@@ -130,7 +130,7 @@ Next.js（App Router）プロジェクトの標準に従い、コードの配置
 プロジェクト構成:
 
 ```
-project-root/multi-schedule-app/  # 実際のプロジェクトルート
+project-root/  # 実際のプロジェクトルート
 ├── src/                      # ソースコードのルートディレクトリ
 │   ├── app/                  # Next.jsのApp Routerディレクトリ
 │   │   ├── layout.tsx        # 全体レイアウト
