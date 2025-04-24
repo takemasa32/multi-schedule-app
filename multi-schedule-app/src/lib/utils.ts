@@ -49,16 +49,25 @@ export function formatDateTimeWithDay(date: Date | string): string {
   return `${month}/${day} (${dayOfWeek}) ${hours}:${minutes}`;
 }
 
-// ICS形式の日時をフォーマットする関数
-export function formatIcsDate(date: Date): string {
-  // ICS形式の日付文字列を返す: YYYYMMDDTHHmmssZ
-  return date
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}/g, "");
+/**
+ * Googleカレンダー用の日時フォーマットに変換する
+ * 形式: yyyyMMddTHHmmssZ
+ */
+export function formatGoogleCalendarDate(date: Date): string {
+  return date.toISOString().replace(/-|:|\.\d{3}/g, "");
 }
 
-// UUIDを生成する（クライアント側での一時的なID生成用）
+/**
+ * ICS形式の日時フォーマットに変換する
+ * 形式: yyyyMMddTHHmmssZ
+ */
+export function formatIcsDate(date: Date): string {
+  return date.toISOString().replace(/-|:|\.\d{3}/g, "");
+}
+
+/**
+ * UUIDを生成する（クライアント側での一時的なID生成用）
+ */
 export function generateUuid(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0,
