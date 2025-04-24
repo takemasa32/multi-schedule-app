@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 複数日程調整アプリ
 
-## Getting Started
+複数の日程候補から最適な日程を決めるための調整アプリケーションです。
 
-First, run the development server:
+## Supabase ローカル開発環境
+
+Supabase のローカル開発環境を使用して、オフラインでの開発や高速なフィードバックループを実現します。
+
+### 前提条件
+
+- Docker がインストールされていること
+- Node.js と npm がインストールされていること
+
+### 基本コマンド
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Supabase ローカル環境の起動
+npx supabase start
+
+# Supabase ローカル環境の停止
+npx supabase stop
+
+# Supabase ローカル環境の状態確認
+npx supabase status
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### ローカル環境の URL・認証情報
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Supabase を起動すると、以下のような情報が表示されます：
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+API URL: http://localhost:54321
+GraphQL URL: http://localhost:54321/graphql/v1
+DB URL: postgresql://postgres:postgres@localhost:54322/postgres
+Studio URL: http://localhost:54323
+Inbucket URL: http://localhost:54324
+JWT secret: super-secret-jwt-token-with-at-least-32-characters-long
+anon key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
-## Learn More
+これらの情報を `.env.local` ファイルにコピーしてください。
 
-To learn more about Next.js, take a look at the following resources:
+### マイグレーション管理
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# 新しいマイグレーションファイルの作成
+npx supabase migration new マイグレーション名
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# マイグレーションの適用
+npx supabase migration up
 
-## Deploy on Vercel
+# データベースリセット（全テーブル削除後にマイグレーション再適用）
+npx supabase db reset
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 型定義の生成
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# TypeScript の型定義を生成
+npx supabase gen types typescript --linked > src/lib/database.types.ts
+```
+
+### データベース操作
+
+```bash
+# SQLエディタを開く
+npx supabase db studio
+
+# データベースのダンプを取得
+npx supabase db dump -f dump-filename.sql
+```
+
+### その他のコマンド
+
+```bash
+# Supabase CLIのヘルプを表示
+npx supabase -h
+
+# 特定コマンドのヘルプを表示
+npx supabase [コマンド] -h
+```
+
+### トラブルシューティング
+
+- **環境起動エラー**: Docker が起動していることを確認し、必要に応じて Docker のリソース設定を見直してください
+- **接続エラー**: ポート競合がないか確認し、必要に応じて実行中のプロセスを停止してください
+- **DB マイグレーションエラー**: エラーメッセージを確認し、SQL の構文や参照整合性を修正してください
+
+## 環境変数の設定
+
+`.env.local.example` ファイルを `.env.local` としてコピーし、Supabase 起動時に表示される値で更新してください：
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[表示されたanonキー]
+SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
+```
+
+## 開発フロー
+
+1. Supabase のローカル環境を起動: `npx supabase start`
+2. 開発サーバーを起動: `npm run dev`
+3. 必要に応じてマイグレーションを作成・適用
+4. 開発終了時に Supabase 環境を停止: `npx supabase stop`
