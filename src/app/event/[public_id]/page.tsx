@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import AvailabilityForm from "@/components/availability-form";
 import AvailabilitySummary from "@/components/availability-summary";
 import FinalizeEventSection from "@/components/finalize-event-section";
 import { CalendarLinks } from "@/components/calendar-links";
+import { EventHeader } from "@/components/event-header";
 import { formatDateTimeWithDay } from "@/lib/utils";
 
 // サーバーサイドでのSupabaseクライアントを初期化する共通関数をインポート
@@ -84,11 +84,8 @@ export default async function EventDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">{event.title}</h1>
-
-      {event.description && (
-        <p className="mb-6 text-gray-700">{event.description}</p>
-      )}
+      {/* ヘッダーコンポーネントを追加 */}
+      <EventHeader event={event} isAdmin={isAdmin} finalDate={finalDateInfo} />
 
       {/* イベントが確定している場合は確定結果を表示 */}
       {event.is_finalized && finalDateInfo ? (

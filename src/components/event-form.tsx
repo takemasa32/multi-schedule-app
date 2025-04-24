@@ -8,6 +8,7 @@ export default function EventForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [adminPassword, setAdminPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +70,27 @@ export default function EventForm() {
           候補日程 <span className="text-error">*</span>
         </label>
         <DateRangePicker onDatesChange={setSelectedDates} />
+      </div>
+
+      <div>
+        <label
+          htmlFor="adminPassword"
+          className="block text-sm font-medium mb-1"
+        >
+          管理者パスワード (任意)
+        </label>
+        <input
+          type="password"
+          id="adminPassword"
+          name="adminPassword"
+          className="input input-bordered w-full"
+          value={adminPassword}
+          onChange={(e) => setAdminPassword(e.target.value)}
+          placeholder="パスワードを設定しない場合は空欄"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          パスワードを設定すると、管理者トークンに加えて、このパスワードでも認証できるようになります。
+        </p>
       </div>
 
       <div>

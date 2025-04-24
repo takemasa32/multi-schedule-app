@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import * as bcrypt from 'bcryptjs';
 
 // サーバーサイド用Supabaseクライアントの初期化
 const supabaseAdmin = getSupabaseServerClient();
@@ -10,6 +11,7 @@ export async function createEvent(formData: FormData) {
   const title = formData.get("title") as string;
   const description = formData.get("description") as string | null;
   const dates = formData.getAll("dates"); // 候補日程フィールド
+  const adminPassword = formData.get("adminPassword") as string | null; // 管理者パスワード（任意）
 
   // バリデーション
   if (!title || dates.length === 0) {
@@ -17,12 +19,19 @@ export async function createEvent(formData: FormData) {
   }
 
   try {
+    // パスワードがあればハッシュ化
+    let adminPasswordHash = null;
+    if (adminPassword && adminPassword.trim() !== "") {
+      adminPasswordHash = await bcrypt.hash(adminPassword, 10);
+    }
+
     // イベント作成
     const { data: eventData, error } = await supabaseAdmin
       .from("events")
       .insert({
         title,
         description,
+        admin_password_hash: adminPasswordHash,
         // UUIDは自動生成 (テーブル定義のdefault値に依存)
       })
       .select("id, public_token, admin_token");
