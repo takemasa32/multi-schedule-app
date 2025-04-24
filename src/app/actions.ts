@@ -1,15 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-// Databaseの型が定義されていなければ、型情報なしでも問題ありません
-// import { Database } from '@/lib/database.types';
+import { getSupabaseServerClient } from "@/lib/supabase";
 
 // サーバーサイド用Supabaseクライアントの初期化
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseAdmin = getSupabaseServerClient();
 
 export async function createEvent(formData: FormData) {
   const title = formData.get("title") as string;

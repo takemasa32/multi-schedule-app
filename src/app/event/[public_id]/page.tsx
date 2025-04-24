@@ -1,30 +1,40 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import AvailabilityForm from "@/components/availability-form";
 import AvailabilitySummary from "@/components/availability-summary";
 import FinalizeEventSection from "@/components/finalize-event-section";
 import { CalendarLinks } from "@/components/calendar-links";
 import { formatDateTimeWithDay } from "@/lib/utils";
 
+// サーバーサイドでのSupabaseクライアントを初期化する共通関数をインポート
+import { getSupabaseServerClient } from "@/lib/supabase";
+
 export default async function EventDetailPage({
   params,
 }: {
   params: { public_id: string };
 }) {
-  const cookieStore = cookies();
+  // 非同期APIであるparamsをawait
+  const resolvedParams = await params;
+  const publicId = resolvedParams.public_id;
+
+  const cookieStore = await cookies();
   const adminToken = cookieStore.get("admin_token")?.value;
 
-  // Supabaseクライアントの初期化
-  const supabase = createServerComponentClient({ cookies });
+  // Supabaseクライアントの取得
+  const supabase = getSupabaseServerClient();
 
   // イベント情報の取得
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("*, event_dates(id, date_time, label)")
-    .eq("public_token", params.public_id)
+    .select("*, event_dates!event_dates_event_id_fkey(id, date_time, label)")
+    .eq("public_token", publicId)
     .single();
 
+  if (eventError) {
+    console.error("イベント取得エラー:", eventError);
+  }
   // イベントが見つからない場合は404を返す
   if (eventError || !event) {
     return notFound();
@@ -156,7 +166,7 @@ export default async function EventDetailPage({
         <>
           {/* 回答フォーム */}
           <AvailabilityForm
-            eventToken={params.public_id}
+            eventToken={publicId}
             eventDates={event.event_dates}
           />
 

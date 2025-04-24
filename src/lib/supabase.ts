@@ -20,3 +20,9 @@ export const getSupabaseAdmin = () => {
   }
   return createClient(supabaseUrl, supabaseServiceKey);
 };
+
+// サーバーサイドで使用するクライアントを取得する関数
+// この関数は常にサービスロールキーを使用します
+export const getSupabaseServerClient = () => {
+  return getSupabaseAdmin();
+};
