@@ -1,33 +1,24 @@
 "use client";
 
-import { formatGoogleCalendarDate, formatIcsDate } from "@/lib/utils";
-
 interface CalendarLinksProps {
   eventTitle: string;
-  eventDateId: string;
+  eventDates: {
+    id: string;
+    start_time: string;
+    end_time: string;
+    label?: string;
+  }[];
   eventId: string;
   description?: string | null;
 }
 
 export function CalendarLinks({
   eventTitle,
-  eventDateId,
+  eventDates,
   eventId,
-  description,
 }: CalendarLinksProps) {
   // Google カレンダーリンクの生成
   const generateGoogleCalendarLink = () => {
-    const params = new URLSearchParams();
-    params.append("text", eventTitle);
-
-    // この時点ではdateの実際の値が不明なので、APIからデータを取得する代わりに
-    // 仮のdates値をセットする（実際の実装では、EventDateデータを含む必要があります）
-    params.append("dates", "DATES_PLACEHOLDER");
-
-    if (description) {
-      params.append("details", description);
-    }
-
     // APIエンドポイントで正確な日時情報を取得するURLを指定
     return `/api/calendar/${eventId}?googleCalendar=true`;
   };
@@ -38,9 +29,26 @@ export function CalendarLinks({
     return `/api/calendar/ics/${eventId}`;
   };
 
+  // 確定された日程の件数
+  const eventCount = eventDates.length;
+
   return (
     <div className="card bg-base-100 shadow-lg p-6">
       <h3 className="text-lg font-semibold mb-4">カレンダーに追加</h3>
+
+      {eventCount === 1 ? (
+        <p className="mb-4">確定された日程をカレンダーに追加できます。</p>
+      ) : (
+        <p className="mb-4">
+          <strong>{eventCount}件</strong>
+          の確定された日程をカレンダーに追加できます。
+          {eventCount > 1 && (
+            <span className="text-sm text-gray-600 block mt-1">
+              ※ 複数の日程は別々のカレンダーイベントとして追加されます
+            </span>
+          )}
+        </p>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <a

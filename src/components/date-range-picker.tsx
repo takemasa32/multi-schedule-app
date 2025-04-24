@@ -7,11 +7,9 @@ import {
   isWithinInterval,
   isEqual,
   parseISO,
-  addHours,
   setHours,
   setMinutes,
 } from "date-fns";
-import { ja } from "date-fns/locale";
 import { TimeSlot } from "@/lib/utils"; // 共通のTimeSlot型をインポート
 
 interface DateRangePickerProps {
@@ -106,7 +104,7 @@ export default function DateRangePicker({
         setSelectedDates(filteredDates);
         onDatesChange?.(filteredDates);
         setErrorMessage(null);
-      } catch (error) {
+      } catch {
         setErrorMessage(
           "正しい期間を選択してください。開始日は終了日より前である必要があります。"
         );
@@ -114,7 +112,7 @@ export default function DateRangePicker({
         onDatesChange?.([]);
       }
     }
-  }, [startDate, endDate, excludedDates, onDatesChange]); // 依存配列を明示的に設定
+  }, [startDate, endDate, excludedDates, onDatesChange]);
 
   // 日付文字列を安全にDate型に変換
   const parseDateSafely = (dateString: string): Date | null => {
@@ -212,9 +210,9 @@ export default function DateRangePicker({
       return;
     }
 
-    // デフォルトの開始時刻と終了時刻（例: 9:00-17:00）
+    // デフォルトの開始時刻と終了時刻（例: 9:00-24:00）
     const defaultStartHour = 9;
-    const defaultEndHour = 17;
+    const defaultEndHour = 24; // 17から24に変更（24:00 = 翌日00:00）
 
     const newTimeSlots: TimeSlot[] = [];
 

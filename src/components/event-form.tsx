@@ -17,7 +17,7 @@ export default function EventForm() {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [timeInterval, setTimeInterval] = useState(120); // デフォルトは120分間隔
   const [startHour, setStartHour] = useState(0); // デフォルトは0時から
-  const [endHour, setEndHour] = useState(24); // デフォルトは24時まで
+  const [endHour, setEndHour] = useState(23); // デフォルトは24時まで
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -182,7 +182,7 @@ export default function EventForm() {
   ];
 
   // 時間帯のオプション（0～23時）
-  const hourOptions = Array.from({ length: 25 }, (_, i) => ({
+  const hourOptions = Array.from({ length: 24 }, (_, i) => ({
     value: i,
     label: `${i}:00`,
   }));

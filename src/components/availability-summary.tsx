@@ -15,14 +15,14 @@ interface AvailabilitySummaryProps {
     event_date_id: string;
     availability: boolean;
   }[];
-  finalDateId?: string | null;
+  finalizedDateIds?: string[] | null; // 複数の確定日程IDを受け取るように変更
 }
 
 export default function AvailabilitySummary({
   eventDates,
   participants,
   availabilities,
-  finalDateId,
+  finalizedDateIds = [],
 }: AvailabilitySummaryProps) {
   const [showDetailedView, setShowDetailedView] = useState(false);
 
@@ -34,6 +34,20 @@ export default function AvailabilitySummary({
       day: "numeric",
       weekday: "short",
     });
+  };
+
+  // 時間をフォーマット
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    // 00:00の場合は24:00として表示
+    if (date.getHours() === 0 && date.getMinutes() === 0) {
+      return "24:00";
+    } else {
+      return date.toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
   };
 
   // 集計計算: 日程ごとの参加可能者数
@@ -54,7 +68,10 @@ export default function AvailabilitySummary({
         availableCount,
         unavailableCount,
         formattedDate: formatDate(date.start_time),
-        isSelected: finalDateId === date.id,
+        formattedTime: `${formatTime(date.start_time)}〜${formatTime(
+          date.end_time
+        )}`,
+        isSelected: finalizedDateIds?.includes(date.id) || false, // 複数の確定日程をチェック
       };
     });
   };
@@ -75,7 +92,7 @@ export default function AvailabilitySummary({
   }
 
   return (
-    <div className="mb-8 p-6 bg-base-100 border rounded-lg shadow-sm">
+    <div className="mb-8 bg-base-100 border rounded-lg shadow-sm">
       <h2 className="text-xl font-bold mb-4">みんなの回答状況</h2>
 
       {/* サマリー表示（常に表示） */}
@@ -83,8 +100,9 @@ export default function AvailabilitySummary({
         <table className="table w-full">
           <thead>
             <tr>
-              <th className="w-1/2">日程</th>
-              <th className="w-1/2 text-center">参加可能 / 不可</th>
+              <th>日程</th>
+              <th>時間</th>
+              <th className="text-center">参加可能 / 不可</th>
             </tr>
           </thead>
           <tbody>
@@ -93,7 +111,7 @@ export default function AvailabilitySummary({
                 key={item.dateId}
                 className={item.isSelected ? "bg-success bg-opacity-10" : ""}
               >
-                <td>
+                <td className="whitespace-nowrap">
                   <span className="font-medium">{item.formattedDate}</span>
                   {item.label && (
                     <span className="ml-2 text-sm text-gray-500">
@@ -104,6 +122,7 @@ export default function AvailabilitySummary({
                     <span className="badge badge-success ml-2">確定</span>
                   )}
                 </td>
+                <td className="whitespace-nowrap">{item.formattedTime}</td>
                 <td className="text-center">
                   <span className="text-success font-medium">
                     {item.availableCount}
@@ -137,8 +156,24 @@ export default function AvailabilitySummary({
               <tr>
                 <th>参加者</th>
                 {eventDates.map((date) => (
-                  <th key={date.id} className="text-center whitespace-nowrap">
+                  <th
+                    key={date.id}
+                    className={`text-center whitespace-nowrap ${
+                      finalizedDateIds?.includes(date.id)
+                        ? "bg-success bg-opacity-10"
+                        : ""
+                    }`}
+                  >
                     {formatDate(date.start_time)}
+                    <br />
+                    <span className="text-xs">
+                      {formatTime(date.start_time)}
+                    </span>
+                    {finalizedDateIds?.includes(date.id) && (
+                      <span className="block badge badge-xs badge-success mt-1">
+                        確定
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -154,8 +189,14 @@ export default function AvailabilitySummary({
                       participant.id,
                       date.id
                     );
+                    const isFinalized = finalizedDateIds?.includes(date.id);
                     return (
-                      <td key={date.id} className="text-center">
+                      <td
+                        key={date.id}
+                        className={`text-center ${
+                          isFinalized ? "bg-success bg-opacity-10" : ""
+                        }`}
+                      >
                         {isAvailable === true && (
                           <span className="text-success">○</span>
                         )}

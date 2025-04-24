@@ -32,12 +32,21 @@ export default function AvailabilityForm({
     const start = new Date(startTime);
     const end = new Date(endTime);
 
+    // 00:00を24:00として表示する処理
+    const formatEndTime = () => {
+      if (end.getHours() === 0 && end.getMinutes() === 0) {
+        return "24:00";
+      } else {
+        return `${end.getHours().toString().padStart(2, "0")}:${end
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+      }
+    };
+
     // 同じ日の場合は日付を1回だけ表示
     if (start.toDateString() === end.toDateString()) {
-      return `${formatDateTimeWithDay(start)} 〜 ${end
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${end.getMinutes().toString().padStart(2, "0")}`;
+      return `${formatDateTimeWithDay(start)} 〜 ${formatEndTime()}`;
     } else {
       // 異なる日の場合は両方の日付を表示
       return `${formatDateTimeWithDay(start)} 〜 ${formatDateTimeWithDay(end)}`;

@@ -122,10 +122,6 @@ export async function submitAvailability(formData: FormData) {
       throw new Error("イベントが見つかりませんでした");
     }
 
-    if (event.is_finalized) {
-      throw new Error("このイベントはすでに確定済みです");
-    }
-
     // 参加者の登録または取得
     const responseToken = uuidv4();
     let participantId: string;
@@ -209,10 +205,11 @@ export async function submitAvailability(formData: FormData) {
 
 /**
  * イベント日程確定用のAction
+ * 複数の日程を確定できるように修正
  */
-export async function finalizeEvent(eventId: string, dateId: string, adminToken: string) {
+export async function finalizeEvent(eventId: string, dateIds: string[], adminToken: string) {
   try {
-    if (!eventId || !dateId || !adminToken) {
+    if (!eventId || !dateIds || dateIds.length === 0 || !adminToken) {
       throw new Error("必須パラメータが不足しています");
     }
 
@@ -235,27 +232,48 @@ export async function finalizeEvent(eventId: string, dateId: string, adminToken:
     const { data: dateCheck, error: dateCheckError } = await supabase
       .from("event_dates")
       .select("id")
-      .eq("id", dateId)
       .eq("event_id", eventId)
-      .single();
+      .in("id", dateIds);
 
-    if (dateCheckError || !dateCheck) {
+    if (dateCheckError || !dateCheck || dateCheck.length !== dateIds.length) {
       console.error("Invalid date selection:", dateCheckError);
       throw new Error("選択された日程が見つかりません");
     }
 
-    // イベント日程の確定
+    // イベントを確定済み状態に更新
+    // 互換性のためfinal_date_idも設定（最初の日程IDを使用）
     const { error: finalizeError } = await supabase
       .from("events")
       .update({
         is_finalized: true,
-        final_date_id: dateId
+        final_date_id: dateIds[0]  // 互換性のため最初の日程IDを設定
       })
       .eq("id", eventId);
 
     if (finalizeError) {
       console.error("Finalize error:", finalizeError);
       throw new Error("イベント確定に失敗しました");
+    }
+
+    // 確定日程テーブルをクリアしてから新しい日程を挿入（再確定の場合のため）
+    await supabase
+      .from("finalized_dates")
+      .delete()
+      .eq("event_id", eventId);
+
+    // 複数の確定日程をfinalized_datesテーブルに登録
+    const finalizedEntries = dateIds.map(dateId => ({
+      event_id: eventId,
+      event_date_id: dateId
+    }));
+
+    const { error: insertError } = await supabase
+      .from("finalized_dates")
+      .insert(finalizedEntries);
+
+    if (insertError) {
+      console.error("Finalized dates insertion error:", insertError);
+      throw new Error("確定日程の登録に失敗しました");
     }
 
     // ページを再検証
