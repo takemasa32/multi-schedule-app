@@ -77,10 +77,11 @@ B -- 主催者が日程確定 --> C[確定後の結果表示 (同ページ)]
   - ページタイトル：「新規イベント作成」
   - イベントタイトル入力欄（text）※必須
   - イベント説明入力欄（textarea）※任意
-  - 候補日程入力欄（date/datetime-local picker or text）※複数行対応
-    - 「＋日程追加」ボタンで入力フィールドを追加可能。初期表示は 2 行程度用意。
-    - 日付のみか日時まで指定するかはユースケースに応じます（初版では日付ベース）。
-  -
+  - 候補日程設定セクション：
+    - 期間指定方式：開始日と終了日を選択するフィールド（date picker）
+    - 除外日の設定：期間内で候補から外したい日付を追加できる機能
+    - 「除外日を追加」ボタンで特定の日を候補から外すことが可能
+    - 候補日程プレビュー機能（何日間の候補があるか表示）
   - 「イベントを作成」送信ボタン（フォームを Server Action にポスト）
   - （UI）Tailwind+DaisyUI でフォームを整形し、項目ごとに<label>を付与します。
 - 入力検証として、タイトルと少なくとも 1 つの日程が入力されていることをチェックします（ブラウザの必須属性とサーバー側の双方で確認）。送信成功後、このページはイベント詳細ページへリダイレクトします。
@@ -128,61 +129,42 @@ Next.js（App Router）プロジェクトの標準に従い、コードの配置
 
 プロジェクト構成:
 
-project-root/
-
-├── app/                      # Next.js の App Router ディレクトリ
-
-│   ├── layout.tsx           # 全体レイアウト（共通<head>や<header>など）
-
-│   ├── page.tsx             # ホーム（イベント作成ページ）
-
-│   ├── event/
-
-│   │   ├── [public_id]/
-
-│   │   │   ├── page.tsx    # イベント詳細ページ（参加者用・主催者用兼用）
-
-│   │   │   └── admin/
-
-│   │   │       └── [admin_token]/
-
-│   │   │           └── page.tsx  # （オプション）管理者専用ビュー
-
-│   │   └── new/ (if needed)...
-
-│   ├── api/
-
-│   │   └── generate-ics/route.ts  # （オプション）ICS ファイル生成用 API ルート
-
-│   └── ...（他、必要に応じて追加）
-
-├── components/               # 再利用可能な React コンポーネント群
-
-│   ├── event-form.tsx       # イベント作成フォームコンポーネント
-
-│   ├── availability-table.tsx # 集計表示用のテーブルコンポーネント
-
-│   └── ...
-
-├── lib/
-
-│   ├── supabase.ts          # Supabase クライアント初期化（サーバー用）
-
-│   └── utils.ts             # 汎用ユーティリティ関数（日時フォーマットなど）
-
-├── styles/
-
-│   └── globals.css          # Tailwind のベースやカスタム CSS
-
-├── prisma/ or sql/           # （必要なら）Prisma スキーマや SQL クエリ
-
-├── .env.local                # 環境変数（Supabase URL/鍵など）※Git 管理除外
-
-├── next.config.js, tailwind.config.js, etc. # 設定ファイル類
-
-├── package.json
-
+```
+project-root/multi-schedule-app/  # 実際のプロジェクトルート
+├── src/                      # ソースコードのルートディレクトリ
+│   ├── app/                  # Next.jsのApp Routerディレクトリ
+│   │   ├── layout.tsx        # 全体レイアウト
+│   │   ├── page.tsx          # ホーム（イベント作成ページ）
+│   │   ├── actions.ts        # Server Actions関数
+│   │   ├── event/
+│   │   │   ├── [public_id]/
+│   │   │   │   ├── page.tsx  # イベント詳細ページ
+│   │   │   │   └── admin/
+│   │   │   │       └── [admin_token]/
+│   │   │   │           └── page.tsx
+│   │   └── api/
+│   │       └── generate-ics/
+│   │           └── route.ts
+│   │
+│   ├── components/           # 再利用可能なコンポーネント
+│   │   ├── event-form.tsx    # イベント作成フォームコンポーネント
+│   │   ├── availability-form.tsx  # 参加可否入力フォーム
+│   │   ├── availability-summary.tsx  # 集計表示用コンポーネント
+│   │   ├── date-range-picker.tsx  # 日程期間選択コンポーネント
+│   │   └── ...
+│   │
+│   └── lib/                  # ユーティリティ関数など
+│       ├── supabase.ts       # Supabaseクライアント初期化
+│       └── actions.ts        # Server Actions実装
+│
+├── public/                   # 静的ファイル
+├── supabase/                 # Supabase関連設定(migrations等)
+│   └── migrations/           # DBマイグレーションファイル
+├── .env.local                # 環境変数（Git管理外）
+├── next.config.ts
+├── tailwind.config.js
 └── ...
+```
 
 - Next.js App Router では app/以下にページを配置します。今回はシンプルなので page.tsx（ホーム）と event/[public_id]/page.tsx 程度です。管理用のページはクエリパラメータで処理しても良いですが、セキュリティ上わかりやすく分けるため admin/[admin_token]サブルートとして用意しています。この admin_token ページは管理者権限のチェックと専用 UI の表示を行います。
 - 静的ファイルは public/ディレクトリ以下（今回は大きな静的アセットは想定なし、ロゴ画像程度）。
