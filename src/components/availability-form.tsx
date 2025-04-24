@@ -1,168 +1,160 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { submitAvailability } from '@/lib/actions';
-import { formatDateTimeWithDay } from '@/lib/utils';
-
-interface EventDate {
-  id: string;
-  event_id: string;
-  date_time: string;
-  label: string | null;
-}
+import { useState } from "react";
+import { submitAvailability } from "@/app/actions";
 
 interface AvailabilityFormProps {
   eventToken: string;
-  eventDates: EventDate[];
+  eventDates: { id: string; date_time: string; label?: string }[];
 }
 
-export function AvailabilityForm({ eventToken, eventDates }: AvailabilityFormProps) {
-  const [name, setName] = useState('');
-  const [availabilities, setAvailabilities] = useState<{[key: string]: boolean}>(
-    eventDates.reduce((acc, date) => ({...acc, [date.id]: false}), {})
+export default function AvailabilityForm({
+  eventToken,
+  eventDates,
+}: AvailabilityFormProps) {
+  const [name, setName] = useState("");
+  const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(
+    {}
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  // ローカルストレージから名前を復元（あれば）
-  useState(() => {
-    const savedName = localStorage.getItem('participant_name');
-    if (savedName) {
-      setName(savedName);
-    }
-  });
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setName(e.target.value);
+  // 日付を読みやすい形式にフォーマット
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "numeric",
+      minute: "numeric",
+    });
   };
 
-  const handleAvailabilityChange = (dateId: string, checked: boolean) => {
-    setAvailabilities(prev => ({
+  const handleCheckboxChange = (dateId: string) => {
+    setSelectedDates((prev) => ({
       ...prev,
-      [dateId]: checked
+      [dateId]: !prev[dateId],
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(false);
-
-    // バリデーション
+  // フォーム送信前のバリデーション用
+  const validateForm = () => {
     if (!name.trim()) {
-      setError('お名前を入力してください');
-      return;
+      setError("お名前を入力してください");
+      return false;
     }
+    return true;
+  };
 
-    setIsSubmitting(true);
-
-    try {
-      // 名前をローカルストレージに保存
-      localStorage.setItem('participant_name', name);
-
-      // フォームデータの準備
-      const formData = new FormData();
-      formData.append('participant_name', name);
-      formData.append('event_token', eventToken);
-
-      // 各日程の回答状態を追加
-      Object.entries(availabilities).forEach(([dateId, isAvailable]) => {
-        if (isAvailable) {
-          formData.append(`availability_${dateId}`, 'on');
-        }
-      });
-
-      // Server Actionの呼び出し
-      await submitAvailability(formData);
-      
-      // 成功メッセージ表示（実際にはページが再レンダリングされるため表示されない可能性が高い）
-      setSuccess(true);
-      
-    } catch (err: unknown) {
-      console.error('回答送信エラー:', err);
-      setError(err instanceof Error ? err.message : '回答の送信に失敗しました。時間をおいて再度お試しください。');
-    } finally {
-      setIsSubmitting(false);
+  // この関数はServer Actionを呼び出す前の準備として使用
+  // 実際の送信はformのaction属性がServer Actionを直接呼ぶ
+  const handleSubmit = async (e: React.FormEvent) => {
+    if (!validateForm()) {
+      e.preventDefault();
+    } else {
+      setIsSubmitting(true);
+      // formのaction属性がServer Actionを呼び出すため
+      // ここでは送信準備のみ行う
     }
   };
 
   return (
-    <div className="card bg-base-100 shadow-lg">
-      <div className="card-body">
-        <h2 className="card-title text-xl mb-4">回答フォーム</h2>
+    <div className="mb-8 p-6 bg-base-100 border rounded-lg shadow-sm">
+      <h2 className="text-xl font-bold mb-4">回答する</h2>
 
-        {error && (
-          <div className="alert alert-error mb-4">
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="alert alert-success mb-4">
-            <span>回答を送信しました！</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2" htmlFor="participant_name">
-              お名前 *
-            </label>
-            <input
-              id="participant_name"
-              type="text"
-              className="input input-bordered w-full"
-              value={name}
-              onChange={handleNameChange}
-              placeholder="例：山田太郎"
-              required
+      {error && (
+        <div className="alert alert-error mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              ※同じ名前で再回答すると上書きされます
-            </p>
-          </div>
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
 
-          <div className="mb-6">
-            <p className="block text-sm font-medium mb-3">参加可能な日程にチェックしてください *</p>
-            
-            <div className="space-y-3">
-              {eventDates.map(date => (
-                <div key={date.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id={`date-${date.id}`}
-                    className="checkbox checkbox-primary"
-                    checked={availabilities[date.id]}
-                    onChange={e => handleAvailabilityChange(date.id, e.target.checked)}
-                  />
-                  <label htmlFor={`date-${date.id}`} className="ml-3 select-none">
-                    {formatDateTimeWithDay(date.date_time)}
-                    {date.label && <span className="ml-2 text-gray-500">({date.label})</span>}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
+      <form
+        action={submitAvailability}
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
+        {/* イベントトークンを隠しフィールドとして保持 */}
+        <input type="hidden" name="event_token" value={eventToken} />
 
-          <div className="card-actions justify-end">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  送信中...
-                </>
-              ) : (
-                '回答を送信'
-              )}
-            </button>
+        <div>
+          <label
+            htmlFor="participant_name"
+            className="block text-sm font-medium mb-1"
+          >
+            お名前 <span className="text-error">*</span>
+          </label>
+          <input
+            type="text"
+            id="participant_name"
+            name="participant_name"
+            className="input input-bordered w-full"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            候補日程から参加可能な日を選択してください{" "}
+            <span className="text-error">*</span>
+          </label>
+          <div className="space-y-2">
+            {eventDates.map((date) => (
+              <div key={date.id} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`availability_${date.id}`}
+                  name={`availability_${date.id}`}
+                  className="checkbox"
+                  checked={!!selectedDates[date.id]}
+                  onChange={() => handleCheckboxChange(date.id)}
+                />
+                <label htmlFor={`availability_${date.id}`} className="ml-3">
+                  <span className="font-medium">
+                    {formatDate(date.date_time)}
+                  </span>
+                  {date.label && (
+                    <span className="ml-2 text-sm text-gray-500">
+                      {date.label}
+                    </span>
+                  )}
+                </label>
+              </div>
+            ))}
           </div>
-        </form>
-      </div>
+        </div>
+
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <span className="loading loading-spinner"></span>
+              送信中...
+            </>
+          ) : (
+            "回答を送信"
+          )}
+        </button>
+      </form>
     </div>
   );
 }

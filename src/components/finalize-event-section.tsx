@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { finalizeEvent } from "@/app/actions"; // これから作成するServer Action
+import { finalizeEvent } from "@/app/actions";
 
 interface FinalizeEventSectionProps {
   eventId: string;
