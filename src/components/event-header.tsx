@@ -4,18 +4,20 @@ import { useState } from "react";
 import { formatDateTimeWithDay } from "@/lib/utils";
 
 interface EventHeaderProps {
-  event: {
-    title: string;
-    description: string | null;
-    is_finalized: boolean;
-  };
-  isAdmin: boolean;
-  finalDate: {
+  title: string;
+  description: string | null;
+  isFinalized: boolean;
+  finalDate?: {
     date_time: string;
   } | null;
 }
 
-export function EventHeader({ event, isAdmin, finalDate }: EventHeaderProps) {
+export function EventHeader({
+  title,
+  description,
+  isFinalized,
+  finalDate,
+}: EventHeaderProps) {
   const [copied, setCopied] = useState(false);
 
   // 現在のURLをコピーする
@@ -32,19 +34,17 @@ export function EventHeader({ event, isAdmin, finalDate }: EventHeaderProps) {
   return (
     <div className="mb-8">
       <div className="flex justify-between items-start mb-2">
-        <h1 className="text-3xl font-bold">{event.title}</h1>
+        <h1 className="text-3xl font-bold">{title}</h1>
         <button className="btn btn-sm btn-outline" onClick={copyEventLink}>
           {copied ? "✓ コピー完了" : "共有リンクをコピー"}
         </button>
       </div>
 
-      {event.description && (
-        <p className="text-gray-600 mb-4 whitespace-pre-line">
-          {event.description}
-        </p>
+      {description && (
+        <p className="text-gray-600 mb-4 whitespace-pre-line">{description}</p>
       )}
 
-      {isAdmin && !event.is_finalized && (
+      {!isFinalized && (
         <div className="alert alert-info text-sm mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"

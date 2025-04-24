@@ -2,6 +2,13 @@
  * 日付フォーマット用ユーティリティ関数
  */
 
+// タイムスロットのインターフェース定義
+export interface TimeSlot {
+  date: Date;
+  startTime: string; // HH:mm形式
+  endTime: string;   // HH:mm形式
+}
+
 // 日付を「YYYY/MM/DD」形式でフォーマットする
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;

@@ -2,52 +2,40 @@
 
 import { formatGoogleCalendarDate, formatIcsDate } from "@/lib/utils";
 
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-}
-
-interface EventDate {
-  id: string;
-  date_time: string;
-}
-
 interface CalendarLinksProps {
-  event: Event;
-  finalDate: EventDate | null;
+  eventTitle: string;
+  eventDateId: string;
+  eventId: string;
+  description?: string | null;
 }
 
-export function CalendarLinks({ event, finalDate }: CalendarLinksProps) {
-  if (!finalDate) return null;
-
-  // 日程の開始時間と終了時間を設定
-  const startDate = new Date(finalDate.date_time);
-  const endDate = new Date(startDate);
-  endDate.setHours(startDate.getHours() + 1); // デフォルトで1時間の予定として設定
-
+export function CalendarLinks({
+  eventTitle,
+  eventDateId,
+  eventId,
+  description,
+}: CalendarLinksProps) {
   // Google カレンダーリンクの生成
   const generateGoogleCalendarLink = () => {
     const params = new URLSearchParams();
-    params.append("text", event.title);
-    params.append(
-      "dates",
-      `${formatGoogleCalendarDate(startDate)}/${formatGoogleCalendarDate(
-        endDate
-      )}`
-    );
+    params.append("text", eventTitle);
 
-    if (event.description) {
-      params.append("details", event.description);
+    // この時点ではdateの実際の値が不明なので、APIからデータを取得する代わりに
+    // 仮のdates値をセットする（実際の実装では、EventDateデータを含む必要があります）
+    params.append("dates", "DATES_PLACEHOLDER");
+
+    if (description) {
+      params.append("details", description);
     }
 
-    return `https://calendar.google.com/calendar/r/eventedit?${params.toString()}`;
+    // APIエンドポイントで正確な日時情報を取得するURLを指定
+    return `/api/calendar/${eventId}?googleCalendar=true`;
   };
 
   // .ics ファイルのダウンロードリンク
   const generateIcsDownloadLink = () => {
     // publicTokenを使用してAPIエンドポイントを呼び出す
-    return `/api/calendar/${event.id}`;
+    return `/api/calendar/ics/${eventId}`;
   };
 
   return (
@@ -75,7 +63,7 @@ export function CalendarLinks({ event, finalDate }: CalendarLinksProps) {
         <a
           href={generateIcsDownloadLink()}
           className="btn btn-outline"
-          download={`${event.title}.ics`}
+          download={`${eventTitle}.ics`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

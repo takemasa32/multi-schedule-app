@@ -1,205 +1,242 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase";
-import * as bcrypt from 'bcryptjs';
-
-// サーバーサイド用Supabaseクライアントの初期化
-const supabaseAdmin = getSupabaseServerClient();
+import { createClient } from "@/lib/supabase";
+import { v4 as uuidv4 } from "uuid";
+import { formatISO } from "date-fns";
+import { revalidatePath } from "next/cache";
 
 export async function createEvent(formData: FormData) {
   const title = formData.get("title") as string;
-  const description = formData.get("description") as string | null;
-  const dates = formData.getAll("dates"); // 候補日程フィールド
-  const adminPassword = formData.get("adminPassword") as string | null; // 管理者パスワード（任意）
+  const description = formData.get("description") as string || null;
+
+  // 新しい仕様：開始時刻と終了時刻のペアを取得
+  const startTimes = formData.getAll("startTimes") as string[];
+  const endTimes = formData.getAll("endTimes") as string[];
 
   // バリデーション
-  if (!title || dates.length === 0) {
-    throw new Error("必要項目が未入力です");
+  if (!title || title.trim() === "") {
+    throw new Error("タイトルは必須です");
   }
 
+  if (startTimes.length === 0 || endTimes.length === 0 || startTimes.length !== endTimes.length) {
+    throw new Error("少なくとも1つの候補時間帯を設定してください");
+  }
+
+  // DB接続
+  const supabase = createClient();
+
   try {
-    // パスワードがあればハッシュ化
-    let adminPasswordHash = null;
-    if (adminPassword && adminPassword.trim() !== "") {
-      adminPasswordHash = await bcrypt.hash(adminPassword, 10);
-    }
+    const publicToken = uuidv4();
+    const adminToken = uuidv4();
 
     // イベント作成
-    const { data: eventData, error } = await supabaseAdmin
+    const { data: eventData, error } = await supabase
       .from("events")
       .insert({
         title,
         description,
-        admin_password_hash: adminPasswordHash,
-        // UUIDは自動生成 (テーブル定義のdefault値に依存)
+        public_token: publicToken,
+        admin_token: adminToken,
       })
-      .select("id, public_token, admin_token");
+      .select("id, public_token, admin_token")
+      .single();
 
-    if (error || !eventData?.length) {
-      console.error("イベント作成エラー:", error);
-      throw new Error("イベント作成に失敗しました");
+    if (error || !eventData) {
+      console.error("Event creation error:", error);
+      throw new Error("イベントの作成に失敗しました");
     }
 
-    const newEvent = eventData[0];
+    // 候補日程の作成
+    const dateRows = [];
+    for (let i = 0; i < startTimes.length; i++) {
+      const startTime = new Date(startTimes[i]);
+      const endTime = new Date(endTimes[i]);
 
-    // 候補日程の挿入
-    const dateRows = dates.map((dateStr) => ({
-      event_id: newEvent.id,
-      date_time: new Date(dateStr as string),
-    }));
+      // 有効な日時かチェック
+      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+        continue; // 無効な日時はスキップ
+      }
 
-    const { error: dateError } = await supabaseAdmin
+      // 終了が開始より後であることを確認
+      if (startTime >= endTime) {
+        continue; // 無効な時間帯はスキップ
+      }
+
+      dateRows.push({
+        event_id: eventData.id,
+        start_time: formatISO(startTime),
+        end_time: formatISO(endTime)
+      });
+    }
+
+    if (dateRows.length === 0) {
+      throw new Error("有効な候補時間帯がありません");
+    }
+
+    const { error: datesError } = await supabase
       .from("event_dates")
       .insert(dateRows);
 
-    if (dateError) {
-      console.error("日程保存エラー:", dateError);
-      throw new Error("日程の保存に失敗しました");
+    if (datesError) {
+      console.error("Event dates error:", datesError);
+      throw new Error("候補日程の作成に失敗しました");
     }
 
-    // 作成成功：管理用ページへリダイレクト
-    return redirect(
-      `/event/${newEvent.public_token}/admin/${newEvent.admin_token}`
-    );
-  } catch (error) {
-    console.error("Server Action実行エラー:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("予期しないエラーが発生しました");
+    // 成功時はイベント詳細ページへリダイレクト
+    // 管理者用クエリパラメータを追加
+    redirect(`/event/${publicToken}?admin=${adminToken}`);
+  } catch (err) {
+    console.error("Error in createEvent:", err);
+    throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
   }
 }
 
-/**
- * 参加可否回答を送信するサーバーアクション
- */
+// 参加者の回答を保存するAction
 export async function submitAvailability(formData: FormData) {
+  const eventId = formData.get("eventId") as string;
+  const publicToken = formData.get("publicToken") as string;
+  const participantName = formData.get("participant_name") as string;
+
+  // バリデーション
+  if (!participantName || participantName.trim() === "") {
+    throw new Error("お名前は必須です");
+  }
+
+  if (!eventId || !publicToken) {
+    throw new Error("イベント情報が不正です");
+  }
+
+  const supabase = createClient();
+
   try {
-    const name = formData.get("participant_name") as string;
-    const eventToken = formData.get("event_token") as string;
-
-    // バリデーション
-    if (!name || !eventToken) {
-      throw new Error("名前とイベントトークンは必須です");
-    }
-
-    // イベント取得（公開トークンから）
-    const { data: events, error: eventError } = await supabaseAdmin
+    // イベント情報の確認
+    const { data: event, error: eventError } = await supabase
       .from("events")
       .select("id, is_finalized")
-      .eq("public_token", eventToken);
+      .eq("id", eventId)
+      .eq("public_token", publicToken)
+      .single();
 
-    if (eventError || !events?.length) {
-      console.error("イベント取得エラー:", eventError);
+    if (eventError || !event) {
+      console.error("Event not found:", eventError);
       throw new Error("イベントが見つかりませんでした");
     }
 
-    const event = events[0];
-
-    // 確定済みイベントへの回答を拒否
     if (event.is_finalized) {
-      throw new Error("このイベントは既に確定済みです");
+      throw new Error("このイベントはすでに確定済みです");
     }
 
-    // 同じ名前でも別参加者として登録するため
-    // 参加者レコードを無条件に新規作成
-    const { data: newParticipant, error: participantError } = await supabaseAdmin
+    // 参加者の登録または取得
+    const responseToken = uuidv4();
+    let participantId: string;
+
+    // 同じ名前の参加者が既に存在するか確認
+    const { data: existingParticipant } = await supabase
       .from("participants")
-      .insert({
-        event_id: event.id,
-        name
-      })
-      .select("id");
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("name", participantName)
+      .maybeSingle();
 
-    if (participantError || !newParticipant?.length) {
-      console.error("参加者登録エラー:", participantError);
-      throw new Error("参加者の登録に失敗しました。同じイベントで既に同じ名前が使われている可能性があります。");
+    if (existingParticipant) {
+      participantId = existingParticipant.id;
+
+      // 既存の回答を削除
+      await supabase
+        .from("availabilities")
+        .delete()
+        .eq("event_id", eventId)
+        .eq("participant_id", participantId);
+    } else {
+      // 新規参加者を作成
+      const { data: newParticipant, error: participantError } = await supabase
+        .from("participants")
+        .insert({
+          event_id: eventId,
+          name: participantName,
+          response_token: responseToken
+        })
+        .select("id")
+        .single();
+
+      if (participantError || !newParticipant) {
+        console.error("Participant creation error:", participantError);
+        throw new Error("参加者登録に失敗しました");
+      }
+
+      participantId = newParticipant.id;
     }
 
-    const participantId = newParticipant[0].id;
+    // フォームデータから利用可能時間を収集
+    const availabilityEntries: Array<{
+      event_id: string;
+      participant_id: string;
+      event_date_id: string;
+      availability: boolean;
+    }> = [];
 
-    // 回答データの作成
-    const availabilityRows = [];
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("availability_")) {
         const dateId = key.replace("availability_", "");
-        const isAvailable = value === "on"; // チェックボックスの値
-
-        availabilityRows.push({
-          event_id: event.id,
+        availabilityEntries.push({
+          event_id: eventId,
           participant_id: participantId,
           event_date_id: dateId,
-          availability: isAvailable
+          availability: value === "on" // checkbox値はonまたは存在しない
         });
       }
     }
 
-    // 回答が一つもない場合
-    if (availabilityRows.length === 0) {
-      throw new Error("少なくとも1つの日程に回答してください");
+    // 回答がない場合
+    if (availabilityEntries.length === 0) {
+      throw new Error("少なくとも1つの回答を入力してください");
     }
 
-    // 回答データの保存
-    const { error: availabilityError } = await supabaseAdmin
+    // 回答を登録
+    const { error: availabilityError } = await supabase
       .from("availabilities")
-      .insert(availabilityRows);
+      .insert(availabilityEntries);
 
     if (availabilityError) {
-      console.error("回答登録エラー:", availabilityError);
+      console.error("Availability submission error:", availabilityError);
       throw new Error("回答の保存に失敗しました");
     }
 
+    // ページを再検証（キャッシュを更新）
+    revalidatePath(`/event/${publicToken}`);
+
     return { success: true };
-  } catch (error) {
-    console.error("回答送信エラー:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("予期しないエラーが発生しました");
+  } catch (err) {
+    console.error("Error in submitAvailability:", err);
+    throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
   }
 }
 
-/**
- * イベントの日程を確定するサーバーアクション
- */
+// イベント日程確定用のAction
 export async function finalizeEvent(eventId: string, dateId: string, adminToken: string) {
+  if (!eventId || !dateId || !adminToken) {
+    throw new Error("必須パラメータが不足しています");
+  }
+
+  const supabase = createClient();
+
   try {
     // 管理者権限の確認
-    const { data: events, error: eventError } = await supabaseAdmin
+    const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, admin_token, is_finalized")
+      .select("id")
       .eq("id", eventId)
+      .eq("admin_token", adminToken)
       .single();
 
-    if (eventError || !events) {
-      console.error("イベント取得エラー:", eventError);
-      throw new Error("イベントが見つかりませんでした");
-    }
-
-    // 管理者トークンが一致するか確認
-    if (events.admin_token !== adminToken) {
+    if (eventError || !event) {
+      console.error("Admin validation error:", eventError);
       throw new Error("管理者権限がありません");
     }
 
-    // 既に確定済みでないか確認
-    if (events.is_finalized) {
-      throw new Error("このイベントは既に確定済みです");
-    }
-
-    // 日程が存在するか確認
-    const { data: dateCheck, error: dateError } = await supabaseAdmin
-      .from("event_dates")
-      .select("id")
-      .eq("id", dateId)
-      .eq("event_id", eventId)
-      .single();
-
-    if (dateError || !dateCheck) {
-      console.error("日程確認エラー:", dateError);
-      throw new Error("指定された日程が見つかりません");
-    }
-
-    // イベントを確定状態に更新
-    const { error: updateError } = await supabaseAdmin
+    // イベント日程の確定
+    const { error: finalizeError } = await supabase
       .from("events")
       .update({
         is_finalized: true,
@@ -207,17 +244,17 @@ export async function finalizeEvent(eventId: string, dateId: string, adminToken:
       })
       .eq("id", eventId);
 
-    if (updateError) {
-      console.error("日程確定エラー:", updateError);
-      throw new Error("日程の確定に失敗しました");
+    if (finalizeError) {
+      console.error("Finalize error:", finalizeError);
+      throw new Error("イベント確定に失敗しました");
     }
 
-    // 正常終了 - キャッシュを更新して現在のページを再表示
+    // URLからクエリパラメータを維持したままページを再検証
+    revalidatePath(`/event/[public_id]`);
+
     return { success: true };
-  } catch (error) {
-    console.error("日程確定エラー:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("予期しないエラーが発生しました");
+  } catch (err) {
+    console.error("Error in finalizeEvent:", err);
+    throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
   }
 }

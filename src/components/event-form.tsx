@@ -1,49 +1,85 @@
 "use client";
 
-import React, { useState } from "react";
+import { FormEvent, useState } from "react";
+import { createEvent } from "@/app/actions";
 import DateRangePicker from "./date-range-picker";
-import { createEvent } from "@/app/actions"; // Server Actionをインポート
+import { TimeSlot } from "@/lib/utils";
 
 export default function EventForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [adminPassword, setAdminPassword] = useState("");
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // これを削除または修正するか、別のクライアント側ハンドラとして利用
-  // handleSubmitはもう不要です。フォーム要素にaction属性を直接指定します
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    if (!title.trim()) {
+      setError("タイトルを入力してください");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (timeSlots.length === 0) {
+      setError("少なくとも1つの日程を選択してください");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+
+      // フォームに時間スロット情報を追加
+      timeSlots.forEach((slot, index) => {
+        // 日付と時間文字列から完全な日時オブジェクトを作成
+        const startDateTime = new Date(slot.date);
+        const [startHours, startMinutes] = slot.startTime
+          .split(":")
+          .map(Number);
+        startDateTime.setHours(startHours, startMinutes, 0, 0);
+
+        const endDateTime = new Date(slot.date);
+        const [endHours, endMinutes] = slot.endTime.split(":").map(Number);
+        endDateTime.setHours(endHours, endMinutes, 0, 0);
+
+        formData.append(`startTimes`, startDateTime.toISOString());
+        formData.append(`endTimes`, endDateTime.toISOString());
+      });
+
+      await createEvent(formData);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+      );
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTimeSlotsChange = (newTimeSlots: TimeSlot[]) => {
+    setTimeSlots(newTimeSlots);
+  };
 
   return (
-    <form action={createEvent} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="alert alert-error">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
           <span>{error}</span>
         </div>
       )}
 
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium mb-1">
-          イベントタイトル <span className="text-error">*</span>
+      <div className="form-control">
+        <label htmlFor="title" className="label">
+          <span className="label-text">
+            イベントタイトル <span className="text-error">*</span>
+          </span>
         </label>
         <input
-          type="text"
           id="title"
           name="title"
+          type="text"
           className="input input-bordered w-full"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -51,68 +87,44 @@ export default function EventForm() {
         />
       </div>
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium mb-1">
-          イベントの説明 (任意)
+      <div className="form-control">
+        <label htmlFor="description" className="label">
+          <span className="label-text">説明（任意）</span>
         </label>
         <textarea
           id="description"
           name="description"
-          rows={3}
-          className="textarea textarea-bordered w-full"
+          className="textarea textarea-bordered h-24"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-        ></textarea>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          候補日程 <span className="text-error">*</span>
-        </label>
-        <DateRangePicker onDatesChange={setSelectedDates} />
-      </div>
-
-      <div>
-        <label
-          htmlFor="adminPassword"
-          className="block text-sm font-medium mb-1"
-        >
-          管理者パスワード (任意)
-        </label>
-        <input
-          type="password"
-          id="adminPassword"
-          name="adminPassword"
-          className="input input-bordered w-full"
-          value={adminPassword}
-          onChange={(e) => setAdminPassword(e.target.value)}
-          placeholder="パスワードを設定しない場合は空欄"
         />
-        <p className="text-xs text-gray-500 mt-1">
-          パスワードを設定すると、管理者トークンに加えて、このパスワードでも認証できるようになります。
-        </p>
       </div>
 
-      <div>
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text">
+            候補日程 <span className="text-error">*</span>
+          </span>
+        </label>
+        <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
+      </div>
+
+      <div className="form-control mt-6">
         <button
           type="submit"
-          className="btn btn-primary w-full"
-          disabled={isSubmitting || selectedDates.length === 0}
+          className={`btn btn-primary ${isSubmitting ? "loading" : ""}`}
+          disabled={isSubmitting || timeSlots.length === 0}
         >
-          {isSubmitting ? (
-            <>
-              <span className="loading loading-spinner"></span>
-              送信中...
-            </>
-          ) : (
-            "イベントを作成"
-          )}
+          {isSubmitting ? "作成中..." : "イベントを作成"}
         </button>
       </div>
 
-      <div className="text-sm text-gray-500 mt-4">
-        * イベント作成後、参加者に共有するための公開リンクが発行されます。
-      </div>
+      {/* 選択された時間スロット数の表示 */}
+      {timeSlots.length > 0 && (
+        <div className="text-sm text-success">
+          {timeSlots.length}個の候補日程が選択されています
+        </div>
+      )}
     </form>
   );
 }

@@ -3,19 +3,26 @@
 import { useState } from "react";
 
 interface AvailabilitySummaryProps {
-  eventDates: { id: string; date_time: string; label?: string }[];
+  eventDates: {
+    id: string;
+    start_time: string;
+    end_time: string;
+    label?: string;
+  }[];
   participants: { id: string; name: string }[];
   availabilities: {
     participant_id: string;
     event_date_id: string;
     availability: boolean;
   }[];
+  finalDateId?: string | null;
 }
 
 export default function AvailabilitySummary({
   eventDates,
   participants,
   availabilities,
+  finalDateId,
 }: AvailabilitySummaryProps) {
   const [showDetailedView, setShowDetailedView] = useState(false);
 
@@ -41,11 +48,13 @@ export default function AvailabilitySummary({
 
       return {
         dateId: date.id,
-        dateTime: date.date_time,
+        startTime: date.start_time,
+        endTime: date.end_time,
         label: date.label,
         availableCount,
         unavailableCount,
-        formattedDate: formatDate(date.date_time),
+        formattedDate: formatDate(date.start_time),
+        isSelected: finalDateId === date.id,
       };
     });
   };
@@ -80,13 +89,19 @@ export default function AvailabilitySummary({
           </thead>
           <tbody>
             {summary.map((item) => (
-              <tr key={item.dateId}>
+              <tr
+                key={item.dateId}
+                className={item.isSelected ? "bg-success bg-opacity-10" : ""}
+              >
                 <td>
                   <span className="font-medium">{item.formattedDate}</span>
                   {item.label && (
                     <span className="ml-2 text-sm text-gray-500">
                       {item.label}
                     </span>
+                  )}
+                  {item.isSelected && (
+                    <span className="badge badge-success ml-2">確定</span>
                   )}
                 </td>
                 <td className="text-center">
@@ -123,7 +138,7 @@ export default function AvailabilitySummary({
                 <th>参加者</th>
                 {eventDates.map((date) => (
                   <th key={date.id} className="text-center whitespace-nowrap">
-                    {formatDate(date.date_time)}
+                    {formatDate(date.start_time)}
                   </th>
                 ))}
               </tr>

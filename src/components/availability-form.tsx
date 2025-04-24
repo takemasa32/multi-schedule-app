@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import { submitAvailability } from "@/app/actions";
+import { formatDateTimeWithDay } from "@/lib/utils";
 
 interface AvailabilityFormProps {
-  eventToken: string;
-  eventDates: { id: string; date_time: string; label?: string }[];
+  eventId: string;
+  publicToken: string;
+  eventDates: {
+    id: string;
+    start_time: string;
+    end_time: string;
+    label?: string;
+  }[];
 }
 
 export default function AvailabilityForm({
-  eventToken,
+  eventId,
+  publicToken,
   eventDates,
 }: AvailabilityFormProps) {
   const [name, setName] = useState("");
@@ -19,17 +27,21 @@ export default function AvailabilityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 日付を読みやすい形式にフォーマット
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-      hour: "numeric",
-      minute: "numeric",
-    });
+  // 時間範囲を読みやすい形式にフォーマット
+  const formatTimeRange = (startTime: string, endTime: string) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    // 同じ日の場合は日付を1回だけ表示
+    if (start.toDateString() === end.toDateString()) {
+      return `${formatDateTimeWithDay(start)} 〜 ${end
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${end.getMinutes().toString().padStart(2, "0")}`;
+    } else {
+      // 異なる日の場合は両方の日付を表示
+      return `${formatDateTimeWithDay(start)} 〜 ${formatDateTimeWithDay(end)}`;
+    }
   };
 
   const handleCheckboxChange = (dateId: string) => {
@@ -49,7 +61,6 @@ export default function AvailabilityForm({
   };
 
   // この関数はServer Actionを呼び出す前の準備として使用
-  // 実際の送信はformのaction属性がServer Actionを直接呼ぶ
   const handleSubmit = async (e: React.FormEvent) => {
     if (!validateForm()) {
       e.preventDefault();
@@ -57,6 +68,16 @@ export default function AvailabilityForm({
       setIsSubmitting(true);
       // formのaction属性がServer Actionを呼び出すため
       // ここでは送信準備のみ行う
+    }
+  };
+
+  // Server Actionを使用したフォーム送信処理
+  const handleFormAction = async (formData: FormData): Promise<void> => {
+    try {
+      await submitAvailability(formData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "送信に失敗しました");
+      setIsSubmitting(false);
     }
   };
 
@@ -84,12 +105,13 @@ export default function AvailabilityForm({
       )}
 
       <form
-        action={submitAvailability}
+        action={handleFormAction}
         onSubmit={handleSubmit}
         className="space-y-4"
       >
-        {/* イベントトークンを隠しフィールドとして保持 */}
-        <input type="hidden" name="event_token" value={eventToken} />
+        {/* イベント情報を隠しフィールドとして渡す */}
+        <input type="hidden" name="eventId" value={eventId} />
+        <input type="hidden" name="publicToken" value={publicToken} />
 
         <div>
           <label
@@ -127,7 +149,7 @@ export default function AvailabilityForm({
                 />
                 <label htmlFor={`availability_${date.id}`} className="ml-3">
                   <span className="font-medium">
-                    {formatDate(date.date_time)}
+                    {formatTimeRange(date.start_time, date.end_time)}
                   </span>
                   {date.label && (
                     <span className="ml-2 text-sm text-gray-500">
@@ -147,7 +169,7 @@ export default function AvailabilityForm({
         >
           {isSubmitting ? (
             <>
-              <span className="loading loading-spinner"></span>
+              <span className="loading loading-spinner loading-sm mr-2"></span>
               送信中...
             </>
           ) : (

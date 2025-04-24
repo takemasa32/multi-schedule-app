@@ -5,14 +5,30 @@ import { finalizeEvent } from "@/app/actions";
 
 interface FinalizeEventSectionProps {
   eventId: string;
-  eventDates: { id: string; date_time: string; label?: string }[];
+  eventDates: {
+    id: string;
+    start_time: string;
+    end_time: string;
+    label?: string;
+  }[];
   adminToken: string;
+  availabilities: {
+    participant_id: string;
+    event_date_id: string;
+    availability: boolean;
+  }[];
+  participants: {
+    id: string;
+    name: string;
+  }[];
 }
 
 export default function FinalizeEventSection({
   eventId,
   eventDates,
   adminToken,
+  availabilities,
+  participants,
 }: FinalizeEventSectionProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [selectedDateId, setSelectedDateId] = useState<string | null>(null);
@@ -55,6 +71,24 @@ export default function FinalizeEventSection({
     });
   };
 
+  // 選択した日程に参加可能な人数を計算
+  const getAvailableParticipantsCount = (dateId: string) => {
+    return availabilities.filter(
+      (a) => a.event_date_id === dateId && a.availability
+    ).length;
+  };
+
+  // 選択した日程に参加可能な参加者の名前リストを取得
+  const getAvailableParticipants = (dateId: string) => {
+    const availableParticipantIds = availabilities
+      .filter((a) => a.event_date_id === dateId && a.availability)
+      .map((a) => a.participant_id);
+
+    return participants
+      .filter((p) => availableParticipantIds.includes(p.id))
+      .map((p) => p.name);
+  };
+
   return (
     <div className="mt-8 border-t pt-6">
       <h3 className="text-xl font-bold mb-4">主催者専用: 日程の確定</h3>
@@ -63,12 +97,27 @@ export default function FinalizeEventSection({
         <div className="bg-warning p-4 rounded-lg">
           <h4 className="font-bold mb-2">確定しますか？</h4>
           <p className="mb-4">
-            {selectedDateId &&
-              `「${formatDate(
-                eventDates.find((d) => d.id === selectedDateId)?.date_time || ""
-              )}」
-              で確定します。この操作は元に戻せません。`}
+            {selectedDateId && (
+              <>
+                「
+                {formatDate(
+                  eventDates.find((d) => d.id === selectedDateId)?.start_time ||
+                    ""
+                )}
+                」 で確定します。この操作は元に戻せません。
+              </>
+            )}
           </p>
+          {selectedDateId && (
+            <div className="mb-4">
+              <p>参加可能: {getAvailableParticipantsCount(selectedDateId)}人</p>
+              {getAvailableParticipants(selectedDateId).length > 0 && (
+                <p className="text-sm text-gray-600">
+                  {getAvailableParticipants(selectedDateId).join(", ")}
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex gap-3">
             <button
               onClick={confirmFinalize}
@@ -106,13 +155,16 @@ export default function FinalizeEventSection({
               >
                 <div>
                   <span className="font-medium">
-                    {formatDate(date.date_time)}
+                    {formatDate(date.start_time)}〜{formatDate(date.end_time)}
                   </span>
                   {date.label && (
                     <span className="ml-2 text-sm text-gray-500">
                       {date.label}
                     </span>
                   )}
+                  <div className="text-sm">
+                    参加可能: {getAvailableParticipantsCount(date.id)}人
+                  </div>
                 </div>
                 <button
                   onClick={() => handleFinalize(date.id)}
