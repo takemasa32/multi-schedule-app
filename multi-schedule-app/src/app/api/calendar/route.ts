@@ -1,8 +1,6 @@
 import { NextRequest } from "next/server";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createServerSupabaseClient } from "@/lib/supabase";
 import { formatIcsDate } from "@/lib/utils";
-import { Database } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -15,7 +13,7 @@ export async function GET(
   }
 
   // Supabaseクライアントの初期化
-  const supabase = createServerComponentClient<Database>({ cookies });
+  const supabase = createServerSupabaseClient();
 
   try {
     // イベント情報の取得
