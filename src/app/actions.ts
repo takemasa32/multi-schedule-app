@@ -3,113 +3,112 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
-import { formatISO } from "date-fns";
 import { revalidatePath } from "next/cache";
 
+/**
+ * イベント作成処理
+ */
 export async function createEvent(formData: FormData) {
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string || null;
-
-  // 新しい仕様：開始時刻と終了時刻のペアを取得
-  const startTimes = formData.getAll("startTimes") as string[];
-  const endTimes = formData.getAll("endTimes") as string[];
-
-  // バリデーション
-  if (!title || title.trim() === "") {
-    throw new Error("タイトルは必須です");
-  }
-
-  if (startTimes.length === 0 || endTimes.length === 0 || startTimes.length !== endTimes.length) {
-    throw new Error("少なくとも1つの候補時間帯を設定してください");
-  }
-
-  // DB接続
-  const supabase = createClient();
-
   try {
+    // フォームからデータを取得
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string | null;
+
+    // 開始・終了時間の配列を取得
+    const startTimes = formData.getAll("startTimes") as string[];
+    const endTimes = formData.getAll("endTimes") as string[];
+
+    // バリデーション
+    if (!title || !title.trim()) {
+      throw new Error("タイトルを入力してください");
+    }
+
+    if (!startTimes.length || !endTimes.length || startTimes.length !== endTimes.length) {
+      throw new Error("候補日程の情報が正しくありません");
+    }
+
+    // トークン生成
     const publicToken = uuidv4();
     const adminToken = uuidv4();
 
+    // Supabaseクライアント取得
+    const supabase = createClient();
+
     // イベント作成
-    const { data: eventData, error } = await supabase
+    const { data: eventData, error: eventError } = await supabase
       .from("events")
       .insert({
-        title,
-        description,
+        title: title.trim(),
+        description: description?.trim() || null,
         public_token: publicToken,
         admin_token: adminToken,
       })
-      .select("id, public_token, admin_token")
+      .select("id")
       .single();
 
-    if (error || !eventData) {
-      console.error("Event creation error:", error);
-      throw new Error("イベントの作成に失敗しました");
+    if (eventError || !eventData) {
+      console.error("イベント作成エラー:", eventError);
+      throw new Error("イベント作成に失敗しました。もう一度お試しください。");
     }
 
-    // 候補日程の作成
-    const dateRows = [];
+    // 候補日程を登録
+    const dateEntries = [];
     for (let i = 0; i < startTimes.length; i++) {
-      const startTime = new Date(startTimes[i]);
-      const endTime = new Date(endTimes[i]);
-
-      // 有効な日時かチェック
-      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-        continue; // 無効な日時はスキップ
-      }
-
-      // 終了が開始より後であることを確認
-      if (startTime >= endTime) {
-        continue; // 無効な時間帯はスキップ
-      }
-
-      dateRows.push({
+      dateEntries.push({
         event_id: eventData.id,
-        start_time: formatISO(startTime),
-        end_time: formatISO(endTime)
+        start_time: startTimes[i],
+        end_time: endTimes[i],
       });
-    }
-
-    if (dateRows.length === 0) {
-      throw new Error("有効な候補時間帯がありません");
     }
 
     const { error: datesError } = await supabase
       .from("event_dates")
-      .insert(dateRows);
+      .insert(dateEntries);
 
     if (datesError) {
-      console.error("Event dates error:", datesError);
-      throw new Error("候補日程の作成に失敗しました");
+      console.error("候補日程登録エラー:", datesError);
+      // イベントは作成済みだがロールバックはせず、エラーを返す
+      throw new Error("候補日程の登録に失敗しました。イベント管理者に連絡してください。");
     }
 
     // 成功時はイベント詳細ページへリダイレクト
     // 管理者用クエリパラメータを追加
     redirect(`/event/${publicToken}?admin=${adminToken}`);
+
   } catch (err) {
+    // エラーログ出力
     console.error("Error in createEvent:", err);
+
+    // Next.jsのリダイレクト例外はそのまま投げる（リダイレクト処理を妨げない）
+    if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+      throw err;
+    }
+
+    // それ以外のエラーは適切なメッセージにラップして返す
     throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
   }
 }
 
-// 参加者の回答を保存するAction
+/**
+ * 参加者の回答を保存するAction
+ */
 export async function submitAvailability(formData: FormData) {
-  const eventId = formData.get("eventId") as string;
-  const publicToken = formData.get("publicToken") as string;
-  const participantName = formData.get("participant_name") as string;
-
-  // バリデーション
-  if (!participantName || participantName.trim() === "") {
-    throw new Error("お名前は必須です");
-  }
-
-  if (!eventId || !publicToken) {
-    throw new Error("イベント情報が不正です");
-  }
-
-  const supabase = createClient();
-
   try {
+    const eventId = formData.get("eventId") as string;
+    const publicToken = formData.get("publicToken") as string;
+    const participantName = formData.get("participant_name") as string;
+
+    // バリデーション
+    if (!participantName || participantName.trim() === "") {
+      throw new Error("お名前は必須です");
+    }
+
+    if (!eventId || !publicToken) {
+      throw new Error("イベント情報が不正です");
+    }
+
+    const supabase = createClient();
+
     // イベント情報の確認
     const { data: event, error: eventError } = await supabase
       .from("events")
@@ -169,12 +168,7 @@ export async function submitAvailability(formData: FormData) {
     }
 
     // フォームデータから利用可能時間を収集
-    const availabilityEntries: Array<{
-      event_id: string;
-      participant_id: string;
-      event_date_id: string;
-      availability: boolean;
-    }> = [];
+    const availabilityEntries = [];
 
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("availability_")) {
@@ -213,19 +207,21 @@ export async function submitAvailability(formData: FormData) {
   }
 }
 
-// イベント日程確定用のAction
+/**
+ * イベント日程確定用のAction
+ */
 export async function finalizeEvent(eventId: string, dateId: string, adminToken: string) {
-  if (!eventId || !dateId || !adminToken) {
-    throw new Error("必須パラメータが不足しています");
-  }
-
-  const supabase = createClient();
-
   try {
+    if (!eventId || !dateId || !adminToken) {
+      throw new Error("必須パラメータが不足しています");
+    }
+
+    const supabase = createClient();
+
     // 管理者権限の確認
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id")
+      .select("id, public_token")
       .eq("id", eventId)
       .eq("admin_token", adminToken)
       .single();
@@ -233,6 +229,19 @@ export async function finalizeEvent(eventId: string, dateId: string, adminToken:
     if (eventError || !event) {
       console.error("Admin validation error:", eventError);
       throw new Error("管理者権限がありません");
+    }
+
+    // 選択された日程が存在するか確認
+    const { data: dateCheck, error: dateCheckError } = await supabase
+      .from("event_dates")
+      .select("id")
+      .eq("id", dateId)
+      .eq("event_id", eventId)
+      .single();
+
+    if (dateCheckError || !dateCheck) {
+      console.error("Invalid date selection:", dateCheckError);
+      throw new Error("選択された日程が見つかりません");
     }
 
     // イベント日程の確定
@@ -249,8 +258,8 @@ export async function finalizeEvent(eventId: string, dateId: string, adminToken:
       throw new Error("イベント確定に失敗しました");
     }
 
-    // URLからクエリパラメータを維持したままページを再検証
-    revalidatePath(`/event/[public_id]`);
+    // ページを再検証
+    revalidatePath(`/event/${event.public_token}`);
 
     return { success: true };
   } catch (err) {

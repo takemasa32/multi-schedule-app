@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { formatDateTimeWithDay } from "@/lib/utils";
 
 interface EventHeaderProps {
   title: string;
@@ -16,7 +15,6 @@ export function EventHeader({
   title,
   description,
   isFinalized,
-  finalDate,
 }: EventHeaderProps) {
   const [copied, setCopied] = useState(false);
 

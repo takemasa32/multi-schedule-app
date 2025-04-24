@@ -20,15 +20,24 @@ export default async function EventPage({
   params,
   searchParams,
 }: EventPageProps) {
-  const { public_id } = params;
-  const adminToken = searchParams.admin || null;
+  // Next.js 15.3.1に対応するため、paramsとsearchParamsを非同期で取得
+  const resolvedParams = await Promise.resolve(params);
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+
+  const { public_id } = resolvedParams;
+  const adminToken = resolvedSearchParams.admin || null;
 
   const supabase = createClient();
 
   // イベント情報を取得
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("*, event_dates(*)")
+    .select(
+      `
+      *,
+      event_dates!event_dates_event_id_fkey(*)
+    `
+    )
     .eq("public_token", public_id)
     .single();
 
