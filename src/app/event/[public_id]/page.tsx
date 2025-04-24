@@ -41,7 +41,7 @@ export default async function EventDetailPage({
   }
 
   // 管理者かどうかの確認
-  const isAdmin = adminToken && adminToken === event.admin_token;
+  const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
 
   // 参加者と回答情報を取得
   const { data: participants } = await supabase
