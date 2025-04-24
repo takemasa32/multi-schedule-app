@@ -1,176 +1,252 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  format,
+  eachDayOfInterval,
+  isWithinInterval,
+  isEqual,
+  parseISO,
+} from "date-fns";
+import { ja } from "date-fns/locale";
 
 interface DateRangePickerProps {
-  dateRange: {
-    startDate: Date;
-    endDate: Date;
-  };
-  setDateRange: (range: { startDate: Date; endDate: Date }) => void;
-  excludedDates: Date[];
-  onAddExcludedDate: (date: Date) => void;
-  onRemoveExcludedDate: (index: number) => void;
+  onDatesChange: (dates: Date[]) => void;
 }
 
 export default function DateRangePicker({
-  dateRange,
-  setDateRange,
-  excludedDates,
-  onAddExcludedDate,
-  onRemoveExcludedDate,
+  onDatesChange,
 }: DateRangePickerProps) {
-  const [newExcludeDate, setNewExcludeDate] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [excludedDates, setExcludedDates] = useState<Date[]>([]);
+  const [excludeDate, setExcludeDate] = useState<string>("");
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // 日付をYYYY-MM-DD形式に変換する関数
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split("T")[0];
+  // 無限ループを修正：依存配列を適切に設定
+  useEffect(() => {
+    if (startDate && endDate) {
+      try {
+        // 開始日と終了日の間の全日付を生成
+        const allDates = eachDayOfInterval({ start: startDate, end: endDate });
+
+        // 除外日を除いたリストを作成
+        const filteredDates = allDates.filter(
+          (date) =>
+            !excludedDates.some((excludedDate) => isEqual(excludedDate, date))
+        );
+
+        // 状態更新とコールバック
+        setSelectedDates(filteredDates);
+        onDatesChange(filteredDates);
+        setErrorMessage(null);
+      } catch (error) {
+        setErrorMessage(
+          "正しい期間を選択してください。開始日は終了日より前である必要があります。"
+        );
+        setSelectedDates([]);
+        onDatesChange([]);
+      }
+    }
+  }, [startDate, endDate, excludedDates, onDatesChange]); // 依存配列を明示的に設定
+
+  // 日付文字列を安全にDate型に変換
+  const parseDateSafely = (dateString: string): Date | null => {
+    try {
+      if (!dateString) return null;
+      const date = parseISO(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date;
+    } catch {
+      return null;
+    }
   };
 
-  // 期間の開始日変更ハンドラ
+  // 開始日の変更処理
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newStartDate = new Date(e.target.value);
-    setDateRange({
-      startDate: newStartDate,
-      endDate:
-        newStartDate > dateRange.endDate ? newStartDate : dateRange.endDate,
-    });
+    const newDate = parseDateSafely(e.target.value);
+    setStartDate(newDate);
+    if (newDate && endDate && newDate > endDate) {
+      setErrorMessage("開始日は終了日より前である必要があります");
+    } else {
+      setErrorMessage(null);
+    }
   };
 
-  // 期間の終了日変更ハンドラ
+  // 終了日の変更処理
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEndDate = new Date(e.target.value);
-    setDateRange({
-      startDate:
-        newEndDate < dateRange.startDate ? newEndDate : dateRange.startDate,
-      endDate: newEndDate,
-    });
+    const newDate = parseDateSafely(e.target.value);
+    setEndDate(newDate);
+    if (startDate && newDate && startDate > newDate) {
+      setErrorMessage("終了日は開始日より後である必要があります");
+    } else {
+      setErrorMessage(null);
+    }
   };
 
-  // 除外日追加ハンドラ
-  const handleAddExcludedDate = () => {
-    if (!newExcludeDate) return;
-
-    const excludeDate = new Date(newExcludeDate);
-
-    // 範囲内の日付であることを確認
-    if (excludeDate < dateRange.startDate || excludeDate > dateRange.endDate) {
-      alert("除外する日付は期間内の日付を選択してください");
+  // 除外日を追加
+  const handleAddExcludeDate = () => {
+    if (!excludeDate) {
+      setErrorMessage("除外する日付を選択してください");
       return;
     }
 
-    // 既に除外リストにあるか確認
-    const alreadyExists = excludedDates.some(
-      (date) =>
-        date.getFullYear() === excludeDate.getFullYear() &&
-        date.getMonth() === excludeDate.getMonth() &&
-        date.getDate() === excludeDate.getDate()
+    const newExcludeDate = parseDateSafely(excludeDate);
+    if (!newExcludeDate) {
+      setErrorMessage("有効な日付を選択してください");
+      return;
+    }
+
+    // 既に追加済みの日付は追加しない
+    if (excludedDates.some((date) => isEqual(date, newExcludeDate))) {
+      setErrorMessage("この日付は既に除外リストに追加されています");
+      return;
+    }
+
+    // 期間内の日付のみ除外可能
+    if (
+      startDate &&
+      endDate &&
+      isWithinInterval(newExcludeDate, { start: startDate, end: endDate })
+    ) {
+      setExcludedDates([...excludedDates, newExcludeDate]);
+      setExcludeDate("");
+      setErrorMessage(null);
+    } else {
+      setErrorMessage("除外日は選択した期間内である必要があります");
+    }
+  };
+
+  // 除外日を削除
+  const handleRemoveExcludeDate = (dateToRemove: Date) => {
+    setExcludedDates(
+      excludedDates.filter((date) => !isEqual(date, dateToRemove))
     );
-
-    if (alreadyExists) {
-      alert("この日付は既に除外リストに追加されています");
-      return;
-    }
-
-    onAddExcludedDate(excludeDate);
-    setNewExcludeDate("");
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {errorMessage && (
+        <div className="alert alert-warning">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">開始日</span>
+        <div>
+          <label
+            htmlFor="start-date"
+            className="block text-sm font-medium mb-1"
+          >
+            開始日 <span className="text-error">*</span>
           </label>
           <input
             type="date"
-            value={formatDate(dateRange.startDate)}
+            id="start-date"
+            className="input input-bordered w-full"
             onChange={handleStartDateChange}
-            className="input input-bordered"
-            min={formatDate(new Date())} // 今日以降の日付のみ
+            required
           />
         </div>
-
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">終了日</span>
+        <div>
+          <label htmlFor="end-date" className="block text-sm font-medium mb-1">
+            終了日 <span className="text-error">*</span>
           </label>
           <input
             type="date"
-            value={formatDate(dateRange.endDate)}
+            id="end-date"
+            className="input input-bordered w-full"
             onChange={handleEndDateChange}
-            className="input input-bordered"
-            min={formatDate(dateRange.startDate)} // 開始日以降の日付のみ
+            min={startDate ? format(startDate, "yyyy-MM-dd") : undefined}
+            required
           />
         </div>
       </div>
 
-      <div className="divider">除外する日</div>
-
-      <div className="flex flex-col md:flex-row gap-2">
-        <div className="form-control flex-1">
+      <div className="space-y-2">
+        <label htmlFor="exclude-date" className="block text-sm font-medium">
+          除外日を設定
+        </label>
+        <div className="flex space-x-2">
           <input
             type="date"
-            value={newExcludeDate}
-            onChange={(e) => setNewExcludeDate(e.target.value)}
-            className="input input-bordered"
-            min={formatDate(dateRange.startDate)}
-            max={formatDate(dateRange.endDate)}
+            id="exclude-date"
+            className="input input-bordered flex-1"
+            value={excludeDate}
+            onChange={(e) => setExcludeDate(e.target.value)}
+            min={startDate ? format(startDate, "yyyy-MM-dd") : undefined}
+            max={endDate ? format(endDate, "yyyy-MM-dd") : undefined}
           />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleAddExcludeDate}
+          >
+            除外日を追加
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleAddExcludedDate}
-          className="btn btn-outline"
-          disabled={!newExcludeDate}
-        >
-          除外日を追加
-        </button>
       </div>
 
       {/* 除外日リスト */}
       {excludedDates.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-sm font-medium mb-2">除外する日程：</h3>
-          <div className="flex flex-wrap gap-2">
+        <div className="bg-base-200 p-3 rounded-md">
+          <h4 className="font-medium mb-2">除外日一覧:</h4>
+          <ul className="space-y-1">
             {excludedDates.map((date, index) => (
-              <div key={index} className="badge badge-lg gap-2">
-                {date.toLocaleDateString("ja-JP")}
+              <li key={index} className="flex justify-between items-center">
+                <span>{format(date, "yyyy年MM月dd日(E)", { locale: ja })}</span>
                 <button
                   type="button"
                   className="btn btn-ghost btn-xs"
-                  onClick={() => onRemoveExcludedDate(index)}
+                  onClick={() => handleRemoveExcludeDate(date)}
                 >
                   ✕
                 </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 候補日程プレビュー */}
+      {selectedDates.length > 0 && (
+        <div className="mt-4">
+          <h4 className="font-medium mb-2">
+            候補日程プレビュー（{selectedDates.length}日間）:
+          </h4>
+          <div className="bg-base-200 p-3 rounded-md max-h-40 overflow-y-auto">
+            {selectedDates.map((date, index) => (
+              <div key={index} className="mb-1">
+                {format(date, "yyyy年MM月dd日(E)", { locale: ja })}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 候補日程のプレビュー */}
-      <div className="card bg-base-200 p-4 mt-4">
-        <h3 className="text-sm font-medium mb-2">候補日程プレビュー：</h3>
-        <p className="text-sm">
-          {formatDate(dateRange.startDate)} から {formatDate(dateRange.endDate)}{" "}
-          の期間
-          {excludedDates.length > 0
-            ? `（${excludedDates.length}日を除外）`
-            : ""}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          候補日数:{" "}
-          {Math.floor(
-            (dateRange.endDate.getTime() - dateRange.startDate.getTime()) /
-              (1000 * 60 * 60 * 24)
-          ) +
-            1 -
-            excludedDates.length}
-          日
-        </p>
-      </div>
+      {/* 日程情報を隠し項目として保持 */}
+      {selectedDates.map((date, index) => (
+        <input
+          key={index}
+          type="hidden"
+          name="dates"
+          value={format(date, "yyyy-MM-dd")}
+        />
+      ))}
     </div>
   );
 }
