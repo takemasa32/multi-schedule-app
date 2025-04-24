@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
 
 export async function GET(
@@ -8,6 +8,8 @@ export async function GET(
 ) {
   try {
     const eventId = params.event_id;
+    // サーバーサイド用のSupabaseクライアントを初期化
+    const supabaseAdmin = getSupabaseServerClient();
 
     // イベント情報を取得
     const { data: event, error: eventError } = await supabaseAdmin
@@ -84,7 +86,7 @@ function generateIcsContent({
   eventId
 }: IcsEventProps): string {
   const now = new Date();
-  
+
   // ICSファイルの内容を構築
   return [
     'BEGIN:VCALENDAR',

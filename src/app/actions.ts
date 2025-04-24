@@ -101,7 +101,8 @@ export async function submitAvailability(formData: FormData) {
       throw new Error("このイベントは既に確定済みです");
     }
 
-    // 参加者登録
+    // 同じ名前でも別参加者として登録するため
+    // 参加者レコードを無条件に新規作成
     const { data: newParticipant, error: participantError } = await supabaseAdmin
       .from("participants")
       .insert({
@@ -112,7 +113,7 @@ export async function submitAvailability(formData: FormData) {
 
     if (participantError || !newParticipant?.length) {
       console.error("参加者登録エラー:", participantError);
-      throw new Error("参加者の登録に失敗しました");
+      throw new Error("参加者の登録に失敗しました。同じイベントで既に同じ名前が使われている可能性があります。");
     }
 
     const participantId = newParticipant[0].id;
