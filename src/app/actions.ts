@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 
@@ -32,7 +32,7 @@ export async function createEvent(formData: FormData) {
     const adminToken = uuidv4();
 
     // Supabaseクライアント取得
-    const supabase = createClient();
+    const supabase = createSupabaseClient();
 
     // イベント作成
     const { data: eventData, error: eventError } = await supabase
@@ -92,7 +92,7 @@ export async function createEvent(formData: FormData) {
 /**
  * 参加者の回答を保存するAction
  */
-export async function submitAvailability(formData: FormData) {
+export async function submitAvailability(formData: FormData): Promise<{ success: boolean; message?: string }> {
   try {
     const eventId = formData.get("eventId") as string;
     const publicToken = formData.get("publicToken") as string;
@@ -107,7 +107,7 @@ export async function submitAvailability(formData: FormData) {
       throw new Error("イベント情報が不正です");
     }
 
-    const supabase = createClient();
+    const supabase = createSupabaseClient();
 
     // イベント情報の確認
     const { data: event, error: eventError } = await supabase
@@ -196,10 +196,16 @@ export async function submitAvailability(formData: FormData) {
     // ページを再検証（キャッシュを更新）
     revalidatePath(`/event/${publicToken}`);
 
-    return { success: true };
+    return { 
+      success: true, 
+      message: "回答を送信しました。ありがとうございます！" 
+    };
   } catch (err) {
     console.error("Error in submitAvailability:", err);
-    throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
+    return { 
+      success: false, 
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました" 
+    };
   }
 }
 
@@ -213,7 +219,7 @@ export async function finalizeEvent(eventId: string, dateIds: string[], adminTok
       throw new Error("必須パラメータが不足しています");
     }
 
-    const supabase = createClient();
+    const supabase = createSupabaseClient();
 
     // 管理者権限の確認
     const { data: event, error: eventError } = await supabase

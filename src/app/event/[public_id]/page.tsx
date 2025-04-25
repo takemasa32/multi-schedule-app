@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import { EventHeader } from "@/components/event-header";
 import AvailabilityForm from "@/components/availability-form";
 import AvailabilitySummary from "@/components/availability-summary";
@@ -27,7 +27,7 @@ export default async function EventPage({
   const { public_id } = resolvedParams;
   const adminToken = resolvedSearchParams.admin || null;
 
-  const supabase = createClient();
+  const supabase = createSupabaseClient();
 
   // イベント情報を取得
   const { data: event, error: eventError } = await supabase
