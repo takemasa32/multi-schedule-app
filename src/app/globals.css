@@ -1,9 +1,7 @@
 @import "tailwindcss";
-@import "tailwindcss/preflight";
-@tailwind utilities;
+@plugin "daisyui";
 
 @import "../styles/theme.css";
-@plugin "daisyui";
 
 body {
   @apply bg-base-100 text-base-content;
@@ -110,40 +108,40 @@ body {
   }
 }
 
-/* Heatmap Colors - Using Primary Color Scale */
+/* Heatmap Colors */
 @layer components {
   .heatmap-0 {
     @apply bg-base-200;
   }
   .heatmap-1 {
-    @apply bg-primary-50;
+    @apply bg-base-100;
   }
   .heatmap-2 {
-    @apply bg-primary-100;
+    @apply bg-base-100 text-primary/30;
   }
   .heatmap-3 {
-    @apply bg-primary-200;
+    @apply bg-primary/10;
   }
   .heatmap-4 {
-    @apply bg-primary-300;
+    @apply bg-primary/20;
   }
   .heatmap-5 {
-    @apply bg-primary-400;
+    @apply bg-primary/30;
   }
   .heatmap-6 {
-    @apply bg-primary-500;
+    @apply bg-primary/50;
   }
   .heatmap-7 {
-    @apply bg-primary-600;
+    @apply bg-primary/70;
   }
   .heatmap-8 {
-    @apply bg-primary-700;
+    @apply bg-primary/80;
   }
   .heatmap-9 {
-    @apply bg-primary-800;
+    @apply bg-primary/90;
   }
   .heatmap-10 {
-    @apply bg-primary-900;
+    @apply bg-primary;
   }
 
   /* 高い値のヒートマップ色はテキストを白に */

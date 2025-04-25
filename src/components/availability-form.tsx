@@ -438,7 +438,7 @@ export default function AvailabilityForm({
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
               <label className="block text-sm font-medium">
-                候補日程から参加可能な日を選択してください{" "}
+                候補日程から参加可能な日を選択してください
                 <span className="text-error">*</span>
               </label>
 
@@ -450,7 +450,29 @@ export default function AvailabilityForm({
                 <button
                   type="button"
                   className={`join-item btn btn-sm ${
-                    viewMode === "list" ? "btn-active bg-white" : ""
+                    viewMode === "heatmap"
+                      ? "btn-active bg-primary text-primary-content font-medium"
+                      : "text-base-content"
+                  }`}
+                  onClick={() => setViewMode("heatmap")}
+                  aria-pressed={viewMode === "heatmap"}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  ヒートマップ
+                </button>
+                <button
+                  type="button"
+                  className={`join-item btn btn-sm ${
+                    viewMode === "list"
+                      ? "btn-active bg-primary text-primary-content font-medium"
+                      : "text-base-content"
                   }`}
                   onClick={() => setViewMode("list")}
                   aria-pressed={viewMode === "list"}
@@ -467,12 +489,14 @@ export default function AvailabilityForm({
                       clipRule="evenodd"
                     />
                   </svg>
-                  リスト
+                  個別
                 </button>
                 <button
                   type="button"
                   className={`join-item btn btn-sm ${
-                    viewMode === "table" ? "btn-active bg-white" : ""
+                    viewMode === "table"
+                      ? "btn-active bg-primary text-primary-content font-medium"
+                      : "text-base-content"
                   }`}
                   onClick={() => setViewMode("table")}
                   aria-pressed={viewMode === "table"}
@@ -489,25 +513,7 @@ export default function AvailabilityForm({
                       clipRule="evenodd"
                     />
                   </svg>
-                  表
-                </button>
-                <button
-                  type="button"
-                  className={`join-item btn btn-sm ${
-                    viewMode === "heatmap" ? "btn-active bg-white" : ""
-                  }`}
-                  onClick={() => setViewMode("heatmap")}
-                  aria-pressed={viewMode === "heatmap"}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-1"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                  ヒートマップ
+                  リスト
                 </button>
               </div>
             </div>

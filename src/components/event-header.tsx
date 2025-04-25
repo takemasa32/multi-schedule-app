@@ -6,6 +6,7 @@ interface EventHeaderProps {
   title: string;
   description: string | null;
   isFinalized: boolean;
+  isAdmin?: boolean;
   finalDate?: {
     date_time: string;
   } | null;
@@ -15,6 +16,7 @@ export function EventHeader({
   title,
   description,
   isFinalized,
+  isAdmin,
 }: EventHeaderProps) {
   const [copied, setCopied] = useState(false);
 
@@ -42,7 +44,7 @@ export function EventHeader({
         <p className="text-gray-600 mb-4 whitespace-pre-line">{description}</p>
       )}
 
-      {!isFinalized && (
+      {!isFinalized && isAdmin && (
         <div className="alert alert-info text-sm mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
