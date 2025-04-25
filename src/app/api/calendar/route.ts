@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import { formatIcsDate } from "@/lib/utils";
 
 export async function GET(
@@ -13,7 +13,7 @@ export async function GET(
   }
 
   // Supabaseクライアントの初期化
-  const supabase = createServerSupabaseClient();
+  const supabase = createSupabaseClient();
 
   try {
     // イベント情報の取得

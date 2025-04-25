@@ -43,6 +43,7 @@ export default function AdminPasswordForm({
       }
     } catch (err) {
       setError("認証処理中にエラーが発生しました");
+      console.error("Error during password verification:", err);
       setIsSubmitting(false);
     }
   };

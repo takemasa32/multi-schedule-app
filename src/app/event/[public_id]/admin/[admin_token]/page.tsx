@@ -1,10 +1,9 @@
-import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import AdminPasswordForm from "./password-form";
 import { adminRedirect } from "../actions";
 
 // サーバーサイド用Supabaseクライアントの初期化
-const supabaseAdmin = getSupabaseServerClient();
+const supabaseAdmin = createSupabaseClient();
 
 // この管理者ページは単なるリダイレクターとして機能し、
 // admin_tokenをセッションに保存してからイベント詳細ページへリダイレクトします

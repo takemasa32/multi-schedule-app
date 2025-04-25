@@ -3,10 +3,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import * as bcrypt from "bcryptjs";
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 
 // サーバーサイド用Supabaseクライアントの初期化
-const supabaseAdmin = getSupabaseServerClient();
+const supabaseAdmin = createSupabaseClient();
 
 // CookieをセットするためのServer Action
 export async function setAdminTokenCookie(adminToken: string) {
@@ -59,21 +59,21 @@ export async function verifyAdminPassword(formData: FormData) {
 
     // パスワードを検証
     const isPasswordValid = await bcrypt.compare(password, event.admin_password_hash);
-    
+
     if (!isPasswordValid) {
       return { success: false, error: "パスワードが正しくありません" };
     }
 
     // 認証成功: Cookieを設定してリダイレクト
     await setAdminTokenCookie(event.admin_token);
-    
+
     // リダイレクトは直接行えないのでsuccessフラグを返す
     return { success: true, redirectTo: `/event/${publicId}` };
   } catch (error) {
     console.error("パスワード認証エラー:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "認証処理中にエラーが発生しました" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "認証処理中にエラーが発生しました"
     };
   }
 }

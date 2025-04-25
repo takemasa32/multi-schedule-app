@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import { formatIcsDate } from '@/lib/utils';
 
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
     const isGoogleCalendar = url.searchParams.get('googleCalendar') === 'true';
 
     // サーバーサイド用のSupabaseクライアントを初期化
-    const supabase = createClient();
+    const supabase = createSupabaseClient();
 
     // イベント情報を取得
     const { data: event, error: eventError } = await supabase
