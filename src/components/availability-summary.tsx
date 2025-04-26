@@ -88,15 +88,30 @@ export default function AvailabilitySummary({
   // 時間をフォーマット
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    // 00:00の場合は24:00として表示
+    
+    // 00:00の場合は24:00として表示する条件を修正
     if (date.getHours() === 0 && date.getMinutes() === 0) {
-      return "24:00";
-    } else {
-      return date.toLocaleTimeString("ja-JP", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      const prevDate = new Date(date);
+      prevDate.setDate(prevDate.getDate() - 1);
+      prevDate.setHours(0, 0, 0, 0); // 日付部分だけ比較するため時刻部分をリセット
+      
+      // 日付部分の比較を行い、前日のイベントがあるか確認
+      for (const eventDate of eventDates) {
+        const startDate = new Date(eventDate.start_time);
+        const startDay = new Date(startDate);
+        startDay.setHours(0, 0, 0, 0); // 時刻部分をリセット
+        
+        // 前日のイベントがあれば 24:00 と表示
+        if (startDay.getTime() === prevDate.getTime()) {
+          return "24:00";
+        }
+      }
     }
+    
+    return date.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // 曜日を抽出
@@ -108,10 +123,12 @@ export default function AvailabilitySummary({
   // 日付だけを抽出 (YYYY/MM/DD形式)
   const getDateString = (dateString: string) => {
     const date = new Date(dateString);
+    // タイムゾーンの問題を避けるため、UTCベースで日付を取得
     return date.toLocaleDateString("ja-JP", {
       year: "numeric",
       month: "numeric",
       day: "numeric",
+      timeZone: "Asia/Tokyo", // 明示的に日本時間を指定
     });
   };
 
@@ -141,6 +158,7 @@ export default function AvailabilitySummary({
 
     eventDates.forEach((date) => {
       const startTimeObj = new Date(date.start_time);
+      // 開始時刻をキーとして使用
       const timeKey = `${startTimeObj
         .getHours()
         .toString()
@@ -148,15 +166,37 @@ export default function AvailabilitySummary({
         .getMinutes()
         .toString()
         .padStart(2, "0")}`;
+        
       if (!timeMap.has(timeKey)) {
         const endTimeObj = new Date(date.end_time);
-        const endTimeKey = `${endTimeObj
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${endTimeObj
-          .getMinutes()
-          .toString()
-          .padStart(2, "0")}`;
+        // 終了時刻のフォーマット
+        let endTimeKey;
+        
+        // 00:00の場合は24:00として表示するかどうかを判断
+        if (endTimeObj.getHours() === 0 && endTimeObj.getMinutes() === 0) {
+          // 開始日と終了日を比較
+          const startDate = new Date(startTimeObj);
+          startDate.setHours(0, 0, 0, 0);
+          
+          const endDate = new Date(endTimeObj);
+          endDate.setHours(0, 0, 0, 0);
+          
+          // 終了日が開始日の翌日である場合は24:00と表示
+          if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
+            endTimeKey = "24:00";
+          } else {
+            endTimeKey = `${endTimeObj.getHours().toString().padStart(2, "0")}:${endTimeObj
+              .getMinutes()
+              .toString()
+              .padStart(2, "0")}`;
+          }
+        } else {
+          endTimeKey = `${endTimeObj.getHours().toString().padStart(2, "0")}:${endTimeObj
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")}`;
+        }
+        
         timeMap.set(timeKey, {
           startTime: timeKey,
           endTime: endTimeKey,
@@ -262,8 +302,13 @@ export default function AvailabilitySummary({
 
     // イベント日程をマップに変換
     eventDates.forEach((date) => {
+      const startDate = new Date(date.start_time);
       const dateStr = getDateString(date.start_time);
-      const timeStr = formatTime(date.start_time);
+      // 時間部分をキーに使用
+      const timeStr = `${startDate.getHours().toString().padStart(2, "0")}:${startDate
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
       const key = `${dateStr}_${timeStr}`;
 
       const availableCount = availabilities.filter(

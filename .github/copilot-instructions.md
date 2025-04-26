@@ -288,7 +288,12 @@ project-root/  # 実際のプロジェクトルート
 
    - id (UUID, PK): 候補日程の ID。
    - event_id (UUID, 外部キー references events.id on delete cascade): 所属するイベントの ID。親イベントが削除されたら候補も削除。
-   - start_time timestamp NOT NULL, end_time timestamp NOT NULL: 候補。タイムゾーンは UTC に統一し、必要なら別途 TZ 情報を持つか、ユーザーに合わせクライアント表示時に変換します（簡易のため UTC 前提）。
+   - start_time timestamp NOT NULL, end_time timestamp NOT NULL: 候補。タイムゾーンは UTC に統一し、また実装簡易化のため、表示時などにもタイムゾーンは考慮しない処理にする。
+     例）`      const dateKey = [
+     start.getFullYear(),
+     String(start.getMonth() + 1).padStart(2, "0"),
+     String(start.getDate()).padStart(2, "0"),
+   ].join("-");`
 
    > 候補日程は「日時」ではなく「時間帯」として管理され、各レコードは開始時刻 (start_time) と終了時刻 (end_time) の範囲を持つ構成とします。例：2024-04-02 10:00 ～ 2024-04-02 11:00
 

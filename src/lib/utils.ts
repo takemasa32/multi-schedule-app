@@ -104,3 +104,85 @@ export function generateUuid(): string {
     return v.toString(16);
   });
 }
+
+/**
+ * Supabaseのクエリを使って、ページネーション処理を行いながら全てのデータを取得する関数
+ * @param query Supabaseのクエリオブジェクト（from().select()など）
+ * @param pageSize 1回あたりの取得サイズ（最大1000）
+ * @returns 全データの配列
+ */
+export async function fetchAllPaginated<T>(query: any, pageSize = 1000): Promise<T[]> {
+  let allData: T[] = [];
+  let page = 0;
+  let hasMoreData = true;
+
+  while (hasMoreData) {
+    const { data, error } = await query
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('データ取得エラー:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      hasMoreData = false;
+    } else {
+      allData = [...allData, ...data];
+
+      // 取得したデータが要求したページサイズより少ない場合は、これ以上のデータがないと判断
+      if (data.length < pageSize) {
+        hasMoreData = false;
+      } else {
+        page++;
+      }
+    }
+  }
+
+  return allData;
+}
+
+/**
+ * 指定したフィールドで並べ替えたデータをページネーション処理しながら全て取得する関数
+ * @param query Supabaseのクエリオブジェクト
+ * @param orderField 並び替えのフィールド
+ * @param options 並び替えオプション
+ * @param pageSize 1回あたりの取得サイズ（最大1000）
+ * @returns 全データの配列
+ */
+export async function fetchAllPaginatedWithOrder<T>(
+  query: any,
+  orderField: string,
+  options: { ascending: boolean } = { ascending: true },
+  pageSize = 1000
+): Promise<T[]> {
+  let allData: T[] = [];
+  let page = 0;
+  let hasMoreData = true;
+
+  while (hasMoreData) {
+    const { data, error } = await query
+      .order(orderField, options)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (error) {
+      console.error('データ取得エラー:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      hasMoreData = false;
+    } else {
+      allData = [...allData, ...data];
+
+      if (data.length < pageSize) {
+        hasMoreData = false;
+      } else {
+        page++;
+      }
+    }
+  }
+
+  return allData;
+}

@@ -104,17 +104,40 @@ export default function AvailabilityForm({
     // 00:00を24:00として表示する処理
     const formatEndTime = () => {
       if (end.getHours() === 0 && end.getMinutes() === 0) {
-        return "24:00";
-      } else {
-        return `${end.getHours().toString().padStart(2, "0")}:${end
-          .getMinutes()
-          .toString()
-          .padStart(2, "0")}`;
+        // 開始日と終了日を比較
+        const startDate = new Date(start);
+        startDate.setHours(0, 0, 0, 0); // 時刻部分をリセット
+
+        const endDate = new Date(end);
+        endDate.setHours(0, 0, 0, 0); // 時刻部分をリセット
+
+        // 終了日が開始日の翌日である場合は24:00と表示
+        if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
+          return "24:00";
+        }
       }
+
+      return `${end.getHours().toString().padStart(2, "0")}:${end
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
     };
 
-    // 同じ日の場合は日付を1回だけ表示
-    if (start.toDateString() === end.toDateString()) {
+    // 同じ日または24:00にまたがる場合は日付を1回だけ表示
+    const startDay = new Date(start);
+    startDay.setHours(0, 0, 0, 0);
+
+    const endDay = new Date(end);
+    endDay.setHours(0, 0, 0, 0);
+
+    const oneDayDiff =
+      endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000;
+    const sameDay = startDay.getTime() === endDay.getTime();
+
+    if (
+      sameDay ||
+      (oneDayDiff && end.getHours() === 0 && end.getMinutes() === 0)
+    ) {
       return `${formatDateTimeWithDay(start)} 〜 ${formatEndTime()}`;
     } else {
       // 異なる日の場合は両方の日付を表示
@@ -231,7 +254,12 @@ export default function AvailabilityForm({
       const start = new Date(date.start_time);
       const end = new Date(date.end_time);
 
-      const dateKey = start.toISOString().split("T")[0];
+      const dateKey = [
+        start.getFullYear(),
+        String(start.getMonth() + 1).padStart(2, "0"),
+        String(start.getDate()).padStart(2, "0"),
+      ].join("-");
+
       allDates.add(dateKey);
 
       const timeKey = `${start.getHours().toString().padStart(2, "0")}:${start
@@ -625,7 +653,7 @@ export default function AvailabilityForm({
                       >
                         <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                       </svg>
-                      ヒートマップ
+                      表
                     </button>
                     <button
                       type="button"

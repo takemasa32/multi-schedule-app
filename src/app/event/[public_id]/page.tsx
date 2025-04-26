@@ -4,6 +4,7 @@ import { createSupabaseClient } from "@/lib/supabase";
 import { EventHeader } from "@/components/event-header";
 import EventClientWrapper from "@/components/event-client/event-client-wrapper";
 import { CalendarLinks } from "@/components/calendar-links";
+import { fetchAllPaginated, fetchAllPaginatedWithOrder } from "@/lib/utils";
 
 interface EventPageProps {
   params: {
@@ -47,32 +48,45 @@ export default async function EventPage({
   // 有効な管理者かチェック
   const isAdmin = adminToken && adminToken === event.admin_token;
 
-  // 参加者と回答を取得
-  const { data: participants } = await supabase
+  // 参加者を取得（ページネーション対応）
+  const participantsQuery = supabase
     .from("participants")
     .select("id, name")
     .eq("event_id", event.id);
 
-  // イベント日程の時間帯を取得
-  const { data: eventDates } = await supabase
+  const participants = await fetchAllPaginated(participantsQuery);
+
+  // イベント日程の時間帯を取得（ページネーション対応）
+  const eventDatesQuery = supabase
     .from("event_dates")
     .select("id, start_time, end_time")
-    .eq("event_id", event.id)
-    .order("start_time", { ascending: true });
+    .eq("event_id", event.id);
 
-  // 全回答データを取得
-  const { data: availabilities } = await supabase
+  const eventDates = await fetchAllPaginatedWithOrder(
+    eventDatesQuery,
+    "start_time",
+    { ascending: true }
+  );
+
+  // 全回答データを取得（ページネーション対応）
+  const availabilitiesQuery = supabase
     .from("availabilities")
     .select("participant_id, event_date_id, availability")
     .eq("event_id", event.id);
 
+  const availabilities = await fetchAllPaginated(availabilitiesQuery);
+
   // 確定した日程IDのリストを取得（新しい確定日程テーブルから）
   let finalizedDateIds: string[] = [];
   if (event.is_finalized) {
-    const { data: finalizedDates } = await supabase
+    // 確定日程の数は多くないと想定されるため、ページネーションなしでも問題ないが、
+    // 念のためページネーション対応にする
+    const finalizedDatesQuery = supabase
       .from("finalized_dates")
       .select("event_date_id")
       .eq("event_id", event.id);
+
+    const finalizedDates = await fetchAllPaginated(finalizedDatesQuery);
 
     if (finalizedDates && finalizedDates.length > 0) {
       finalizedDateIds = finalizedDates.map((fd) => fd.event_date_id);
