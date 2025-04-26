@@ -26,8 +26,6 @@ interface AvailabilityFormProps {
   } | null;
   initialAvailabilities?: Record<string, boolean>;
   mode?: "new" | "edit";
-  onEditComplete?: () => void; // 編集完了時のコールバック
-  onCancelEdit?: () => void; // 編集キャンセル時のコールバック
 }
 
 type ViewMode = "list" | "table" | "heatmap";
@@ -40,8 +38,6 @@ export default function AvailabilityForm({
   initialParticipant,
   initialAvailabilities = {},
   mode = "new",
-  onEditComplete,
-  onCancelEdit,
 }: AvailabilityFormProps) {
   const [name, setName] = useState(initialParticipant?.name || "");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -1082,9 +1078,11 @@ export default function AvailabilityForm({
 
               {/* キャンセルボタン - 入力ページに戻る */}
               <a
-                href={`/event/${publicToken || publicId}`}
-                className="btn btn-outline w-full md:w-auto"
-                disabled={isSubmitting}
+                href={isSubmitting ? "#" : `/event/${publicToken}`}
+                className={`btn btn-outline w-full md:w-auto ${
+                  isSubmitting ? "opacity-60 pointer-events-none" : ""
+                }`}
+                onClick={(e) => isSubmitting && e.preventDefault()}
               >
                 キャンセル
               </a>

@@ -10,8 +10,8 @@ export default async function EventInput({
   params,
   searchParams,
 }: {
-  params: { public_id: string };
-  searchParams: { participant_id?: string };
+  params: Promise<{ public_id: string }>;
+  searchParams: Promise<{ participant_id?: string }>;
 }) {
   // paramsとsearchParamsをawaitして取得
   const { public_id } = await params;
@@ -44,7 +44,11 @@ export default async function EventInput({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <EventHeader event={event} />
+      <EventHeader
+        title={event.title}
+        description={event.description}
+        isFinalized={event.is_finalized}
+      />
 
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">{pageTitle}</h2>
@@ -64,12 +68,10 @@ export default async function EventInput({
           <AvailabilityForm
             eventId={event.id}
             eventDates={eventDates}
-            participantId={participantId}
-            existingParticipant={existingParticipant}
-            existingAvailabilities={existingAvailabilities}
-            isEditMode={isEditMode}
-            publicId={public_id}
-            publicToken={public_id} // publicToken プロパティを追加
+            initialParticipant={existingParticipant}
+            initialAvailabilities={existingAvailabilities || undefined}
+            mode={isEditMode ? "edit" : "new"}
+            publicToken={public_id}
           />
         </Suspense>
       </div>

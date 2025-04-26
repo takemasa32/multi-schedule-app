@@ -1,18 +1,20 @@
-import { Suspense } from "react";
+import { getEvent } from "@/lib/actions";
+import { getEventDates } from "@/lib/actions";
+import { getParticipants } from "@/lib/actions";
+import { getAvailabilities } from "@/lib/actions";
+import { getFinalizedDateIds } from "@/lib/actions";
 import { notFound } from "next/navigation";
-import { createSupabaseClient } from "@/lib/supabase";
-import { EventHeader } from "@/components/event-header";
 import EventClientWrapper from "@/components/event-client/event-client-wrapper";
-import { CalendarLinks } from "@/components/calendar-links";
-import { fetchAllPaginated, fetchAllPaginatedWithOrder } from "@/lib/utils";
+import { EventHeader } from "@/components/event-header";
 
+// Next.js 15.3.1でのParams型定義の変更に対応
 interface EventPageProps {
-  params: {
+  params: Promise<{
     public_id: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     admin?: string;
-  };
+  }>;
 }
 
 export default async function EventPage({
@@ -20,85 +22,37 @@ export default async function EventPage({
   searchParams,
 }: EventPageProps) {
   // Next.js 15.3.1に対応するため、paramsとsearchParamsを非同期で取得
-  const resolvedParams = await Promise.resolve(params);
-  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
 
   const { public_id } = resolvedParams;
   const adminToken = resolvedSearchParams.admin || null;
 
-  const supabase = createSupabaseClient();
-
   // イベント情報を取得
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      event_dates!event_dates_event_id_fkey(*)
-    `
-    )
-    .eq("public_token", public_id)
-    .single();
+  const event = await getEvent(public_id);
 
-  if (eventError || !event) {
-    console.error("Event not found:", eventError);
+  if (!event) {
+    console.error("Event not found");
     notFound();
   }
 
-  // 有効な管理者かチェック
-  const isAdmin = adminToken && adminToken === event.admin_token;
+  // 有効な管理者かチェック（必ずboolean型に変換）
+  const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
 
   // 参加者を取得（ページネーション対応）
-  const participantsQuery = supabase
-    .from("participants")
-    .select("id, name")
-    .eq("event_id", event.id);
-
-  const participants = await fetchAllPaginated(participantsQuery);
+  const participants = await getParticipants(event.id);
 
   // イベント日程の時間帯を取得（ページネーション対応）
-  const eventDatesQuery = supabase
-    .from("event_dates")
-    .select("id, start_time, end_time")
-    .eq("event_id", event.id);
-
-  const eventDates = await fetchAllPaginatedWithOrder(
-    eventDatesQuery,
-    "start_time",
-    { ascending: true }
-  );
+  const eventDates = await getEventDates(event.id);
 
   // 全回答データを取得（ページネーション対応）
-  const availabilitiesQuery = supabase
-    .from("availabilities")
-    .select("participant_id, event_date_id, availability")
-    .eq("event_id", event.id);
-
-  const availabilities = await fetchAllPaginated(availabilitiesQuery);
+  const availabilities = await getAvailabilities(event.id);
 
   // 確定した日程IDのリストを取得（新しい確定日程テーブルから）
   let finalizedDateIds: string[] = [];
   if (event.is_finalized) {
-    // 確定日程の数は多くないと想定されるため、ページネーションなしでも問題ないが、
-    // 念のためページネーション対応にする
-    const finalizedDatesQuery = supabase
-      .from("finalized_dates")
-      .select("event_date_id")
-      .eq("event_id", event.id);
-
-    const finalizedDates = await fetchAllPaginated(finalizedDatesQuery);
-
-    if (finalizedDates && finalizedDates.length > 0) {
-      finalizedDateIds = finalizedDates.map((fd) => fd.event_date_id);
-    } else if (event.final_date_id) {
-      // 互換性のため、既存のfinal_date_idがあれば使用
-      finalizedDateIds = [event.final_date_id];
-    }
+    finalizedDateIds = await getFinalizedDateIds(event.id, event.final_date_id);
   }
-
-  // 確定された日程の詳細情報を取得
-  const finalizedDates =
-    eventDates?.filter((date) => finalizedDateIds.includes(date.id)) || [];
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-8">
@@ -116,7 +70,6 @@ export default async function EventPage({
         availabilities={availabilities || []}
         finalizedDateIds={finalizedDateIds}
         isAdmin={isAdmin}
-        adminToken={adminToken}
       />
     </main>
   );

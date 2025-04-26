@@ -175,6 +175,67 @@ export async function getEvent(publicToken: string) {
 }
 
 /**
+ * イベントIDに基づいて参加者一覧を取得する
+ */
+export async function getParticipants(eventId: string) {
+  const supabase = createSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from('participants')
+    .select('*')
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('参加者一覧取得エラー:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * イベントの全回答データを取得する
+ */
+export async function getAvailabilities(eventId: string) {
+  const supabase = createSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from('availabilities')
+    .select('*')
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('回答データ取得エラー:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * 確定した日程IDのリストを取得する
+ */
+export async function getFinalizedDateIds(eventId: string, finalDateId: string | null) {
+  const supabase = createSupabaseAdmin();
+  
+  if (!finalDateId) return [];
+  
+  // 確定日程テーブルから確定した日程IDを取得
+  const { data, error } = await supabase
+    .from('event_finalized_dates')
+    .select('event_date_id')
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('確定日程取得エラー:', error);
+    return [];
+  }
+
+  // event_date_idの配列を返す
+  return data.map(item => item.event_date_id);
+}
+
+/**
  * イベントIDに基づいてイベント日程を取得する
  */
 export async function getEventDates(eventId: string) {

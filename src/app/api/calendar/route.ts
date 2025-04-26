@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 import { createSupabaseClient } from "@/lib/supabase";
 import { formatIcsDate } from "@/lib/utils";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { eventId: string } }
-) {
-  const eventId = params.eventId;
+// ルートハンドラーでは動的パラメータを使わないので、第2引数は削除
+export async function GET(request: NextRequest) {
+  // クエリパラメータからeventIdを取得する
+  const url = new URL(request.url);
+  const eventId = url.searchParams.get('eventId');
 
   if (!eventId) {
     return new Response("イベントIDが指定されていません", { status: 400 });

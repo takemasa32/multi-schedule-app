@@ -2,6 +2,19 @@
  * 日付フォーマット用ユーティリティ関数
  */
 
+// Supabase クエリに関するインターフェース
+export interface SupabaseQueryInterface {
+  range(from: number, to: number): SupabaseQueryInterface;
+  order(column: string, options?: { ascending: boolean }): SupabaseQueryInterface;
+  then<T>(onfulfilled?: ((value: T) => T | PromiseLike<T>)): Promise<T>;
+}
+
+// Supabaseのクエリ結果インターフェース
+export interface SupabaseQueryResult<T> {
+  data: T[] | null;
+  error: Error | null;
+}
+
 // タイムスロットのインターフェース定義
 export interface TimeSlot {
   date: Date;
@@ -111,15 +124,17 @@ export function generateUuid(): string {
  * @param pageSize 1回あたりの取得サイズ（最大1000）
  * @returns 全データの配列
  */
-export async function fetchAllPaginated<T>(query: any, pageSize = 1000): Promise<T[]> {
+export async function fetchAllPaginated<T>(query: SupabaseQueryInterface, pageSize = 1000): Promise<T[]> {
   let allData: T[] = [];
   let page = 0;
   let hasMoreData = true;
 
   while (hasMoreData) {
-    const { data, error } = await query
+    const result = await query
       .range(page * pageSize, (page + 1) * pageSize - 1)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as unknown as SupabaseQueryResult<T>;
+
+    const { data, error } = result;
 
     if (error) {
       console.error('データ取得エラー:', error);
@@ -152,7 +167,7 @@ export async function fetchAllPaginated<T>(query: any, pageSize = 1000): Promise
  * @returns 全データの配列
  */
 export async function fetchAllPaginatedWithOrder<T>(
-  query: any,
+  query: SupabaseQueryInterface,
   orderField: string,
   options: { ascending: boolean } = { ascending: true },
   pageSize = 1000
@@ -162,9 +177,11 @@ export async function fetchAllPaginatedWithOrder<T>(
   let hasMoreData = true;
 
   while (hasMoreData) {
-    const { data, error } = await query
+    const result = await query
       .order(orderField, options)
-      .range(page * pageSize, (page + 1) * pageSize - 1);
+      .range(page * pageSize, (page + 1) * pageSize - 1) as unknown as SupabaseQueryResult<T>;
+
+    const { data, error } = result;
 
     if (error) {
       console.error('データ取得エラー:', error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   format,
   eachDayOfInterval,
@@ -75,7 +75,7 @@ export default function DateRangePicker({
   };
 
   // 期間全体を時間帯に分割する（15分、30分、60分など）
-  const generatePeriodTimeSlots = () => {
+  const generatePeriodTimeSlots = useCallback(() => {
     if (!startDate || !endDate) {
       setErrorMessage("開始日と終了日を設定してください");
       return;
@@ -149,7 +149,7 @@ export default function DateRangePicker({
 
     setTimeSlots(newTimeSlots);
     setErrorMessage(null);
-  };
+  }, [startDate, endDate, excludedDates, intervalUnit, defaultStartTime, defaultEndTime]);
 
   // 日付文字列を安全にDate型に変換
   const parseDateSafely = (dateString: string): Date | null => {
@@ -200,6 +200,7 @@ export default function DateRangePicker({
     defaultStartTime,
     defaultEndTime,
     onDatesChange,
+    generatePeriodTimeSlots,
   ]);
 
   // 開始日の変更処理

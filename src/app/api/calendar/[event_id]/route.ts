@@ -1,10 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient } from "@/lib/supabase";
 import { formatIcsDate } from '@/lib/utils';
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 
+// Extend dayjs with plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Next.js 15.3.1のAPIルートハンドラの形式に合わせる
 export async function GET(
-  request: Request,
-  { params }: { params: { event_id: string } }
+  request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  { params }: any
 ) {
   try {
     const eventId = params.event_id;
@@ -22,7 +31,7 @@ export async function GET(
       .single();
 
     if (eventError || !event || !event.is_finalized) {
-      return new Response('イベントが見つからないか、まだ確定されていません', {
+      return new NextResponse('イベントが見つからないか、まだ確定されていません', {
         status: 404
       });
     }
@@ -44,7 +53,7 @@ export async function GET(
 
       // それでも確定日程がなければエラー
       if (!eventWithFinalDate?.final_date_id) {
-        return new Response('確定された日程が見つかりません', {
+        return new NextResponse('確定された日程が見つかりません', {
           status: 404
         });
       }
@@ -59,7 +68,7 @@ export async function GET(
         .in('id', finalDateIds);
 
       if (dateError || !finalDates || finalDates.length === 0) {
-        return new Response('日程情報が見つかりません', {
+        return new NextResponse('日程情報が見つかりません', {
           status: 404
         });
       }
@@ -97,7 +106,7 @@ export async function GET(
       const safeTitle = event.title.replace(/[^\w\s]/gi, '').trim() || 'event';
 
       // iCSファイルをダウンロード
-      return new Response(icsContent, {
+      return new NextResponse(icsContent, {
         headers: {
           'Content-Type': 'text/calendar',
           'Content-Disposition': `attachment; filename="${safeTitle}.ics"`,
@@ -114,7 +123,7 @@ export async function GET(
         .in('id', finalDateIds);
 
       if (dateError || !finalDates || finalDates.length === 0) {
-        return new Response('日程情報が見つかりません', {
+        return new NextResponse('日程情報が見つかりません', {
           status: 404
         });
       }
@@ -152,7 +161,7 @@ export async function GET(
       const safeTitle = event.title.replace(/[^\w\s]/gi, '').trim() || 'event';
 
       // iCSファイルをダウンロード
-      return new Response(icsContent, {
+      return new NextResponse(icsContent, {
         headers: {
           'Content-Type': 'text/calendar',
           'Content-Disposition': `attachment; filename="${safeTitle}.ics"`,
@@ -161,7 +170,7 @@ export async function GET(
     }
   } catch (error) {
     console.error('カレンダーデータ生成エラー:', error);
-    return new Response('カレンダーデータの生成に失敗しました', {
+    return new NextResponse('カレンダーデータの生成に失敗しました', {
       status: 500
     });
   }
@@ -216,5 +225,9 @@ function escapeIcsValue(value: string): string {
 
 // Google Calendar用の日付フォーマット（YYYYMMDDTHHMMSSZ形式）
 function formatGoogleDate(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  // 日本時間として解釈してからUTC形式に変換
+  return dayjs(date)
+    .tz("Asia/Tokyo")
+    .utc()
+    .format("YYYYMMDDTHHmmss") + "Z";
 }

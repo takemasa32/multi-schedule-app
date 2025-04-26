@@ -10,7 +10,7 @@ const supabaseAdmin = createSupabaseClient();
 export default async function EventAdminPage({
   params,
 }: {
-  params: { public_id: string; admin_token: string };
+  params: Promise<{ public_id: string; admin_token: string }>;
 }) {
   // paramsを非同期APIとして正しく取得
   const resolvedParams = await params;

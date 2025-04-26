@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import AvailabilitySummary from "@/components/availability-summary";
 import { CalendarLinks } from "@/components/calendar-links";
 import FinalizeEventSection from "@/components/finalize-event-section";
@@ -38,7 +38,6 @@ interface EventClientWrapperProps {
   availabilities: Availability[];
   finalizedDateIds: string[];
   isAdmin: boolean;
-  adminToken: string | null;
 }
 
 export default function EventClientWrapper({
@@ -47,9 +46,12 @@ export default function EventClientWrapper({
   participants,
   availabilities,
   finalizedDateIds,
-  isAdmin,
-  adminToken,
 }: EventClientWrapperProps) {
+  // viewModeのステート追加
+  const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
+    "heatmap"
+  );
+
   // 確定された日程の詳細情報を取得
   const finalizedDates = eventDates.filter((date) =>
     finalizedDateIds.includes(date.id)
@@ -189,8 +191,9 @@ export default function EventClientWrapper({
             eventDates={eventDates}
             availabilities={availabilities}
             finalizedDateIds={finalizedDateIds}
-            eventId={event.id}
             publicToken={event.public_token}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
           />
         </div>
       </div>

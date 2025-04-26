@@ -1,30 +1,37 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-interface AvailabilitySummaryProps {
-  eventDates: {
-    id: string;
-    start_time: string;
-    end_time: string;
-    label?: string;
-  }[];
-  participants: { id: string; name: string }[];
-  availabilities: {
-    participant_id: string;
-    event_date_id: string;
-    availability: boolean;
-  }[];
-  finalizedDateIds?: string[] | null;
-  eventId: string;
-  publicToken: string;
-  onEditParticipant?: (
+type EventDate = {
+  id: string;
+  start_time: string;
+  end_time: string;
+  label?: string;
+};
+
+type Participant = { id: string; name: string };
+
+type Availability = {
+  participant_id: string;
+  event_date_id: string;
+  availability: boolean;
+};
+
+type AvailabilitySummaryProps = {
+  eventDates: EventDate[];
+  participants: Participant[];
+  availabilities: Availability[];
+  finalizedDateIds?: string[];
+  onShowParticipantForm?: (
     participantId: string,
     participantName: string,
     participantAvailabilities: Record<string, boolean>
   ) => void;
-}
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+  publicToken?: string; // 追加: イベントの公開トークン
+};
 
 type ViewMode = "list" | "heatmap" | "detailed";
 
@@ -43,11 +50,11 @@ export default function AvailabilitySummary({
   participants,
   availabilities,
   finalizedDateIds = [],
-  eventId,
+  onShowParticipantForm,
+  viewMode,
+  setViewMode,
   publicToken,
-  onEditParticipant,
 }: AvailabilitySummaryProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
   const [tooltip, setTooltip] = useState<TooltipState>({
     show: false,
     x: 0,
@@ -59,6 +66,48 @@ export default function AvailabilitySummary({
 
   // ツールチップ表示のためのポータル用参照
   const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
+
+  // 日付を読みやすい形式にフォーマット
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    });
+  };
+
+  // 時間をフォーマット
+  const formatTime = useCallback(
+    (dateString: string) => {
+      const date = new Date(dateString);
+
+      // 00:00の場合は24:00として表示する条件を修正
+      if (date.getHours() === 0 && date.getMinutes() === 0) {
+        const prevDate = new Date(date);
+        prevDate.setDate(prevDate.getDate() - 1);
+        prevDate.setHours(0, 0, 0, 0); // 日付部分だけ比較するため時刻部分をリセット
+
+        // 日付部分の比較を行い、前日のイベントがあるか確認
+        for (const eventDate of eventDates) {
+          const startDate = new Date(eventDate.start_time);
+          const startDay = new Date(startDate);
+          startDay.setHours(0, 0, 0, 0); // 時刻部分をリセット
+
+          // 前日のイベントがあれば 24:00 と表示
+          if (startDay.getTime() === prevDate.getTime()) {
+            return "24:00";
+          }
+        }
+      }
+
+      return date.toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+    [eventDates]
+  );
 
   // コンポーネントマウント時にポータル要素を作成
   useMemo(() => {
@@ -74,45 +123,6 @@ export default function AvailabilitySummary({
     }
     return null;
   }, []);
-
-  // 日付を読みやすい形式にフォーマット
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ja-JP", {
-      month: "numeric",
-      day: "numeric",
-      weekday: "short",
-    });
-  };
-
-  // 時間をフォーマット
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-
-    // 00:00の場合は24:00として表示する条件を修正
-    if (date.getHours() === 0 && date.getMinutes() === 0) {
-      const prevDate = new Date(date);
-      prevDate.setDate(prevDate.getDate() - 1);
-      prevDate.setHours(0, 0, 0, 0); // 日付部分だけ比較するため時刻部分をリセット
-
-      // 日付部分の比較を行い、前日のイベントがあるか確認
-      for (const eventDate of eventDates) {
-        const startDate = new Date(eventDate.start_time);
-        const startDay = new Date(startDate);
-        startDay.setHours(0, 0, 0, 0); // 時刻部分をリセット
-
-        // 前日のイベントがあれば 24:00 と表示
-        if (startDay.getTime() === prevDate.getTime()) {
-          return "24:00";
-        }
-      }
-    }
-
-    return date.toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   // 曜日を抽出
   const getDayOfWeek = (dateString: string) => {
@@ -253,7 +263,7 @@ export default function AvailabilitySummary({
         isSelected: finalizedDateIds?.includes(date.id) || false,
       };
     });
-  }, [eventDates, availabilities, finalizedDateIds]);
+  }, [eventDates, availabilities, finalizedDateIds, formatTime]);
 
   // 参加者が参加可能かどうかを判定
   const isParticipantAvailable = (participantId: string, dateId: string) => {
@@ -363,10 +373,10 @@ export default function AvailabilitySummary({
 
   // 参加者の編集ボタンがクリックされたときの処理
   const handleEditClick = (participantId: string, participantName: string) => {
-    if (onEditParticipant) {
+    if (onShowParticipantForm) {
       const participantAvailabilities =
         getParticipantAvailabilities(participantId);
-      onEditParticipant(
+      onShowParticipantForm(
         participantId,
         participantName,
         participantAvailabilities
@@ -708,7 +718,7 @@ export default function AvailabilitySummary({
                       <span>{participant.name}</span>
                       {/* 編集ボタン: onEditParticipantが渡されている場合はそれを使用、
                           そうでなければ編集ページへのリンクを表示 */}
-                      {onEditParticipant ? (
+                      {onShowParticipantForm ? (
                         <button
                           onClick={() =>
                             handleEditClick(participant.id, participant.name)

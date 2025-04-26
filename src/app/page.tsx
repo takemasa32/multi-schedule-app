@@ -1,5 +1,4 @@
 import EventForm from "@/components/event-form";
-import { createEvent } from "@/lib/actions";
 
 export default function HomePage() {
   return (
@@ -11,7 +10,7 @@ export default function HomePage() {
 
         <div className="card bg-base-100 shadow-lg">
           <div className="card-body">
-            <EventForm createEvent={createEvent} />
+            <EventForm />
           </div>
         </div>
       </div>

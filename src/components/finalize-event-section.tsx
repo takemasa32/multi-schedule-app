@@ -114,17 +114,6 @@ export default function FinalizeEventSection({
     ).length;
   };
 
-  // 選択した日程に参加可能な参加者の名前リストを取得
-  const getAvailableParticipants = (dateId: string) => {
-    const availableParticipantIds = availabilities
-      .filter((a) => a.event_date_id === dateId && a.availability)
-      .map((a) => a.participant_id);
-
-    return participants
-      .filter((p) => availableParticipantIds.includes(p.id))
-      .map((p) => p.name);
-  };
-
   // 選択された複数の時間枠に参加可能な人数を計算（すべての選択時間枠を満たす人）
   const getParticipantsForAllSelectedDates = () => {
     if (selectedDateIds.length === 0) return [];
@@ -243,19 +232,7 @@ export default function FinalizeEventSection({
     return selectedDateIds.includes(dateId);
   };
 
-  // ヒートマップの色レベルを計算（参加可能率に基づく）
-  const getHeatmapLevel = (dateId: string | null) => {
-    if (!dateId) return 0;
-
-    const availableCount = getAvailableParticipantsCount(dateId);
-    const totalParticipants = participants.length;
-
-    if (totalParticipants === 0) return 0;
-
-    // 0-10の範囲で色の強さを計算
-    const availabilityRate = availableCount / totalParticipants;
-    return Math.round(availabilityRate * 10);
-  };
+  // 未使用の関数を削除しました
 
   // マトリクス表示用の日程と時間帯のセル生成
   const renderTimeSlotMatrix = () => {
@@ -322,7 +299,6 @@ export default function FinalizeEventSection({
                       slot.start,
                       slot.end
                     );
-                    const heatLevel = getHeatmapLevel(dateId);
                     const isSelected = isDateSelected(dateId);
                     const availableCount = dateId
                       ? getAvailableParticipantsCount(dateId)
