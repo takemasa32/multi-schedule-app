@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import Card from "@/components/layout/Card";
-import SectionDivider from "@/components/layout/SectionDivider";
 
 export default function LandingPage() {
   return (

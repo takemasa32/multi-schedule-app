@@ -20,9 +20,11 @@ export default function CreateEventPage() {
           </p>
         </div>
 
-        <Card className="fade-in" style={{ animationDelay: "0.1s" }}>
-          <EventForm />
-        </Card>
+        <div style={{ animationDelay: "0.1s" }}>
+          <Card className="fade-in">
+            <EventForm />
+          </Card>
+        </div>
       </div>
     </>
   );
