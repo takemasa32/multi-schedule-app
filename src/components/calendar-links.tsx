@@ -1,58 +1,54 @@
 "use client";
 
-import { formatGoogleCalendarDate, formatIcsDate } from "@/lib/utils";
-
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-}
-
-interface EventDate {
-  id: string;
-  date_time: string;
-}
-
 interface CalendarLinksProps {
-  event: Event;
-  finalDate: EventDate | null;
+  eventTitle: string;
+  eventDates: {
+    id: string;
+    start_time: string;
+    end_time: string;
+    label?: string;
+  }[];
+  eventId: string;
+  description?: string | null;
 }
 
-export function CalendarLinks({ event, finalDate }: CalendarLinksProps) {
-  if (!finalDate) return null;
-
-  // 日程の開始時間と終了時間を設定
-  const startDate = new Date(finalDate.date_time);
-  const endDate = new Date(startDate);
-  endDate.setHours(startDate.getHours() + 1); // デフォルトで1時間の予定として設定
-
+export function CalendarLinks({
+  eventTitle,
+  eventDates,
+  eventId,
+}: CalendarLinksProps) {
   // Google カレンダーリンクの生成
   const generateGoogleCalendarLink = () => {
-    const params = new URLSearchParams();
-    params.append("text", event.title);
-    params.append(
-      "dates",
-      `${formatGoogleCalendarDate(startDate)}/${formatGoogleCalendarDate(
-        endDate
-      )}`
-    );
-
-    if (event.description) {
-      params.append("details", event.description);
-    }
-
-    return `https://calendar.google.com/calendar/r/eventedit?${params.toString()}`;
+    // APIエンドポイントで正確な日時情報を取得するURLを指定
+    return `/api/calendar/${eventId}?googleCalendar=true`;
   };
 
   // .ics ファイルのダウンロードリンク
   const generateIcsDownloadLink = () => {
     // publicTokenを使用してAPIエンドポイントを呼び出す
-    return `/api/calendar/${event.id}`;
+    return `/api/calendar/ics/${eventId}`;
   };
+
+  // 確定された日程の件数
+  const eventCount = eventDates.length;
 
   return (
     <div className="card bg-base-100 shadow-lg p-6">
       <h3 className="text-lg font-semibold mb-4">カレンダーに追加</h3>
+
+      {eventCount === 1 ? (
+        <p className="mb-4">確定された日程をカレンダーに追加できます。</p>
+      ) : (
+        <p className="mb-4">
+          <strong>{eventCount}件</strong>
+          の確定された日程をカレンダーに追加できます。
+          {eventCount > 1 && (
+            <span className="text-sm text-gray-600 block mt-1">
+              ※ 複数の日程は別々のカレンダーイベントとして追加されます
+            </span>
+          )}
+        </p>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <a
@@ -75,7 +71,7 @@ export function CalendarLinks({ event, finalDate }: CalendarLinksProps) {
         <a
           href={generateIcsDownloadLink()}
           className="btn btn-outline"
-          download={`${event.title}.ics`}
+          download={`${eventTitle}.ics`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

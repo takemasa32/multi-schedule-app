@@ -1,26 +1,182 @@
 @import "tailwindcss";
+@plugin "daisyui";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import "../styles/theme.css";
+
+body {
+  @apply bg-base-100 text-base-content;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Card Component Styles */
+@layer components {
+  .card {
+    @apply bg-base-100 border border-base-300 rounded-xl overflow-hidden transition-all;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  .card:hover {
+    @apply shadow-md;
+  }
+
+  /* Button Styles */
+  /* DaisyUIのボタンクラス(btn, btn-primary, btn-secondary)を活用する */
+  .btn-custom {
+    @apply transition-all duration-200 font-medium;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Form Element Styles */
+@layer components {
+  .form-control {
+    @apply relative mb-4;
+  }
+
+  .form-control label {
+    @apply block mb-2 text-sm font-medium text-base-content;
+  }
+
+  .form-control input,
+  .form-control select,
+  .form-control textarea {
+    @apply w-full px-4 py-2 border border-base-300 rounded-lg bg-base-100 text-base-content transition-all;
+  }
+
+  .form-control input:focus,
+  .form-control select:focus,
+  .form-control textarea:focus {
+    @apply border-primary outline-none ring-2 ring-primary/20;
+  }
+}
+
+/* Animation Classes */
+@layer components {
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  /* Loading Spinner */
+  .loading-container {
+    @apply flex items-center justify-center;
+  }
+
+  .loading-spinner {
+    @apply w-6 h-6 rounded-full border-2 border-base-300 border-t-primary inline-block mr-2;
+    animation: spinner 0.8s linear infinite;
+  }
+
+  .loading-spinner-sm {
+    @apply w-4 h-4 border-2;
+  }
+}
+
+/* Feedback Messages */
+@layer components {
+  .feedback-message {
+    @apply flex items-center p-3 rounded mb-4;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .feedback-success {
+    @apply bg-success/10 text-success border-l-4 border-success;
+  }
+
+  .feedback-error {
+    @apply bg-error/10 text-error border-l-4 border-error;
+  }
+
+  .feedback-info {
+    @apply bg-info/10 text-info border-l-4 border-info;
+  }
+
+  .feedback-warning {
+    @apply bg-warning/10 text-warning border-l-4 border-warning;
+  }
+
+  /* Responsive Table */
+  .responsive-table {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-container {
+    @apply w-full border border-base-300 rounded-lg overflow-hidden mb-6;
+  }
+}
+
+/* Heatmap Colors */
+@layer components {
+  .heatmap-0 {
+    @apply bg-base-200;
+  }
+  .heatmap-1 {
+    @apply bg-base-100;
+  }
+  .heatmap-2 {
+    @apply bg-base-100 text-primary/30;
+  }
+  .heatmap-3 {
+    @apply bg-primary/10;
+  }
+  .heatmap-4 {
+    @apply bg-primary/20;
+  }
+  .heatmap-5 {
+    @apply bg-primary/30;
+  }
+  .heatmap-6 {
+    @apply bg-primary/50;
+  }
+  .heatmap-7 {
+    @apply bg-primary/70;
+  }
+  .heatmap-8 {
+    @apply bg-primary/80;
+  }
+  .heatmap-9 {
+    @apply bg-primary/90;
+  }
+  .heatmap-10 {
+    @apply bg-primary;
+  }
+
+  /* 高い値のヒートマップ色はテキストを白に */
+  .heatmap-6,
+  .heatmap-7,
+  .heatmap-8,
+  .heatmap-9,
+  .heatmap-10 {
+    @apply text-white;
+  }
+}
+
+/* アニメーション定義 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }

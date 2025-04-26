@@ -25,7 +25,6 @@ interface InputFormProps {
 }
 
 export default function InputForm({
-  eventId,
   publicToken,
   eventDates,
   existingParticipant,
@@ -46,13 +45,10 @@ export default function InputForm({
       setAvailabilities(existingParticipant.availabilities);
     } else {
       // 新規の場合、全てのイベント日程をfalseで初期化
-      const initialAvailabilities = eventDates.reduce(
-        (acc, date) => {
-          acc[date.id] = false;
-          return acc;
-        },
-        {} as Record<string, boolean>
-      );
+      const initialAvailabilities = eventDates.reduce((acc, date) => {
+        acc[date.id] = false;
+        return acc;
+      }, {} as Record<string, boolean>);
       setAvailabilities(initialAvailabilities);
     }
   }, [existingParticipant, eventDates]);
@@ -79,7 +75,7 @@ export default function InputForm({
       const formData = new FormData();
       formData.append("participant_name", participantName);
       formData.append("event_token", publicToken);
-      
+
       if (mode === "edit" && existingParticipant) {
         formData.append("participant_id", existingParticipant.id);
       }
@@ -89,11 +85,10 @@ export default function InputForm({
         formData.append(`availability_${dateId}`, isAvailable ? "on" : "off");
       });
 
-      const result = await submitAvailability(formData);
-      
+      await submitAvailability(formData);
+
       // 送信成功したら元のイベントページに戻る
       router.push(`/event/${publicToken}`);
-
     } catch (error) {
       console.error("回答送信エラー:", error);
       setErrorMessage(

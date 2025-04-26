@@ -1,130 +1,103 @@
-// filepath: /home/takemasa32/programs/multi-schedule-app/src/app/event/[public_id]/input/page.tsx
-import { notFound, redirect } from "next/navigation";
+import { getEvent } from "@/lib/actions";
+import { getEventDates } from "@/lib/actions";
+import { getParticipantById } from "@/lib/actions";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { createSupabaseClient } from "@/lib/supabase";
+import AvailabilityForm from "@/components/availability-form";
 import { EventHeader } from "@/components/event-header";
-import InputForm from "./input-form";
 
-interface InputPageProps {
-  params: {
-    public_id: string;
-  };
-  searchParams: {
-    participantId?: string;
-    mode?: string; // "new" or "edit"
-  };
-}
-
-export default async function InputPage({
+export default async function EventInput({
   params,
   searchParams,
-}: InputPageProps) {
-  // Next.js 15.3.1に対応するため、paramsとsearchParamsを非同期で取得
-  const resolvedParams = await Promise.resolve(params);
-  const resolvedSearchParams = await Promise.resolve(searchParams);
-
-  const { public_id } = resolvedParams;
-  const participantId = resolvedSearchParams.participantId || null;
-  const mode = resolvedSearchParams.mode || "new";
-
-  const supabase = createSupabaseClient();
+}: {
+  params: Promise<{ public_id: string }>;
+  searchParams: Promise<{ participant_id?: string }>;
+}) {
+  // paramsとsearchParamsをawaitして取得
+  const { public_id } = await params;
+  const awaitedSearchParams = await searchParams;
+  const participantId = awaitedSearchParams.participant_id;
 
   // イベント情報を取得
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      event_dates!event_dates_event_id_fkey(*)
-    `
-    )
-    .eq("public_token", public_id)
-    .single();
-
-  if (eventError || !event) {
-    console.error("Event not found:", eventError);
+  const event = await getEvent(public_id);
+  if (!event) {
     notFound();
   }
 
-  // イベント日程の取得
-  const eventDatesQuery = supabase
-    .from("event_dates")
-    .select("id, start_time, end_time")
-    .eq("event_id", event.id)
-    .order("start_time", { ascending: true });
+  // イベントの日程を取得
+  const eventDates = await getEventDates(event.id);
 
-  const { data: eventDates, error: datesError } = await eventDatesQuery;
-
-  if (datesError) {
-    console.error("Error fetching event dates:", datesError);
-    notFound();
-  }
-
-  // 既存参加者情報の取得（編集モードの場合）
+  // 既存の参加者情報と回答を取得（編集モードの場合）
   let existingParticipant = null;
-  let existingAvailabilities: Record<string, boolean> = {};
+  let existingAvailabilities = null;
 
-  if (participantId && mode === "edit") {
-    // 参加者情報の取得
-    const { data: participant, error: partError } = await supabase
-      .from("participants")
-      .select("*")
-      .eq("id", participantId)
-      .eq("event_id", event.id)
-      .single();
-
-    if (partError || !participant) {
-      console.error("Participant not found:", partError);
-      redirect(`/event/${public_id}`);
+  if (participantId) {
+    const result = await getParticipantById(participantId, event.id);
+    if (result) {
+      existingParticipant = result.participant;
+      existingAvailabilities = result.availabilityMap;
     }
-
-    // 参加者の回答を取得
-    const { data: availabilities, error: availError } = await supabase
-      .from("availabilities")
-      .select("*")
-      .eq("participant_id", participantId)
-      .eq("event_id", event.id);
-
-    if (!availError && availabilities) {
-      existingAvailabilities = availabilities.reduce((acc, item) => {
-        acc[item.event_date_id] = item.availability;
-        return acc;
-      }, {} as Record<string, boolean>);
-    }
-
-    existingParticipant = {
-      id: participant.id,
-      name: participant.name,
-      availabilities: existingAvailabilities,
-    };
   }
+
+  const isEditMode = !!participantId && !!existingParticipant;
+  const pageTitle = isEditMode ? "回答を編集する" : "新しく回答する";
 
   return (
-    <main className="container mx-auto max-w-5xl px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
       <EventHeader
         title={event.title}
         description={event.description}
         isFinalized={event.is_finalized}
       />
 
-      <div className="my-8">
-        <div className="card bg-base-100 shadow-md">
-          <div className="card-body">
-            <h2 className="card-title text-xl mb-4">
-              {mode === "edit" ? "参加予定を編集" : "参加予定を入力"}
-            </h2>
-            <Suspense fallback={<div>読み込み中...</div>}>
-              <InputForm
-                eventId={event.id}
-                publicToken={event.public_token}
-                eventDates={eventDates || []}
-                existingParticipant={existingParticipant}
-                mode={mode as "new" | "edit"}
-              />
-            </Suspense>
-          </div>
-        </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">{pageTitle}</h2>
+        {isEditMode ? (
+          <p className="text-gray-600 mb-4">
+            「{existingParticipant.name}」さんの回答を編集しています。
+          </p>
+        ) : (
+          <p className="text-gray-600 mb-4">
+            あなたの名前と参加可能な日程を入力してください。
+          </p>
+        )}
       </div>
-    </main>
+
+      <div className="bg-base rounded-lg shadow-md p-6">
+        <Suspense fallback={<div>フォームを読み込み中...</div>}>
+          <AvailabilityForm
+            eventId={event.id}
+            eventDates={eventDates}
+            initialParticipant={existingParticipant}
+            initialAvailabilities={existingAvailabilities || undefined}
+            mode={isEditMode ? "edit" : "new"}
+            publicToken={public_id}
+          />
+        </Suspense>
+      </div>
+
+      <div className="mt-6">
+        <a
+          href={`/event/${public_id}`}
+          className="text-blue-600 hover:text-blue-800 flex items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 mr-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          回答状況の確認・集計に戻る
+        </a>
+      </div>
+    </div>
   );
 }
