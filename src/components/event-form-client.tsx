@@ -39,38 +39,20 @@ export default function EventFormClient() {
       formData.append("title", title);
       if (description) formData.append("description", description);
 
-      // タイムスロットをISOString形式に変換してFormDataに追加
+      // タイムスロットを文字列形式に変換してFormDataに追加
       timeSlots.forEach((slot) => {
-        const startDate = new Date(slot.date);
-        const [startHours, startMinutes] = slot.startTime
-          .split(":")
-          .map(Number);
-        startDate.setHours(startHours, startMinutes, 0, 0);
+        // 日付をYYYY-MM-DD形式で取得
+        const dateStr = format(slot.date, "yyyy-MM-dd");
 
-        const endDate = new Date(slot.date);
-        const [endHours, endMinutes] = slot.endTime.split(":").map(Number);
+        // 開始時間と終了時間をそのまま文字列として使用
+        const startTime = slot.startTime;
+        const endTime = slot.endTime;
 
-        // 特殊ケース: 終了時間が「24:00」または「00:00」の場合は翌日の0時として扱う
-        if (endHours === 24 || (endHours === 0 && endMinutes === 0)) {
-          endDate.setDate(endDate.getDate() + 1);
-          endDate.setHours(0, 0, 0, 0);
-        } else {
-          endDate.setHours(endHours, endMinutes, 0, 0);
-
-          // 終了時間が翌日になる場合の調整（例：23:59 → 翌日0:00）
-          if (endHours === 23 && endMinutes === 59) {
-            endDate.setDate(endDate.getDate() + 1);
-            endDate.setHours(0, 0, 0, 0);
-          }
-
-          // 終了時間が開始時間より前の場合は翌日として扱う
-          if (endDate < startDate) {
-            endDate.setDate(endDate.getDate() + 1);
-          }
-        }
-
-        formData.append("startTimes", startDate.toISOString());
-        formData.append("endTimes", endDate.toISOString());
+        // 日付と時間を組み合わせて文字列として送信（タイムゾーンは考慮しない）
+        formData.append("startDates", dateStr);
+        formData.append("startTimes", startTime);
+        formData.append("endDates", dateStr);
+        formData.append("endTimes", endTime);
       });
 
       console.log("Submitting time slots:", timeSlots);

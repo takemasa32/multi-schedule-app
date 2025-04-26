@@ -28,7 +28,11 @@ export default function DateRangePicker({
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [intervalUnit, setIntervalUnit] = useState<string>("60"); // 時間帯の単位（分）
+  const [intervalUnit, setIntervalUnit] = useState<string>("120"); // 時間帯の単位（分）
+
+  // デフォルトの開始時間と終了時間を0時から24時に設定
+  const [defaultStartTime, setDefaultStartTime] = useState<string>("00:00");
+  const [defaultEndTime, setDefaultEndTime] = useState<string>("24:00");
 
   // タイムスロットを削除
   const removeTimeSlot = (index: number) => {
@@ -92,24 +96,31 @@ export default function DateRangePicker({
       return;
     }
 
-    // デフォルトの開始時刻と終了時刻（例: 9:00-24:00）
-    const defaultStartHour = 9;
-    const defaultEndHour = 24; // 24:00 = 翌日00:00
-
     const newTimeSlots: TimeSlot[] = [];
 
     targetDates.forEach((date) => {
-      // 9:00 から 24:00まで、選択された間隔で時間枠を生成
-      let currentTime = setHours(setMinutes(date, 0), defaultStartHour);
-      let endTime;
+      // デフォルト開始時間を設定
+      const [startHour, startMinute] = defaultStartTime.split(":").map(Number);
+      let currentTime = setHours(
+        setMinutes(date, startMinute || 0),
+        startHour || 0
+      );
 
+      let endTime;
       // 終了時間が24:00の場合は翌日の0:00として扱う
-      if (defaultEndHour === 24) {
+      if (defaultEndTime === "24:00") {
         const nextDay = new Date(date);
         nextDay.setDate(nextDay.getDate() + 1);
         endTime = setHours(setMinutes(nextDay, 0), 0);
       } else {
-        endTime = setHours(setMinutes(date, 0), defaultEndHour);
+        // それ以外の場合は当日の指定時刻
+        const [endHour, endMinute] = defaultEndTime.split(":").map(Number);
+        endTime = setHours(setMinutes(date, endMinute || 0), endHour || 0);
+
+        // 終了時間が開始時間より前の場合は翌日として扱う
+        if (endTime < currentTime) {
+          endTime.setDate(endTime.getDate() + 1);
+        }
       }
 
       while (currentTime < endTime) {
@@ -121,7 +132,7 @@ export default function DateRangePicker({
         // 次の時間が終了時間を超えないようにする
         const slotEndTime =
           nextTime > endTime
-            ? defaultEndHour === 24
+            ? defaultEndTime === "24:00"
               ? "24:00"
               : format(endTime, "HH:mm")
             : format(nextTime, "HH:mm");
@@ -152,7 +163,7 @@ export default function DateRangePicker({
     }
   };
 
-  // 開始日、終了日、除外日が変更されたとき、または時間間隔が変更されたときに時間枠を自動生成
+  // 開始日、終了日、除外日が変更されたとき、または時間間隔・デフォルト時間が変更されたときに時間枠を自動生成
   useEffect(() => {
     if (startDate && endDate) {
       try {
@@ -181,7 +192,15 @@ export default function DateRangePicker({
         onDatesChange?.([]);
       }
     }
-  }, [startDate, endDate, excludedDates, intervalUnit, onDatesChange]);
+  }, [
+    startDate,
+    endDate,
+    excludedDates,
+    intervalUnit,
+    defaultStartTime,
+    defaultEndTime,
+    onDatesChange,
+  ]);
 
   // 開始日の変更処理
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,6 +281,32 @@ export default function DateRangePicker({
   // 時間間隔の選択肢変更ハンドラ
   const handleIntervalChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setIntervalUnit(e.target.value);
+  };
+
+  // デフォルト開始時間変更ハンドラ
+  const handleDefaultStartTimeChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setDefaultStartTime(e.target.value);
+    // 時間が変更されたら時間枠を再生成
+    if (startDate && endDate) {
+      setTimeSlots([]); // 一度クリアしてから
+      setTimeout(() => generatePeriodTimeSlots(), 0);
+    }
+  };
+
+  // デフォルト終了時間変更ハンドラ
+  const handleDefaultEndTimeChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    // 「24:00」の特殊ケースを処理
+    const value = e.target.value === "00:00" ? "24:00" : e.target.value;
+    setDefaultEndTime(value);
+    // 時間が変更されたら時間枠を再生成
+    if (startDate && endDate) {
+      setTimeSlots([]); // 一度クリアしてから
+      setTimeout(() => generatePeriodTimeSlots(), 0);
+    }
   };
 
   return (
@@ -361,6 +406,40 @@ export default function DateRangePicker({
       <div className="card bg-base-100 shadow-md">
         <div className="card-body">
           <h3 className="card-title text-lg">時間枠の設定</h3>
+
+          {/* デフォルトの開始・終了時刻設定UI */}
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text">デフォルト開始時間</span>
+                </div>
+                <input
+                  type="time"
+                  className="input input-bordered w-full"
+                  value={defaultStartTime}
+                  onChange={handleDefaultStartTimeChange}
+                />
+              </label>
+            </div>
+            <div>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text">デフォルト終了時間</span>
+                </div>
+                <input
+                  type="time"
+                  className="input input-bordered w-full"
+                  value={defaultEndTime === "24:00" ? "00:00" : defaultEndTime}
+                  onChange={handleDefaultEndTimeChange}
+                />
+              </label>
+              <span className="label-text-alt text-info">
+                00:00は翌日0:00として扱われます
+              </span>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-grow">
               <label className="form-control w-full">

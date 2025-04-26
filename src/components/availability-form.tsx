@@ -679,7 +679,7 @@ export default function AvailabilityForm({
                 </div>
               </div>
 
-              <div className="bg-base-100 p-2 mb-4 text-xs text-info-content flex items-center">
+              <div className="bg-info/10 p-2 mb-4 text-xs text-info rounded-lg border border-info/20 flex items-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -690,7 +690,7 @@ export default function AvailabilityForm({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   ></path>
                 </svg>
                 <span>
