@@ -1,22 +1,21 @@
 import Link from "next/link";
+import siteConfig from "@/lib/site-config";
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
-  
   return (
     <footer className="bg-base-200 border-t border-base-300 py-8 mt-auto">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* サービス情報 */}
           <div>
-            <h3 className="font-bold text-lg mb-4">複数日程調整アプリ</h3>
+            <h3 className="font-bold text-lg mb-4">{siteConfig.name.full}</h3>
             <p className="text-base-content/70 text-sm">
               グループのイベント日程調整を簡単に。
               <br />
               参加者はログイン不要で回答でき、最適な日程を素早く見つけることができます。
             </p>
           </div>
-          
+
           {/* リンク集 */}
           <div>
             <h3 className="font-bold mb-4">リンク</h3>
@@ -33,7 +32,7 @@ export default function Footer() {
               </li>
             </ul>
           </div>
-          
+
           {/* 連絡先・著作権 */}
           <div>
             <h3 className="font-bold mb-4">お問い合わせ</h3>
@@ -42,10 +41,11 @@ export default function Footer() {
             </p>
           </div>
         </div>
-        
+
         {/* コピーライト */}
         <div className="border-t border-base-300 mt-6 pt-6 text-center text-sm text-base-content/60">
-          &copy; {currentYear} 複数日程調整アプリ All Rights Reserved.
+          &copy; {siteConfig.copyright.year} {siteConfig.copyright.holder} All
+          Rights Reserved.
         </div>
       </div>
     </footer>

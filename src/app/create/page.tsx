@@ -1,6 +1,7 @@
 import EventForm from "@/components/event-form";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import Card from "@/components/layout/Card";
+import siteConfig from "@/lib/site-config";
 
 export default function CreateEventPage() {
   return (
@@ -15,16 +16,14 @@ export default function CreateEventPage() {
         <div className="text-center mb-8 fade-in">
           <h1 className="text-4xl font-bold mb-3">新規イベント作成</h1>
           <p className="text-base-content/70 max-w-xl mx-auto">
-            候補日程を複数選択して、参加者に共有するイベントを作成します。
-            作成後に共有用リンクが発行されます。
+            候補日程を複数選択して、参加者に共有する{siteConfig.name.full}
+            を作成します。 作成後に共有用リンクが発行されます。
           </p>
         </div>
 
-        <div style={{ animationDelay: "0.1s" }}>
-          <Card className="fade-in">
-            <EventForm />
-          </Card>
-        </div>
+        <Card className="fade-in animate-delay-100">
+          <EventForm />
+        </Card>
       </div>
     </>
   );

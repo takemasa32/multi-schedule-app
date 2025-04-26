@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import Card from "@/components/layout/Card";
+import siteConfig from "@/lib/site-config";
 
 export default function LandingPage() {
   return (
@@ -47,16 +48,12 @@ export default function LandingPage() {
                 style={{ animationDelay: "0.3s" }}
               >
                 <Image
-                  src="/calendar.svg"
-                  alt="カレンダーイラスト"
+                  src={siteConfig.logo.main}
+                  alt={siteConfig.logo.alt}
                   fill
                   className="object-contain"
                   priority
                 />
-                {/* SVG画像がない場合のフォールバック */}
-                <div className="absolute inset-0 flex items-center justify-center text-primary text-9xl opacity-20">
-                  📅
-                </div>
               </div>
             </div>
           </div>

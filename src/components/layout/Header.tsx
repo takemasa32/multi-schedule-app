@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+import siteConfig from "@/lib/site-config";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Header() {
   return (
@@ -8,17 +10,19 @@ export default function Header() {
         <Link href="/" className="flex items-center space-x-2 text-primary">
           <div className="w-8 h-8 relative">
             <Image
-              src="/logo/favicon.svg"
-              alt="複数日程調整アプリ"
+              src={siteConfig.logo.svg}
+              alt={siteConfig.logo.alt}
               fill
               className="object-contain"
               priority
             />
           </div>
           <span className="font-bold text-xl hidden sm:inline">
-            複数日程調整アプリ
+            {siteConfig.name.full}
           </span>
-          <span className="font-bold text-xl sm:hidden">日程調整</span>
+          <span className="font-bold text-xl sm:hidden">
+            {siteConfig.name.short}
+          </span>
         </Link>
 
         <nav className="flex items-center space-x-2 sm:space-x-4">
@@ -38,6 +42,9 @@ export default function Header() {
           >
             ホーム
           </Link>
+
+          {/* テーマ切り替えボタン */}
+          <ThemeSwitcher />
         </nav>
       </div>
     </header>
