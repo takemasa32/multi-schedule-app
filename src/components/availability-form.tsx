@@ -20,14 +20,14 @@ interface AvailabilityFormProps {
     label?: string;
   }[];
   // 既存の回答データがある場合はそれを受け取る
-  existingResponses?: {
-    participantName?: string;
-    availabilities?: Record<string, boolean>;
-    participantId?: string; // 編集モードの場合は参加者IDも渡す
-  };
+  initialParticipant?: {
+    id: string;
+    name: string;
+  } | null;
+  initialAvailabilities?: Record<string, boolean>;
+  mode?: "new" | "edit";
   onEditComplete?: () => void; // 編集完了時のコールバック
   onCancelEdit?: () => void; // 編集キャンセル時のコールバック
-  isEditMode?: boolean; // 編集モードかどうか
 }
 
 type ViewMode = "list" | "table" | "heatmap";
@@ -37,21 +37,22 @@ export default function AvailabilityForm({
   eventId,
   publicToken,
   eventDates,
-  existingResponses,
+  initialParticipant,
+  initialAvailabilities = {},
+  mode = "new",
   onEditComplete,
   onCancelEdit,
-  isEditMode = false,
 }: AvailabilityFormProps) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialParticipant?.name || "");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false); // 更新モード用の状態
-  // すべての日程に対して初期状態を「不可」（false）に設定
+  // すべての日程に対して初期状態を設定
   const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(
     () => {
       const initialState: Record<string, boolean> = {};
-      // 既存の回答がある場合はそれを使用、ない場合は全てfalseで初期化
-      if (existingResponses?.availabilities) {
-        return { ...initialState, ...existingResponses.availabilities };
+      // 初期値がある場合はそれを使用
+      if (Object.keys(initialAvailabilities).length > 0) {
+        return { ...initialState, ...initialAvailabilities };
       }
       // すべての日程に対してfalse（不可）を初期値として設定
       eventDates.forEach((date) => {
@@ -86,15 +87,15 @@ export default function AvailabilityForm({
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
     // 既存回答データの名前があればそれを優先
-    if (existingResponses?.participantName) {
-      setName(existingResponses.participantName);
+    if (initialParticipant?.name) {
+      setName(initialParticipant.name);
     } else {
       const savedName = localStorage.getItem("participantName");
       if (savedName) {
         setName(savedName);
       }
     }
-  }, [existingResponses]);
+  }, [initialParticipant]);
 
   // 時間範囲を読みやすい形式にフォーマット
   const formatTimeRange = (startTime: string, endTime: string) => {
@@ -171,17 +172,17 @@ export default function AvailabilityForm({
   const handleFormAction = async (formData: FormData): Promise<void> => {
     try {
       // 編集モードの場合、既存の参加者IDを追加
-      if (isEditMode && existingResponses?.participantId) {
-        formData.append("participantId", existingResponses.participantId);
+      if (mode === "edit" && initialParticipant?.id) {
+        formData.append("participantId", initialParticipant.id);
       }
 
       const response = await submitAvailability(formData);
 
       if (response.success) {
         setFeedback(response.message ?? "送信が完了しました");
-        // 編集モードで編集完了コールバックがあれば呼び出す
-        if (isEditMode && onEditComplete) {
-          onEditComplete();
+        // 入力ページの場合は元の確認ページに戻る
+        if (typeof window !== "undefined") {
+          window.location.href = `/event/${publicToken}`;
         }
       } else {
         setError(response.message || "送信に失敗しました");
@@ -569,8 +570,8 @@ export default function AvailabilityForm({
       ) : (
         <>
           <h2 className="text-xl font-bold mb-4">
-            {isEditMode
-              ? `${existingResponses?.participantName}さんの予定を編集`
+            {mode === "edit"
+              ? `${initialParticipant?.name}さんの予定を編集`
               : isEditing
               ? "回答を更新する"
               : "回答する"}
@@ -718,7 +719,7 @@ export default function AvailabilityForm({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   ></path>
                 </svg>
                 <span>
@@ -1072,24 +1073,21 @@ export default function AvailabilityForm({
                     <span className="loading loading-spinner loading-sm mr-2"></span>
                     送信中...
                   </>
-                ) : isEditMode ? (
+                ) : mode === "edit" ? (
                   "編集を保存"
                 ) : (
                   "回答を送信"
                 )}
               </button>
 
-              {/* 編集モードの場合はキャンセルボタンを表示 */}
-              {isEditMode && onCancelEdit && (
-                <button
-                  type="button"
-                  className="btn btn-outline w-full md:w-auto"
-                  onClick={onCancelEdit}
-                  disabled={isSubmitting}
-                >
-                  キャンセル
-                </button>
-              )}
+              {/* キャンセルボタン - 入力ページに戻る */}
+              <a
+                href={`/event/${publicToken || publicId}`}
+                className="btn btn-outline w-full md:w-auto"
+                disabled={isSubmitting}
+              >
+                キャンセル
+              </a>
             </div>
           </form>
         </>

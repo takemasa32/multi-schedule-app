@@ -106,3 +106,90 @@ export async function createEvent(formData: FormData) {
     throw error; // Re-throw to be caught by error boundary
   }
 }
+
+/**
+ * 特定の参加者IDに基づいて参加者情報と回答を取得する
+ */
+export async function getParticipantById(participantId: string, eventId: string) {
+  const supabase = createSupabaseAdmin();
+
+  // 参加者情報を取得
+  const { data: participant, error: participantError } = await supabase
+    .from('participants')
+    .select('*')
+    .eq('id', participantId)
+    .eq('event_id', eventId)
+    .single();
+
+  if (participantError || !participant) {
+    console.error("参加者取得エラー:", participantError);
+    return null;
+  }
+
+  // 参加者の回答を取得
+  const { data: availabilities, error: availError } = await supabase
+    .from('availabilities')
+    .select(`
+      id,
+      event_date_id,
+      availability
+    `)
+    .eq('participant_id', participantId)
+    .eq('event_id', eventId);
+
+  if (availError) {
+    console.error("回答取得エラー:", availError);
+    return null;
+  }
+
+  // 回答をイベント日付IDでマップ化
+  const availabilityMap = availabilities.reduce((acc, item) => {
+    acc[item.event_date_id] = item.availability;
+    return acc;
+  }, {} as Record<string, boolean>);
+
+  return {
+    participant,
+    availabilityMap
+  };
+}
+
+/**
+ * 公開トークンを使用してイベントを取得する
+ */
+export async function getEvent(publicToken: string) {
+  const supabase = createSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('public_token', publicToken)
+    .single();
+
+  if (error) {
+    console.error('イベント取得エラー:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * イベントIDに基づいてイベント日程を取得する
+ */
+export async function getEventDates(eventId: string) {
+  const supabase = createSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from('event_dates')
+    .select('*')
+    .eq('event_id', eventId)
+    .order('start_time', { ascending: true });
+
+  if (error) {
+    console.error('イベント日程取得エラー:', error);
+    return [];
+  }
+
+  return data || [];
+}

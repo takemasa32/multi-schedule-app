@@ -88,26 +88,26 @@ export default function AvailabilitySummary({
   // 時間をフォーマット
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    
+
     // 00:00の場合は24:00として表示する条件を修正
     if (date.getHours() === 0 && date.getMinutes() === 0) {
       const prevDate = new Date(date);
       prevDate.setDate(prevDate.getDate() - 1);
       prevDate.setHours(0, 0, 0, 0); // 日付部分だけ比較するため時刻部分をリセット
-      
+
       // 日付部分の比較を行い、前日のイベントがあるか確認
       for (const eventDate of eventDates) {
         const startDate = new Date(eventDate.start_time);
         const startDay = new Date(startDate);
         startDay.setHours(0, 0, 0, 0); // 時刻部分をリセット
-        
+
         // 前日のイベントがあれば 24:00 と表示
         if (startDay.getTime() === prevDate.getTime()) {
           return "24:00";
         }
       }
     }
-    
+
     return date.toLocaleTimeString("ja-JP", {
       hour: "2-digit",
       minute: "2-digit",
@@ -166,37 +166,43 @@ export default function AvailabilitySummary({
         .getMinutes()
         .toString()
         .padStart(2, "0")}`;
-        
+
       if (!timeMap.has(timeKey)) {
         const endTimeObj = new Date(date.end_time);
         // 終了時刻のフォーマット
         let endTimeKey;
-        
+
         // 00:00の場合は24:00として表示するかどうかを判断
         if (endTimeObj.getHours() === 0 && endTimeObj.getMinutes() === 0) {
           // 開始日と終了日を比較
           const startDate = new Date(startTimeObj);
           startDate.setHours(0, 0, 0, 0);
-          
+
           const endDate = new Date(endTimeObj);
           endDate.setHours(0, 0, 0, 0);
-          
+
           // 終了日が開始日の翌日である場合は24:00と表示
           if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
             endTimeKey = "24:00";
           } else {
-            endTimeKey = `${endTimeObj.getHours().toString().padStart(2, "0")}:${endTimeObj
+            endTimeKey = `${endTimeObj
+              .getHours()
+              .toString()
+              .padStart(2, "0")}:${endTimeObj
               .getMinutes()
               .toString()
               .padStart(2, "0")}`;
           }
         } else {
-          endTimeKey = `${endTimeObj.getHours().toString().padStart(2, "0")}:${endTimeObj
+          endTimeKey = `${endTimeObj
+            .getHours()
+            .toString()
+            .padStart(2, "0")}:${endTimeObj
             .getMinutes()
             .toString()
             .padStart(2, "0")}`;
         }
-        
+
         timeMap.set(timeKey, {
           startTime: timeKey,
           endTime: endTimeKey,
@@ -305,7 +311,10 @@ export default function AvailabilitySummary({
       const startDate = new Date(date.start_time);
       const dateStr = getDateString(date.start_time);
       // 時間部分をキーに使用
-      const timeStr = `${startDate.getHours().toString().padStart(2, "0")}:${startDate
+      const timeStr = `${startDate
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${startDate
         .getMinutes()
         .toString()
         .padStart(2, "0")}`;
@@ -697,7 +706,9 @@ export default function AvailabilitySummary({
                   >
                     <td className="whitespace-nowrap font-medium flex items-center justify-between gap-2">
                       <span>{participant.name}</span>
-                      {onEditParticipant && (
+                      {/* 編集ボタン: onEditParticipantが渡されている場合はそれを使用、
+                          そうでなければ編集ページへのリンクを表示 */}
+                      {onEditParticipant ? (
                         <button
                           onClick={() =>
                             handleEditClick(participant.id, participant.name)
@@ -720,6 +731,27 @@ export default function AvailabilitySummary({
                             />
                           </svg>
                         </button>
+                      ) : (
+                        <a
+                          href={`/event/${publicToken}/input?participant_id=${participant.id}`}
+                          className="btn btn-ghost btn-xs tooltip tooltip-right"
+                          data-tip="この参加者の予定を編集"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            />
+                          </svg>
+                        </a>
                       )}
                     </td>
                     {eventDates.map((date) => {
