@@ -195,43 +195,41 @@ export default function EventClientWrapper({
         </div>
       </div>
 
-      {/* 日程確定セクション（管理者のみ） */}
-      {isAdmin && (
-        <div className="card bg-base-100 shadow-md border border-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-xl mb-4">
-              {event.is_finalized ? "日程修正セクション" : "日程確定セクション"}
-            </h2>
-            {event.is_finalized && (
-              <div className="alert alert-warning mb-4">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                <span>
-                  日程が既に確定していますが、必要に応じて修正できます。
-                </span>
-              </div>
-            )}
-            <FinalizeEventSection
-              eventId={event.id}
-              eventDates={eventDates}
-              availabilities={availabilities}
-              participants={participants}
-              finalizedDateIds={finalizedDateIds}
-            />
-          </div>
+      {/* 日程確定セクション */}
+      <div className="card bg-base-100 shadow-md border border-base-200">
+        <div className="card-body">
+          <h2 className="card-title text-xl mb-4">
+            {event.is_finalized ? "日程修正セクション" : "日程確定セクション"}
+          </h2>
+          {event.is_finalized && (
+            <div className="alert alert-warning mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <span>
+                日程が既に確定していますが、必要に応じて修正できます。
+              </span>
+            </div>
+          )}
+          <FinalizeEventSection
+            eventId={event.id}
+            eventDates={eventDates}
+            availabilities={availabilities}
+            participants={participants}
+            finalizedDateIds={finalizedDateIds}
+          />
         </div>
-      )}
+      </div>
     </>
   );
 }
