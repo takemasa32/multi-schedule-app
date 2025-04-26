@@ -1,10 +1,13 @@
 import { Toaster } from "react-hot-toast";
 import type { Metadata } from "next";
 import "./globals.css";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "日程調整するやつ",
-  description: "私が作りました",
+  title: "複数日程調整アプリ - みんなの予定を簡単調整",
+  description:
+    "イベント・会議・集まりの日程調整を簡単に。複数の候補日から参加者の都合を集計し、最適な日程を見つけます。ログイン不要、リンク共有だけで誰でも簡単に回答できます。",
 };
 
 export default function RootLayout({
@@ -13,9 +16,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
-      <body>
-        {children}
+    <html lang="ja" data-theme="light">
+      <body className="flex flex-col min-h-screen bg-base-100">
+        <Header />
+        <main className="flex-grow container mx-auto px-4 py-6">
+          {children}
+        </main>
+        <Footer />
         <Toaster position="top-right" />
       </body>
     </html>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Card from "@/components/layout/Card";
 
 interface EventHeaderProps {
   title: string;
@@ -32,20 +33,73 @@ export function EventHeader({
   };
 
   return (
-    <div className="mb-8">
-      <div className="flex justify-between items-start mb-2">
-        <h1 className="text-3xl font-bold">{title}</h1>
-        <button className="btn btn-sm btn-outline" onClick={copyEventLink}>
-          {copied ? "✓ コピー完了" : "共有リンクをコピー"}
+    <Card className="mb-8" isHighlighted={isFinalized}>
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold mb-2">
+            {isFinalized && <span className="text-success mr-2">✓</span>}
+            {title}
+          </h1>
+          {isFinalized && (
+            <div className="badge badge-success badge-lg mb-4">
+              日程確定済み
+            </div>
+          )}
+          {description && (
+            <p className="text-base-content/70 whitespace-pre-line mt-2">
+              {description}
+            </p>
+          )}
+        </div>
+
+        <button
+          className={`btn ${
+            copied ? "btn-success" : "btn-primary"
+          } btn-sm sm:btn-md btn-animated`}
+          onClick={copyEventLink}
+        >
+          {copied ? (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              コピー完了
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5"
+                />
+              </svg>
+              共有リンクをコピー
+            </>
+          )}
         </button>
       </div>
 
-      {description && (
-        <p className="text-gray-600 mb-4 whitespace-pre-line">{description}</p>
-      )}
-
       {!isFinalized && isAdmin && (
-        <div className="alert alert-info text-sm mb-4">
+        <div className="alert bg-info/10 text-info border-l-4 border-info text-sm">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -64,6 +118,6 @@ export function EventHeader({
           </span>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
