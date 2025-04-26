@@ -2,10 +2,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 import { EventHeader } from "@/components/event-header";
-import AvailabilityForm from "@/components/availability-form";
-import AvailabilitySummary from "@/components/availability-summary";
+import EventClientWrapper from "@/components/event-client/event-client-wrapper";
 import { CalendarLinks } from "@/components/calendar-links";
-import FinalizeEventSection from "@/components/finalize-event-section";
 
 interface EventPageProps {
   params: {
@@ -96,110 +94,16 @@ export default async function EventPage({
         isFinalized={event.is_finalized}
       />
 
-      {event.is_finalized && finalizedDates.length > 0 ? (
-        <>
-          <div className="alert alert-success mb-8">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>日程が確定しました！</span>
-          </div>
-
-          <div className="mb-8">
-            <h3 className="text-lg font-bold mb-2">確定した日程:</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              {finalizedDates.map((date) => (
-                <li key={date.id}>
-                  {new Date(date.start_time).toLocaleDateString("ja-JP", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    weekday: "short",
-                  })}{" "}
-                  {new Date(date.start_time).toLocaleTimeString("ja-JP", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}{" "}
-                  〜{" "}
-                  {new Date(date.end_time).toLocaleTimeString("ja-JP", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <Suspense fallback={<div>カレンダーリンクを読み込み中...</div>}>
-            <CalendarLinks
-              eventTitle={event.title}
-              eventDates={finalizedDates}
-              eventId={event.id}
-            />
-          </Suspense>
-
-          <div className="card bg-base-100 shadow-md mb-8 mt-8">
-            <div className="card-body">
-              <h3 className="card-title text-lg">引き続き回答できます</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                イベントは確定していますが、引き続き回答を更新できます。
-              </p>
-              <AvailabilityForm
-                eventId={event.id}
-                publicToken={event.public_token}
-                eventDates={eventDates || []}
-              />
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="card bg-base-100 shadow-md mb-8">
-          <div className="card-body">
-            <AvailabilityForm
-              eventId={event.id}
-              publicToken={event.public_token}
-              eventDates={eventDates || []}
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="card bg-base-100 shadow-md mb-8">
-        <div className="card-body">
-          <h2 className="card-title text-xl mb-4">回答状況</h2>
-          <AvailabilitySummary
-            participants={participants || []}
-            eventDates={eventDates || []}
-            availabilities={availabilities || []}
-            finalizedDateIds={finalizedDateIds}
-          />
-        </div>
-      </div>
-
-      {isAdmin && !event.is_finalized && (
-        <div className="card bg-base-100 shadow-md">
-          <div className="card-body">
-            <h2 className="card-title text-xl mb-4">管理者メニュー</h2>
-            <FinalizeEventSection
-              eventId={event.id}
-              adminToken={adminToken}
-              eventDates={eventDates || []}
-              availabilities={availabilities || []}
-              participants={participants || []}
-            />
-          </div>
-        </div>
-      )}
+      {/* クライアントラッパーに全ての必要なデータを渡す */}
+      <EventClientWrapper
+        event={event}
+        eventDates={eventDates || []}
+        participants={participants || []}
+        availabilities={availabilities || []}
+        finalizedDateIds={finalizedDateIds}
+        isAdmin={isAdmin}
+        adminToken={adminToken}
+      />
     </main>
   );
 }

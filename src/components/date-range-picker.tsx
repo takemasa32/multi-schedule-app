@@ -30,23 +30,6 @@ export default function DateRangePicker({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [intervalUnit, setIntervalUnit] = useState<string>("60"); // 時間帯の単位（分）
 
-  // 新しいタイムスロットを追加
-  const addTimeSlot = () => {
-    if (!startDate) {
-      setErrorMessage("まず開始日を選択してください");
-      return;
-    }
-
-    // デフォルトの時間枠を設定（例: 10:00-11:00）
-    const newSlot: TimeSlot = {
-      date: startDate,
-      startTime: "10:00",
-      endTime: "11:00",
-    };
-
-    setTimeSlots([...timeSlots, newSlot]);
-  };
-
   // タイムスロットを削除
   const removeTimeSlot = (index: number) => {
     const updatedSlots = [...timeSlots];
@@ -87,7 +70,89 @@ export default function DateRangePicker({
     setTimeSlots(updatedSlots);
   };
 
-  // 無限ループを修正：依存配列を適切に設定
+  // 期間全体を時間帯に分割する（15分、30分、60分など）
+  const generatePeriodTimeSlots = () => {
+    if (!startDate || !endDate) {
+      setErrorMessage("開始日と終了日を設定してください");
+      return;
+    }
+
+    // 除外日を除いた日付のみを対象にする
+    const targetDates = eachDayOfInterval({
+      start: startDate,
+      end: endDate,
+    }).filter(
+      (date) => !excludedDates.some((excluded) => isEqual(excluded, date))
+    );
+
+    // 文字列から数値に変換（分単位）
+    const intervalMinutes = parseInt(intervalUnit);
+    if (isNaN(intervalMinutes) || intervalMinutes <= 0) {
+      setErrorMessage("有効な時間間隔を選択してください");
+      return;
+    }
+
+    // デフォルトの開始時刻と終了時刻（例: 9:00-24:00）
+    const defaultStartHour = 9;
+    const defaultEndHour = 24; // 24:00 = 翌日00:00
+
+    const newTimeSlots: TimeSlot[] = [];
+
+    targetDates.forEach((date) => {
+      // 9:00 から 24:00まで、選択された間隔で時間枠を生成
+      let currentTime = setHours(setMinutes(date, 0), defaultStartHour);
+      let endTime;
+
+      // 終了時間が24:00の場合は翌日の0:00として扱う
+      if (defaultEndHour === 24) {
+        const nextDay = new Date(date);
+        nextDay.setDate(nextDay.getDate() + 1);
+        endTime = setHours(setMinutes(nextDay, 0), 0);
+      } else {
+        endTime = setHours(setMinutes(date, 0), defaultEndHour);
+      }
+
+      while (currentTime < endTime) {
+        const slotStartTime = format(currentTime, "HH:mm");
+        // intervalMinutesを使って正しい時間間隔で加算する
+        const nextTime = new Date(currentTime);
+        nextTime.setMinutes(nextTime.getMinutes() + intervalMinutes);
+
+        // 次の時間が終了時間を超えないようにする
+        const slotEndTime =
+          nextTime > endTime
+            ? defaultEndHour === 24
+              ? "24:00"
+              : format(endTime, "HH:mm")
+            : format(nextTime, "HH:mm");
+
+        newTimeSlots.push({
+          date,
+          startTime: slotStartTime,
+          endTime: slotEndTime,
+        });
+
+        currentTime = nextTime;
+      }
+    });
+
+    setTimeSlots(newTimeSlots);
+    setErrorMessage(null);
+  };
+
+  // 日付文字列を安全にDate型に変換
+  const parseDateSafely = (dateString: string): Date | null => {
+    try {
+      if (!dateString) return null;
+      const date = parseISO(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date;
+    } catch {
+      return null;
+    }
+  };
+
+  // 開始日、終了日、除外日が変更されたとき、または時間間隔が変更されたときに時間枠を自動生成
   useEffect(() => {
     if (startDate && endDate) {
       try {
@@ -103,6 +168,10 @@ export default function DateRangePicker({
         // 状態更新とコールバック
         setSelectedDates(filteredDates);
         onDatesChange?.(filteredDates);
+
+        // 日付が設定されたら時間枠を自動生成
+        generatePeriodTimeSlots();
+
         setErrorMessage(null);
       } catch {
         setErrorMessage(
@@ -112,19 +181,7 @@ export default function DateRangePicker({
         onDatesChange?.([]);
       }
     }
-  }, [startDate, endDate, excludedDates, onDatesChange]);
-
-  // 日付文字列を安全にDate型に変換
-  const parseDateSafely = (dateString: string): Date | null => {
-    try {
-      if (!dateString) return null;
-      const date = parseISO(dateString);
-      if (isNaN(date.getTime())) return null;
-      return date;
-    } catch {
-      return null;
-    }
-  };
+  }, [startDate, endDate, excludedDates, intervalUnit, onDatesChange]);
 
   // 開始日の変更処理
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,60 +243,6 @@ export default function DateRangePicker({
     setExcludedDates(
       excludedDates.filter((date) => !isEqual(date, dateToRemove))
     );
-  };
-
-  // 期間全体を時間帯に分割する（15分、30分、60分など）
-  const generatePeriodTimeSlots = () => {
-    if (!startDate || !endDate) {
-      setErrorMessage("開始日と終了日を設定してください");
-      return;
-    }
-
-    // 除外日を除いた日付のみを対象にする
-    const targetDates = eachDayOfInterval({
-      start: startDate,
-      end: endDate,
-    }).filter(
-      (date) => !excludedDates.some((excluded) => isEqual(excluded, date))
-    );
-
-    // 文字列から数値に変換（分単位）
-    const intervalMinutes = parseInt(intervalUnit);
-    if (isNaN(intervalMinutes) || intervalMinutes <= 0) {
-      setErrorMessage("有効な時間間隔を選択してください");
-      return;
-    }
-
-    // デフォルトの開始時刻と終了時刻（例: 9:00-24:00）
-    const defaultStartHour = 9;
-    const defaultEndHour = 24; // 17から24に変更（24:00 = 翌日00:00）
-
-    const newTimeSlots: TimeSlot[] = [];
-
-    targetDates.forEach((date) => {
-      // 9:00 から 17:00まで、選択された間隔で時間枠を生成
-      let currentTime = setHours(setMinutes(date, 0), defaultStartHour);
-      const endTime = setHours(setMinutes(date, 0), defaultEndHour);
-
-      while (currentTime < endTime) {
-        const slotStartTime = format(currentTime, "HH:mm");
-        // intervalMinutesを使って正しい時間間隔で加算する
-        const nextTime = new Date(currentTime);
-        nextTime.setMinutes(nextTime.getMinutes() + intervalMinutes);
-        const slotEndTime = format(nextTime, "HH:mm");
-
-        newTimeSlots.push({
-          date,
-          startTime: slotStartTime,
-          endTime: slotEndTime,
-        });
-
-        currentTime = nextTime;
-      }
-    });
-
-    setTimeSlots(newTimeSlots);
-    setErrorMessage(null);
   };
 
   // タイムスロットに変更があったらコールバック実行
@@ -365,91 +368,105 @@ export default function DateRangePicker({
                   <span className="label-text">時間枠の間隔</span>
                 </div>
                 <select
-                  className="select select-bordered w-full"
+                  className="select select-bordered w-full bg-base-100 text-base-content"
                   value={intervalUnit}
                   onChange={handleIntervalChange}
                 >
-                  <option value="15">15分</option>
-                  <option value="30">30分</option>
-                  <option value="60">1時間</option>
-                  <option value="120">2時間</option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="15"
+                  >
+                    15分
+                  </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="30"
+                  >
+                    30分
+                  </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="60"
+                  >
+                    1時間
+                  </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="120"
+                  >
+                    2時間
+                  </option>
                 </select>
               </label>
             </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={generatePeriodTimeSlots}
-            >
-              時間枠を自動生成
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-primary"
-              onClick={addTimeSlot}
-            >
-              時間枠を手動追加
-            </button>
           </div>
 
-          {/* タイムスロットの一覧表示と編集UI */}
+          {/* タイムスロットの一覧表示と編集UI (折りたたみ可能) */}
           {timeSlots.length > 0 && (
-            <div className="overflow-x-auto mt-4">
-              <table className="table table-zebra">
-                <thead>
-                  <tr>
-                    <th>日付</th>
-                    <th>開始時間</th>
-                    <th>終了時間</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {timeSlots.map((slot, index) => (
-                    <tr key={index}>
-                      <td>
-                        <input
-                          type="date"
-                          className="input input-bordered input-sm w-full"
-                          value={format(slot.date, "yyyy-MM-dd")}
-                          onChange={(e) =>
-                            updateTimeSlotDate(index, e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="time"
-                          className="input input-bordered input-sm w-full"
-                          value={slot.startTime}
-                          onChange={(e) =>
-                            updateTimeSlotStart(index, e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="time"
-                          className="input input-bordered input-sm w-full"
-                          value={slot.endTime}
-                          onChange={(e) =>
-                            updateTimeSlotEnd(index, e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-error"
-                          onClick={() => removeTimeSlot(index)}
-                        >
-                          削除
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="collapse collapse-arrow bg-base-200 mt-4">
+              <input type="checkbox" /> {/* Removed defaultChecked */}
+              <div className="collapse-title font-medium">
+                時間枠一覧 ({timeSlots.length}件)
+              </div>
+              <div className="collapse-content">
+                <div className="overflow-x-auto">
+                  <table className="table table-zebra">
+                    <thead>
+                      <tr>
+                        <th>日付</th>
+                        <th>開始時間</th>
+                        <th>終了時間</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timeSlots.map((slot, index) => (
+                        <tr key={index}>
+                          <td>
+                            <input
+                              type="date"
+                              className="input input-bordered input-sm w-full"
+                              value={format(slot.date, "yyyy-MM-dd")}
+                              onChange={(e) =>
+                                updateTimeSlotDate(index, e.target.value)
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="time"
+                              className="input input-bordered input-sm w-full"
+                              value={slot.startTime}
+                              onChange={(e) =>
+                                updateTimeSlotStart(index, e.target.value)
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="time"
+                              className="input input-bordered input-sm w-full"
+                              value={slot.endTime}
+                              onChange={(e) =>
+                                updateTimeSlotEnd(index, e.target.value)
+                              }
+                            />
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-error"
+                              onClick={() => removeTimeSlot(index)}
+                            >
+                              削除
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </div>

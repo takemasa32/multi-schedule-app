@@ -92,76 +92,76 @@ export async function createEvent(formData: FormData) {
 /**
  * 参加者の回答を保存するAction
  */
-export async function submitAvailability(formData: FormData): Promise<{ success: boolean; message?: string }> {
+export async function submitAvailability(formData: FormData) {
   try {
     const eventId = formData.get("eventId") as string;
     const publicToken = formData.get("publicToken") as string;
     const participantName = formData.get("participant_name") as string;
 
-    // バリデーション
-    if (!participantName || participantName.trim() === "") {
-      throw new Error("お名前は必須です");
-    }
+    // 編集モードの場合、既存の参加者IDが提供される
+    const participantId = formData.get("participantId") as string | null;
 
-    if (!eventId || !publicToken) {
-      throw new Error("イベント情報が不正です");
+    // バリデーション
+    if (!eventId || !publicToken || !participantName) {
+      return { success: false, message: "必須項目が未入力です" };
     }
 
     const supabase = createSupabaseClient();
 
-    // イベント情報の確認
+    // イベントの存在確認
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, is_finalized")
-      .eq("id", eventId)
+      .select("id")
       .eq("public_token", publicToken)
+      .eq("id", eventId)
       .single();
 
     if (eventError || !event) {
-      console.error("Event not found:", eventError);
-      throw new Error("イベントが見つかりませんでした");
+      return { success: false, message: "イベントが見つかりません" };
     }
 
-    // 参加者の登録または取得
-    const responseToken = uuidv4();
-    let participantId: string;
+    // 参加者の作成/特定
+    let existingParticipantId = participantId;
 
-    // 同じ名前の参加者が既に存在するか確認
-    const { data: existingParticipant } = await supabase
-      .from("participants")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("name", participantName)
-      .maybeSingle();
-
-    if (existingParticipant) {
-      participantId = existingParticipant.id;
-
-      // 既存の回答を削除
-      await supabase
-        .from("availabilities")
-        .delete()
-        .eq("event_id", eventId)
-        .eq("participant_id", participantId);
-    } else {
-      // 新規参加者を作成
-      const { data: newParticipant, error: participantError } = await supabase
+    if (!existingParticipantId) {
+      // 参加者IDが指定されていない場合は、名前で既存参加者を探す
+      const { data: existingParticipant } = await supabase
         .from("participants")
-        .insert({
-          event_id: eventId,
-          name: participantName,
-          response_token: responseToken
-        })
         .select("id")
-        .single();
+        .eq("event_id", eventId)
+        .eq("name", participantName)
+        .maybeSingle();
 
-      if (participantError || !newParticipant) {
-        console.error("Participant creation error:", participantError);
-        throw new Error("参加者登録に失敗しました");
+      if (existingParticipant) {
+        existingParticipantId = existingParticipant.id;
+      } else {
+        // 新規参加者を作成
+        const responseToken = uuidv4();
+        const { data: newParticipant, error: participantError } = await supabase
+          .from("participants")
+          .insert({
+            event_id: eventId,
+            name: participantName,
+            response_token: responseToken
+          })
+          .select("id")
+          .single();
+
+        if (participantError || !newParticipant) {
+          console.error("Participant creation error:", participantError);
+          throw new Error("参加者登録に失敗しました");
+        }
+
+        existingParticipantId = newParticipant.id;
       }
-
-      participantId = newParticipant.id;
     }
+
+    // 既存の参加者の回答を削除
+    await supabase
+      .from("availabilities")
+      .delete()
+      .eq("participant_id", existingParticipantId)
+      .eq("event_id", eventId);
 
     // フォームデータから利用可能時間を収集
     const availabilityEntries = [];
@@ -171,7 +171,7 @@ export async function submitAvailability(formData: FormData): Promise<{ success:
         const dateId = key.replace("availability_", "");
         availabilityEntries.push({
           event_id: eventId,
-          participant_id: participantId,
+          participant_id: existingParticipantId,
           event_date_id: dateId,
           availability: value === "on" // checkbox値はonまたは存在しない
         });
@@ -196,15 +196,15 @@ export async function submitAvailability(formData: FormData): Promise<{ success:
     // ページを再検証（キャッシュを更新）
     revalidatePath(`/event/${publicToken}`);
 
-    return { 
-      success: true, 
-      message: "回答を送信しました。ありがとうございます！" 
+    return {
+      success: true,
+      message: "回答を送信しました。ありがとうございます！"
     };
   } catch (err) {
     console.error("Error in submitAvailability:", err);
-    return { 
-      success: false, 
-      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました" 
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました"
     };
   }
 }

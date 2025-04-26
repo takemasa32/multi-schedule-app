@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface AvailabilitySummaryProps {
   eventDates: {
@@ -16,17 +17,63 @@ interface AvailabilitySummaryProps {
     availability: boolean;
   }[];
   finalizedDateIds?: string[] | null;
+  eventId: string;
+  publicToken: string;
+  onEditParticipant?: (
+    participantId: string,
+    participantName: string,
+    participantAvailabilities: Record<string, boolean>
+  ) => void;
 }
 
 type ViewMode = "list" | "heatmap" | "detailed";
+
+// ツールチップ用のインターフェース
+interface TooltipState {
+  show: boolean;
+  x: number;
+  y: number;
+  dateId: string | null;
+  availableParticipants: string[];
+  unavailableParticipants: string[];
+}
 
 export default function AvailabilitySummary({
   eventDates,
   participants,
   availabilities,
   finalizedDateIds = [],
+  eventId,
+  publicToken,
+  onEditParticipant,
 }: AvailabilitySummaryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    show: false,
+    x: 0,
+    y: 0,
+    dateId: null,
+    availableParticipants: [],
+    unavailableParticipants: [],
+  });
+
+  // ツールチップ表示のためのポータル用参照
+  const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
+
+  // コンポーネントマウント時にポータル要素を作成
+  useMemo(() => {
+    if (typeof document !== "undefined") {
+      const portalElement =
+        document.getElementById("tooltip-portal") ||
+        document.createElement("div");
+      if (!document.getElementById("tooltip-portal")) {
+        portalElement.id = "tooltip-portal";
+        document.body.appendChild(portalElement);
+      }
+      tooltipPortalRef.current = portalElement as HTMLDivElement;
+    }
+    return null;
+  }, []);
 
   // 日付を読みやすい形式にフォーマット
   const formatDate = (dateString: string) => {
@@ -170,6 +217,44 @@ export default function AvailabilitySummary({
     return availability ? availability.availability : null;
   };
 
+  // 特定の日程に対して参加可能な参加者と不可能な参加者のリストを取得する関数
+  const getParticipantsByDateId = (dateId: string) => {
+    const availableParticipants: string[] = [];
+    const unavailableParticipants: string[] = [];
+
+    participants.forEach((participant) => {
+      const isAvailable = isParticipantAvailable(participant.id, dateId);
+      if (isAvailable === true) {
+        availableParticipants.push(participant.name);
+      } else if (isAvailable === false) {
+        unavailableParticipants.push(participant.name);
+      }
+    });
+
+    return { availableParticipants, unavailableParticipants };
+  };
+
+  // ツールチップ表示処理
+  const handleMouseEnter = (event: React.MouseEvent, dateId: string) => {
+    const { availableParticipants, unavailableParticipants } =
+      getParticipantsByDateId(dateId);
+
+    // マウス位置を取得
+    setTooltip({
+      show: true,
+      x: event.clientX,
+      y: event.clientY,
+      dateId,
+      availableParticipants,
+      unavailableParticipants,
+    });
+  };
+
+  // ツールチップ非表示処理
+  const handleMouseLeave = () => {
+    setTooltip((prev) => ({ ...prev, show: false }));
+  };
+
   // ヒートマップデータの取得 - 日付×時間のマトリックス
   const heatmapData = useMemo(() => {
     // 各日付×時間帯のセルデータを格納するマップ
@@ -204,6 +289,137 @@ export default function AvailabilitySummary({
 
     return cellMap;
   }, [eventDates, availabilities, finalizedDateIds]);
+
+  // 参加者の回答データを取得して編集用に整形する
+  const getParticipantAvailabilities = (participantId: string) => {
+    const result: Record<string, boolean> = {};
+
+    eventDates.forEach((date) => {
+      // 該当する参加者の回答を検索
+      const response = availabilities.find(
+        (a) => a.participant_id === participantId && a.event_date_id === date.id
+      );
+
+      // 回答が見つかれば、その値を使用。なければデフォルトでfalse
+      result[date.id] = response ? response.availability : false;
+    });
+
+    return result;
+  };
+
+  // 参加者の編集ボタンがクリックされたときの処理
+  const handleEditClick = (participantId: string, participantName: string) => {
+    if (onEditParticipant) {
+      const participantAvailabilities =
+        getParticipantAvailabilities(participantId);
+      onEditParticipant(
+        participantId,
+        participantName,
+        participantAvailabilities
+      );
+    }
+  };
+
+  // ツールチップコンポーネント
+  const Tooltip = () => {
+    if (!tooltip.show || !tooltipPortalRef.current) return null;
+
+    const tooltipStyle = {
+      position: "fixed",
+      top: `${tooltip.y + 10}px`,
+      left: `${tooltip.x + 10}px`,
+      zIndex: 1000,
+      backgroundColor: "white",
+      borderRadius: "8px",
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
+      padding: "12px",
+      maxWidth: "300px",
+      fontSize: "14px",
+    } as React.CSSProperties;
+
+    // 参加者情報が全くない場合
+    const hasNoParticipants =
+      tooltip.availableParticipants.length === 0 &&
+      tooltip.unavailableParticipants.length === 0;
+
+    return createPortal(
+      <div
+        style={tooltipStyle}
+        className="bg-base-100 border border-base-300 shadow-lg p-3 rounded-lg"
+        onMouseEnter={(e) => e.stopPropagation()}
+      >
+        {hasNoParticipants ? (
+          <div className="text-center text-gray-500 py-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mx-auto mb-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p>まだ回答者がいません</p>
+          </div>
+        ) : (
+          <>
+            {tooltip.availableParticipants.length > 0 && (
+              <div className="mb-3">
+                <div className="font-medium text-success mb-2 flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 rounded-full bg-success flex-shrink-0"></span>
+                  <span>
+                    参加可能（{tooltip.availableParticipants.length}名）
+                  </span>
+                </div>
+                <ul className="pl-5 list-disc text-base-content">
+                  {tooltip.availableParticipants.map((name, idx) => (
+                    <li key={`avail-${idx}`} className="mb-0.5">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {tooltip.unavailableParticipants.length > 0 && (
+              <div>
+                <div className="font-medium text-error mb-2 flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 rounded-full bg-error flex-shrink-0"></span>
+                  <span>
+                    参加不可（{tooltip.unavailableParticipants.length}名）
+                  </span>
+                </div>
+                <ul className="pl-5 list-disc text-base-content">
+                  {tooltip.unavailableParticipants.map((name, idx) => (
+                    <li key={`unavail-${idx}`} className="mb-0.5">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {tooltip.availableParticipants.length === 0 &&
+              tooltip.unavailableParticipants.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-200 text-gray-500 text-sm">
+                  <p>参加可能な方はいません</p>
+                </div>
+              )}
+            {tooltip.unavailableParticipants.length === 0 &&
+              tooltip.availableParticipants.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-200 text-gray-500 text-sm">
+                  <p>参加不可の方はいません</p>
+                </div>
+              )}
+          </>
+        )}
+      </div>,
+      tooltipPortalRef.current
+    );
+  };
 
   // 参加者がまだいない場合は表示しない
   if (participants.length === 0) {
@@ -283,7 +499,11 @@ export default function AvailabilitySummary({
                     </td>
                     <td className="whitespace-nowrap">{item.formattedTime}</td>
                     <td className="text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div
+                        className="flex items-center justify-center gap-2"
+                        onMouseEnter={(e) => handleMouseEnter(e, item.dateId)}
+                        onMouseLeave={handleMouseLeave}
+                      >
                         <div className="flex items-center">
                           <span className="w-3 h-3 rounded-full bg-success mr-1"></span>
                           <span className="font-medium">
@@ -350,6 +570,10 @@ export default function AvailabilitySummary({
                           className={`relative p-3 transition-all ${heatmapClass} ${
                             isSelected ? "ring-2 ring-success" : ""
                           }`}
+                          onMouseEnter={(e) =>
+                            handleMouseEnter(e, cellData?.dateId || "")
+                          }
+                          onMouseLeave={handleMouseLeave}
                         >
                           {hasData ? (
                             <div className="flex flex-col items-center justify-center h-full">
@@ -426,8 +650,32 @@ export default function AvailabilitySummary({
                     key={participant.id}
                     className="hover:bg-base-200 transition-colors"
                   >
-                    <td className="whitespace-nowrap font-medium">
-                      {participant.name}
+                    <td className="whitespace-nowrap font-medium flex items-center justify-between gap-2">
+                      <span>{participant.name}</span>
+                      {onEditParticipant && (
+                        <button
+                          onClick={() =>
+                            handleEditClick(participant.id, participant.name)
+                          }
+                          className="btn btn-ghost btn-xs tooltip tooltip-right"
+                          data-tip="この参加者の予定を編集"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            />
+                          </svg>
+                        </button>
+                      )}
                     </td>
                     {eventDates.map((date) => {
                       const isAvailable = isParticipantAvailable(
@@ -465,6 +713,8 @@ export default function AvailabilitySummary({
           </div>
         )}
       </div>
+      {/* ツールチップコンポーネントをレンダリング */}
+      <Tooltip />
     </div>
   );
 }
