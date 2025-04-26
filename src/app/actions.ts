@@ -212,26 +212,26 @@ export async function submitAvailability(formData: FormData) {
 /**
  * イベント日程確定用のAction
  * 複数の日程を確定できるように修正
+ * 管理者でなくても使えるように変更
  */
-export async function finalizeEvent(eventId: string, dateIds: string[], adminToken: string) {
+export async function finalizeEvent(eventId: string, dateIds: string[]) {
   try {
-    if (!eventId || !dateIds || dateIds.length === 0 || !adminToken) {
-      throw new Error("必須パラメータが不足しています");
+    if (!eventId || !dateIds || dateIds.length === 0) {
+      return { success: false, message: "必須パラメータが不足しています" };
     }
 
     const supabase = createSupabaseClient();
 
-    // 管理者権限の確認
+    // イベント情報を取得
     const { data: event, error: eventError } = await supabase
       .from("events")
       .select("id, public_token")
       .eq("id", eventId)
-      .eq("admin_token", adminToken)
       .single();
 
     if (eventError || !event) {
-      console.error("Admin validation error:", eventError);
-      throw new Error("管理者権限がありません");
+      console.error("Event retrieval error:", eventError);
+      return { success: false, message: "イベントが見つかりません" };
     }
 
     // 選択された日程が存在するか確認
@@ -243,7 +243,7 @@ export async function finalizeEvent(eventId: string, dateIds: string[], adminTok
 
     if (dateCheckError || !dateCheck || dateCheck.length !== dateIds.length) {
       console.error("Invalid date selection:", dateCheckError);
-      throw new Error("選択された日程が見つかりません");
+      return { success: false, message: "選択された日程が見つかりません" };
     }
 
     // イベントを確定済み状態に更新
@@ -258,7 +258,7 @@ export async function finalizeEvent(eventId: string, dateIds: string[], adminTok
 
     if (finalizeError) {
       console.error("Finalize error:", finalizeError);
-      throw new Error("イベント確定に失敗しました");
+      return { success: false, message: "イベント確定に失敗しました" };
     }
 
     // 確定日程テーブルをクリアしてから新しい日程を挿入（再確定の場合のため）
@@ -279,7 +279,7 @@ export async function finalizeEvent(eventId: string, dateIds: string[], adminTok
 
     if (insertError) {
       console.error("Finalized dates insertion error:", insertError);
-      throw new Error("確定日程の登録に失敗しました");
+      return { success: false, message: "確定日程の登録に失敗しました" };
     }
 
     // ページを再検証
@@ -288,6 +288,9 @@ export async function finalizeEvent(eventId: string, dateIds: string[], adminTok
     return { success: true };
   } catch (err) {
     console.error("Error in finalizeEvent:", err);
-    throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+    };
   }
 }
