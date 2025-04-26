@@ -8,7 +8,7 @@ export default function CreateEventPage() {
     <>
       <div className="bg-base-200 mb-6 py-4">
         <div className="container mx-auto max-w-5xl px-4">
-          <Breadcrumbs items={[{ label: "イベント作成", href: null }]} />
+          <Breadcrumbs items={[{ label: "イベント作成" }]} />
         </div>
       </div>
 

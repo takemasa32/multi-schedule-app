@@ -14,11 +14,11 @@ export const metadata: Metadata = {
       { url: "/favicon.ico", sizes: "32x32" },
       { url: siteConfig.logo.icon, type: "image/svg+xml" },
     ],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
+    apple: [{ url: "/logo/apple-icon.png", sizes: "180x180" }],
     other: [
       {
         rel: "mask-icon",
-        url: "/safari-pinned-tab.svg",
+        url: "/logo/favicon.svg",
         color: siteConfig.meta.themeColor,
       },
     ],
@@ -34,11 +34,7 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen bg-base-100">
-        <ThemeProvider
-          attribute="data-theme"
-          defaultTheme="daysynth"
-          enableSystem
-        >
+        <ThemeProvider attribute="data-theme" defaultTheme="daysynth">
           <Header />
           <main className="flex-grow container mx-auto px-4 py-6">
             {children}

@@ -1,20 +1,23 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import {
+  ThemeProvider as NextThemesProvider,
+  type Attribute,
+} from "next-themes";
 import { type ReactNode } from "react";
 
 interface ThemeProviderProps {
   children: ReactNode;
-  attribute?: string;
+  attribute?: Attribute;
   defaultTheme?: string;
   enableSystem?: boolean;
 }
 
 export function ThemeProvider({
   children,
-  attribute = "data-theme",
+  attribute = "data-theme" as Attribute,
   defaultTheme = "daysynth",
-  enableSystem = true,
+  enableSystem = false, // システム設定よりも手動設定を優先する
   ...props
 }: ThemeProviderProps) {
   return (
