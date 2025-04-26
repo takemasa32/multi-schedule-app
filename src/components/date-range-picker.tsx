@@ -149,7 +149,14 @@ export default function DateRangePicker({
 
     setTimeSlots(newTimeSlots);
     setErrorMessage(null);
-  }, [startDate, endDate, excludedDates, intervalUnit, defaultStartTime, defaultEndTime]);
+  }, [
+    startDate,
+    endDate,
+    excludedDates,
+    intervalUnit,
+    defaultStartTime,
+    defaultEndTime,
+  ]);
 
   // 日付文字列を安全にDate型に変換
   const parseDateSafely = (dateString: string): Date | null => {

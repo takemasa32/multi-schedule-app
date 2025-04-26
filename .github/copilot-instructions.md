@@ -183,6 +183,8 @@ project-root/  # 実際のプロジェクトルート
 └── ...
 ```
 
+````
+
 - Next.js App Router では app/以下にページを配置します。今回はシンプルなので page.tsx（ホーム）と event/[public_id]/page.tsx 程度です。管理用のページはクエリパラメータで処理しても良いですが、セキュリティ上わかりやすく分けるため admin/[admin_token]サブルートとして用意しています。この admin_token ページは管理者権限のチェックと専用 UI の表示を行います。
 - 静的ファイルは public/ディレクトリ以下（今回は大きな静的アセットは想定なし、ロゴ画像程度）。
 - コンポーネントは UI 部品ごとに components/ディレクトリに配置し、ファイル名は kebab-case（ハイフンつなぎ小文字）で統一します。たとえば EventForm コンポーネントは event-form.tsx ファイルに定義します。React コンポーネントの関数名（型名）は PascalCase で書きますが、ファイルシステム上は大文字小文字の違いによる不具合を避けるため全て小文字ファイル名とします。
@@ -982,24 +984,26 @@ LINE 連携の検討:
 1. リポジトリ初期化: 新しい Git リポジトリを作成し、Next.js (最新安定版)のプロジェクトを npx create-next-app@latest でセットアップします。TypeScript と App Router 有効、ESLint/Prettier も含めて構成します。リポジトリはプライベートで開始し、後に公開可能状態になれば Public にします。
 2. Tailwind CSS + DaisyUI 導入: npm install tailwindcss daisyui を実行し、Tailwind の設定ファイルと globals.css を編集して DaisyUI プラグインを追加します。デザインテーマを一旦デフォルト（light）に設定し、DaisyUI コンポーネントが使えることを簡単なボタンで確認します。
 
-   ```
-   3. Add Tailwind CSS and daisyUI
-      Add Tailwind CSS to your PostCSS config file
+````
 
-   postcss.config.mjs
-   /\*_ @type {import('postcss-load-config').Config} _/
-   const config = {
-   plugins: {
-   '@tailwindcss/postcss': {},
-   },
-   };
-   export default config;
-   Put Tailwind CSS and daisyUI in your CSS file (and remove old styles)
+3.  Add Tailwind CSS and daisyUI
+    Add Tailwind CSS to your PostCSS config file
 
-   app/globals.css
-   @import "tailwindcss";
-   @plugin "daisyui";
-   ```
+postcss.config.mjs
+/\*_ @type {import('postcss-load-config').Config} _/
+const config = {
+plugins: {
+'@tailwindcss/postcss': {},
+},
+};
+export default config;
+Put Tailwind CSS and daisyUI in your CSS file (and remove old styles)
+
+app/globals.css
+@import "tailwindcss";
+@plugin "daisyui";
+
+```
 
 3. Supabase プロジェクト設定: Supabase のウェブコンソールで新規プロジェクトを作成（無料枠内）。プロジェクト URL と Anon キー・Service キーを取得し、Next.js の環境変数（.env.local）に設定します。また、Postgres の拡張 uuid-ossp を有効化して UUID 生成関数を使えるようにします。RLS は全テーブルでデフォルト OFF なので、後でテーブル作成時に ON にします。
 4. データベーステーブル作成: Supabase の SQL エディタで前述のテーブルスキーマを実行し、events, event_dates, participants, availabilities を作成します。念のため ER 図を Supabase UI で確認し、FK の挙動（カスケード削除）が設定されているかチェックします。続いて各テーブルで ENABLE RLS を実行し、必要最低限のポリシーも SQL で追加します（ただし、最初は開発の利便のために「すべて許可」のポリシーを入れておき、動作検証後に厳密な条件に変更する方法もあり）。
@@ -1018,3 +1022,4 @@ LINE 連携の検討:
 17. 改善サイクル: リリース後、フィードバックや自分の気づきをもとに機能追加や改善を続けます。LINE 通知の調査や、要望があれば参加者編集機能の実装など、優先順位を考慮して取り組みます。その際も ChatGPT を活用して実装方針を相談し、効率よく開発します。
 
 以上が今後の具体的アクションプランです。これらを順次遂行し、本仕様書に沿ったアプリケーションを完成させます。各ステップで問題が発生した場合は都度 AI やドキュメントを参照しつつ解決し、最終的に安定したサービスインを目指します。
+```

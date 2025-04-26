@@ -217,9 +217,9 @@ export async function getAvailabilities(eventId: string) {
  */
 export async function getFinalizedDateIds(eventId: string, finalDateId: string | null) {
   const supabase = createSupabaseAdmin();
-  
+
   if (!finalDateId) return [];
-  
+
   // 確定日程テーブルから確定した日程IDを取得
   const { data, error } = await supabase
     .from('event_finalized_dates')
