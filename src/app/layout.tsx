@@ -34,7 +34,11 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen bg-base-100">
-        <ThemeProvider attribute="data-theme" defaultTheme="daysynth">
+        <ThemeProvider
+          attribute="data-theme"
+          defaultTheme="daysynth"
+          enableSystem={false}
+        >
           <Header />
           <main className="flex-grow container mx-auto px-4 py-6">
             {children}
