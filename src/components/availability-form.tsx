@@ -401,7 +401,7 @@ export default function AvailabilityForm({
       }, 100);
 
       // タッチムーブイベントを一時的に監視して、大きく動いたらスクロールと判断
-      const handleInitialMove = (moveEvent: TouchEvent) => {
+      const handleInitialMove = (moveEvent: globalThis.TouchEvent) => {
         const moveTouch = moveEvent.touches[0];
         const deltaX = Math.abs(moveTouch.clientX - startX);
         const deltaY = Math.abs(moveTouch.clientY - startY);
@@ -422,10 +422,14 @@ export default function AvailabilityForm({
       };
 
       // 判定用のイベントリスナーを設定
-      document.addEventListener("touchmove", handleInitialMove, {
-        passive: true,
-      });
-      document.addEventListener("touchend", handleInitialEnd, {
+      document.addEventListener(
+        "touchmove",
+        handleInitialMove as EventListener,
+        {
+          passive: true,
+        }
+      );
+      document.addEventListener("touchend", handleInitialEnd as EventListener, {
         passive: true,
       });
 
@@ -1038,18 +1042,28 @@ export default function AvailabilityForm({
                   }}
                   onMouseLeave={handleMouseLeave}
                 >
-                  <table className="table table-fixed w-full border-collapse">
+                  <table className="table table-xs sm:table-sm table-fixed w-full border-collapse">
                     <thead className="sticky top-0 z-20">
                       <tr className="bg-base-200">
-                        <th className="w-24 px-2 py-3 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
-                          時間帯
+                        <th className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
+                          <span className="text-xs sm:text-sm">時間</span>
                         </th>
                         {heatmapData.dates.map((date) => (
                           <th
                             key={date.dateKey}
-                            className="w-24 px-2 py-3 text-center whitespace-nowrap border border-base-300 sticky top-0 bg-base-200 z-20"
+                            className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center whitespace-nowrap border border-base-300 sticky top-0 bg-base-200 z-20"
                           >
-                            {date.formattedDate}
+                            <div className="text-xs sm:text-sm">
+                              {date.formattedDate.replace(
+                                /\([月火水木金土日]\)/,
+                                ""
+                              )}
+                              <div className="text-[0.6rem] sm:text-xs">
+                                {date.formattedDate.match(
+                                  /\([月火水木金土日]\)/
+                                )?.[0] || ""}
+                              </div>
+                            </div>
                           </th>
                         ))}
                       </tr>
@@ -1058,7 +1072,7 @@ export default function AvailabilityForm({
                       {heatmapData.timeSlots.map(
                         (timeSlot, index, timeSlots) => {
                           // 時間が変わるときだけ表示するためのチェック
-                          const [startTime, endTime] = timeSlot.split("-");
+                          const [startTime] = timeSlot.split("-");
                           const showTime =
                             index === 0 ||
                             timeSlot.split("-")[0] !==
@@ -1072,11 +1086,15 @@ export default function AvailabilityForm({
 
                           return (
                             <tr key={timeSlot} className="hover">
-                              <td className="px-2 py-3 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                              <td className="px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
                                 {showTime ? (
-                                  <>{formattedStartTime}</>
+                                  <span className="text-xs sm:text-sm">
+                                    {formattedStartTime}
+                                  </span>
                                 ) : (
-                                  <span className="text-gray-400">-</span>
+                                  <span className="text-xs sm:text-sm text-gray-400">
+                                    -
+                                  </span>
                                 )}
                               </td>
                               {heatmapData.dates.map((date) => {
@@ -1088,12 +1106,12 @@ export default function AvailabilityForm({
                                 return (
                                   <td
                                     key={`${date.dateKey}-${timeSlot}`}
-                                    className="p-0.5 sm:p-1 text-center border border-base-300"
+                                    className="p-0 text-center border border-base-300"
                                     data-date-id={dateId}
                                   >
                                     {dateId ? (
                                       <div
-                                        className={`w-full h-8 sm:h-10 md:h-12 rounded-md flex items-center justify-center cursor-pointer touch-manipulation transition-colors duration-200 ease-in-out ${className}`}
+                                        className={`w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center cursor-pointer touch-manipulation transition-colors duration-200 ease-in-out ${className}`}
                                         onMouseDown={() =>
                                           dateId &&
                                           handleMouseDown(
@@ -1116,8 +1134,10 @@ export default function AvailabilityForm({
                                         {getCellContent(status)}
                                       </div>
                                     ) : (
-                                      <div className="w-full h-8 sm:h-10 md:h-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-400">
-                                        ー
+                                      <div className="w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center bg-gray-100 text-gray-400">
+                                        <span className="text-xs sm:text-sm">
+                                          ー
+                                        </span>
                                       </div>
                                     )}
                                   </td>

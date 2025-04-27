@@ -729,15 +729,11 @@ export default function AvailabilitySummary({
                           return (
                             <td
                               key={key}
-                              className={`relative p-1 sm:p-2 transition-all ${heatmapClass} ${
+                              className={`relative p-0 sm:p-1 transition-all ${heatmapClass} ${
                                 isSelected
                                   ? "ring-1 sm:ring-2 ring-success"
                                   : ""
-                              } min-w-[36px] min-h-[36px] sm:min-w-[42px] sm:min-h-[42px]`}
-                              onMouseEnter={(e) =>
-                                handleMouseEnter(e, cellData?.dateId || "")
-                              }
-                              onMouseLeave={handleMouseLeave}
+                              } min-w-[28px] min-h-[28px] sm:min-w-[36px] sm:min-h-[36px]`}
                             >
                               {hasData ? (
                                 <div className="flex flex-col items-center justify-center h-full">

@@ -43,7 +43,7 @@ export default async function EventInput({
   const pageTitle = isEditMode ? "回答を編集する" : "新しく回答する";
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto md:px-4 py-8">
       <EventHeader
         title={event.title}
         description={event.description}
@@ -63,7 +63,7 @@ export default async function EventInput({
         )}
       </div>
 
-      <div className="bg-base rounded-lg shadow-md p-6">
+      <div className="bg-base rounded-lg shadow-md md:p-6">
         <Suspense fallback={<div>フォームを読み込み中...</div>}>
           <AvailabilityForm
             eventId={event.id}
