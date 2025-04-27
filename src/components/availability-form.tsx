@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
-  TouchEvent,
+  Fragment,
 } from "react";
 import { submitAvailability } from "@/app/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
@@ -29,6 +29,11 @@ interface AvailabilityFormProps {
 }
 
 type ViewMode = "list" | "table" | "heatmap";
+type WeekDay = "月" | "火" | "水" | "木" | "金" | "土" | "日";
+type WeekDaySchedule = {
+  selected: boolean;
+  timeSlots: Record<string, boolean>;
+};
 type CellStatus = "available" | "unavailable" | "empty";
 
 export default function AvailabilityForm({
@@ -66,8 +71,27 @@ export default function AvailabilityForm({
   const [dragStartId, setDragStartId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<boolean | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
+  // 週入力モード（アコーディオンを表示中か）：この状態が true の時は通常入力を無効化
+  const [isWeekdayModeActive, setIsWeekdayModeActive] = useState(false);
+  // 曜日マトリックスのドラッグ選択関連の状態
+  const [isDraggingMatrix, setIsDraggingMatrix] = useState(false);
+  const [matrixDragState, setMatrixDragState] = useState<boolean | null>(null); // ドラッグ中の設定値
+  // 曜日ごとの選択状態と時間帯設定
+  const [weekdaySelections, setWeekdaySelections] = useState<
+    Record<WeekDay, WeekDaySchedule>
+  >({
+    月: { selected: false, timeSlots: {} },
+    火: { selected: false, timeSlots: {} },
+    水: { selected: false, timeSlots: {} },
+    木: { selected: false, timeSlots: {} },
+    金: { selected: false, timeSlots: {} },
+    土: { selected: false, timeSlots: {} },
+    日: { selected: false, timeSlots: {} },
+  });
   // タッチ操作対応のための状態
   const [isTouching, setIsTouching] = useState(false);
+  // 週入力マトリックスのタッチ操作対応
+  const [isMatrixTouching, setIsMatrixTouching] = useState(false);
 
   // ページネーション用の状態
   const [currentPage, setCurrentPage] = useState(0);
@@ -79,6 +103,107 @@ export default function AvailabilityForm({
     { value: 14, label: "2週間" },
     { value: 0, label: "すべて表示" },
   ];
+
+  // セルのスタイルと状態を返す関数
+  const getCellStyle = useCallback(
+    (dateId: string | undefined) => {
+      if (!dateId) {
+        return {
+          className: "bg-gray-100 text-gray-400",
+          status: "empty" as CellStatus,
+        };
+      }
+
+      const isSelected = selectedDates[dateId];
+      if (isSelected) {
+        return {
+          className: "bg-success text-success-content",
+          status: "available" as CellStatus,
+        };
+      } else {
+        return {
+          className: "bg-base-200 hover:bg-base-300",
+          status: "unavailable" as CellStatus,
+        };
+      }
+    },
+    [selectedDates]
+  );
+
+  // ドラッグ終了処理
+  const handleMatrixDragEnd = useCallback(() => {
+    setIsDraggingMatrix(false);
+    setMatrixDragState(null);
+    setIsMatrixTouching(false);
+    // ドラッグ終了時にスクロールを再度許可する
+    document.body.classList.remove("no-scroll");
+  }, []);
+
+  // マトリックスでのタッチ移動処理
+  const handleMatrixTouchMove = useCallback(
+    (e: React.TouchEvent | globalThis.TouchEvent) => {
+      if (isMatrixTouching && matrixDragState !== null) {
+        // スクロールを防止
+        try {
+          e.preventDefault();
+        } catch {
+          // パッシブイベントの場合は何もしない
+        }
+
+        // タッチ位置の要素を取得
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        if (element) {
+          // マトリックスのセルを探索
+          const cellElement = element.closest("td");
+          if (cellElement) {
+            // data属性からday（曜日）とtimeSlot（時間枠）を抽出
+            const day = cellElement.getAttribute("data-day");
+            const timeSlot = cellElement.getAttribute("data-time-slot");
+
+            if (day && timeSlot) {
+              setWeekdaySelections((prev) => {
+                // 同じ値であれば更新しない（パフォーマンス最適化）
+                if (
+                  prev[day as WeekDay].timeSlots[timeSlot] === matrixDragState
+                ) {
+                  return prev;
+                }
+
+                const newState = { ...prev };
+                newState[day as WeekDay] = {
+                  ...prev[day as WeekDay],
+                  selected: true,
+                  timeSlots: {
+                    ...prev[day as WeekDay].timeSlots,
+                    [timeSlot]: matrixDragState,
+                  },
+                };
+                return newState;
+              });
+            }
+          }
+        }
+      }
+    },
+    [isMatrixTouching, matrixDragState]
+  );
+
+  // 全体にイベントリスナーを設定（ドラッグ終了用）
+  useEffect(() => {
+    if (isDraggingMatrix) {
+      // ドラッグ中はbodyにno-scrollクラスを追加してスクロールを防止
+      document.body.classList.add("no-scroll");
+      window.addEventListener("mouseup", handleMatrixDragEnd);
+      window.addEventListener("touchend", handleMatrixDragEnd);
+      return () => {
+        document.body.classList.remove("no-scroll");
+        window.removeEventListener("mouseup", handleMatrixDragEnd);
+        window.removeEventListener("touchend", handleMatrixDragEnd);
+      };
+    }
+  }, [isDraggingMatrix, handleMatrixDragEnd]);
 
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
@@ -328,6 +453,42 @@ export default function AvailabilityForm({
     };
   }, [eventDates, currentPage, pageSize]);
 
+  // start_time と end_time から時間帯のキーを生成する関数
+  const getTimeKey = (startTime: string, endTime: string): string => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return `${start.getHours().toString().padStart(2, "0")}:${start
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  // 週入力モード用の時間帯スロットを初期化する関数
+  const initializeWeekdayTimeSlots = () => {
+    // 全ての時間帯を収集
+    const timeSlots: Record<string, boolean> = {};
+
+    // すべての日程から時間帯を抽出
+    eventDates.forEach((date) => {
+      const timeKey = getTimeKey(date.start_time, date.end_time);
+      timeSlots[timeKey] = false; // デフォルト値はfalse
+    });
+
+    // 各曜日に時間帯スロットを設定
+    const updatedSelections = { ...weekdaySelections };
+    Object.keys(updatedSelections).forEach((day) => {
+      updatedSelections[day as WeekDay] = {
+        selected: false,
+        timeSlots: { ...timeSlots }, // 各曜日に全時間帯のコピーを作成
+      };
+    });
+
+    setWeekdaySelections(updatedSelections);
+  };
+
   // ドラッグ選択の開始
   const handleMouseDown = useCallback(
     (dateId: string, initialState: boolean) => {
@@ -362,6 +523,8 @@ export default function AvailabilityForm({
     setIsDragging(false);
     setDragStartId(null);
     setDragState(null);
+    // ドラッグ終了時にスクロールを再度許可する
+    document.body.classList.remove("no-scroll");
   }, []);
 
   // マウスが領域外に出た時の処理
@@ -373,81 +536,32 @@ export default function AvailabilityForm({
     }
   }, [isDragging]);
 
-  // タッチ操作開始（スマホ向け）
+  // タッチ操作開始（スマホ向け）- シンプル化したバージョン
   const handleTouchStart = useCallback(
-    (dateId: string, initialState: boolean, e: TouchEvent) => {
-      // タッチ操作開始時に、まずタッチポイントを記録
-      const touch = e.touches[0];
-      const startX = touch.clientX;
-      const startY = touch.clientY;
+    (dateId: string, initialState: boolean) => {
+      // タッチ操作時はすぐに選択状態に移行
+      setIsTouching(true);
+      setDragStartId(dateId);
+      setDragState(!initialState);
 
-      // 移動距離の閾値を設定 - この値以上動いたらスクロール、それ以下なら選択と判断
-      const moveThreshold = 10;
+      // 即座に選択状態を反映
+      setSelectedDates((prev) => ({
+        ...prev,
+        [dateId]: !initialState,
+      }));
 
-      // 最初のタッチから少し動いた時点で判断するための遅延処理
-      const timeoutId = setTimeout(() => {
-        // タッチが続いていれば選択操作を開始
-        setIsTouching(true);
-        setDragStartId(dateId);
-        setDragState(!initialState);
-
-        setSelectedDates((prev) => ({
-          ...prev,
-          [dateId]: !initialState,
-        }));
-
-        // 選択操作中はスクロールを防止
-        e.preventDefault();
-      }, 100);
-
-      // タッチムーブイベントを一時的に監視して、大きく動いたらスクロールと判断
-      const handleInitialMove = (moveEvent: globalThis.TouchEvent) => {
-        const moveTouch = moveEvent.touches[0];
-        const deltaX = Math.abs(moveTouch.clientX - startX);
-        const deltaY = Math.abs(moveTouch.clientY - startY);
-
-        // 閾値以上の移動があればスクロール操作と判断
-        if (deltaX > moveThreshold || deltaY > moveThreshold) {
-          clearTimeout(timeoutId);
-          document.removeEventListener("touchmove", handleInitialMove);
-          document.removeEventListener("touchend", handleInitialEnd);
-        }
-      };
-
-      // タッチエンド時のクリーンアップ
-      const handleInitialEnd = () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener("touchmove", handleInitialMove);
-        document.removeEventListener("touchend", handleInitialEnd);
-      };
-
-      // 判定用のイベントリスナーを設定
-      document.addEventListener(
-        "touchmove",
-        handleInitialMove as EventListener,
-        {
-          passive: true,
-        }
-      );
-      document.addEventListener("touchend", handleInitialEnd as EventListener, {
-        passive: true,
-      });
-
-      return () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener("touchmove", handleInitialMove);
-        document.removeEventListener("touchend", handleInitialEnd);
-      };
+      // preventDefault()は専用のイベントリスナーで処理するため、ここでは呼び出さない
     },
-    []
+    [] // 依存配列を空のままにして、コールバックが再作成されないようにする
   );
 
-  // タッチ移動（スマホ向け）
+  // タッチ移動（スマホ向け）- ドラッグ状態の管理を改善
   const handleTouchMove = useCallback(
     (e: React.TouchEvent | globalThis.TouchEvent) => {
-      // !isTouching || !dragStateではない方が良い（二重否定で複雑）
-      // 論理的には「タッチ中」かつ「ドラッグ状態がnullでない」という条件が正しい
+      // 条件チェックをシンプルに
       if (isTouching && dragState !== null) {
+        // preventDefault()は専用のイベントリスナーで処理するため、ここでは呼び出さない
+
         // タッチ位置の要素を取得
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -458,10 +572,14 @@ export default function AvailabilityForm({
           if (dateElement) {
             const dateId = dateElement.getAttribute("data-date-id");
             if (dateId) {
-              setSelectedDates((prev) => ({
-                ...prev,
-                [dateId]: dragState,
-              }));
+              setSelectedDates((prev) => {
+                // 同じ値の場合は状態を更新しない（パフォーマンス最適化）
+                if (prev[dateId] === dragState) return prev;
+                return {
+                  ...prev,
+                  [dateId]: dragState,
+                };
+              });
             }
           }
         }
@@ -475,13 +593,18 @@ export default function AvailabilityForm({
     setIsTouching(false);
     setDragStartId(null);
     setDragState(null);
+    // タッチ終了時にスクロールを再度許可する
+    document.body.classList.remove("no-scroll");
   }, []);
 
   // 全体にイベントリスナーを設定（ドラッグ終了用）
   useEffect(() => {
     if (isDragging) {
+      // ドラッグ中はbodyにno-scrollクラスを追加してスクロールを防止
+      document.body.classList.add("no-scroll");
       window.addEventListener("mouseup", handleMouseUp);
       return () => {
+        document.body.classList.remove("no-scroll");
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
@@ -490,42 +613,68 @@ export default function AvailabilityForm({
   // タッチ操作のイベントリスナー
   useEffect(() => {
     if (isTouching) {
-      // 型付きのハンドラーを定義
+      // ドラッグ中はbodyにno-scrollクラスを追加
+      document.body.classList.add("no-scroll");
+
+      // タッチ操作用のイベントリスナーを追加
+      window.addEventListener("touchend", handleTouchEnd);
+
+      // touchmoveは明示的にpassive: falseを設定
+      // 型付きのハンドラーを別途定義して、スコープ外で確実に削除できるようにする
       const handleDomTouchMove = (e: globalThis.TouchEvent) => {
-        handleTouchMove(e);
+        // タッチ操作中はスクロールを防止 - ここではpreventDefaultをtry-catchで囲む
+        if (isTouching) {
+          try {
+            // passive: falseが設定されていれば実行される
+            e.preventDefault();
+          } catch {
+            // パッシブイベントの場合は何もしない
+          }
+          handleTouchMove(e);
+        }
       };
 
-      window.addEventListener("touchend", handleTouchEnd);
-      window.addEventListener("touchmove", handleDomTouchMove);
+      // passive: false を明示的に指定することで、preventDefault()が可能になる
+      window.addEventListener("touchmove", handleDomTouchMove, {
+        passive: false,
+      });
 
       return () => {
+        document.body.classList.remove("no-scroll");
         window.removeEventListener("touchend", handleTouchEnd);
         window.removeEventListener("touchmove", handleDomTouchMove);
       };
     }
   }, [isTouching, handleTouchEnd, handleTouchMove]);
 
-  // セルの状態に基づいたクラス名とスタイルを生成する
-  const getCellStyle = (
-    dateId: string | undefined
-  ): { className: string; status: CellStatus } => {
-    if (!dateId)
-      return { className: "bg-gray-100 text-gray-400", status: "empty" };
+  // マトリックス用のタッチ操作イベントリスナー
+  useEffect(() => {
+    if (isMatrixTouching) {
+      // ドラッグ中はbodyにno-scrollクラスを追加
+      document.body.classList.add("no-scroll");
 
-    const isSelected = !!selectedDates[dateId];
+      // タッチ操作用のイベントリスナーを追加
+      const handleMatrixTouchEnd = () => {
+        setIsMatrixTouching(false);
+        setMatrixDragState(null);
+        document.body.classList.remove("no-scroll");
+      };
 
-    if (isSelected) {
-      return {
-        className: "bg-success text-success-content shadow-md", // text-white → text-success-contentに変更して適切なコントラストを確保
-        status: "available",
+      window.addEventListener("touchend", handleMatrixTouchEnd);
+
+      // マトリクス用のタッチムーブハンドラを登録
+      // passive: false を明示的に指定
+      window.addEventListener("touchmove", handleMatrixTouchMove, {
+        passive: false,
+      });
+
+      return () => {
+        document.body.classList.remove("no-scroll");
+        window.removeEventListener("touchend", handleMatrixTouchEnd);
+        window.removeEventListener("touchmove", handleMatrixTouchMove);
       };
     }
-
-    return {
-      className: "bg-base-200 hover:bg-base-300",
-      status: "unavailable",
-    };
-  };
+  }, [isMatrixTouching, handleMatrixTouchMove]);
 
   // CellStatusに基づいて表示するアイコンやテキスト
   const getCellContent = (status: CellStatus) => {
@@ -565,6 +714,39 @@ export default function AvailabilityForm({
     setIsEditing(true);
     setFeedback(null); // 編集モードに変わるとフィードバックメッセージを消去
   };
+
+  // 曜日ごとの選択と時間帯を適用する関数
+  const applyWeekdaySelections = useCallback(() => {
+    // 更新する日程の選択状態を準備
+    const newSelectedDates = { ...selectedDates };
+
+    // 選択された曜日と時間帯のデータを処理
+    Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
+      if (!daySchedule.selected) return; // 選択されていない曜日はスキップ
+
+      // 全イベント日程をループして、選択された曜日に該当する日程を更新
+      eventDates.forEach((date) => {
+        const dateObj = new Date(date.start_time);
+        const weekday = ["日", "月", "火", "水", "木", "金", "土"][
+          dateObj.getDay()
+        ];
+
+        if (weekday === day) {
+          // この日程の時間帯ID
+          const timeKey = getTimeKey(date.start_time, date.end_time);
+
+          // 時間帯ごとの設定がある場合のみ適用する
+          // 週入力の選択を優先（既存の選択を上書き）
+          if (daySchedule.timeSlots[timeKey] !== undefined) {
+            newSelectedDates[date.id] = daySchedule.timeSlots[timeKey];
+          }
+        }
+      });
+    });
+
+    // 状態を更新
+    setSelectedDates(newSelectedDates);
+  }, [weekdaySelections, eventDates, selectedDates, getTimeKey]);
 
   return (
     <div className="mb-8 p-6 bg-base-100 border rounded-lg shadow-sm transition-all animate-fadeIn">
@@ -757,30 +939,268 @@ export default function AvailabilityForm({
                 </div>
               </div>
 
-              <div className="bg-info/10 p-2 mb-4 text-xs text-info rounded-lg border border-info/20 flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  className="stroke-info flex-shrink-0 w-4 h-4 mr-1"
+              <div className="flex flex-col md:flex-row gap-3 mb-4">
+                <div className="bg-info/10 p-2 text-xs text-info rounded-lg border border-info/20 flex items-center flex-grow">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    className="stroke-info flex-shrink-0 w-4 h-4 mr-1"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  <span>
+                    セルをドラッグすると複数選択できます（タッチ操作も対応）
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // アコーディオンを開く/閉じる処理
+                    setIsWeekdayModeActive(!isWeekdayModeActive);
+                    // 週入力モードがアクティブになったときは時間帯スロットを初期化
+                    if (!isWeekdayModeActive) {
+                      initializeWeekdayTimeSlots();
+                    }
+                  }}
+                  className={`btn btn-sm ${
+                    isWeekdayModeActive ? "btn-primary" : "btn-accent"
+                  } text-xs sm:text-sm font-medium flex-shrink-0`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
-                <span>
-                  セルをドラッグすると複数選択できます（タッチ操作も対応）
-                </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  曜日ごとの時間帯設定
+                  {isWeekdayModeActive ? "（閉じる）" : ""}
+                </button>
               </div>
 
-              {/* ページネーションUI */}
-              {/* リストビュー、ヒートマップビュー、テーブルビューでのページネーション表示 */}
-              {(viewMode === "heatmap" ||
-                viewMode === "table" ||
-                viewMode === "list") &&
+              {/* 週入力アコーディオンセクション */}
+              {isWeekdayModeActive && (
+                <div className="mb-6 animate-fadeIn transition-all duration-300">
+                  <div className="bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
+                    <h3 className="text-lg font-bold mb-4">
+                      曜日ごとの時間帯設定
+                    </h3>
+                    <p className="text-sm mb-4">
+                      曜日と時間帯で参加可能な枠を一括設定できます。表の各セルをクリックして、参加可能（○）または参加不可（×）を設定してください。
+                    </p>
+
+                    <div className="divider text-xs">曜日×時間帯表</div>
+
+                    <div
+                      className="mb-4 overflow-x-auto overflow-y-hidden matrix-container touch-none"
+                      style={{ touchAction: "none" }}
+                    >
+                      <table
+                        className="table table-xs border-collapse"
+                        onMouseDown={(e) => e.preventDefault()} // ドラッグ動作中のテキスト選択を防止
+                        onTouchStart={(e) => e.preventDefault()} // タッチ操作中のスクロールを完全に防止
+                      >
+                        <thead className="sticky top-0 z-20">
+                          <tr className="bg-base-200">
+                            <th className="px-2 py-1 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
+                              <span className="text-xs">\</span>
+                            </th>
+                            {Object.entries(weekdaySelections).map(([day]) => (
+                              <th
+                                key={day}
+                                className="px-1 py-1 text-center border border-base-300"
+                              >
+                                {day}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.keys(
+                            Object.values(weekdaySelections)[0]?.timeSlots || {}
+                          ).length > 0 ? (
+                            Object.keys(
+                              Object.values(weekdaySelections)[0].timeSlots
+                            )
+                              .sort()
+                              .map((timeSlot) => {
+                                const [startTime] = timeSlot.split("-");
+                                return (
+                                  <tr key={timeSlot}>
+                                    <td className="font-medium border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10">
+                                      {startTime}
+                                    </td>
+                                    {Object.entries(weekdaySelections).map(
+                                      ([day, daySchedule]) => (
+                                        <td
+                                          key={`${day}-${timeSlot}`}
+                                          className="text-center border border-base-300 p-0 cursor-pointer"
+                                          data-day={day}
+                                          data-time-slot={timeSlot}
+                                          onMouseDown={() => {
+                                            // ドラッグ開始処理
+                                            setIsDraggingMatrix(true);
+                                            setMatrixDragState(
+                                              !daySchedule.timeSlots[timeSlot]
+                                            );
+                                            setWeekdaySelections((prev) => {
+                                              const newState = { ...prev };
+                                              newState[day as WeekDay] = {
+                                                ...prev[day as WeekDay],
+                                                selected: true,
+                                                timeSlots: {
+                                                  ...prev[day as WeekDay]
+                                                    .timeSlots,
+                                                  [timeSlot]:
+                                                    !daySchedule.timeSlots[
+                                                      timeSlot
+                                                    ],
+                                                },
+                                              };
+                                              return newState;
+                                            });
+                                          }}
+                                          onMouseEnter={() => {
+                                            // ドラッグ中の処理
+                                            if (
+                                              isDraggingMatrix &&
+                                              matrixDragState !== null
+                                            ) {
+                                              setWeekdaySelections((prev) => {
+                                                const newState = { ...prev };
+                                                newState[day as WeekDay] = {
+                                                  ...prev[day as WeekDay],
+                                                  selected: true,
+                                                  timeSlots: {
+                                                    ...prev[day as WeekDay]
+                                                      .timeSlots,
+                                                    [timeSlot]: matrixDragState,
+                                                  },
+                                                };
+                                                return newState;
+                                              });
+                                            }
+                                          }}
+                                          onTouchStart={(e) => {
+                                            // タッチ操作の開始処理
+                                            e.stopPropagation(); // イベントの伝播は防止
+                                            e.preventDefault(); // スクロールを防止
+                                            setIsDraggingMatrix(true);
+                                            setIsMatrixTouching(true);
+                                            setMatrixDragState(
+                                              !daySchedule.timeSlots[timeSlot]
+                                            );
+                                            setWeekdaySelections((prev) => {
+                                              const newState = { ...prev };
+                                              newState[day as WeekDay] = {
+                                                ...prev[day as WeekDay],
+                                                selected: true,
+                                                timeSlots: {
+                                                  ...prev[day as WeekDay]
+                                                    .timeSlots,
+                                                  [timeSlot]:
+                                                    !daySchedule.timeSlots[
+                                                      timeSlot
+                                                    ],
+                                                },
+                                              };
+                                              return newState;
+                                            });
+                                          }}
+                                        >
+                                          <div
+                                            className={`w-full h-7 flex items-center justify-center ${
+                                              daySchedule.timeSlots[timeSlot]
+                                                ? "bg-success text-success-content"
+                                                : "bg-base-200"
+                                            }`}
+                                          >
+                                            {daySchedule.timeSlots[timeSlot] ? (
+                                              <div className="text-lg font-bold select-none inline-block">
+                                                ○
+                                              </div>
+                                            ) : (
+                                              <div className="text-lg font-bold opacity-70 select-none inline-block">
+                                                ×
+                                              </div>
+                                            )}
+                                          </div>
+                                        </td>
+                                      )
+                                    )}
+                                  </tr>
+                                );
+                              })
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={
+                                  1 + Object.keys(weekdaySelections).length
+                                }
+                                className="text-center py-4"
+                              >
+                                利用可能な時間帯がありません
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {Object.entries(weekdaySelections).filter(
+                      ([, daySchedule]) => daySchedule.selected
+                    ).length === 0 && (
+                      <div className="text-center text-sm text-gray-500 py-4">
+                        曜日を選択すると、時間帯の設定が表示されます
+                      </div>
+                    )}
+
+                    <div className="text-xs text-base-content/70 mb-4">
+                      ※選択した曜日の時間帯ごとに参加可否を設定できます。
+                      <br />
+                      チェックがついている時間帯が「参加可能」になります。
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        onClick={() => setIsWeekdayModeActive(false)}
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => {
+                          // 選択した曜日と時間帯に基づいて日程を更新
+                          applyWeekdaySelections();
+                          setIsWeekdayModeActive(false);
+                        }}
+                      >
+                        設定を適用する
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ページネーションUI - 週入力モードが無効の場合のみ表示 */}
+              {!isWeekdayModeActive &&
+                (viewMode === "heatmap" ||
+                  viewMode === "table" ||
+                  viewMode === "list") &&
                 pageSize > 0 &&
                 heatmapData.allDatesCount > pageSize && (
                   <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-4 bg-base-200 p-3 rounded-lg">
@@ -863,293 +1283,316 @@ export default function AvailabilityForm({
                   </div>
                 )}
 
-              {/* 選択した日程の隠しフィールド */}
-              {Object.entries(selectedDates).map(
-                ([dateId, isSelected]) =>
-                  isSelected && (
-                    <input
-                      key={dateId}
-                      type="hidden"
-                      name={`availability_${dateId}`}
-                      value="on"
-                    />
-                  )
-              )}
+              {/* 週入力モードがアクティブでない場合のみ、通常の入力フォームを表示 */}
+              {!isWeekdayModeActive && (
+                <>
+                  {/* 選択した日程の隠しフィールド */}
+                  {Object.entries(selectedDates).map(
+                    ([dateId, isSelected]) =>
+                      isSelected && (
+                        <input
+                          key={dateId}
+                          type="hidden"
+                          name={`availability_${dateId}`}
+                          value="on"
+                        />
+                      )
+                  )}
 
-              {viewMode === "list" && (
-                <div
-                  className="grid grid-cols-1 gap-1 select-none"
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {/* リストビュー用にページネーションされたイベント日程データを準備 */}
-                  {(() => {
-                    // 日程を日付順にソート
-                    const sortedDates = [...eventDates].sort(
-                      (a, b) =>
-                        new Date(a.start_time).getTime() -
-                        new Date(b.start_time).getTime()
-                    );
+                  {viewMode === "list" && (
+                    <div
+                      className="grid grid-cols-1 gap-1 select-none"
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      {/* リストビュー用にページネーションされたイベント日程データを準備 */}
+                      {(() => {
+                        // 日程を日付順にソート
+                        const sortedDates = [...eventDates].sort(
+                          (a, b) =>
+                            new Date(a.start_time).getTime() -
+                            new Date(b.start_time).getTime()
+                        );
 
-                    // ページネーション処理
-                    const paginatedDates =
-                      pageSize === 0
-                        ? sortedDates
-                        : sortedDates.slice(
-                            currentPage * pageSize,
-                            (currentPage + 1) * pageSize
-                          );
+                        // ページネーション処理
+                        const paginatedDates =
+                          pageSize === 0
+                            ? sortedDates
+                            : sortedDates.slice(
+                                currentPage * pageSize,
+                                (currentPage + 1) * pageSize
+                              );
 
-                    return paginatedDates.map((date) => {
-                      const { className, status } = getCellStyle(date.id);
-                      return (
-                        <div
-                          key={date.id}
-                          data-date-id={date.id}
-                          className={`flex items-center p-3 rounded-md border border-base-300 transition-all cursor-pointer ${
-                            status === "available"
-                              ? "bg-base-100"
-                              : "hover:bg-base-200"
-                          }`}
-                          onMouseDown={() =>
-                            handleMouseDown(date.id, !!selectedDates[date.id])
-                          }
-                          onMouseEnter={() => handleMouseEnter(date.id)}
-                          onTouchStart={(e) =>
-                            handleTouchStart(
-                              date.id,
-                              !!selectedDates[date.id],
-                              e
-                            )
-                          }
-                        >
-                          <div
-                            className={`flex items-center justify-center w-10 h-10 rounded-md mr-4 shrink-0 transition-colors duration-200 ease-in-out ${className}`}
-                          >
-                            {getCellContent(status)}
-                          </div>
-                          <div className="grid grid-cols-1">
-                            <span className="font-medium">
-                              {formatTimeRange(date.start_time, date.end_time)}
-                            </span>
-                            {date.label && (
-                              <span className="text-sm text-gray-500">
-                                {date.label}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
-
-              {viewMode === "table" && (
-                <div
-                  className="overflow-x-auto select-none"
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <table className="table table-fixed w-full border-collapse">
-                    <thead>
-                      <tr className="bg-base-200">
-                        <th className="w-32 border border-base-300">日付</th>
-                        <th className="w-32 border border-base-300">時間帯</th>
-                        <th className="w-24 text-center border border-base-300">
-                          参加可否
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dateGroups.map((group) => (
-                        <React.Fragment key={group.dateKey}>
-                          {group.slots.map((date, index) => {
-                            const start = new Date(date.start_time);
-                            const end = new Date(date.end_time);
-                            const timeStr = `${start
-                              .getHours()
-                              .toString()
-                              .padStart(2, "0")}:${start
-                              .getMinutes()
-                              .toString()
-                              .padStart(2, "0")}～${end
-                              .getHours()
-                              .toString()
-                              .padStart(2, "0")}:${end
-                              .getMinutes()
-                              .toString()
-                              .padStart(2, "0")}`;
-
-                            const { className, status } = getCellStyle(date.id);
-
-                            return (
-                              <tr
-                                key={date.id}
-                                className="hover"
-                                data-date-id={date.id}
+                        return paginatedDates.map((date) => {
+                          const { className, status } = getCellStyle(date.id);
+                          return (
+                            <div
+                              key={date.id}
+                              data-date-id={date.id}
+                              className={`flex items-center p-3 rounded-md border border-base-300 transition-all cursor-pointer ${
+                                status === "available"
+                                  ? "bg-base-100"
+                                  : "hover:bg-base-200"
+                              }`}
+                              onMouseDown={() =>
+                                handleMouseDown(
+                                  date.id,
+                                  !!selectedDates[date.id]
+                                )
+                              }
+                              onMouseEnter={() => handleMouseEnter(date.id)}
+                              onTouchStart={(e) => {
+                                // Reactのイベントハンドラ内ではpreventDefaultを避ける
+                                // e.preventDefault()は削除
+                                e.stopPropagation(); // イベント伝播は防止
+                                handleTouchStart(
+                                  date.id,
+                                  !!selectedDates[date.id]
+                                );
+                              }}
+                            >
+                              <div
+                                className={`flex items-center justify-center w-10 h-10 rounded-md mr-4 shrink-0 transition-colors duration-200 ease-in-out ${className}`}
                               >
-                                {index === 0 && (
-                                  <td
-                                    rowSpan={group.slots.length}
-                                    className="align-middle border border-base-300 bg-base-100"
-                                  >
-                                    <div className="font-medium">
-                                      {group.formattedDate}
-                                    </div>
-                                  </td>
+                                {getCellContent(status)}
+                              </div>
+                              <div className="grid grid-cols-1">
+                                <span className="font-medium">
+                                  {formatTimeRange(
+                                    date.start_time,
+                                    date.end_time
+                                  )}
+                                </span>
+                                {date.label && (
+                                  <span className="text-sm text-gray-500">
+                                    {date.label}
+                                  </span>
                                 )}
-                                <td className="border border-base-300">
-                                  {timeStr}
-                                </td>
-                                <td className="text-center border border-base-300">
-                                  <div
-                                    className={`w-full h-10 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className}`}
-                                    onMouseDown={() =>
-                                      handleMouseDown(
-                                        date.id,
-                                        !!selectedDates[date.id]
-                                      )
-                                    }
-                                    onMouseEnter={() =>
-                                      handleMouseEnter(date.id)
-                                    }
-                                    onTouchStart={(e) =>
-                                      handleTouchStart(
-                                        date.id,
-                                        !!selectedDates[date.id],
-                                        e
-                                      )
-                                    }
-                                  >
-                                    {getCellContent(status)}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {viewMode === "heatmap" && (
-                <div
-                  className="overflow-x-auto select-none overscroll-contain table-container-mobile"
-                  style={{
-                    overscrollBehaviorY: "contain",
-                    touchAction: "pan-x",
-                  }}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <table className="table table-xs sm:table-sm table-fixed w-full border-collapse">
-                    <thead className="sticky top-0 z-20">
-                      <tr className="bg-base-200">
-                        <th className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
-                          <span className="text-xs sm:text-sm">時間</span>
-                        </th>
-                        {heatmapData.dates.map((date) => (
-                          <th
-                            key={date.dateKey}
-                            className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center whitespace-nowrap border border-base-300 sticky top-0 bg-base-200 z-20"
-                          >
-                            <div className="text-xs sm:text-sm">
-                              {date.formattedDate.replace(
-                                /\([月火水木金土日]\)/,
-                                ""
-                              )}
-                              <div className="text-[0.6rem] sm:text-xs">
-                                {date.formattedDate.match(
-                                  /\([月火水木金土日]\)/
-                                )?.[0] || ""}
                               </div>
                             </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {heatmapData.timeSlots.map(
-                        (timeSlot, index, timeSlots) => {
-                          // 時間が変わるときだけ表示するためのチェック
-                          const [startTime] = timeSlot.split("-");
-                          const showTime =
-                            index === 0 ||
-                            timeSlot.split("-")[0] !==
-                              timeSlots[index - 1].split("-")[0];
-
-                          // 時間表示を省スペース化
-                          const formattedStartTime = startTime.replace(
-                            /^0/,
-                            ""
                           );
+                        });
+                      })()}
+                    </div>
+                  )}
 
-                          return (
-                            <tr key={timeSlot} className="hover">
-                              <td className="px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
-                                {showTime ? (
-                                  <span className="text-xs sm:text-sm">
-                                    {formattedStartTime}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs sm:text-sm text-gray-400">
-                                    -
-                                  </span>
-                                )}
-                              </td>
-                              {heatmapData.dates.map((date) => {
-                                const dateId =
-                                  heatmapData.dateMap[date.dateKey]?.[timeSlot];
-                                const { className, status } =
-                                  getCellStyle(dateId);
+                  {viewMode === "table" && (
+                    <div
+                      className="overflow-x-auto select-none"
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <table className="table table-fixed w-full border-collapse">
+                        <thead>
+                          <tr className="bg-base-200">
+                            <th className="w-32 border border-base-300">
+                              日付
+                            </th>
+                            <th className="w-32 border border-base-300">
+                              時間帯
+                            </th>
+                            <th className="w-24 text-center border border-base-300">
+                              参加可否
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dateGroups.map((group) => (
+                            <React.Fragment key={group.dateKey}>
+                              {group.slots.map((date, index) => {
+                                const start = new Date(date.start_time);
+                                const end = new Date(date.end_time);
+                                const timeStr = `${start
+                                  .getHours()
+                                  .toString()
+                                  .padStart(2, "0")}:${start
+                                  .getMinutes()
+                                  .toString()
+                                  .padStart(2, "0")}～${end
+                                  .getHours()
+                                  .toString()
+                                  .padStart(2, "0")}:${end
+                                  .getMinutes()
+                                  .toString()
+                                  .padStart(2, "0")}`;
+
+                                const { className, status } = getCellStyle(
+                                  date.id
+                                );
 
                                 return (
-                                  <td
-                                    key={`${date.dateKey}-${timeSlot}`}
-                                    className="p-0 text-center border border-base-300"
-                                    data-date-id={dateId}
+                                  <tr
+                                    key={date.id}
+                                    className="hover"
+                                    data-date-id={date.id}
                                   >
-                                    {dateId ? (
+                                    {index === 0 && (
+                                      <td
+                                        rowSpan={group.slots.length}
+                                        className="align-middle border border-base-300 bg-base-100"
+                                      >
+                                        <div className="font-medium">
+                                          {group.formattedDate}
+                                        </div>
+                                      </td>
+                                    )}
+                                    <td className="border border-base-300">
+                                      {timeStr}
+                                    </td>
+                                    <td className="text-center border border-base-300">
                                       <div
-                                        className={`w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center cursor-pointer touch-manipulation transition-colors duration-200 ease-in-out ${className}`}
+                                        className={`w-full h-10 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className}`}
                                         onMouseDown={() =>
-                                          dateId &&
                                           handleMouseDown(
-                                            dateId,
-                                            !!selectedDates[dateId]
+                                            date.id,
+                                            !!selectedDates[date.id]
                                           )
                                         }
                                         onMouseEnter={() =>
-                                          dateId && handleMouseEnter(dateId)
+                                          handleMouseEnter(date.id)
                                         }
-                                        onTouchStart={(e) =>
-                                          dateId &&
+                                        onTouchStart={() =>
                                           handleTouchStart(
-                                            dateId,
-                                            !!selectedDates[dateId],
-                                            e
+                                            date.id,
+                                            !!selectedDates[date.id]
                                           )
                                         }
                                       >
                                         {getCellContent(status)}
                                       </div>
-                                    ) : (
-                                      <div className="w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center bg-gray-100 text-gray-400">
-                                        <span className="text-xs sm:text-sm">
-                                          ー
-                                        </span>
-                                      </div>
-                                    )}
-                                  </td>
+                                    </td>
+                                  </tr>
                                 );
                               })}
-                            </tr>
-                          );
-                        }
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {viewMode === "heatmap" && (
+                    <div
+                      className="overflow-x-auto select-none overscroll-contain table-container-mobile"
+                      style={{
+                        overscrollBehaviorY: "contain",
+                        touchAction: isDragging ? "none" : "pan-x", // ドラッグ中はタッチ操作を無効化
+                      }}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <table className="table table-xs sm:table-sm table-fixed w-full border-collapse">
+                        <thead className="sticky top-0 z-20">
+                          <tr className="bg-base-200">
+                            <th className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
+                              <span className="text-xs sm:text-sm">時間</span>
+                            </th>
+                            {heatmapData.dates.map((date) => (
+                              <th
+                                key={date.dateKey}
+                                className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center whitespace-nowrap border border-base-300 sticky top-0 bg-base-200 z-20"
+                              >
+                                <div className="text-xs sm:text-sm">
+                                  {date.formattedDate.replace(
+                                    /\([月火水木金土日]\)/,
+                                    ""
+                                  )}
+                                  <div className="text-[0.6rem] sm:text-xs">
+                                    {date.formattedDate.match(
+                                      /\([月火水木金土日]\)/
+                                    )?.[0] || ""}
+                                  </div>
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {heatmapData.timeSlots.map(
+                            (timeSlot, index, timeSlots) => {
+                              // 時間が変わるときだけ表示するためのチェック
+                              const [startTime] = timeSlot.split("-");
+                              const showTime =
+                                index === 0 ||
+                                timeSlot.split("-")[0] !==
+                                  timeSlots[index - 1].split("-")[0];
+
+                              // 時間表示を省スペース化
+                              const formattedStartTime = startTime.replace(
+                                /^0/,
+                                ""
+                              );
+
+                              return (
+                                <tr key={timeSlot} className="hover">
+                                  <td className="px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                    {showTime ? (
+                                      <span className="text-xs sm:text-sm">
+                                        {formattedStartTime}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs sm:text-sm text-gray-400">
+                                        -
+                                      </span>
+                                    )}
+                                  </td>
+                                  {heatmapData.dates.map((date) => {
+                                    const dateId =
+                                      heatmapData.dateMap[date.dateKey]?.[
+                                        timeSlot
+                                      ];
+                                    const { className, status } =
+                                      getCellStyle(dateId);
+
+                                    return (
+                                      <td
+                                        key={`${date.dateKey}-${timeSlot}`}
+                                        className="p-0 text-center border border-base-300"
+                                        data-date-id={dateId}
+                                      >
+                                        {dateId ? (
+                                          <div
+                                            className={`w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center cursor-pointer touch-manipulation transition-colors duration-200 ease-in-out ${className}`}
+                                            style={{ touchAction: "none" }} // タッチ操作時のスクロールを完全に防止
+                                            onMouseDown={() =>
+                                              dateId &&
+                                              handleMouseDown(
+                                                dateId,
+                                                !!selectedDates[dateId]
+                                              )
+                                            }
+                                            onMouseEnter={() =>
+                                              dateId && handleMouseEnter(dateId)
+                                            }
+                                            onTouchStart={(e) => {
+                                              if (dateId) {
+                                                // e.preventDefault()を削除
+                                                e.stopPropagation(); // イベント伝播は防止
+                                                handleTouchStart(
+                                                  dateId,
+                                                  !!selectedDates[dateId]
+                                                );
+                                              }
+                                            }}
+                                          >
+                                            {getCellContent(status)}
+                                          </div>
+                                        ) : (
+                                          <div className="w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center bg-gray-100 text-gray-400">
+                                            <span className="text-xs sm:text-sm">
+                                              ー
+                                            </span>
+                                          </div>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            }
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

@@ -48,7 +48,7 @@ export default function LandingPage() {
                 style={{ animationDelay: "0.3s" }}
               >
                 <Image
-                  src={siteConfig.logo.main}
+                  src={siteConfig.logo.main.toString()}
                   alt={siteConfig.logo.alt}
                   fill
                   className="object-contain"
