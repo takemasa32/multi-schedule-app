@@ -142,6 +142,58 @@ export default function AvailabilitySummary({
     });
   };
 
+  // 最適化された日付表示（同じ年月は省略）
+  const getOptimizedDateDisplay = (
+    dateString: string,
+    index: number,
+    allDates: string[]
+  ) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    const dayOfWeek = getDayOfWeek(dateString);
+
+    // 最初の日付または前の日付と年月が異なる場合は年月を表示
+    if (index === 0) {
+      return (
+        <>
+          {`${year}年${month + 1}月`}
+          <br />
+          {`${day}日(${dayOfWeek})`}
+        </>
+      );
+    }
+
+    // 前の日付と比較
+    const prevDate = new Date(allDates[index - 1]);
+
+    // 年が変わる場合
+    if (prevDate.getFullYear() !== year) {
+      return (
+        <>
+          {`${year}年${month + 1}月`}
+          <br />
+          {`${day}日(${dayOfWeek})`}
+        </>
+      );
+    }
+
+    // 月が変わる場合
+    if (prevDate.getMonth() !== month) {
+      return (
+        <>
+          {`${month + 1}月`}
+          <br />
+          {`${day}日(${dayOfWeek})`}
+        </>
+      );
+    }
+
+    // 同じ月なら日付と曜日のみ
+    return `${day}日(${dayOfWeek})`;
+  };
+
   // 日付をまとめる (重複を排除)
   const uniqueDates = useMemo(() => {
     const dateMap = new Map();
@@ -492,11 +544,11 @@ export default function AvailabilitySummary({
 
   return (
     <div className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all">
-      <div className="p-4">
-        <h2 className="text-xl font-bold mb-4">みんなの回答状況</h2>
+      <div className="p-2 sm:p-4">
+        <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>
 
         {/* 表示切り替えタブ */}
-        <div className="tabs tabs-boxed mb-4 bg-base-300 p-1 rounded-lg">
+        <div className="tabs tabs-boxed mb-2 sm:mb-4 bg-base-300 p-1 rounded-lg">
           <a
             className={`tab transition-all ${
               viewMode === "heatmap"
@@ -531,7 +583,7 @@ export default function AvailabilitySummary({
 
         {/* リスト表示モード */}
         {viewMode === "list" && (
-          <div className="overflow-x-auto fade-in">
+          <div className="overflow-x-auto fade-in -mx-2 sm:mx-0">
             <table className="table w-full">
               <thead>
                 <tr>
@@ -561,7 +613,14 @@ export default function AvailabilitySummary({
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap">{item.formattedTime}</td>
+                    <td className="whitespace-nowrap">
+                      {/* 時間表示を最適化 - 先頭の0を削除してコンパクトに */}
+                      {formatTime(item.startTime).replace(/^0/, "")}
+                      <span className="text-xs text-gray-500">
+                        {/* 終了時刻を矢印記号で簡潔に表示 */}→
+                        {formatTime(item.endTime).replace(/^0/, "")}
+                      </span>
+                    </td>
                     <td className="text-center">
                       <div
                         className="flex items-center justify-center gap-2"
@@ -592,84 +651,127 @@ export default function AvailabilitySummary({
 
         {/* ヒートマップ表示モード */}
         {viewMode === "heatmap" && (
-          <div className="overflow-x-auto fade-in">
-            <div className="bg-base-100 p-2 mb-2 text-sm">
+          <div className="overflow-x-auto fade-in -mx-2 sm:mx-0">
+            <div className="bg-base-100 p-1 sm:p-2 mb-2 text-xs sm:text-sm">
               <span className="font-medium">
                 色が濃いほど参加可能な人が多い時間帯です
               </span>
             </div>
-            <table className="table table-zebra w-full text-center">
-              <thead>
-                <tr className="bg-base-200">
-                  <th className="text-left">時間 \ 日付</th>
-                  {uniqueDates.map((dateInfo) => (
-                    <th key={dateInfo.date} className="text-center px-2 py-3">
-                      {dateInfo.date}
-                      <br />
-                      <span className="text-xs">({dateInfo.dayOfWeek})</span>
+            <div className="relative overflow-x-auto">
+              <table className="table table-zebra w-full text-center border-collapse">
+                <thead className="sticky top-0 z-20">
+                  <tr className="bg-base-200">
+                    <th className="text-left sticky left-0 top-0 bg-base-200 z-30 p-1 sm:p-2 text-xs sm:text-sm">
+                      時間
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {uniqueTimeSlots.map((timeSlot) => (
-                  <tr key={timeSlot.startTime}>
-                    <td className="text-left font-medium whitespace-nowrap">
-                      {timeSlot.startTime}〜{timeSlot.endTime}
-                    </td>
-                    {uniqueDates.map((dateInfo) => {
-                      const key = `${dateInfo.date}_${timeSlot.startTime}`;
-                      const cellData = heatmapData.get(key);
-                      const heatmapClass = cellData
-                        ? `heatmap-${cellData.heatmapLevel}`
-                        : "heatmap-0";
-                      const isSelected = cellData?.isSelected || false;
-                      const availableCount = cellData?.availableCount || 0;
-                      const unavailableCount = cellData?.unavailableCount || 0;
-                      const hasData = cellData !== undefined;
+                    {uniqueDates.map((dateInfo, index, arr) => (
+                      <th
+                        key={dateInfo.date}
+                        className="text-center p-1 sm:px-2 sm:py-3 min-w-[50px] sm:min-w-[80px] text-xs sm:text-sm sticky top-0 bg-base-200 z-20"
+                      >
+                        {getOptimizedDateDisplay(
+                          dateInfo.dateObj.toISOString(),
+                          index,
+                          arr.map((d) => d.dateObj.toISOString())
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="touch-none">
+                  {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
+                    const showEndTime =
+                      index === 0 ||
+                      timeSlot.endTime !== timeSlots[index - 1].endTime;
+                    // 時間表示の最適化 - 1:00のような形式に変換
+                    const formattedStartTime = timeSlot.startTime.replace(
+                      /^0/,
+                      ""
+                    );
+                    const formattedEndTime = timeSlot.endTime.replace(/^0/, "");
 
-                      return (
-                        <td
-                          key={key}
-                          className={`relative p-3 transition-all ${heatmapClass} ${
-                            isSelected ? "ring-2 ring-success" : ""
-                          }`}
-                          onMouseEnter={(e) =>
-                            handleMouseEnter(e, cellData?.dateId || "")
-                          }
-                          onMouseLeave={handleMouseLeave}
-                        >
-                          {hasData ? (
-                            <div className="flex flex-col items-center justify-center h-full">
-                              <span className="font-bold">
-                                {availableCount}
-                              </span>
-                              {unavailableCount > 0 && (
-                                <span className="text-xs text-gray-500">
-                                  ({unavailableCount})
+                    // 時間が変わるときのみ表示する条件を追加
+                    const showTime =
+                      index === 0 ||
+                      timeSlot.startTime.split(":")[0] !==
+                        timeSlots[index - 1].startTime.split(":")[0];
+
+                    return (
+                      <tr key={timeSlot.startTime}>
+                        <td className="text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
+                          {showTime ? (
+                            <>
+                              {formattedStartTime}
+                              {showEndTime ? (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  {formattedEndTime === "24:00"
+                                    ? "24:00"
+                                    : `→${formattedEndTime}`}
                                 </span>
-                              )}
-                              {isSelected && (
-                                <div className="absolute top-0 right-0 w-2 h-2 bg-success rounded-full m-1"></div>
-                              )}
-                            </div>
+                              ) : null}
+                            </>
                           ) : (
-                            <span className="text-gray-300">-</span>
+                            <span className="text-gray-400">-</span>
                           )}
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="flex justify-center items-center mt-3 gap-2 text-sm">
+                        {uniqueDates.map((dateInfo) => {
+                          const key = `${dateInfo.date}_${timeSlot.startTime}`;
+                          const cellData = heatmapData.get(key);
+                          const heatmapClass = cellData
+                            ? `heatmap-${cellData.heatmapLevel}`
+                            : "heatmap-0";
+                          const isSelected = cellData?.isSelected || false;
+                          const availableCount = cellData?.availableCount || 0;
+                          const unavailableCount =
+                            cellData?.unavailableCount || 0;
+                          const hasData = cellData !== undefined;
+
+                          return (
+                            <td
+                              key={key}
+                              className={`relative p-1 sm:p-2 transition-all ${heatmapClass} ${
+                                isSelected
+                                  ? "ring-1 sm:ring-2 ring-success"
+                                  : ""
+                              } min-w-[36px] min-h-[36px] sm:min-w-[42px] sm:min-h-[42px]`}
+                              onMouseEnter={(e) =>
+                                handleMouseEnter(e, cellData?.dateId || "")
+                              }
+                              onMouseLeave={handleMouseLeave}
+                            >
+                              {hasData ? (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                  <span className="font-bold text-xs sm:text-base">
+                                    {availableCount}
+                                  </span>
+                                  {unavailableCount > 0 && (
+                                    <span className="text-[10px] sm:text-xs text-gray-500">
+                                      ({unavailableCount})
+                                    </span>
+                                  )}
+                                  {isSelected && (
+                                    <div className="absolute top-0 right-0 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-success rounded-full m-0.5 sm:m-1"></div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 text-xs">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-center items-center mt-2 sm:mt-3 gap-1 sm:gap-2 text-xs sm:text-sm">
               <span>少ない</span>
               <div className="flex">
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
                   <div
                     key={level}
-                    className={`heatmap-${level} w-4 h-4 border border-gray-200`}
+                    className={`heatmap-${level} w-2 h-2 sm:w-4 sm:h-4 border border-gray-200`}
                   ></div>
                 ))}
               </div>
@@ -681,122 +783,140 @@ export default function AvailabilitySummary({
         {/* 詳細表示モード（個人ごとの回答詳細） */}
         {viewMode === "detailed" && (
           <div className="mt-4 overflow-x-auto fade-in">
-            <table className="table w-full">
-              <thead>
-                <tr>
-                  <th>参加者</th>
-                  {eventDates.map((date) => (
-                    <th
-                      key={date.id}
-                      className={`text-center whitespace-nowrap ${
-                        finalizedDateIds?.includes(date.id)
-                          ? "bg-success bg-opacity-10"
-                          : ""
-                      }`}
-                    >
-                      {formatDate(date.start_time)}
-                      <br />
-                      <span className="text-xs">
-                        {formatTime(date.start_time)}
-                      </span>
-                      {finalizedDateIds?.includes(date.id) && (
-                        <span className="block badge badge-xs badge-success mt-1">
-                          確定
-                        </span>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {participants.map((participant) => (
-                  <tr
-                    key={participant.id}
-                    className="hover:bg-base-200 transition-colors"
-                  >
-                    <td className="whitespace-nowrap font-medium flex items-center justify-between gap-2">
-                      <span>{participant.name}</span>
-                      {/* 編集ボタン: onEditParticipantが渡されている場合はそれを使用、
-                          そうでなければ編集ページへのリンクを表示 */}
-                      {onShowParticipantForm ? (
-                        <button
-                          onClick={() =>
-                            handleEditClick(participant.id, participant.name)
-                          }
-                          className="btn btn-ghost btn-xs tooltip tooltip-right"
-                          data-tip="この参加者の予定を編集"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            />
-                          </svg>
-                        </button>
-                      ) : (
-                        <a
-                          href={`/event/${publicToken}/input?participant_id=${participant.id}`}
-                          className="btn btn-ghost btn-xs tooltip tooltip-right"
-                          data-tip="この参加者の予定を編集"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            />
-                          </svg>
-                        </a>
-                      )}
-                    </td>
-                    {eventDates.map((date) => {
-                      const isAvailable = isParticipantAvailable(
-                        participant.id,
-                        date.id
+            <div className="relative">
+              <table className="table w-full">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 bg-base-200 z-10">参加者</th>
+                    {eventDates.map((date, index, arr) => {
+                      const currentDate = new Date(date.start_time);
+                      let prevDate = null;
+
+                      if (index > 0) {
+                        prevDate = new Date(arr[index - 1].start_time);
+                      }
+
+                      const isSameDay =
+                        prevDate &&
+                        currentDate.getDate() === prevDate.getDate() &&
+                        currentDate.getMonth() === prevDate.getMonth() &&
+                        currentDate.getFullYear() === prevDate.getFullYear();
+
+                      // 時刻表示を簡素化
+                      const formattedTime = formatTime(date.start_time).replace(
+                        /^0/,
+                        ""
                       );
-                      const isFinalized = finalizedDateIds?.includes(date.id);
+
                       return (
-                        <td
+                        <th
                           key={date.id}
-                          className={`text-center transition-colors ${
-                            isFinalized ? "bg-success bg-opacity-10" : ""
+                          className={`text-center whitespace-nowrap ${
+                            finalizedDateIds?.includes(date.id)
+                              ? "bg-success bg-opacity-10"
+                              : ""
                           }`}
                         >
-                          {isAvailable === true && (
-                            <div className="text-success font-bold w-6 h-6 rounded-full bg-success bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
-                              ○
-                            </div>
+                          {!isSameDay && formatDate(date.start_time)}
+                          <div className="text-xs">{formattedTime}</div>
+                          {finalizedDateIds?.includes(date.id) && (
+                            <span className="block badge badge-xs badge-success mt-1">
+                              確定
+                            </span>
                           )}
-                          {isAvailable === false && (
-                            <div className="text-error font-bold w-6 h-6 rounded-full bg-error bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
-                              ×
-                            </div>
-                          )}
-                          {isAvailable === null && (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </td>
+                        </th>
                       );
                     })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {participants.map((participant) => (
+                    <tr
+                      key={participant.id}
+                      className="hover:bg-base-200 transition-colors"
+                    >
+                      <td className="whitespace-nowrap font-medium sticky left-0 bg-base-100 z-10 flex items-center justify-between gap-2">
+                        <span>{participant.name}</span>
+                        {onShowParticipantForm ? (
+                          <button
+                            onClick={() =>
+                              handleEditClick(participant.id, participant.name)
+                            }
+                            className="btn btn-ghost btn-xs tooltip tooltip-right"
+                            data-tip="この参加者の予定を編集"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </button>
+                        ) : (
+                          <a
+                            href={`/event/${publicToken}/input?participant_id=${participant.id}`}
+                            className="btn btn-ghost btn-xs tooltip tooltip-right"
+                            data-tip="この参加者の予定を編集"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </a>
+                        )}
+                      </td>
+                      {eventDates.map((date) => {
+                        const isAvailable = isParticipantAvailable(
+                          participant.id,
+                          date.id
+                        );
+                        const isFinalized = finalizedDateIds?.includes(date.id);
+                        return (
+                          <td
+                            key={date.id}
+                            className={`text-center transition-colors ${
+                              isFinalized ? "bg-success bg-opacity-10" : ""
+                            }`}
+                          >
+                            {isAvailable === true && (
+                              <div className="text-success font-bold w-6 h-6 rounded-full bg-success bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
+                                ○
+                              </div>
+                            )}
+                            {isAvailable === false && (
+                              <div className="text-error font-bold w-6 h-6 rounded-full bg-error bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
+                                ×
+                              </div>
+                            )}
+                            {isAvailable === null && (
+                              <span className="text-gray-300">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

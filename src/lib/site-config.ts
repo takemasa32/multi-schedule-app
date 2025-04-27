@@ -29,7 +29,7 @@ interface SiteConfig {
 // サービス設定
 const siteConfig: SiteConfig = {
   name: {
-    full: "DaySynth-β版",
+    full: "DaySynth - β版",
     short: "DaySynth-β版",
     tagline: "みんなの予定を簡単調整",
   },

@@ -180,3 +180,45 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* ヒートマップの最適化スタイル */
+@media (max-width: 640px) {
+  /* スマホ表示用のマージン調整 */
+  .table-container-mobile {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    width: calc(100% + 2rem);
+  }
+
+  /* スマホ表示時のセル幅調整 */
+  .heatmap-cell-mobile {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0;
+  }
+}
+
+/* スクロール制御のための追加スタイル */
+.scroll-lock {
+  touch-action: none !important;
+  overscroll-behavior: contain;
+}
+
+.touch-x-only {
+  touch-action: pan-x;
+}
+
+.touch-y-only {
+  touch-action: pan-y;
+}
+
+/* タッチ操作の高度な制御 */
+.drag-surface {
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* ヒートマップのセル内容がスワイプ操作でも選択されないようにする */
+.cell-content {
+  pointer-events: none;
+}
