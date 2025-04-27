@@ -34,6 +34,11 @@ module.exports = {
           900: "#581c87",
           950: "#3b0764",
         },
+        // 例：独自の淡いブルー調
+        "day-muted": "#E0F2FE",
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
       animation: {
         fadeIn: "fadeIn 0.3s ease-in-out",
@@ -80,6 +85,52 @@ module.exports = {
           error: "#ef4444",
         },
       },
+      {
+        daysynth: {
+          /* カラーパレット */
+          primary: "#2563EB",
+          "primary-content": "#ffffff",
+          secondary: "#38BDF8",
+          "secondary-content": "#1E293B",
+          accent: "#06B6D4",
+          "accent-content": "#ffffff",
+          neutral: "#F1F5F9",
+          "neutral-content": "#334155",
+          "base-100": "#ffffff",
+          "base-200": "#F8FAFC",
+          "base-300": "#F1F5F9",
+          "base-content": "#1E293B",
+          info: "#3B82F6",
+          success: "#10B981",
+          warning: "#F59E0B",
+          error: "#EF4444",
+          /* 追加トークン例 */
+          "--rounded-btn": "0.5rem", // ボタン角丸 8px
+          "--rounded-box": "1rem", // コンテナ角丸 16px
+        },
+      },
+      {
+        dark: {
+          primary: "#6366F1",
+          "primary-content": "#ffffff",
+          secondary: "#A78BFA",
+          "secondary-content": "#ffffff",
+          accent: "#22D3EE",
+          "accent-content": "#0F172A",
+          neutral: "#1F2937",
+          "neutral-content": "#E5E7EB",
+          "base-100": "#0F172A", // ダークモードのメイン背景
+          "base-200": "#1E293B",
+          "base-300": "#334155",
+          "base-content": "#F1F5F9",
+          info: "#38BDF8",
+          success: "#34D399",
+          warning: "#FBBF24",
+          error: "#F87171",
+        },
+      },
     ],
+    // デフォルトテーマを daysynth に設定
+    defaultTheme: "daysynth",
   },
 };

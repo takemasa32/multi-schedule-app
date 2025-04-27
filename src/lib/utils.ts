@@ -69,6 +69,22 @@ export function formatDateTimeWithDay(date: Date | string): string {
   return `${month}/${day} (${dayOfWeek}) ${hours}:${minutes}`;
 }
 
+// 時刻を「HH:MM」形式でフォーマットする
+export function formatTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  
+  // 00:00は24:00として表示する条件があれば、ここでチェック
+  if (hours === "00" && minutes === "00") {
+    // 呼び出し側で前日の日付かどうかチェックが必要な場合は
+    // そのロジックを追加する。基本的には単純に表示するだけ
+    return "00:00";
+  }
+  
+  return `${hours}:${minutes}`;
+}
+
 /**
  * Googleカレンダー用の日時フォーマットに変換する
  * 形式: YYYYMMDDTHHmmssZ

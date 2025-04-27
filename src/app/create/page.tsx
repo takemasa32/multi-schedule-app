@@ -1,24 +1,30 @@
-import EventForm from '@/components/event-form';
-import Link from 'next/link';
+import EventForm from "@/components/event-form";
+import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import Card from "@/components/layout/Card";
+import siteConfig from "@/lib/site-config";
 
 export default function CreateEventPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <header className="mb-8">
-        <nav className="flex justify-between items-center mb-8">
-          <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-800">
-            複数日程調整アプリ
-          </Link>
-        </nav>
-        <h1 className="text-3xl font-bold mb-2 text-center">新規イベント作成</h1>
-        <p className="text-gray-600 text-center">候補日程を複数選択して、参加者に共有するイベントを作成します</p>
-      </header>
-      
-      <EventForm />
-      
-      <footer className="mt-16 py-4 text-center text-sm text-gray-500">
-        <p>© 2025 複数日程調整アプリ</p>
-      </footer>
-    </div>
+    <>
+      <div className="bg-base-200 mb-6 py-4">
+        <div className="container mx-auto max-w-5xl px-4">
+          <Breadcrumbs items={[{ label: "イベント作成" }]} />
+        </div>
+      </div>
+
+      <div className="container mx-auto max-w-3xl px-4 pb-12">
+        <div className="text-center mb-8 fade-in">
+          <h1 className="text-4xl font-bold mb-3">新規イベント作成</h1>
+          <p className="text-base-content/70 max-w-xl mx-auto">
+            候補日程を複数選択して、参加者に共有する{siteConfig.name.full}
+            を作成します。 作成後に共有用リンクが発行されます。
+          </p>
+        </div>
+
+        <Card className="fade-in animate-delay-100">
+          <EventForm />
+        </Card>
+      </div>
+    </>
   );
 }

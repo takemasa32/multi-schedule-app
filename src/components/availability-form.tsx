@@ -376,15 +376,68 @@ export default function AvailabilityForm({
   // タッチ操作開始（スマホ向け）
   const handleTouchStart = useCallback(
     (dateId: string, initialState: boolean, e: TouchEvent) => {
-      e.preventDefault(); // デフォルトのスクロールなどを防止
-      setIsTouching(true);
-      setDragStartId(dateId);
-      setDragState(!initialState);
+      // タッチ操作開始時に、まずタッチポイントを記録
+      const touch = e.touches[0];
+      const startX = touch.clientX;
+      const startY = touch.clientY;
 
-      setSelectedDates((prev) => ({
-        ...prev,
-        [dateId]: !initialState,
-      }));
+      // 移動距離の閾値を設定 - この値以上動いたらスクロール、それ以下なら選択と判断
+      const moveThreshold = 10;
+
+      // 最初のタッチから少し動いた時点で判断するための遅延処理
+      const timeoutId = setTimeout(() => {
+        // タッチが続いていれば選択操作を開始
+        setIsTouching(true);
+        setDragStartId(dateId);
+        setDragState(!initialState);
+
+        setSelectedDates((prev) => ({
+          ...prev,
+          [dateId]: !initialState,
+        }));
+
+        // 選択操作中はスクロールを防止
+        e.preventDefault();
+      }, 100);
+
+      // タッチムーブイベントを一時的に監視して、大きく動いたらスクロールと判断
+      const handleInitialMove = (moveEvent: globalThis.TouchEvent) => {
+        const moveTouch = moveEvent.touches[0];
+        const deltaX = Math.abs(moveTouch.clientX - startX);
+        const deltaY = Math.abs(moveTouch.clientY - startY);
+
+        // 閾値以上の移動があればスクロール操作と判断
+        if (deltaX > moveThreshold || deltaY > moveThreshold) {
+          clearTimeout(timeoutId);
+          document.removeEventListener("touchmove", handleInitialMove);
+          document.removeEventListener("touchend", handleInitialEnd);
+        }
+      };
+
+      // タッチエンド時のクリーンアップ
+      const handleInitialEnd = () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener("touchmove", handleInitialMove);
+        document.removeEventListener("touchend", handleInitialEnd);
+      };
+
+      // 判定用のイベントリスナーを設定
+      document.addEventListener(
+        "touchmove",
+        handleInitialMove as EventListener,
+        {
+          passive: true,
+        }
+      );
+      document.addEventListener("touchend", handleInitialEnd as EventListener, {
+        passive: true,
+      });
+
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener("touchmove", handleInitialMove);
+        document.removeEventListener("touchend", handleInitialEnd);
+      };
     },
     []
   );
@@ -982,76 +1035,118 @@ export default function AvailabilityForm({
 
               {viewMode === "heatmap" && (
                 <div
-                  className="overflow-x-auto select-none"
+                  className="overflow-x-auto select-none overscroll-contain table-container-mobile"
+                  style={{
+                    overscrollBehaviorY: "contain",
+                    touchAction: "pan-x",
+                  }}
                   onMouseLeave={handleMouseLeave}
                 >
-                  <table className="table table-fixed w-full border-collapse">
-                    <thead>
+                  <table className="table table-xs sm:table-sm table-fixed w-full border-collapse">
+                    <thead className="sticky top-0 z-20">
                       <tr className="bg-base-200">
-                        <th className="w-24 px-2 py-3 text-center border border-base-300">
-                          時間帯\日付
+                        <th className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
+                          <span className="text-xs sm:text-sm">時間</span>
                         </th>
                         {heatmapData.dates.map((date) => (
                           <th
                             key={date.dateKey}
-                            className="w-24 px-2 py-3 text-center whitespace-nowrap border border-base-300"
+                            className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center whitespace-nowrap border border-base-300 sticky top-0 bg-base-200 z-20"
                           >
-                            {date.formattedDate}
+                            <div className="text-xs sm:text-sm">
+                              {date.formattedDate.replace(
+                                /\([月火水木金土日]\)/,
+                                ""
+                              )}
+                              <div className="text-[0.6rem] sm:text-xs">
+                                {date.formattedDate.match(
+                                  /\([月火水木金土日]\)/
+                                )?.[0] || ""}
+                              </div>
+                            </div>
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {heatmapData.timeSlots.map((timeSlot) => (
-                        <tr key={timeSlot} className="hover">
-                          <td className="px-2 py-3 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100">
-                            {timeSlot}
-                          </td>
-                          {heatmapData.dates.map((date) => {
-                            const dateId =
-                              heatmapData.dateMap[date.dateKey]?.[timeSlot];
-                            const { className, status } = getCellStyle(dateId);
+                      {heatmapData.timeSlots.map(
+                        (timeSlot, index, timeSlots) => {
+                          // 時間が変わるときだけ表示するためのチェック
+                          const [startTime] = timeSlot.split("-");
+                          const showTime =
+                            index === 0 ||
+                            timeSlot.split("-")[0] !==
+                              timeSlots[index - 1].split("-")[0];
 
-                            return (
-                              <td
-                                key={`${date.dateKey}-${timeSlot}`}
-                                className="p-1 text-center border border-base-300"
-                                data-date-id={dateId}
-                              >
-                                {dateId ? (
-                                  <div
-                                    className={`w-full h-10 rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className}`}
-                                    onMouseDown={() =>
-                                      dateId &&
-                                      handleMouseDown(
-                                        dateId,
-                                        !!selectedDates[dateId]
-                                      )
-                                    }
-                                    onMouseEnter={() =>
-                                      dateId && handleMouseEnter(dateId)
-                                    }
-                                    onTouchStart={(e) =>
-                                      dateId &&
-                                      handleTouchStart(
-                                        dateId,
-                                        !!selectedDates[dateId],
-                                        e
-                                      )
-                                    }
-                                  >
-                                    {getCellContent(status)}
-                                  </div>
+                          // 時間表示を省スペース化
+                          const formattedStartTime = startTime.replace(
+                            /^0/,
+                            ""
+                          );
+
+                          return (
+                            <tr key={timeSlot} className="hover">
+                              <td className="px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                {showTime ? (
+                                  <span className="text-xs sm:text-sm">
+                                    {formattedStartTime}
+                                  </span>
                                 ) : (
-                                  <div className="w-full h-10 rounded-md flex items-center justify-center bg-gray-100 text-gray-400">
-                                    ー
-                                  </div>
+                                  <span className="text-xs sm:text-sm text-gray-400">
+                                    -
+                                  </span>
                                 )}
                               </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
+                              {heatmapData.dates.map((date) => {
+                                const dateId =
+                                  heatmapData.dateMap[date.dateKey]?.[timeSlot];
+                                const { className, status } =
+                                  getCellStyle(dateId);
+
+                                return (
+                                  <td
+                                    key={`${date.dateKey}-${timeSlot}`}
+                                    className="p-0 text-center border border-base-300"
+                                    data-date-id={dateId}
+                                  >
+                                    {dateId ? (
+                                      <div
+                                        className={`w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center cursor-pointer touch-manipulation transition-colors duration-200 ease-in-out ${className}`}
+                                        onMouseDown={() =>
+                                          dateId &&
+                                          handleMouseDown(
+                                            dateId,
+                                            !!selectedDates[dateId]
+                                          )
+                                        }
+                                        onMouseEnter={() =>
+                                          dateId && handleMouseEnter(dateId)
+                                        }
+                                        onTouchStart={(e) =>
+                                          dateId &&
+                                          handleTouchStart(
+                                            dateId,
+                                            !!selectedDates[dateId],
+                                            e
+                                          )
+                                        }
+                                      >
+                                        {getCellContent(status)}
+                                      </div>
+                                    ) : (
+                                      <div className="w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center bg-gray-100 text-gray-400">
+                                        <span className="text-xs sm:text-sm">
+                                          ー
+                                        </span>
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        }
+                      )}
                     </tbody>
                   </table>
                 </div>

@@ -6,6 +6,8 @@ import { getFinalizedDateIds } from "@/lib/actions";
 import { notFound } from "next/navigation";
 import EventClientWrapper from "@/components/event-client/event-client-wrapper";
 import { EventHeader } from "@/components/event-header";
+import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import SectionDivider from "@/components/layout/SectionDivider";
 
 // Next.js 15.3.1でのParams型定義の変更に対応
 interface EventPageProps {
@@ -55,22 +57,34 @@ export default async function EventPage({
   }
 
   return (
-    <main className="container mx-auto max-w-5xl px-4 py-8">
-      <EventHeader
-        title={event.title}
-        description={event.description}
-        isFinalized={event.is_finalized}
-      />
+    <>
+      <div className="bg-base-200 mb-6 py-4">
+        <div className="container mx-auto max-w-5xl px-4">
+          <Breadcrumbs items={[{ label: "イベント詳細" }]} />
+        </div>
+      </div>
 
-      {/* クライアントラッパーに全ての必要なデータを渡す */}
-      <EventClientWrapper
-        event={event}
-        eventDates={eventDates || []}
-        participants={participants || []}
-        availabilities={availabilities || []}
-        finalizedDateIds={finalizedDateIds}
-        isAdmin={isAdmin}
-      />
-    </main>
+      <div className="container mx-auto max-w-5xl px-4 pb-12">
+        <div className="fade-in">
+          <EventHeader
+            title={event.title}
+            description={event.description}
+            isFinalized={event.is_finalized}
+          />
+
+          <SectionDivider title="イベント情報" />
+
+          {/* クライアントラッパーに全ての必要なデータを渡す */}
+          <EventClientWrapper
+            event={event}
+            eventDates={eventDates || []}
+            participants={participants || []}
+            availabilities={availabilities || []}
+            finalizedDateIds={finalizedDateIds}
+            isAdmin={isAdmin}
+          />
+        </div>
+      </div>
+    </>
   );
 }
