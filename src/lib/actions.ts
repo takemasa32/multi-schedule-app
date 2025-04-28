@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { createSupabaseAdmin } from './supabase';
 import { v4 as uuidv4 } from 'uuid'; // You may need to install this package: npm install uuid @types/uuid
 
@@ -98,8 +97,10 @@ export async function createEvent(formData: FormData) {
       throw new Error('候補日程の登録に失敗しました');
     }
 
-    // Redirect to event page with admin token
-    redirect(`/event/${event.public_token}?admin=${event.admin_token}`);
+    // イベント作成が成功した場合、イベントページにリダイレクト
+    // Next.jsのリダイレクトは内部的にはエラーとしてスローされる仕組みのため
+    // try-catchブロックを抜けてリダイレクトを実行
+    return { redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}` };
 
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
@@ -226,13 +227,13 @@ export async function getFinalizedDateIds(eventId: string, finalDateId: string |
 
   if (error) {
     console.error('確定日程取得エラー:', error);
-    
+
     // 互換性のため、エラーが発生した場合やデータがない場合は
     // 古い形式（final_date_id）を使用
     if (finalDateId) {
       return [finalDateId];
     }
-    
+
     return [];
   }
 
