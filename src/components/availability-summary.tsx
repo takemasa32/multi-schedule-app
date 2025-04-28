@@ -292,12 +292,21 @@ export default function AvailabilitySummary({
         (a) => a.event_date_id === date.id && !a.availability
       ).length;
 
-      // ヒートマップの色の強さを計算（参加率に基づく）
+      // ヒートマップの色の強さを計算
       const totalResponses = availableCount + unavailableCount;
-      const availabilityRate =
-        totalResponses > 0 ? availableCount / totalResponses : 0;
-      // 0-10の範囲で色の強さを計算
-      const heatmapLevel = Math.round(availabilityRate * 10);
+
+      // 少人数でもより明確な差が出るように計算方法を変更
+      let heatmapLevel = 0;
+      if (totalResponses > 0) {
+        // 参加可能な人数に基づいてレベルを計算（単純な割合でなく）
+        // これにより少人数でも色の差がつきやすくなります
+        if (availableCount > 0) {
+          // 参加可能な人がいる場合、最低でも色がつくようにする
+          const rate = availableCount / Math.max(1, totalResponses);
+          // 2人だとしても、1人と2人で明確な差をつける
+          heatmapLevel = Math.max(2, Math.floor(rate * 10) + 1);
+        }
+      }
 
       return {
         dateId: date.id,
@@ -307,7 +316,8 @@ export default function AvailabilitySummary({
         availableCount,
         unavailableCount,
         heatmapLevel,
-        availabilityRate,
+        availabilityRate:
+          totalResponses > 0 ? availableCount / totalResponses : 0,
         formattedDate: formatDate(date.start_time),
         formattedTime: `${formatTime(date.start_time)}〜${formatTime(
           date.end_time
@@ -362,6 +372,16 @@ export default function AvailabilitySummary({
   const handleMouseLeave = () => {
     setTooltip((prev) => ({ ...prev, show: false }));
   };
+
+  // 最大参加可能者数を算出（セルごとの availableCount の最大値）
+  const maxAvailable = useMemo(() => {
+    return eventDates.reduce((max, date) => {
+      const cnt = availabilities.filter(
+        (a) => a.event_date_id === date.id && a.availability
+      ).length;
+      return Math.max(max, cnt);
+    }, 0);
+  }, [eventDates, availabilities]);
 
   // ヒートマップデータの取得 - 日付×時間のマトリックス
   const heatmapData = useMemo(() => {
@@ -651,14 +671,14 @@ export default function AvailabilitySummary({
 
         {/* ヒートマップ表示モード */}
         {viewMode === "heatmap" && (
-          <div className="overflow-x-auto fade-in -mx-2 sm:mx-0">
+          <div className="fade-in">
             <div className="bg-base-100 p-1 sm:p-2 mb-2 text-xs sm:text-sm">
               <span className="font-medium">
                 色が濃いほど参加可能な人が多い時間帯です
               </span>
             </div>
-            <div className="relative overflow-x-auto">
-              <table className="table table-zebra w-full text-center border-collapse">
+            <div className="overflow-x-auto">
+              <table className="table w-full text-center border-collapse">
                 <thead className="sticky top-0 z-20">
                   <tr className="bg-base-200">
                     <th className="text-left sticky left-0 top-0 bg-base-200 z-30 p-1 sm:p-2 text-xs sm:text-sm">
@@ -678,7 +698,7 @@ export default function AvailabilitySummary({
                     ))}
                   </tr>
                 </thead>
-                <tbody className="touch-none">
+                <tbody>
                   {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
                     // 時間表示の最適化 - 1:00のような形式に変換
                     const formattedStartTime = timeSlot.startTime.replace(
@@ -704,23 +724,38 @@ export default function AvailabilitySummary({
                         {uniqueDates.map((dateInfo) => {
                           const key = `${dateInfo.date}_${timeSlot.startTime}`;
                           const cellData = heatmapData.get(key);
-                          const heatmapClass = cellData
-                            ? `heatmap-${cellData.heatmapLevel}`
-                            : "heatmap-0";
                           const isSelected = cellData?.isSelected || false;
                           const availableCount = cellData?.availableCount || 0;
                           const unavailableCount =
                             cellData?.unavailableCount || 0;
                           const hasData = cellData !== undefined;
 
+                          // テーマカラー単色スケール：最大参加者数に応じた不透明度
+                          const ratio =
+                            maxAvailable > 0
+                              ? availableCount / maxAvailable
+                              : 0;
+
+                          // 不透明度を計算 - 5%刻みに丸める処理
+                          const raw = 20 + ratio * 80; // 20〜100 の実数
+                          const opacity5 = Math.round(raw / 5) * 5; // 5 の倍数へ丸め
+                          const opacityValue = Math.min(
+                            Math.max(opacity5, 20),
+                            100
+                          ); // 20〜100に制限
+
+                          // Tailwindの不透明度クラス名を生成
+                          const opacityClass = `bg-primary-500/${opacityValue}`;
+
+                          // 確定済み日程用の追加クラス
+                          const selectedClass = isSelected
+                            ? "border-2 border-success"
+                            : "";
+
                           return (
                             <td
                               key={key}
-                              className={`relative p-0 sm:p-1 transition-all ${heatmapClass} ${
-                                isSelected
-                                  ? "ring-1 sm:ring-2 ring-success"
-                                  : ""
-                              } min-w-[28px] min-h-[28px] sm:min-w-[36px] sm:min-h-[36px]`}
+                              className={`relative p-0 sm:p-1 transition-all ${opacityClass} ${selectedClass}`}
                             >
                               {hasData ? (
                                 <div className="flex flex-col items-center justify-center h-full">
@@ -751,12 +786,15 @@ export default function AvailabilitySummary({
             <div className="flex justify-center items-center mt-2 sm:mt-3 gap-1 sm:gap-2 text-xs sm:text-sm">
               <span>少ない</span>
               <div className="flex">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                  <div
-                    key={level}
-                    className={`heatmap-${level} w-2 h-2 sm:w-4 sm:h-4 border border-gray-200`}
-                  ></div>
-                ))}
+                {Array.from({ length: 11 }).map((_, i) => {
+                  const opacity = 20 + i * 8; // Values from 20 to 100
+                  return (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 sm:w-4 sm:h-4 border border-gray-200 bg-primary/${opacity}`}
+                    ></div>
+                  );
+                })}
               </div>
               <span>多い</span>
             </div>
