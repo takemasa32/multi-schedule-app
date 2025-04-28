@@ -6,12 +6,14 @@ import { createEvent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import DateRangePicker from "./date-range-picker";
 import { TimeSlot } from "@/lib/utils";
+import TermsCheckbox from "./terms/terms-checkbox";
 
 export default function EventFormClient() {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -25,6 +27,11 @@ export default function EventFormClient() {
     }
     if (timeSlots.length === 0) {
       setError("少なくとも1つの時間枠を設定してください");
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError("利用規約への同意が必要です");
       return;
     }
 
@@ -117,6 +124,12 @@ export default function EventFormClient() {
         <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
         <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
       </div>
+
+      <TermsCheckbox 
+        isChecked={termsAccepted} 
+        onChange={setTermsAccepted} 
+        id="event-form-terms"
+      />
 
       <div className="flex justify-end mt-8">
         <button
