@@ -249,22 +249,52 @@ export async function getFinalizedDateIds(eventId: string, finalDateId: string |
   return [];
 }
 
+// EventDate 型はテーブル定義に合わせてください
+type EventDate = {
+  id: string;
+  event_id: string;
+  start_time: string; // ISO 8601形式のタイムスタンプ
+  end_time: string;   // ISO 8601形式のタイムスタンプ
+  label?: string | undefined; // 任意のラベル
+  created_at: string; // ISO 8601形式のタイムスタンプ
+};
+
 /**
- * イベントIDに基づいてイベント日程を取得する
+ * イベントIDに基づいて、Supabaseの1000件制限を超えて全件取得する
  */
-export async function getEventDates(eventId: string) {
+export async function getEventDates(eventId: string): Promise<EventDate[]> {
   const supabase = createSupabaseAdmin();
+  const pageSize = 1000;    // 1ページあたり取得件数
+  let page = 0;             // ページカウンタ
+  let allDates: EventDate[] = [];
 
-  const { data, error } = await supabase
-    .from('event_dates')
-    .select('*')
-    .eq('event_id', eventId)
-    .order('start_time', { ascending: true });
+  while (true) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
 
-  if (error) {
-    console.error('イベント日程取得エラー:', error);
-    return [];
+    const { data, error } = await supabase
+      .from("event_dates")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("start_time", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error("イベント日程取得エラー:", error);
+      break;  // エラー時はループを抜けてこれまでの結果を返す
+    }
+    if (!data || data.length === 0) {
+      break;  // 取得データが空なら最後のページに到達
+    }
+
+    allDates = allDates.concat(data);
+
+    if (data.length < pageSize) {
+      // 取得件数が pageSize 未満ならもう次ページは無い
+      break;
+    }
+    page++;
   }
 
-  return data || [];
+  return allDates;
 }
