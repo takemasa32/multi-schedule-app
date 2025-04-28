@@ -48,6 +48,7 @@ export default async function EventInput({
         title={event.title}
         description={event.description}
         isFinalized={event.is_finalized}
+        isAdmin={false}
       />
 
       <div className="mb-8">

@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-@import "../styles/theme.css";
-
 body {
   @apply bg-base-100 text-base-content;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -220,5 +218,11 @@ body {
 
 /* ヒートマップのセル内容がスワイプ操作でも選択されないようにする */
 .cell-content {
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+/* drag/touch 操作時のブラウザ既定動作を無効化 */
+.touch-manipulation {
+  touch-action: none;
+  overscroll-behavior: contain;
 }

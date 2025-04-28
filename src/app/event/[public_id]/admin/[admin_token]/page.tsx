@@ -49,7 +49,18 @@ export default async function EventAdminPage({
             </p>
 
             <form action={adminRedirect.bind(null, adminToken, publicId)}>
-              <button type="submit" className="btn btn-primary w-full mt-2">
+              <button
+                type="submit"
+                className="btn btn-primary w-full mt-2"
+                onClick={(e) => {
+                  const target = e.currentTarget;
+                  target.classList.add("loading");
+                  const spinner = document.createElement("span");
+                  spinner.className = "loading loading-spinner loading-sm mr-2";
+                  target.prepend(spinner);
+                  target.textContent = "認証中...";
+                }}
+              >
                 トークンで認証して続行
               </button>
             </form>

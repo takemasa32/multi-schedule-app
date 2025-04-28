@@ -1004,6 +1004,25 @@ app/globals.css
 @plugin "daisyui";
 
 ```
+- @import / @plugin の記述と @tailwind ディレクティブ
+@import "tailwindcss"; は Tailwind v4 以降、CSS ファイル内で Tailwind の全ルール（base, components, utilities）をまとめて取り込む方法としてサポートされています
+tailwindcss.com
+。
+
+@plugin "daisyui"; は v4 の新機能で、PostCSS 上で daisyUI プラグインを直接読み込む正しい書き方です
+Stack Overflow
+。
+
+注意点
+
+Next.js（App Router）環境では、通常 globals.css にこれらを置き、layout.tsx で必ずインポートする必要があります
+Next.js by Vercel - The React Framework
+。
+
+もし @tailwind base; や @tailwind components;、@tailwind utilities; を個別に使いたい場合は、代わりにそれぞれを明示的に書くスタイルにも移行可能です。
+```
+
+```
 
 3. Supabase プロジェクト設定: Supabase のウェブコンソールで新規プロジェクトを作成（無料枠内）。プロジェクト URL と Anon キー・Service キーを取得し、Next.js の環境変数（.env.local）に設定します。また、Postgres の拡張 uuid-ossp を有効化して UUID 生成関数を使えるようにします。RLS は全テーブルでデフォルト OFF なので、後でテーブル作成時に ON にします。
 4. データベーステーブル作成: Supabase の SQL エディタで前述のテーブルスキーマを実行し、events, event_dates, participants, availabilities を作成します。念のため ER 図を Supabase UI で確認し、FK の挙動（カスケード削除）が設定されているかチェックします。続いて各テーブルで ENABLE RLS を実行し、必要最低限のポリシーも SQL で追加します（ただし、最初は開発の利便のために「すべて許可」のポリシーを入れておき、動作検証後に厳密な条件に変更する方法もあり）。

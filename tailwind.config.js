@@ -5,6 +5,18 @@ module.exports = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    // ヒートマップで使用する 20〜100% (5% 刻み)
+    {
+      // bg-primary-500/20 〜 /100 を全て生成
+      pattern:
+        /^bg-primary-500\/(20|25|30|35|40|45|50|55|60|65|70|75|80|85|90|95|100)$/,
+    },
+    // 確定セルの枠線用
+    "border-success",
+    // heatmap-X クラスも残す場合
+    { pattern: /^heatmap-(?:[0-9]|10)$/ },
+  ],
   theme: {
     extend: {
       colors: {

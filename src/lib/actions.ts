@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { createSupabaseAdmin } from './supabase';
 import { v4 as uuidv4 } from 'uuid'; // You may need to install this package: npm install uuid @types/uuid
 
@@ -98,8 +97,10 @@ export async function createEvent(formData: FormData) {
       throw new Error('候補日程の登録に失敗しました');
     }
 
-    // Redirect to event page with admin token
-    redirect(`/event/${event.public_token}?admin=${event.admin_token}`);
+    // イベント作成が成功した場合、イベントページにリダイレクト
+    // Next.jsのリダイレクトは内部的にはエラーとしてスローされる仕組みのため
+    // try-catchブロックを抜けてリダイレクトを実行
+    return { redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}` };
 
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
@@ -218,39 +219,82 @@ export async function getAvailabilities(eventId: string) {
 export async function getFinalizedDateIds(eventId: string, finalDateId: string | null) {
   const supabase = createSupabaseAdmin();
 
-  if (!finalDateId) return [];
-
   // 確定日程テーブルから確定した日程IDを取得
   const { data, error } = await supabase
-    .from('event_finalized_dates')
+    .from('finalized_dates')
     .select('event_date_id')
     .eq('event_id', eventId);
 
   if (error) {
     console.error('確定日程取得エラー:', error);
+
+    // 互換性のため、エラーが発生した場合やデータがない場合は
+    // 古い形式（final_date_id）を使用
+    if (finalDateId) {
+      return [finalDateId];
+    }
+
     return [];
   }
 
-  // event_date_idの配列を返す
-  return data.map(item => item.event_date_id);
+  if (data && data.length > 0) {
+    // event_date_idの配列を返す
+    return data.map(item => item.event_date_id);
+  } else if (finalDateId) {
+    // 旧形式の互換性のため、finalized_dates テーブルにデータがない場合は
+    // final_date_id があれば使用
+    return [finalDateId];
+  }
+
+  return [];
 }
 
+// EventDate 型はテーブル定義に合わせてください
+type EventDate = {
+  id: string;
+  event_id: string;
+  start_time: string; // ISO 8601形式のタイムスタンプ
+  end_time: string;   // ISO 8601形式のタイムスタンプ
+  label?: string | undefined; // 任意のラベル
+  created_at: string; // ISO 8601形式のタイムスタンプ
+};
+
 /**
- * イベントIDに基づいてイベント日程を取得する
+ * イベントIDに基づいて、Supabaseの1000件制限を超えて全件取得する
  */
-export async function getEventDates(eventId: string) {
+export async function getEventDates(eventId: string): Promise<EventDate[]> {
   const supabase = createSupabaseAdmin();
+  const pageSize = 1000;    // 1ページあたり取得件数
+  let page = 0;             // ページカウンタ
+  let allDates: EventDate[] = [];
 
-  const { data, error } = await supabase
-    .from('event_dates')
-    .select('*')
-    .eq('event_id', eventId)
-    .order('start_time', { ascending: true });
+  while (true) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
 
-  if (error) {
-    console.error('イベント日程取得エラー:', error);
-    return [];
+    const { data, error } = await supabase
+      .from("event_dates")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("start_time", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error("イベント日程取得エラー:", error);
+      break;  // エラー時はループを抜けてこれまでの結果を返す
+    }
+    if (!data || data.length === 0) {
+      break;  // 取得データが空なら最後のページに到達
+    }
+
+    allDates = allDates.concat(data);
+
+    if (data.length < pageSize) {
+      // 取得件数が pageSize 未満ならもう次ページは無い
+      break;
+    }
+    page++;
   }
 
-  return data || [];
+  return allDates;
 }

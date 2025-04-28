@@ -80,20 +80,22 @@ export default function AdminPasswordForm({
         />
       </div>
 
-      <button
-        type="submit"
-        className="btn btn-secondary w-full mt-3"
-        disabled={isSubmitting || !password}
-      >
-        {isSubmitting ? (
-          <>
-            <span className="loading loading-spinner loading-sm"></span>
-            認証中...
-          </>
-        ) : (
-          "パスワードで認証する"
-        )}
-      </button>
+      <div className="form-control mt-4">
+        <button
+          type="submit"
+          className="btn btn-primary w-full"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <span className="loading loading-spinner loading-sm mr-2"></span>
+              認証中...
+            </>
+          ) : (
+            "パスワードで認証する"
+          )}
+        </button>
+      </div>
     </form>
   );
 }

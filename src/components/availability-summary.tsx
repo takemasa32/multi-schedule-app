@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 type EventDate = {
@@ -292,12 +292,21 @@ export default function AvailabilitySummary({
         (a) => a.event_date_id === date.id && !a.availability
       ).length;
 
-      // ヒートマップの色の強さを計算（参加率に基づく）
+      // ヒートマップの色の強さを計算
       const totalResponses = availableCount + unavailableCount;
-      const availabilityRate =
-        totalResponses > 0 ? availableCount / totalResponses : 0;
-      // 0-10の範囲で色の強さを計算
-      const heatmapLevel = Math.round(availabilityRate * 10);
+
+      // 少人数でもより明確な差が出るように計算方法を変更
+      let heatmapLevel = 0;
+      if (totalResponses > 0) {
+        // 参加可能な人数に基づいてレベルを計算（単純な割合でなく）
+        // これにより少人数でも色の差がつきやすくなります
+        if (availableCount > 0) {
+          // 参加可能な人がいる場合、最低でも色がつくようにする
+          const rate = availableCount / Math.max(1, totalResponses);
+          // 2人だとしても、1人と2人で明確な差をつける
+          heatmapLevel = Math.max(2, Math.floor(rate * 10) + 1);
+        }
+      }
 
       return {
         dateId: date.id,
@@ -307,7 +316,8 @@ export default function AvailabilitySummary({
         availableCount,
         unavailableCount,
         heatmapLevel,
-        availabilityRate,
+        availabilityRate:
+          totalResponses > 0 ? availableCount / totalResponses : 0,
         formattedDate: formatDate(date.start_time),
         formattedTime: `${formatTime(date.start_time)}〜${formatTime(
           date.end_time
@@ -342,16 +352,70 @@ export default function AvailabilitySummary({
     return { availableParticipants, unavailableParticipants };
   };
 
+  // タッチデバイスの判定（useCallback で最適化）
+  const isTouchDevice = useCallback(() => {
+    return (
+      "ontouchstart" in window ||
+      navigator.maxTouchPoints > 0 ||
+      ((navigator as Navigator & { msMaxTouchPoints?: number })
+        .msMaxTouchPoints || 0) > 0
+    );
+  }, []);
+
   // ツールチップ表示処理
   const handleMouseEnter = (event: React.MouseEvent, dateId: string) => {
+    if (isTouchDevice()) return; // タッチデバイスではホバーイベントをスキップ
+
     const { availableParticipants, unavailableParticipants } =
       getParticipantsByDateId(dateId);
 
-    // マウス位置を取得
+    // マウス位置を取得 - ウィンドウサイズに基づいて調整
+    const x = Math.min(event.clientX, window.innerWidth - 320);
+    const y = Math.min(event.clientY, window.innerHeight - 200);
+
     setTooltip({
       show: true,
-      x: event.clientX,
-      y: event.clientY,
+      x,
+      y,
+      dateId,
+      availableParticipants,
+      unavailableParticipants,
+    });
+  };
+
+  // ツールチップ表示処理（タッチ/クリック）
+  const handleClick = (
+    event: React.MouseEvent | React.TouchEvent,
+    dateId: string
+  ) => {
+    event.stopPropagation(); // バブリングを防止
+
+    // すでに同じ日程のツールチップが表示されている場合は閉じる
+    if (tooltip.show && tooltip.dateId === dateId) {
+      setTooltip((prev) => ({ ...prev, show: false }));
+      return;
+    }
+
+    const { availableParticipants, unavailableParticipants } =
+      getParticipantsByDateId(dateId);
+
+    // タッチ/クリック位置を取得
+    let x, y;
+    if ("touches" in event) {
+      // タッチイベントの場合
+      const touch = event.touches[0] || event.changedTouches[0];
+      x = Math.min(touch.clientX, window.innerWidth - 320);
+      y = Math.min(touch.clientY, window.innerHeight - 200);
+    } else {
+      // マウスイベントの場合
+      x = Math.min(event.clientX, window.innerWidth - 320);
+      y = Math.min(event.clientY, window.innerHeight - 200);
+    }
+
+    setTooltip({
+      show: true,
+      x,
+      y,
       dateId,
       availableParticipants,
       unavailableParticipants,
@@ -360,8 +424,19 @@ export default function AvailabilitySummary({
 
   // ツールチップ非表示処理
   const handleMouseLeave = () => {
+    if (isTouchDevice()) return; // タッチデバイスではホバーイベントをスキップ
     setTooltip((prev) => ({ ...prev, show: false }));
   };
+
+  // 最大参加可能者数を算出（セルごとの availableCount の最大値）
+  const maxAvailable = useMemo(() => {
+    return eventDates.reduce((max, date) => {
+      const cnt = availabilities.filter(
+        (a) => a.event_date_id === date.id && a.availability
+      ).length;
+      return Math.max(max, cnt);
+    }, 0);
+  }, [eventDates, availabilities]);
 
   // ヒートマップデータの取得 - 日付×時間のマトリックス
   const heatmapData = useMemo(() => {
@@ -436,6 +511,30 @@ export default function AvailabilitySummary({
     }
   };
 
+  // ドキュメント全体のクリックとスクロールイベントを監視してツールチップを閉じる
+  const closeTooltipOnOutsideClick = useCallback(() => {
+    // ツールチップ表示中のみ処理
+    if (tooltip.show) {
+      setTooltip((prev) => ({ ...prev, show: false }));
+    }
+  }, [tooltip.show]);
+
+  // マウント時にグローバルイベントリスナーを追加
+  useEffect(() => {
+    // PCとタッチデバイス両方に対応
+    document.addEventListener("click", closeTooltipOnOutsideClick);
+    document.addEventListener("touchstart", closeTooltipOnOutsideClick);
+    // スクロール時にもツールチップを閉じる
+    window.addEventListener("scroll", closeTooltipOnOutsideClick);
+
+    // クリーンアップ関数
+    return () => {
+      document.removeEventListener("click", closeTooltipOnOutsideClick);
+      document.removeEventListener("touchstart", closeTooltipOnOutsideClick);
+      window.removeEventListener("scroll", closeTooltipOnOutsideClick);
+    };
+  }, [closeTooltipOnOutsideClick]);
+
   // ツールチップコンポーネント
   const Tooltip = () => {
     if (!tooltip.show || !tooltipPortalRef.current) return null;
@@ -492,7 +591,7 @@ export default function AvailabilitySummary({
                     参加可能（{tooltip.availableParticipants.length}名）
                   </span>
                 </div>
-                <ul className="pl-5 list-disc text-base-content">
+                <ul className="pl-5 list-disc text-primary">
                   {tooltip.availableParticipants.map((name, idx) => (
                     <li key={`avail-${idx}`} className="mb-0.5">
                       {name}
@@ -509,7 +608,7 @@ export default function AvailabilitySummary({
                     参加不可（{tooltip.unavailableParticipants.length}名）
                   </span>
                 </div>
-                <ul className="pl-5 list-disc text-base-content">
+                <ul className="pl-5 list-disc text-primary">
                   {tooltip.unavailableParticipants.map((name, idx) => (
                     <li key={`unavail-${idx}`} className="mb-0.5">
                       {name}
@@ -623,9 +722,11 @@ export default function AvailabilitySummary({
                     </td>
                     <td className="text-center">
                       <div
-                        className="flex items-center justify-center gap-2"
+                        className="flex items-center justify-center gap-2 cursor-pointer"
                         onMouseEnter={(e) => handleMouseEnter(e, item.dateId)}
                         onMouseLeave={handleMouseLeave}
+                        onClick={(e) => handleClick(e, item.dateId)}
+                        onTouchStart={(e) => handleClick(e, item.dateId)}
                       >
                         <div className="flex items-center">
                           <span className="w-3 h-3 rounded-full bg-success mr-1"></span>
@@ -651,14 +752,14 @@ export default function AvailabilitySummary({
 
         {/* ヒートマップ表示モード */}
         {viewMode === "heatmap" && (
-          <div className="overflow-x-auto fade-in -mx-2 sm:mx-0">
+          <div className="fade-in">
             <div className="bg-base-100 p-1 sm:p-2 mb-2 text-xs sm:text-sm">
               <span className="font-medium">
                 色が濃いほど参加可能な人が多い時間帯です
               </span>
             </div>
-            <div className="relative overflow-x-auto">
-              <table className="table table-zebra w-full text-center border-collapse">
+            <div className="overflow-x-auto">
+              <table className="table w-full text-center border-collapse">
                 <thead className="sticky top-0 z-20">
                   <tr className="bg-base-200">
                     <th className="text-left sticky left-0 top-0 bg-base-200 z-30 p-1 sm:p-2 text-xs sm:text-sm">
@@ -678,17 +779,13 @@ export default function AvailabilitySummary({
                     ))}
                   </tr>
                 </thead>
-                <tbody className="touch-none">
+                <tbody>
                   {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
-                    const showEndTime =
-                      index === 0 ||
-                      timeSlot.endTime !== timeSlots[index - 1].endTime;
                     // 時間表示の最適化 - 1:00のような形式に変換
                     const formattedStartTime = timeSlot.startTime.replace(
                       /^0/,
                       ""
                     );
-                    const formattedEndTime = timeSlot.endTime.replace(/^0/, "");
 
                     // 時間が変わるときのみ表示する条件を追加
                     const showTime =
@@ -700,16 +797,7 @@ export default function AvailabilitySummary({
                       <tr key={timeSlot.startTime}>
                         <td className="text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
                           {showTime ? (
-                            <>
-                              {formattedStartTime}
-                              {showEndTime ? (
-                                <span className="text-xs text-gray-500 ml-1">
-                                  {formattedEndTime === "24:00"
-                                    ? "24:00"
-                                    : `→${formattedEndTime}`}
-                                </span>
-                              ) : null}
-                            </>
+                            <>{formattedStartTime}</>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
@@ -717,23 +805,51 @@ export default function AvailabilitySummary({
                         {uniqueDates.map((dateInfo) => {
                           const key = `${dateInfo.date}_${timeSlot.startTime}`;
                           const cellData = heatmapData.get(key);
-                          const heatmapClass = cellData
-                            ? `heatmap-${cellData.heatmapLevel}`
-                            : "heatmap-0";
                           const isSelected = cellData?.isSelected || false;
                           const availableCount = cellData?.availableCount || 0;
                           const unavailableCount =
                             cellData?.unavailableCount || 0;
                           const hasData = cellData !== undefined;
 
+                          // テーマカラー単色スケール：最大参加者数に応じた不透明度
+                          const ratio =
+                            maxAvailable > 0
+                              ? availableCount / maxAvailable
+                              : 0;
+
+                          // 不透明度を計算 - 5%刻みに丸める処理
+                          const raw = 20 + ratio * 80; // 20〜100 の実数
+                          const opacity5 = Math.round(raw / 5) * 5; // 5 の倍数へ丸め
+                          const opacityValue = Math.min(
+                            Math.max(opacity5, 20),
+                            100
+                          ); // 20〜100に制限
+
+                          // Tailwindの不透明度クラス名を生成
+                          const opacityClass = `bg-primary-500/${opacityValue}`;
+
+                          // 確定済み日程用の追加クラス
+                          const selectedClass = isSelected
+                            ? "border-2 border-success"
+                            : "";
+
                           return (
                             <td
                               key={key}
-                              className={`relative p-0 sm:p-1 transition-all ${heatmapClass} ${
-                                isSelected
-                                  ? "ring-1 sm:ring-2 ring-success"
-                                  : ""
-                              } min-w-[28px] min-h-[28px] sm:min-w-[36px] sm:min-h-[36px]`}
+                              className={`relative p-0 sm:p-1 transition-all ${opacityClass} ${selectedClass} cursor-pointer`}
+                              onMouseEnter={(e) =>
+                                hasData &&
+                                handleMouseEnter(e, cellData?.dateId || "")
+                              }
+                              onMouseLeave={() => hasData && handleMouseLeave()}
+                              onClick={(e) =>
+                                hasData &&
+                                handleClick(e, cellData?.dateId || "")
+                              }
+                              onTouchStart={(e) =>
+                                hasData &&
+                                handleClick(e, cellData?.dateId || "")
+                              }
                             >
                               {hasData ? (
                                 <div className="flex flex-col items-center justify-center h-full">
@@ -764,12 +880,15 @@ export default function AvailabilitySummary({
             <div className="flex justify-center items-center mt-2 sm:mt-3 gap-1 sm:gap-2 text-xs sm:text-sm">
               <span>少ない</span>
               <div className="flex">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                  <div
-                    key={level}
-                    className={`heatmap-${level} w-2 h-2 sm:w-4 sm:h-4 border border-gray-200`}
-                  ></div>
-                ))}
+                {Array.from({ length: 11 }).map((_, i) => {
+                  const opacity = 20 + i * 8; // Values from 20 to 100
+                  return (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 sm:w-4 sm:h-4 border border-gray-200 bg-primary/${opacity}`}
+                    ></div>
+                  );
+                })}
               </div>
               <span>多い</span>
             </div>
@@ -888,9 +1007,13 @@ export default function AvailabilitySummary({
                         return (
                           <td
                             key={date.id}
-                            className={`text-center transition-colors ${
+                            className={`text-center transition-colors cursor-pointer ${
                               isFinalized ? "bg-success bg-opacity-10" : ""
                             }`}
+                            onMouseEnter={(e) => handleMouseEnter(e, date.id)}
+                            onMouseLeave={handleMouseLeave}
+                            onClick={(e) => handleClick(e, date.id)}
+                            onTouchStart={(e) => handleClick(e, date.id)}
                           >
                             {isAvailable === true && (
                               <div className="text-success font-bold w-6 h-6 rounded-full bg-success bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
