@@ -2,11 +2,11 @@ import LandingPageClient from "@/components/landing/landing-page-client";
 import siteConfig from "@/lib/site-config";
 
 export const metadata = {
-  title: "日程調整アプリ",
+  title: siteConfig.name,
   description:
     "複数の日程から最適な予定を見つける、シンプルで使いやすい日程調整アプリです。",
   openGraph: {
-    title: "日程調整アプリ",
+    title: siteConfig.name,
     description:
       "複数の日程から最適な予定を見つける、シンプルで使いやすい日程調整アプリです。",
     url: siteConfig.url,
