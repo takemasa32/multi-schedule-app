@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 interface CalendarLinksProps {
   eventTitle: string;
   eventDates: {
@@ -12,11 +14,11 @@ interface CalendarLinksProps {
   description?: string | null;
 }
 
-export function CalendarLinks({
-  eventTitle,
-  eventDates,
-  eventId,
-}: CalendarLinksProps) {
+export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
+  // ローディング状態を管理するstate
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isIcsLoading, setIsIcsLoading] = useState(false);
+
   // Google カレンダーリンクの生成
   const generateGoogleCalendarLink = () => {
     // APIエンドポイントで正確な日時情報を取得するURLを指定
@@ -56,34 +58,52 @@ export function CalendarLinks({
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-primary"
+          onClick={() => setIsGoogleLoading(true)}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-5 h-5 mr-2"
-          >
-            <path d="M19,4H17V3a1,1,0,0,0-2,0V4H9V3A1,1,0,0,0,7,3V4H5A3,3,0,0,0,2,7V19a3,3,0,0,0,3,3H19a3,3,0,0,0,3-3V7A3,3,0,0,0,19,4Zm1,15a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V10H20Zm0-11H4V7A1,1,0,0,1,5,6H7V7A1,1,0,0,0,9,7V6h6V7a1,1,0,0,0,2,0V6h2a1,1,0,0,1,1,1Z" />
-          </svg>
-          Google カレンダーで開く
+          {isGoogleLoading ? (
+            <>
+              <span className="loading loading-spinner loading-sm mr-2"></span>
+              読み込み中...
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M19,4H18V2H16V4H8V2H6V4H5A2,2,0,0,0,3,6V20a2,2,0,0,0,2,2H19a2,2,0,0,0,2-2V6A2,2,0,0,0,19,4Zm0,16H5V10H19ZM19,8H5V6H19ZM7,12h4v4H7Z" />
+              </svg>
+              Google カレンダーに追加
+            </>
+          )}
         </a>
 
         <a
           href={generateIcsDownloadLink()}
-          className="btn btn-outline"
-          download={`${eventTitle}.ics`}
+          className="btn btn-secondary"
+          onClick={() => setIsIcsLoading(true)}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-5 h-5 mr-2"
-          >
-            <path d="M12,16a1,1,0,0,1-.71-.29l-5-5A1,1,0,0,1,7.71,9.29L12,13.59l4.29-4.3a1,1,0,0,1,1.42,1.42l-5,5A1,1,0,0,1,12,16Z" />
-            <path d="M12,16a1,1,0,0,1-1-1V4a1,1,0,0,1,2,0V15A1,1,0,0,1,12,16Z" />
-            <path d="M19,20H5a1,1,0,0,1,0-2H19a1,1,0,0,1,0,2Z" />
-          </svg>
-          iCalendar (.ics) をダウンロード
+          {isIcsLoading ? (
+            <>
+              <span className="loading loading-spinner loading-sm mr-2"></span>
+              ダウンロード中...
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12,16a1,1,0,0,1-1-1V4a1,1,0,0,1,2,0V15A1,1,0,0,1,12,16Z" />
+                <path d="M19,20H5a1,1,0,0,1,0-2H19a1,1,0,0,1,0,2Z" />
+              </svg>
+              iCalendar (.ics) をダウンロード
+            </>
+          )}
         </a>
       </div>
 

@@ -10,7 +10,6 @@ import {
   Music,
   Gamepad2,
   Briefcase,
-  MessageCircle,
 } from "lucide-react";
 import Card from "@/components/layout/Card";
 import siteConfig from "@/lib/site-config";
@@ -47,7 +46,7 @@ export default function LandingPageClient() {
       desc: "ヒートマップで最適枠を瞬時に把握。",
     },
     {
-      icon: MessageCircle,
+      icon: Briefcase,
       title: "カレンダー登録",
       desc: "日程を確定すると自動でカレンダーリンクが生成。",
     },

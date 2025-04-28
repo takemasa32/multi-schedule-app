@@ -1696,34 +1696,18 @@ export default function AvailabilityForm({
             <div className="pt-4 flex flex-wrap gap-2">
               <button
                 type="submit"
-                className="btn btn-primary w-full md:w-auto transition-all btn-animated shadow-lg hover:shadow-xl"
-                disabled={isSubmitting || isWeekdayModeActive}
+                className={`btn btn-primary w-full md:w-auto ${
+                  isSubmitting ? "opacity-70" : ""
+                }`}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
-                    送信中...
-                  </>
-                ) : isWeekdayModeActive ? (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
-                    曜日設定中...
+                    {isEditing ? "保存中..." : "送信中..."}
                   </>
                 ) : mode === "edit" ? (
-                  "編集を保存"
+                  "回答を更新する"
                 ) : (
                   "回答を送信"
                 )}

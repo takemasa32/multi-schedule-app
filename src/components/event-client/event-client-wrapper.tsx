@@ -126,6 +126,22 @@ export default function EventClientWrapper({
             <Link
               href={`/event/${event.public_token}/input`}
               className="btn btn-primary"
+              onClick={(e) => {
+                // ボタンクリック時のローディング表示
+                const target = e.currentTarget;
+                target.classList.add("loading");
+                // loading-spinnerクラスの要素を動的に追加
+                const spinner = document.createElement("span");
+                spinner.className = "loading loading-spinner loading-sm mr-2";
+                target.prepend(spinner);
+                // テキスト内容を変更
+                const textNode = Array.from(target.childNodes).find(
+                  (node) => node.nodeType === Node.TEXT_NODE
+                );
+                if (textNode) {
+                  textNode.textContent = "移動中...";
+                }
+              }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

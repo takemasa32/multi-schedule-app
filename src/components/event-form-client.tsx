@@ -58,17 +58,9 @@ export default function EventFormClient() {
       console.log("Submitting time slots:", timeSlots);
 
       // Call server action
-      const result = await createEvent(formData);
+      await createEvent(formData);
 
-      // リダイレクトURLが返された場合は遷移
-      if (result && result.redirectUrl) {
-        window.location.href = result.redirectUrl;
-        return; // 早期リターンして以降のコードを実行しない
-      }
-
-      // リダイレクトが行われなかった場合（サーバーアクションのリダイレクトが動作しない場合の対応）
-      setError("イベントは作成されましたが、ページの更新に失敗しました。");
-      setIsSubmitting(false);
+      // Redirection is handled by the server action
     } catch (error) {
       console.error("Form submission error:", error);
       setError(
@@ -180,7 +172,7 @@ export default function EventFormClient() {
       <div className="flex justify-end mt-8">
         <button
           type="submit"
-          className={`px-6 py-3 bg-primary text-primary-content rounded-md hover:bg-primary-focus transition-all duration-200 shadow-md ${
+          className={`btn btn-primary btn-lg ${
             isSubmitting ? "opacity-50 cursor-not-allowed" : ""
           }`}
           disabled={isSubmitting}

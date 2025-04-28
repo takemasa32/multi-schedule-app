@@ -1,3 +1,4 @@
+import Link from "next/link";
 import LandingPageClient from "@/components/landing/landing-page-client";
 import siteConfig from "@/lib/site-config";
 
