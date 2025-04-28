@@ -133,6 +133,60 @@ export default function AvailabilityForm({
     document.body.classList.remove("no-scroll");
   }, []);
 
+  // 現在座標からセルを引き当てる共通関数
+  const applyDragToElement = useCallback(
+    (el: HTMLElement | null) => {
+      if (!el) return;
+
+      // 熱マップセル（date-id）の処理
+      const dateId = el.dataset.dateId;
+      if (isDragging && dragState !== null && dateId) {
+        setSelectedDates((prev) => {
+          // 同じ値の場合は状態を更新しない（パフォーマンス最適化）
+          if (prev[dateId] === dragState) return prev;
+          return { ...prev, [dateId]: dragState };
+        });
+        return;
+      }
+
+      // 曜日マトリックスセル（day＋timeSlot）の処理
+      const day = el.dataset.day;
+      const slot = el.dataset.timeSlot;
+      if (
+        isDraggingMatrix &&
+        matrixDragState !== null &&
+        day &&
+        slot &&
+        Object.keys(weekdaySelections).includes(day as WeekDay)
+      ) {
+        const weekday = day as WeekDay;
+        setWeekdaySelections((prev) => {
+          // 同じ値であれば更新しない（パフォーマンス最適化）
+          if (prev[weekday].timeSlots[slot] === matrixDragState) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [weekday]: {
+              selected: true,
+              timeSlots: {
+                ...prev[weekday].timeSlots,
+                [slot]: matrixDragState,
+              },
+            },
+          };
+        });
+      }
+    },
+    [
+      isDragging,
+      dragState,
+      isDraggingMatrix,
+      matrixDragState,
+      weekdaySelections,
+    ]
+  );
+
   // マトリックスでのタッチ移動処理
   const handleMatrixTouchMove = useCallback(
     (e: React.TouchEvent | globalThis.TouchEvent) => {
@@ -149,39 +203,13 @@ export default function AvailabilityForm({
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
 
         if (element) {
-          // マトリックスのセルを探索
-          const cellElement = element.closest("td");
-          if (cellElement) {
-            // data属性からday（曜日）とtimeSlot（時間枠）を抽出
-            const day = cellElement.getAttribute("data-day");
-            const timeSlot = cellElement.getAttribute("data-time-slot");
-
-            if (day && timeSlot) {
-              setWeekdaySelections((prev) => {
-                // 同じ値であれば更新しない（パフォーマンス最適化）
-                if (
-                  prev[day as WeekDay].timeSlots[timeSlot] === matrixDragState
-                ) {
-                  return prev;
-                }
-
-                const newState = { ...prev };
-                newState[day as WeekDay] = {
-                  ...prev[day as WeekDay],
-                  selected: true,
-                  timeSlots: {
-                    ...prev[day as WeekDay].timeSlots,
-                    [timeSlot]: matrixDragState,
-                  },
-                };
-                return newState;
-              });
-            }
-          }
+          // マトリックスのセルを探索し、共通関数に処理を委譲
+          const cellElement = element.closest("td[data-day][data-time-slot]");
+          applyDragToElement(cellElement as HTMLElement | null);
         }
       }
     },
-    [isMatrixTouching, matrixDragState]
+    [isMatrixTouching, matrixDragState, applyDragToElement]
   );
 
   // 全体にイベントリスナーを設定（ドラッグ終了用）
@@ -203,8 +231,7 @@ export default function AvailabilityForm({
   /** セル選択のポインターイベント統一処理 */
   const commonPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      // ポインターキャプチャ開始
-      e.currentTarget.setPointerCapture(e.pointerId);
+      // ポインターキャプチャを使用しない（削除）
       e.preventDefault();
       e.stopPropagation();
       document.body.classList.add("no-scroll");
@@ -259,55 +286,13 @@ export default function AvailabilityForm({
       const el: HTMLElement | null = isNative
         ? (e.target as HTMLElement).closest("[data-date-id], [data-day]")
         : e.currentTarget;
-      if (!el) return;
 
-      // 熱マップセル（date-id）の処理
-      const dateId = el.dataset.dateId;
-      if (isDragging && dragState !== null && dateId) {
-        setSelectedDates((prev) => ({ ...prev, [dateId]: dragState }));
-        return;
-      }
-
-      // 曜日マトリックスセル（day＋timeSlot）の処理
-      const day = el.dataset.day;
-      const slot = el.dataset.timeSlot;
-      if (
-        isDraggingMatrix &&
-        matrixDragState !== null &&
-        day &&
-        slot &&
-        Object.keys(weekdaySelections).includes(day as WeekDay)
-      ) {
-        const weekday = day as WeekDay;
-        setWeekdaySelections((prev) => ({
-          ...prev,
-          [weekday]: {
-            selected: true,
-            timeSlots: {
-              ...prev[weekday].timeSlots,
-              [slot]: matrixDragState,
-            },
-          },
-        }));
-      }
+      applyDragToElement(el);
     },
-    [
-      isDragging,
-      dragState,
-      isDraggingMatrix,
-      matrixDragState,
-      weekdaySelections,
-    ]
+    [applyDragToElement]
   );
 
-  const commonPointerUp = useCallback((e: React.PointerEvent<HTMLElement> | PointerEvent) => {
-    // キャプチャ解放
-    try {
-      if (!(e instanceof PointerEvent)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {}
-
+  const commonPointerUp = useCallback(() => {
     // ドラッグ状態をリセット
     setIsDragging(false);
     setDragState(null);
@@ -315,14 +300,20 @@ export default function AvailabilityForm({
     setMatrixDragState(null);
     document.body.classList.remove("no-scroll");
   }, []);
-  
+
   // ネイティブイベント用のラッパー関数
-  const handleNativePointerMove = useCallback((e: PointerEvent) => {
-    commonPointerEnter(e);
-  }, [commonPointerEnter]);
-  
-  const handleNativePointerUp = useCallback((e: PointerEvent) => {
-    commonPointerUp(e);
+  const handleNativePointerMove = useCallback(
+    (e: PointerEvent) => {
+      e.preventDefault();
+      applyDragToElement(
+        document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+      );
+    },
+    [applyDragToElement]
+  );
+
+  const handleNativePointerUp = useCallback(() => {
+    commonPointerUp();
   }, [commonPointerUp]);
   // --- ここまで共通処理 ---
 
@@ -767,26 +758,13 @@ export default function AvailabilityForm({
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
 
-        if (element) {
-          // data-date-id属性を持つ要素を探索
-          const dateElement = element.closest("[data-date-id]");
-          if (dateElement) {
-            const dateId = dateElement.getAttribute("data-date-id");
-            if (dateId) {
-              setSelectedDates((prev) => {
-                // 同じ値の場合は状態を更新しない（パフォーマンス最適化）
-                if (prev[dateId] === dragState) return prev;
-                return {
-                  ...prev,
-                  [dateId]: dragState,
-                };
-              });
-            }
-          }
-        }
+        // 共通関数に処理を委譲
+        applyDragToElement(
+          element?.closest("[data-date-id]") as HTMLElement | null
+        );
       }
     },
-    [isTouching, dragState]
+    [isTouching, dragState, applyDragToElement]
   );
 
   // タッチ終了（スマホ向け）
