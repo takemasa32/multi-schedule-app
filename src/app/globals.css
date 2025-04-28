@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @plugin "daisyui";
-@import "../styles/theme.css";
 
 body {
   @apply bg-base-100 text-base-content;

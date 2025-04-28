@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 type EventDate = {
@@ -352,16 +352,70 @@ export default function AvailabilitySummary({
     return { availableParticipants, unavailableParticipants };
   };
 
+  // タッチデバイスの判定（useCallback で最適化）
+  const isTouchDevice = useCallback(() => {
+    return (
+      "ontouchstart" in window ||
+      navigator.maxTouchPoints > 0 ||
+      ((navigator as Navigator & { msMaxTouchPoints?: number })
+        .msMaxTouchPoints || 0) > 0
+    );
+  }, []);
+
   // ツールチップ表示処理
   const handleMouseEnter = (event: React.MouseEvent, dateId: string) => {
+    if (isTouchDevice()) return; // タッチデバイスではホバーイベントをスキップ
+
     const { availableParticipants, unavailableParticipants } =
       getParticipantsByDateId(dateId);
 
-    // マウス位置を取得
+    // マウス位置を取得 - ウィンドウサイズに基づいて調整
+    const x = Math.min(event.clientX, window.innerWidth - 320);
+    const y = Math.min(event.clientY, window.innerHeight - 200);
+
     setTooltip({
       show: true,
-      x: event.clientX,
-      y: event.clientY,
+      x,
+      y,
+      dateId,
+      availableParticipants,
+      unavailableParticipants,
+    });
+  };
+
+  // ツールチップ表示処理（タッチ/クリック）
+  const handleClick = (
+    event: React.MouseEvent | React.TouchEvent,
+    dateId: string
+  ) => {
+    event.stopPropagation(); // バブリングを防止
+
+    // すでに同じ日程のツールチップが表示されている場合は閉じる
+    if (tooltip.show && tooltip.dateId === dateId) {
+      setTooltip((prev) => ({ ...prev, show: false }));
+      return;
+    }
+
+    const { availableParticipants, unavailableParticipants } =
+      getParticipantsByDateId(dateId);
+
+    // タッチ/クリック位置を取得
+    let x, y;
+    if ("touches" in event) {
+      // タッチイベントの場合
+      const touch = event.touches[0] || event.changedTouches[0];
+      x = Math.min(touch.clientX, window.innerWidth - 320);
+      y = Math.min(touch.clientY, window.innerHeight - 200);
+    } else {
+      // マウスイベントの場合
+      x = Math.min(event.clientX, window.innerWidth - 320);
+      y = Math.min(event.clientY, window.innerHeight - 200);
+    }
+
+    setTooltip({
+      show: true,
+      x,
+      y,
       dateId,
       availableParticipants,
       unavailableParticipants,
@@ -370,6 +424,7 @@ export default function AvailabilitySummary({
 
   // ツールチップ非表示処理
   const handleMouseLeave = () => {
+    if (isTouchDevice()) return; // タッチデバイスではホバーイベントをスキップ
     setTooltip((prev) => ({ ...prev, show: false }));
   };
 
@@ -456,6 +511,32 @@ export default function AvailabilitySummary({
     }
   };
 
+
+
+  // ドキュメント全体のクリックとスクロールイベントを監視してツールチップを閉じる
+  const closeTooltipOnOutsideClick = useCallback((event) => {
+    // ツールチップ表示中のみ処理
+    if (tooltip.show) {
+      setTooltip((prev) => ({ ...prev, show: false }));
+    }
+  }, [tooltip.show]);
+
+  // マウント時にグローバルイベントリスナーを追加
+  useEffect(() => {
+    // PCとタッチデバイス両方に対応
+    document.addEventListener('click', closeTooltipOnOutsideClick);
+    document.addEventListener('touchstart', closeTooltipOnOutsideClick);
+    // スクロール時にもツールチップを閉じる
+    window.addEventListener('scroll', closeTooltipOnOutsideClick);
+    
+    // クリーンアップ関数
+    return () => {
+      document.removeEventListener('click', closeTooltipOnOutsideClick);
+      document.removeEventListener('touchstart', closeTooltipOnOutsideClick);
+      window.removeEventListener('scroll', closeTooltipOnOutsideClick);
+    };
+  }, [closeTooltipOnOutsideClick]);
+
   // ツールチップコンポーネント
   const Tooltip = () => {
     if (!tooltip.show || !tooltipPortalRef.current) return null;
@@ -512,7 +593,7 @@ export default function AvailabilitySummary({
                     参加可能（{tooltip.availableParticipants.length}名）
                   </span>
                 </div>
-                <ul className="pl-5 list-disc text-base-content">
+                <ul className="pl-5 list-disc text-primary">
                   {tooltip.availableParticipants.map((name, idx) => (
                     <li key={`avail-${idx}`} className="mb-0.5">
                       {name}
@@ -529,7 +610,7 @@ export default function AvailabilitySummary({
                     参加不可（{tooltip.unavailableParticipants.length}名）
                   </span>
                 </div>
-                <ul className="pl-5 list-disc text-base-content">
+                <ul className="pl-5 list-disc text-primary">
                   {tooltip.unavailableParticipants.map((name, idx) => (
                     <li key={`unavail-${idx}`} className="mb-0.5">
                       {name}
@@ -643,9 +724,11 @@ export default function AvailabilitySummary({
                     </td>
                     <td className="text-center">
                       <div
-                        className="flex items-center justify-center gap-2"
+                        className="flex items-center justify-center gap-2 cursor-pointer"
                         onMouseEnter={(e) => handleMouseEnter(e, item.dateId)}
                         onMouseLeave={handleMouseLeave}
+                        onClick={(e) => handleClick(e, item.dateId)}
+                        onTouchStart={(e) => handleClick(e, item.dateId)}
                       >
                         <div className="flex items-center">
                           <span className="w-3 h-3 rounded-full bg-success mr-1"></span>
@@ -755,7 +838,20 @@ export default function AvailabilitySummary({
                           return (
                             <td
                               key={key}
-                              className={`relative p-0 sm:p-1 transition-all ${opacityClass} ${selectedClass}`}
+                              className={`relative p-0 sm:p-1 transition-all ${opacityClass} ${selectedClass} cursor-pointer`}
+                              onMouseEnter={(e) =>
+                                hasData &&
+                                handleMouseEnter(e, cellData?.dateId || "")
+                              }
+                              onMouseLeave={() => hasData && handleMouseLeave()}
+                              onClick={(e) =>
+                                hasData &&
+                                handleClick(e, cellData?.dateId || "")
+                              }
+                              onTouchStart={(e) =>
+                                hasData &&
+                                handleClick(e, cellData?.dateId || "")
+                              }
                             >
                               {hasData ? (
                                 <div className="flex flex-col items-center justify-center h-full">
@@ -913,9 +1009,13 @@ export default function AvailabilitySummary({
                         return (
                           <td
                             key={date.id}
-                            className={`text-center transition-colors ${
+                            className={`text-center transition-colors cursor-pointer ${
                               isFinalized ? "bg-success bg-opacity-10" : ""
                             }`}
+                            onMouseEnter={(e) => handleMouseEnter(e, date.id)}
+                            onMouseLeave={handleMouseLeave}
+                            onClick={(e) => handleClick(e, date.id)}
+                            onTouchStart={(e) => handleClick(e, date.id)}
                           >
                             {isAvailable === true && (
                               <div className="text-success font-bold w-6 h-6 rounded-full bg-success bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
