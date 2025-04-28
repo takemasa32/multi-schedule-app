@@ -680,15 +680,11 @@ export default function AvailabilitySummary({
                 </thead>
                 <tbody className="touch-none">
                   {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
-                    const showEndTime =
-                      index === 0 ||
-                      timeSlot.endTime !== timeSlots[index - 1].endTime;
                     // 時間表示の最適化 - 1:00のような形式に変換
                     const formattedStartTime = timeSlot.startTime.replace(
                       /^0/,
                       ""
                     );
-                    const formattedEndTime = timeSlot.endTime.replace(/^0/, "");
 
                     // 時間が変わるときのみ表示する条件を追加
                     const showTime =
@@ -700,16 +696,7 @@ export default function AvailabilitySummary({
                       <tr key={timeSlot.startTime}>
                         <td className="text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
                           {showTime ? (
-                            <>
-                              {formattedStartTime}
-                              {showEndTime ? (
-                                <span className="text-xs text-gray-500 ml-1">
-                                  {formattedEndTime === "24:00"
-                                    ? "24:00"
-                                    : `→${formattedEndTime}`}
-                                </span>
-                              ) : null}
-                            </>
+                            <>{formattedStartTime}</>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
