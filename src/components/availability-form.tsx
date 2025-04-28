@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { submitAvailability } from "@/app/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
+import TermsCheckbox from "./terms/terms-checkbox";
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -41,6 +42,7 @@ export default function AvailabilityForm({
   const [name, setName] = useState(initialParticipant?.name || "");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false); // 更新モード用の状態
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   // すべての日程に対して初期状態を設定
   const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(
     () => {
@@ -434,6 +436,12 @@ export default function AvailabilityForm({
       setError("お名前を入力してください");
       return false;
     }
+    
+    if (!termsAccepted) {
+      setError("利用規約への同意が必要です");
+      return false;
+    }
+    
     return true;
   };
 
@@ -1694,6 +1702,12 @@ export default function AvailabilityForm({
             </div>
 
             <div className="pt-4 flex flex-wrap gap-2">
+              <TermsCheckbox
+                isChecked={termsAccepted}
+                onChange={setTermsAccepted}
+                id="availability-form-terms"
+              />
+              
               <button
                 type="submit"
                 className={`btn btn-primary w-full md:w-auto ${

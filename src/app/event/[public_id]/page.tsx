@@ -70,6 +70,7 @@ export default async function EventPage({
             title={event.title}
             description={event.description}
             isFinalized={event.is_finalized}
+            isAdmin={isAdmin}
           />
 
           <SectionDivider title="イベント情報" />
