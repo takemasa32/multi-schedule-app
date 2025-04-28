@@ -511,10 +511,8 @@ export default function AvailabilitySummary({
     }
   };
 
-
-
   // ドキュメント全体のクリックとスクロールイベントを監視してツールチップを閉じる
-  const closeTooltipOnOutsideClick = useCallback((event) => {
+  const closeTooltipOnOutsideClick = useCallback(() => {
     // ツールチップ表示中のみ処理
     if (tooltip.show) {
       setTooltip((prev) => ({ ...prev, show: false }));
@@ -524,16 +522,16 @@ export default function AvailabilitySummary({
   // マウント時にグローバルイベントリスナーを追加
   useEffect(() => {
     // PCとタッチデバイス両方に対応
-    document.addEventListener('click', closeTooltipOnOutsideClick);
-    document.addEventListener('touchstart', closeTooltipOnOutsideClick);
+    document.addEventListener("click", closeTooltipOnOutsideClick);
+    document.addEventListener("touchstart", closeTooltipOnOutsideClick);
     // スクロール時にもツールチップを閉じる
-    window.addEventListener('scroll', closeTooltipOnOutsideClick);
-    
+    window.addEventListener("scroll", closeTooltipOnOutsideClick);
+
     // クリーンアップ関数
     return () => {
-      document.removeEventListener('click', closeTooltipOnOutsideClick);
-      document.removeEventListener('touchstart', closeTooltipOnOutsideClick);
-      window.removeEventListener('scroll', closeTooltipOnOutsideClick);
+      document.removeEventListener("click", closeTooltipOnOutsideClick);
+      document.removeEventListener("touchstart", closeTooltipOnOutsideClick);
+      window.removeEventListener("scroll", closeTooltipOnOutsideClick);
     };
   }, [closeTooltipOnOutsideClick]);
 
