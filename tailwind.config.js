@@ -5,6 +5,22 @@ module.exports = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    // ヒートマップ関連のクラスを保護
+    {
+      pattern: /^bg-(success|warning|error|primary|accent|base)-opacity-\d+/,
+    },
+    {
+      pattern: /^bg-(success|warning|error|primary|accent|base)$/,
+    },
+    {
+      pattern: /^bg-opacity-\d+/,
+    },
+    // 追加でヒートマップ用のカスタムクラス
+    {
+      pattern: /^heatmap-(?:[0-9]|10)$/,
+    },
+  ],
   theme: {
     extend: {
       colors: {

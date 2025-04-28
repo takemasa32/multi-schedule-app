@@ -276,7 +276,7 @@ export default function FinalizeEventSection({
         )}
 
         <div className="overflow-x-auto mb-6">
-          <table className="table table-zebra w-full text-sm md:text-base">
+          <table className="table w-full text-sm md:text-base">
             <thead>
               <tr>
                 <th className="bg-base-300 sticky left-0 z-10 whitespace-normal min-w-20 max-w-24">
@@ -328,32 +328,52 @@ export default function FinalizeEventSection({
                     }
 
                     // 参加率に応じた色の設定（赤→黄→緑のグラデーション）
-                    let heatmapClass = "";
+                    // 直接インラインでスタイルを設定
+                    let bgStyle = {};
+
                     if (availabilityPercent >= 75) {
-                      heatmapClass = "bg-success bg-opacity-80"; // 緑：高参加率
+                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.8)" }; // 緑：高参加率
                     } else if (availabilityPercent >= 50) {
-                      heatmapClass = "bg-success bg-opacity-50"; // 緑（薄め）：中〜高参加率
+                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.6)" }; // 緑（薄め）：中〜高参加率
                     } else if (availabilityPercent >= 25) {
-                      heatmapClass = "bg-warning bg-opacity-50"; // 黄：中参加率
+                      bgStyle = { backgroundColor: "rgba(251, 191, 36, 0.6)" }; // 黄：中参加率
                     } else if (availabilityPercent > 0) {
-                      heatmapClass = "bg-error bg-opacity-30"; // 赤（薄め）：低参加率
+                      bgStyle = { backgroundColor: "rgba(239, 68, 68, 0.4)" }; // 赤（薄め）：低参加率
                     } else {
-                      heatmapClass = "bg-base-200"; // 参加者なし
+                      bgStyle = { backgroundColor: "rgba(243, 244, 246, 0.8)" }; // 参加者なし
                     }
+
+                    const cellStyle = {
+                      ...bgStyle,
+                      ...(dateId && finalizedDateIds.includes(dateId)
+                        ? {
+                            backgroundColor: "rgba(52, 211, 153, 0.3)",
+                            borderWidth: "2px",
+                            borderColor: "rgb(52, 211, 153)",
+                          }
+                        : isSelected
+                        ? {
+                            backgroundColor: "rgba(6, 182, 212, 0.5)",
+                            borderWidth: "2px",
+                            borderColor: "rgb(6, 182, 212)",
+                          }
+                        : {}),
+                    };
 
                     return (
                       <td
                         key={`${date.dateStr}-${slot.start}`}
                         className={`
-                          text-center cursor-pointer transition-all p-1 md:p-2
+                          text-center cursor-pointer transition-all p-1 md:p-2 z-10
                           ${
                             dateId && finalizedDateIds.includes(dateId)
-                              ? "bg-success bg-opacity-30 border-2 border-success"
+                              ? "border-2 border-success"
                               : isSelected
-                              ? "bg-accent bg-opacity-50 border-2 border-accent"
-                              : heatmapClass
+                              ? "border-2 border-accent"
+                              : ""
                           }
                         `}
+                        style={cellStyle}
                         onClick={() => dateId && handleDateToggle(dateId)}
                       >
                         <div className="flex flex-col items-center justify-center">
