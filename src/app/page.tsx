@@ -2,7 +2,7 @@ import LandingPageClient from "@/components/landing/landing-page-client";
 import siteConfig from "@/lib/site-config";
 
 export const metadata = {
-  title: siteConfig.name,
+  title: "DaySynth",
   description:
     "複数の日程から最適な予定を見つける、シンプルで使いやすい日程調整アプリです。",
   openGraph: {
