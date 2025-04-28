@@ -30,6 +30,11 @@ export default function Footer() {
                   イベント作成
                 </Link>
               </li>
+              <li>
+                <Link href="/terms" className="hover:text-primary transition">
+                  利用規約
+                </Link>
+              </li>
             </ul>
           </div>
 
