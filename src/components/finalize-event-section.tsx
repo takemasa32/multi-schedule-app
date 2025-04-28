@@ -276,12 +276,17 @@ export default function FinalizeEventSection({
         )}
 
         <div className="overflow-x-auto mb-6">
-          <table className="table table-zebra w-full">
+          <table className="table table-zebra w-full text-sm md:text-base">
             <thead>
               <tr>
-                <th className="bg-base-300 sticky left-0 z-10">時間帯</th>
+                <th className="bg-base-300 sticky left-0 z-10 whitespace-normal min-w-20 max-w-24">
+                  時間帯
+                </th>
                 {uniqueDates.map((date) => (
-                  <th key={date.dateStr} className="text-center">
+                  <th
+                    key={date.dateStr}
+                    className="text-center whitespace-normal min-w-16 px-1 py-2"
+                  >
                     {date.label}
                   </th>
                 ))}
@@ -290,8 +295,8 @@ export default function FinalizeEventSection({
             <tbody>
               {uniqueTimeslots.map((slot) => (
                 <tr key={`${slot.start}-${slot.end}`}>
-                  <th className="bg-base-300 sticky left-0 z-10">
-                    {slot.start}〜{slot.end}
+                  <th className="bg-base-300 sticky left-0 z-10 text-xs md:text-sm whitespace-nowrap">
+                    {slot.start}
                   </th>
                   {uniqueDates.map((date) => {
                     const dateId = getDateIdForSlot(
@@ -340,7 +345,7 @@ export default function FinalizeEventSection({
                       <td
                         key={`${date.dateStr}-${slot.start}`}
                         className={`
-                          text-center cursor-pointer transition-all
+                          text-center cursor-pointer transition-all p-1 md:p-2
                           ${
                             dateId && finalizedDateIds.includes(dateId)
                               ? "bg-success bg-opacity-30 border-2 border-success"
@@ -351,31 +356,24 @@ export default function FinalizeEventSection({
                         `}
                         onClick={() => dateId && handleDateToggle(dateId)}
                       >
-                        <div className="flex flex-col items-center justify-center p-2">
-                          <span className="font-semibold">
+                        <div className="flex flex-col items-center justify-center">
+                          <span className="font-semibold text-xs md:text-sm">
                             {availableCount}人
                           </span>
-                          <span className="text-xs">
+                          <span className="text-xs hidden md:block">
                             {availabilityPercent}%
                           </span>
                           {isSelected &&
                             !finalizedDateIds.includes(dateId as string) && (
-                              <span className="badge badge-accent badge-sm">
-                                選択中
+                              <span className="badge badge-accent badge-xs md:badge-sm mt-1">
+                                選択
                               </span>
                             )}
                           {dateId && finalizedDateIds.includes(dateId) && (
-                            <span className="badge badge-success badge-sm mt-1">
-                              確定済み
+                            <span className="badge badge-success badge-xs md:badge-sm mt-1">
+                              確定
                             </span>
                           )}
-                          {isSelected &&
-                            dateId &&
-                            finalizedDateIds.includes(dateId) && (
-                              <span className="badge badge-success badge-sm mt-1">
-                                確定済み (選択中)
-                              </span>
-                            )}
                         </div>
                       </td>
                     );
@@ -578,7 +576,7 @@ export default function FinalizeEventSection({
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            この操作は元に戻せません。
+            確定後も必要に応じて変更可能です（この画面から再選択して確定し直せます）。
           </p>
 
           <div className="flex gap-3">
