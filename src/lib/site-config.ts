@@ -1,5 +1,10 @@
 // サービス名やロゴに関する設定を一元管理するファイル
 interface SiteConfig {
+  url: string;
+  ogImage: string;
+  illustrations: {
+    hero: string;
+  };
   // サービス名の設定
   name: {
     full: string;         // 完全なサービス名
@@ -40,13 +45,18 @@ const siteConfig: SiteConfig = {
   },
   logo: {
     main: "/logo/favicon.svg", // メインロゴ（すでに設定されているパス）
-    icon: "/logo/favicon.ico",   // アイコン（ファビコン）
-    svg: "/logo/favicon.svg",  // SVGロゴ（ヘッダーで使用）
+    icon: "/logo/favicon.ico", // アイコン（ファビコン）
+    svg: "/logo/favicon.svg", // SVGロゴ（ヘッダーで使用）
     alt: "複数日程調整アプリ",
   },
   copyright: {
     year: new Date().getFullYear(),
     holder: "DaySynth",
+  },
+  url: "https://schedule.k-tkms.com/",
+  ogImage: "/logo/web-app-manifest-512x512.png",
+  illustrations: {
+    hero: "/logo/web-app-manifest-512x512.png", // Add the 'hero' property here
   },
 };
 

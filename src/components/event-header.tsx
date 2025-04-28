@@ -5,12 +5,9 @@ import Card from "@/components/layout/Card";
 
 interface EventHeaderProps {
   title: string;
-  description: string | null;
+  description?: string | null;
   isFinalized: boolean;
-  isAdmin?: boolean;
-  finalDate?: {
-    date_time: string;
-  } | null;
+  isAdmin: boolean;
 }
 
 export function EventHeader({
@@ -21,9 +18,13 @@ export function EventHeader({
 }: EventHeaderProps) {
   const [copied, setCopied] = useState(false);
 
-  // 現在のURLをコピーする
+  // 現在のURLをコピーする（adminパラメータを除外）
   const copyEventLink = () => {
-    navigator.clipboard.writeText(window.location.href).then(
+    // 現在のURLから公開用URLのみを取得
+    const url = new URL(window.location.href);
+    url.searchParams.delete("admin"); // adminパラメータを削除
+
+    navigator.clipboard.writeText(url.toString()).then(
       () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -41,22 +42,21 @@ export function EventHeader({
             {title}
           </h1>
           {isFinalized && (
-            <div className="badge badge-success badge-lg mb-4">
+            <div className="badge badge-success text-white mb-3">
               日程確定済み
             </div>
           )}
           {description && (
-            <p className="text-base-content/70 whitespace-pre-line mt-2">
+            <p className="text-base-content/70 whitespace-pre-wrap">
               {description}
             </p>
           )}
         </div>
-
         <button
-          className={`btn ${
-            copied ? "btn-success" : "btn-primary"
-          } btn-sm sm:btn-md btn-animated`}
           onClick={copyEventLink}
+          className={`btn btn-sm ${
+            copied ? "btn-success" : "btn-outline"
+          } self-start whitespace-nowrap`}
         >
           {copied ? (
             <>
@@ -102,19 +102,19 @@ export function EventHeader({
         <div className="alert bg-info/10 text-info border-l-4 border-info text-sm">
           <svg
             xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6 mr-2"
             fill="none"
             viewBox="0 0 24 24"
-            className="stroke-current shrink-0 w-6 h-6"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
+            />
           </svg>
           <span>
-            管理者として閲覧中です。十分な回答が集まったら、下部の「この日程で確定」ボタンを押して日程を確定できます。
+            管理者として閲覧中です。このURLは参加者と共有しないでください。
           </span>
         </div>
       )}
