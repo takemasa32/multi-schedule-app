@@ -218,21 +218,34 @@ export async function getAvailabilities(eventId: string) {
 export async function getFinalizedDateIds(eventId: string, finalDateId: string | null) {
   const supabase = createSupabaseAdmin();
 
-  if (!finalDateId) return [];
-
   // 確定日程テーブルから確定した日程IDを取得
   const { data, error } = await supabase
-    .from('event_finalized_dates')
+    .from('finalized_dates')
     .select('event_date_id')
     .eq('event_id', eventId);
 
   if (error) {
     console.error('確定日程取得エラー:', error);
+    
+    // 互換性のため、エラーが発生した場合やデータがない場合は
+    // 古い形式（final_date_id）を使用
+    if (finalDateId) {
+      return [finalDateId];
+    }
+    
     return [];
   }
 
-  // event_date_idの配列を返す
-  return data.map(item => item.event_date_id);
+  if (data && data.length > 0) {
+    // event_date_idの配列を返す
+    return data.map(item => item.event_date_id);
+  } else if (finalDateId) {
+    // 旧形式の互換性のため、finalized_dates テーブルにデータがない場合は
+    // final_date_id があれば使用
+    return [finalDateId];
+  }
+
+  return [];
 }
 
 /**
