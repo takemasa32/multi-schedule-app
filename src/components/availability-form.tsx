@@ -1605,19 +1605,15 @@ export default function AvailabilityForm({
                             {heatmapData.dates.map((date) => (
                               <th
                                 key={date.dateKey}
-                                className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center whitespace-nowrap border border-base-300 sticky top-0 bg-base-200 z-20"
+                                className="px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 heatmap-cell-mobile"
                               >
-                                <div className="text-xs sm:text-sm">
-                                  {date.formattedDate.replace(
-                                    /\([月火水木金土日]\)/,
-                                    ""
-                                  )}
-                                  <div className="text-[0.6rem] sm:text-xs">
-                                    {date.formattedDate.match(
-                                      /\([月火水木金土日]\)/
-                                    )?.[0] || ""}
-                                  </div>
-                                </div>
+                                <span className="text-xs sm:text-sm whitespace-nowrap">
+                                  {date.formattedDate.split("(")[0]}
+                                  <br />
+                                  <span className="text-xs text-gray-500">
+                                    ({date.formattedDate.split("(")[1]}
+                                  </span>
+                                </span>
                               </th>
                             ))}
                           </tr>
