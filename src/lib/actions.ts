@@ -100,7 +100,7 @@ export async function createEvent(formData: FormData) {
     // イベント作成が成功した場合、イベントページにリダイレクト
     // Next.jsのリダイレクトは内部的にはエラーとしてスローされる仕組みのため
     // try-catchブロックを抜けてリダイレクトを実行
-    return { redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}` };
+    return { redirectUrl: `/event/${event.public_token}` };
 
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
