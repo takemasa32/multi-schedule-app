@@ -29,12 +29,10 @@ export default function EventFormClient() {
       setError("少なくとも1つの時間枠を設定してください");
       return;
     }
-
     if (!termsAccepted) {
       setError("利用規約への同意が必要です");
       return;
     }
-
     const formData = new FormData();
     formData.append("title", title);
     if (description.trim()) {
@@ -124,13 +122,11 @@ export default function EventFormClient() {
         <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
         <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
       </div>
-
       <TermsCheckbox 
         isChecked={termsAccepted} 
         onChange={setTermsAccepted} 
         id="event-form-terms"
       />
-
       <div className="flex justify-end mt-8">
         <button
           type="submit"
