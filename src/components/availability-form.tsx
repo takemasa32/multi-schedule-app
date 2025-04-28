@@ -208,7 +208,7 @@ export default function AvailabilityForm({
   // ---Pointer イベントでマウス／タッチを統一 ---
   /** セル選択を pointer イベントに一本化 */
   const handlePointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
+    (e: React.PointerEvent<HTMLElement>) => {
       e.preventDefault(); // 後続の mouse*/click を止める
       const dateId = e.currentTarget.getAttribute("data-date-id");
       if (!dateId) return;
@@ -241,7 +241,7 @@ export default function AvailabilityForm({
 
   /** ポインターがセルに入った時の処理（ドラッグ中） */
   const handlePointerEnter = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
+    (e: React.PointerEvent<HTMLElement>) => {
       if (!isDragging || dragState === null) return;
 
       const dateId = e.currentTarget.getAttribute("data-date-id");
@@ -259,6 +259,9 @@ export default function AvailabilityForm({
     setIsDragging(false);
     setDragState(null);
     document.body.classList.remove("no-scroll");
+    // 曜日モードのドラッグ状態もリセット
+    setIsDraggingMatrix(false);
+    setMatrixDragState(null);
   }, []);
 
   /* 監視用 useEffect */
@@ -1160,101 +1163,47 @@ export default function AvailabilityForm({
                                           className="text-center border border-base-300 p-0 cursor-pointer"
                                           data-day={day}
                                           data-time-slot={timeSlot}
-                                          onMouseDown={(e) => {
-                                            // デフォルト動作と伝播を防止
+                                          onPointerDown={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-
-                                            // ドラッグ開始処理
-                                            const newValue =
+                                            // ヒートマップ用ハンドラを流用
+                                            handlePointerDown(e);
+                                            // 曜日モード用 state も更新
+                                            const newVal =
                                               !daySchedule.timeSlots[timeSlot];
-
-                                            // ドラッグ状態を先に設定
-                                            setIsDraggingMatrix(true);
-                                            setMatrixDragState(newValue);
-
-                                            // その後で選択状態を更新
-                                            setWeekdaySelections((prev) => {
-                                              const newState = { ...prev };
-                                              newState[day as WeekDay] = {
-                                                ...prev[day as WeekDay],
+                                            setWeekdaySelections((prev) => ({
+                                              ...prev,
+                                              [day]: {
                                                 selected: true,
                                                 timeSlots: {
                                                   ...prev[day as WeekDay]
                                                     .timeSlots,
-                                                  [timeSlot]: newValue,
+                                                  [timeSlot]: newVal,
                                                 },
-                                              };
-                                              return newState;
-                                            });
-
-                                            // マウスアップイベントのハンドラを追加
-                                            const handleMouseUpOnce = () => {
-                                              setIsDraggingMatrix(false);
-                                              setMatrixDragState(null);
-                                              document.body.classList.remove(
-                                                "no-scroll"
-                                              );
-                                              window.removeEventListener(
-                                                "mouseup",
-                                                handleMouseUpOnce
-                                              );
-                                            };
-
-                                            // 一度だけ実行するイベントリスナーを追加
-                                            window.addEventListener(
-                                              "mouseup",
-                                              handleMouseUpOnce,
-                                              { once: true }
-                                            );
+                                              },
+                                            }));
                                           }}
-                                          onMouseEnter={() => {
-                                            // ドラッグ中の処理
+                                          onPointerEnter={(e) => {
+                                            // ヒートマップ用ドラッグ追従
+                                            handlePointerEnter(e);
                                             if (
-                                              isDraggingMatrix &&
-                                              matrixDragState !== null
+                                              isDragging &&
+                                              dragState !== null
                                             ) {
-                                              setWeekdaySelections((prev) => {
-                                                const newState = { ...prev };
-                                                newState[day as WeekDay] = {
-                                                  ...prev[day as WeekDay],
+                                              setWeekdaySelections((prev) => ({
+                                                ...prev,
+                                                [day]: {
                                                   selected: true,
                                                   timeSlots: {
                                                     ...prev[day as WeekDay]
                                                       .timeSlots,
-                                                    [timeSlot]: matrixDragState,
+                                                    [timeSlot]: dragState,
                                                   },
-                                                };
-                                                return newState;
-                                              });
+                                                },
+                                              }));
                                             }
                                           }}
-                                          onTouchStart={(e) => {
-                                            // タッチ操作の開始処理
-                                            e.stopPropagation(); // イベントの伝播は防止
-                                            e.preventDefault(); // スクロールを防止
-                                            setIsDraggingMatrix(true);
-                                            setIsMatrixTouching(true);
-                                            setMatrixDragState(
-                                              !daySchedule.timeSlots[timeSlot]
-                                            );
-                                            setWeekdaySelections((prev) => {
-                                              const newState = { ...prev };
-                                              newState[day as WeekDay] = {
-                                                ...prev[day as WeekDay],
-                                                selected: true,
-                                                timeSlots: {
-                                                  ...prev[day as WeekDay]
-                                                    .timeSlots,
-                                                  [timeSlot]:
-                                                    !daySchedule.timeSlots[
-                                                      timeSlot
-                                                    ],
-                                                },
-                                              };
-                                              return newState;
-                                            });
-                                          }}
+                                          onPointerUp={handlePointerUp}
                                         >
                                           <div
                                             className={`w-full h-7 flex items-center justify-center ${
