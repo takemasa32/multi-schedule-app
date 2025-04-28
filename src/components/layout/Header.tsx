@@ -7,7 +7,7 @@ import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Header() {
   return (
-    <header className="bg-base-100 sticky top-0 z-[100] border-b border-base-300 shadow-sm w-full">
+    <header className="bg-base-100 fixed top-0 left-0 right-0 z-[100] border-b border-base-300 shadow-sm w-full">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/" className="flex items-center space-x-2 text-primary">
           <div className="w-8 h-8 relative">
