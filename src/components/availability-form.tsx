@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  Fragment,
-} from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { submitAvailability } from "@/app/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
 
@@ -205,80 +199,181 @@ export default function AvailabilityForm({
     }
   }, [isDraggingMatrix, handleMatrixDragEnd]);
 
-  // ---Pointer イベントでマウス／タッチを統一 ---
-  /** セル選択を pointer イベントに一本化 */
-  const handlePointerDown = useCallback(
+  // --- 共通ポインターイベント処理 ---
+  /** セル選択のポインターイベント統一処理 */
+  const commonPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      e.preventDefault(); // 後続の mouse*/click を止める
-      const dateId = e.currentTarget.getAttribute("data-date-id");
-      if (!dateId) return;
-      const newState = !selectedDates[dateId];
-      setSelectedDates((prev) => ({ ...prev, [dateId]: newState }));
-      setIsDragging(true);
-      setDragState(newState);
+      // ポインターキャプチャ開始
+      e.currentTarget.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
       document.body.classList.add("no-scroll");
-    },
-    [selectedDates]
-  );
+      const el = e.currentTarget;
 
-  /* 高速追随用グローバル pointermove */
-  const handleGlobalPointerMove = useCallback(
-    (ev: PointerEvent) => {
-      if (!isDragging || dragState === null) return;
-
-      const el = document.elementFromPoint(ev.clientX, ev.clientY);
-      const cell = el?.closest("[data-date-id]") as HTMLElement | null;
-      const dateId = cell?.dataset.dateId;
-
+      // ───── 熱マップセルの場合 ─────
+      const dateId = el.dataset.dateId;
       if (dateId) {
-        setSelectedDates((prev) =>
-          prev[dateId] === dragState ? prev : { ...prev, [dateId]: dragState }
-        );
+        const newState = !selectedDates[dateId];
+        setSelectedDates((prev) => ({ ...prev, [dateId]: newState }));
+        setIsDragging(true);
+        setDragState(newState);
+        return;
+      }
+
+      // ──── 曜日マトリックスセルの場合 ────
+      const day = el.dataset.day;
+      const slot = el.dataset.timeSlot;
+      if (
+        day &&
+        slot &&
+        Object.keys(weekdaySelections).includes(day as WeekDay)
+      ) {
+        const weekday = day as WeekDay;
+        const newVal = !weekdaySelections[weekday].timeSlots[slot];
+        setWeekdaySelections((prev) => ({
+          ...prev,
+          [weekday]: {
+            selected: true,
+            timeSlots: { ...prev[weekday].timeSlots, [slot]: newVal },
+          },
+        }));
+        setIsDraggingMatrix(true);
+        setIsMatrixTouching(true);
+        setMatrixDragState(newVal);
       }
     },
-    [isDragging, dragState]
+    [selectedDates, weekdaySelections]
   );
 
-  /** ポインターがセルに入った時の処理（ドラッグ中） */
-  const handlePointerEnter = useCallback(
-    (e: React.PointerEvent<HTMLElement>) => {
-      if (!isDragging || dragState === null) return;
+  const commonPointerEnter = useCallback(
+    (e: React.PointerEvent<HTMLElement> | PointerEvent) => {
+      // イベントがネイティブか React かを判定
+      const isNative = e instanceof PointerEvent;
 
-      const dateId = e.currentTarget.getAttribute("data-date-id");
-      if (!dateId) return;
+      // スクロールを防止
+      try {
+        e.preventDefault();
+      } catch {}
 
-      setSelectedDates((prev) =>
-        prev[dateId] === dragState ? prev : { ...prev, [dateId]: dragState }
-      );
+      // 参照要素を取得
+      const el: HTMLElement | null = isNative
+        ? (e.target as HTMLElement).closest("[data-date-id], [data-day]")
+        : e.currentTarget;
+      if (!el) return;
+
+      // 熱マップセル（date-id）の処理
+      const dateId = el.dataset.dateId;
+      if (isDragging && dragState !== null && dateId) {
+        setSelectedDates((prev) => ({ ...prev, [dateId]: dragState }));
+        return;
+      }
+
+      // 曜日マトリックスセル（day＋timeSlot）の処理
+      const day = el.dataset.day;
+      const slot = el.dataset.timeSlot;
+      if (
+        isDraggingMatrix &&
+        matrixDragState !== null &&
+        day &&
+        slot &&
+        Object.keys(weekdaySelections).includes(day as WeekDay)
+      ) {
+        const weekday = day as WeekDay;
+        setWeekdaySelections((prev) => ({
+          ...prev,
+          [weekday]: {
+            selected: true,
+            timeSlots: {
+              ...prev[weekday].timeSlots,
+              [slot]: matrixDragState,
+            },
+          },
+        }));
+      }
     },
-    [isDragging, dragState]
+    [
+      isDragging,
+      dragState,
+      isDraggingMatrix,
+      matrixDragState,
+      weekdaySelections,
+    ]
   );
 
-  /** ポインター操作終了時の処理 */
-  const handlePointerUp = useCallback(() => {
+  const commonPointerUp = useCallback((e: React.PointerEvent<HTMLElement> | PointerEvent) => {
+    // キャプチャ解放
+    try {
+      if (!(e instanceof PointerEvent)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+
+    // ドラッグ状態をリセット
     setIsDragging(false);
     setDragState(null);
-    document.body.classList.remove("no-scroll");
-    // 曜日モードのドラッグ状態もリセット
     setIsDraggingMatrix(false);
     setMatrixDragState(null);
+    document.body.classList.remove("no-scroll");
   }, []);
+  
+  // ネイティブイベント用のラッパー関数
+  const handleNativePointerMove = useCallback((e: PointerEvent) => {
+    commonPointerEnter(e);
+  }, [commonPointerEnter]);
+  
+  const handleNativePointerUp = useCallback((e: PointerEvent) => {
+    commonPointerUp(e);
+  }, [commonPointerUp]);
+  // --- ここまで共通処理 ---
 
   /* 監視用 useEffect */
   useEffect(() => {
-    if (!isDragging) return;
+    if (isDragging) {
+      // ドラッグ中はbodyにno-scrollクラスを追加してスクロールを防止
+      document.body.classList.add("no-scroll");
 
-    window.addEventListener("pointermove", handleGlobalPointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerUp);
+      // グローバルなポインターイベントリスナーを追加
+      window.addEventListener("pointermove", handleNativePointerMove);
+      window.addEventListener("pointerup", handleNativePointerUp);
 
-    return () => {
-      window.removeEventListener("pointermove", handleGlobalPointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", handlePointerUp);
-    };
-  }, [isDragging, handleGlobalPointerMove, handlePointerUp]);
-  // --- ここまで追加 ---
+      return () => {
+        document.body.classList.remove("no-scroll");
+        window.removeEventListener("pointermove", handleNativePointerMove);
+        window.removeEventListener("pointerup", handleNativePointerUp);
+      };
+    }
+  }, [isDragging, handleNativePointerMove, handleNativePointerUp]);
+
+  // --- 曜日マトリックス用グローバルポインター＆タッチ監視 ---
+  useEffect(() => {
+    if (isDraggingMatrix) {
+      document.body.classList.add("no-scroll");
+
+      // グローバルポインターイベント監視を追加
+      window.addEventListener("pointermove", handleNativePointerMove);
+      window.addEventListener("pointerup", handleNativePointerUp);
+
+      // タッチ移動・終了を拾う（passive: false）
+      window.addEventListener("touchmove", handleMatrixTouchMove, {
+        passive: false,
+      });
+      window.addEventListener("touchend", handleMatrixDragEnd);
+
+      return () => {
+        document.body.classList.remove("no-scroll");
+        window.removeEventListener("pointermove", handleNativePointerMove);
+        window.removeEventListener("pointerup", handleNativePointerUp);
+        window.removeEventListener("touchmove", handleMatrixTouchMove);
+        window.removeEventListener("touchend", handleMatrixDragEnd);
+      };
+    }
+  }, [
+    isDraggingMatrix,
+    handleMatrixDragEnd,
+    handleMatrixTouchMove,
+    commonPointerEnter,
+    commonPointerUp,
+  ]);
 
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
@@ -1163,47 +1258,9 @@ export default function AvailabilityForm({
                                           className="text-center border border-base-300 p-0 cursor-pointer"
                                           data-day={day}
                                           data-time-slot={timeSlot}
-                                          onPointerDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            // ヒートマップ用ハンドラを流用
-                                            handlePointerDown(e);
-                                            // 曜日モード用 state も更新
-                                            const newVal =
-                                              !daySchedule.timeSlots[timeSlot];
-                                            setWeekdaySelections((prev) => ({
-                                              ...prev,
-                                              [day]: {
-                                                selected: true,
-                                                timeSlots: {
-                                                  ...prev[day as WeekDay]
-                                                    .timeSlots,
-                                                  [timeSlot]: newVal,
-                                                },
-                                              },
-                                            }));
-                                          }}
-                                          onPointerEnter={(e) => {
-                                            // ヒートマップ用ドラッグ追従
-                                            handlePointerEnter(e);
-                                            if (
-                                              isDragging &&
-                                              dragState !== null
-                                            ) {
-                                              setWeekdaySelections((prev) => ({
-                                                ...prev,
-                                                [day]: {
-                                                  selected: true,
-                                                  timeSlots: {
-                                                    ...prev[day as WeekDay]
-                                                      .timeSlots,
-                                                    [timeSlot]: dragState,
-                                                  },
-                                                },
-                                              }));
-                                            }
-                                          }}
-                                          onPointerUp={handlePointerUp}
+                                          onPointerDown={commonPointerDown}
+                                          onPointerEnter={commonPointerEnter}
+                                          onPointerUp={commonPointerUp}
                                         >
                                           <div
                                             className={`w-full h-7 flex items-center justify-center ${
@@ -1426,15 +1483,12 @@ export default function AvailabilityForm({
                                 )
                               }
                               onMouseEnter={() => handleMouseEnter(date.id)}
-                              onTouchStart={(e) => {
-                                // Reactのイベントハンドラ内ではpreventDefaultを避ける
-                                // e.preventDefault()は削除
-                                e.stopPropagation(); // イベント伝播は防止
+                              onTouchStart={() =>
                                 handleTouchStart(
                                   date.id,
                                   !!selectedDates[date.id]
-                                );
-                              }}
+                                )
+                              }
                             >
                               <div
                                 className={`flex items-center justify-center w-10 h-10 rounded-md mr-4 shrink-0 transition-colors duration-200 ease-in-out ${className}`}
@@ -1637,13 +1691,9 @@ export default function AvailabilityForm({
                                           <div
                                             className={`w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className} touch-manipulation`}
                                             data-date-id={dateId}
-                                            onPointerDown={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              handlePointerDown(e);
-                                            }}
-                                            onPointerEnter={handlePointerEnter}
-                                            onPointerUp={handlePointerUp}
+                                            onPointerDown={commonPointerDown}
+                                            onPointerEnter={commonPointerEnter}
+                                            onPointerUp={commonPointerUp}
                                           >
                                             {getCellContent(status)}
                                           </div>

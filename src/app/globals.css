@@ -220,7 +220,7 @@ body {
 
 /* ヒートマップのセル内容がスワイプ操作でも選択されないようにする */
 .cell-content {
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 /* drag/touch 操作時のブラウザ既定動作を無効化 */
