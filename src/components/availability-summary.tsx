@@ -396,6 +396,9 @@ export default function AvailabilitySummary({
     dateId: string
   ) => {
     event.stopPropagation(); // バブリングを防止
+    if (event.nativeEvent) {
+      event.nativeEvent.stopImmediatePropagation(); // ネイティブ伝播も止める
+    }
 
     // タッチイベントの場合はデフォルト動作を防止
     if (isTouchEvent(event)) {
@@ -530,25 +533,32 @@ export default function AvailabilitySummary({
   };
 
   // ドキュメント全体のクリックとスクロールイベントを監視してツールチップを閉じる
-  const closeTooltipOnOutsideClick = useCallback(() => {
-    // ツールチップ表示中のみ処理
-    if (tooltip.show) {
+  const closeTooltipOnOutsideClick = useCallback(
+    (e: Event) => {
+      // ツールチップ表示中のみ処理
+      if (!tooltip.show) return;
+
+      // 可用性サマリーコンテナ内のクリックは無視
+      const container = document.querySelector(".availability-summary");
+      if (container?.contains(e.target as Node)) return;
+
       setTooltip((prev) => ({ ...prev, show: false }));
-    }
-  }, [tooltip.show]);
+    },
+    [tooltip.show]
+  );
 
   // マウント時にグローバルイベントリスナーを追加
   useEffect(() => {
     // PCとタッチデバイス両方に対応
     document.addEventListener("click", closeTooltipOnOutsideClick);
-    document.addEventListener("touchstart", closeTooltipOnOutsideClick);
+    document.addEventListener("touchend", closeTooltipOnOutsideClick);
     // スクロール時にもツールチップを閉じる
     window.addEventListener("scroll", closeTooltipOnOutsideClick);
 
     // クリーンアップ関数
     return () => {
       document.removeEventListener("click", closeTooltipOnOutsideClick);
-      document.removeEventListener("touchstart", closeTooltipOnOutsideClick);
+      document.removeEventListener("touchend", closeTooltipOnOutsideClick);
       window.removeEventListener("scroll", closeTooltipOnOutsideClick);
     };
   }, [closeTooltipOnOutsideClick]);
@@ -660,7 +670,7 @@ export default function AvailabilitySummary({
   }
 
   return (
-    <div className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all">
+    <div className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary">
       <div className="p-2 sm:p-4">
         <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>
 
