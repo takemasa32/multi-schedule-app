@@ -9,7 +9,7 @@ import { EventHeader } from "@/components/event-header";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
-import { Metadata, ResolvingMetadata } from "next";
+import { Metadata } from "next";
 
 // Next.js 15.3.1でのParams型定義の変更に対応
 interface EventPageProps {
@@ -22,15 +22,15 @@ interface EventPageProps {
 }
 
 // 動的メタデータ生成関数
-export async function generateMetadata(
-  { params }: { params: { public_id: string } },
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  // イベント情報を取得
-  const { public_id } = params;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ public_id: string }>;
+}): Promise<Metadata> {
+  const { public_id } = await params;
   const event = await getEvent(public_id);
-
   if (!event) {
+    // イベントが見つからない場合のメタデータ
     return {
       title: `イベントが見つかりません | ${siteConfig.name.full}`,
       description: `お探しのイベントは存在しないか、削除された可能性があります。`,
@@ -40,12 +40,12 @@ export async function generateMetadata(
   // イベントのタイトルを取得
   const eventTitle = event.title;
   const isFinalized = event.is_finalized;
-  
+
   // 確定済みかどうかでタイトルと説明を変える
-  const title = isFinalized 
-    ? `${eventTitle} (日程確定済み) | ${siteConfig.name.full}` 
+  const title = isFinalized
+    ? `${eventTitle} (日程確定済み) | ${siteConfig.name.full}`
     : `${eventTitle} | ${siteConfig.name.full}`;
-    
+
   const description = isFinalized
     ? `${eventTitle}の日程が確定しました。詳細を確認して予定に追加しましょう。`
     : `${eventTitle}の日程調整ページです。あなたの参加可能な日程を選択して回答してください。`;
@@ -72,21 +72,14 @@ export default async function EventPage({
   params,
   searchParams,
 }: EventPageProps) {
-  // Next.js 15.3.1に対応するため、paramsとsearchParamsを非同期で取得
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
+  const { public_id } = await params;
+  const { admin: adminToken } = await searchParams;
 
-  const { public_id } = resolvedParams;
-  const adminToken = resolvedSearchParams.admin || null;
-
-  // イベント情報を取得
   const event = await getEvent(public_id);
-
   if (!event) {
     console.error("Event not found");
     notFound();
   }
-
   // 有効な管理者かチェック（必ずboolean型に変換）
   const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
 
