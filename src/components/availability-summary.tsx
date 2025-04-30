@@ -383,15 +383,22 @@ export default function AvailabilitySummary({
     });
   };
 
+  // タイプガードを定義
+  function isTouchEvent(
+    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
+  ): e is React.TouchEvent<HTMLElement> {
+    return "touches" in e || "changedTouches" in e;
+  }
+
   // ツールチップ表示処理（タッチ/クリック）
   const handleClick = (
-    event: React.MouseEvent | React.TouchEvent,
+    event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
     dateId: string
   ) => {
     event.stopPropagation(); // バブリングを防止
 
     // タッチイベントの場合はデフォルト動作を防止
-    if ("touches" in event || "changedTouches" in event) {
+    if (isTouchEvent(event)) {
       event.preventDefault();
     }
 
@@ -405,17 +412,18 @@ export default function AvailabilitySummary({
       getParticipantsByDateId(dateId);
 
     // タッチ/クリック位置を取得
-    let x, y;
-    if ("touches" in event) {
+    let x: number, y: number;
+    if (isTouchEvent(event)) {
       // タッチイベントの場合
-      const touch = event.touches[0] || event.changedTouches[0];
-      x = Math.min(touch.clientX, window.innerWidth - 320);
-      y = Math.min(touch.clientY, window.innerHeight - 200);
-    } else if ("changedTouches" in event) {
-      // touchendイベントの場合
-      const touch = event.changedTouches[0];
-      x = Math.min(touch.clientX, window.innerWidth - 320);
-      y = Math.min(touch.clientY, window.innerHeight - 200);
+      const touch = event.touches?.[0] || event.changedTouches?.[0];
+      if (touch) {
+        x = Math.min(touch.clientX, window.innerWidth - 320);
+        y = Math.min(touch.clientY, window.innerHeight - 200);
+      } else {
+        // タッチが取得できない場合はデフォルト位置
+        x = window.innerWidth / 2 - 150;
+        y = window.innerHeight / 2 - 100;
+      }
     } else {
       // マウスイベントの場合
       x = Math.min(event.clientX, window.innerWidth - 320);
