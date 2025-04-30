@@ -64,6 +64,9 @@ export default function AvailabilitySummary({
     unavailableParticipants: [],
   });
 
+  // コンテナref追加 - ツールチップ外部クリック判定用
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // ツールチップ表示のためのポータル用参照
   const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
 
@@ -539,10 +542,12 @@ export default function AvailabilitySummary({
       if (!tooltip.show) return;
 
       // 可用性サマリーコンテナ内のクリックは無視
-      const container = document.querySelector(".availability-summary");
-      if (container?.contains(e.target as Node)) return;
-
-      setTooltip((prev) => ({ ...prev, show: false }));
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setTooltip((prev) => ({ ...prev, show: false }));
+      }
     },
     [tooltip.show]
   );
@@ -670,7 +675,10 @@ export default function AvailabilitySummary({
   }
 
   return (
-    <div className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary">
+    <div
+      className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary"
+      ref={containerRef}
+    >
       <div className="p-2 sm:p-4">
         <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>
 
@@ -853,8 +861,28 @@ export default function AvailabilitySummary({
                             100
                           ); // 20〜100に制限
 
-                          // Tailwindの不透明度クラス名を生成
-                          const opacityClass = `bg-primary-500/${opacityValue}`;
+                          // Tailwindの不透明度クラス名をマップから取得
+                          const opacityClasses: Record<number, string> = {
+                            20: "bg-primary-500/20",
+                            25: "bg-primary-500/25",
+                            30: "bg-primary-500/30",
+                            35: "bg-primary-500/35",
+                            40: "bg-primary-500/40",
+                            45: "bg-primary-500/45",
+                            50: "bg-primary-500/50",
+                            55: "bg-primary-500/55",
+                            60: "bg-primary-500/60",
+                            65: "bg-primary-500/65",
+                            70: "bg-primary-500/70",
+                            75: "bg-primary-500/75",
+                            80: "bg-primary-500/80",
+                            85: "bg-primary-500/85",
+                            90: "bg-primary-500/90",
+                            95: "bg-primary-500/95",
+                            100: "bg-primary-500/100",
+                          };
+                          const opacityClass =
+                            opacityClasses[opacityValue] || "bg-primary-500/20";
 
                           // 確定済み日程用の追加クラス
                           const selectedClass = isSelected

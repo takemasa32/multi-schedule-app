@@ -1,3 +1,4 @@
+// tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -6,12 +7,8 @@ module.exports = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
-    // ヒートマップで使用する 20〜100% (5% 刻み)
-    {
-      // bg-primary-500/20 〜 /100 を全て生成
-      pattern:
-        /^bg-primary-500\/(20|25|30|35|40|45|50|55|60|65|70|75|80|85|90|95|100)$/,
-    },
+    // ヒートマップで使用する 20〜100% (数値部分を2-3桁の正規表現で緩和)
+    { pattern: /^bg-primary-500\/\d{2,3}$/ },
     // 確定セルの枠線用
     "border-success",
     // heatmap-X クラスも残す場合
