@@ -390,6 +390,11 @@ export default function AvailabilitySummary({
   ) => {
     event.stopPropagation(); // バブリングを防止
 
+    // タッチイベントの場合はデフォルト動作を防止
+    if ("touches" in event || "changedTouches" in event) {
+      event.preventDefault();
+    }
+
     // すでに同じ日程のツールチップが表示されている場合は閉じる
     if (tooltip.show && tooltip.dateId === dateId) {
       setTooltip((prev) => ({ ...prev, show: false }));
@@ -404,6 +409,11 @@ export default function AvailabilitySummary({
     if ("touches" in event) {
       // タッチイベントの場合
       const touch = event.touches[0] || event.changedTouches[0];
+      x = Math.min(touch.clientX, window.innerWidth - 320);
+      y = Math.min(touch.clientY, window.innerHeight - 200);
+    } else if ("changedTouches" in event) {
+      // touchendイベントの場合
+      const touch = event.changedTouches[0];
       x = Math.min(touch.clientX, window.innerWidth - 320);
       y = Math.min(touch.clientY, window.innerHeight - 200);
     } else {
