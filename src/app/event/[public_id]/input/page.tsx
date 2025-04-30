@@ -5,6 +5,50 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AvailabilityForm from "@/components/availability-form";
 import { EventHeader } from "@/components/event-header";
+import siteConfig from "@/lib/site-config";
+import { Metadata } from "next";
+
+// 動的メタデータ生成関数
+export async function generateMetadata({
+  params,
+}: {
+  params: { public_id: string };
+}): Promise<Metadata> {
+  // イベント情報を取得
+  const { public_id } = params;
+  const event = await getEvent(public_id);
+
+  if (!event) {
+    return {
+      title: `イベントが見つかりません | ${siteConfig.name.full}`,
+      description: `お探しのイベントは存在しないか、削除された可能性があります。`,
+    };
+  }
+
+  // イベントのタイトルを取得
+  const eventTitle = event.title;
+
+  return {
+    title: `回答フォーム | ${siteConfig.name.full}`,
+    description: `「${eventTitle}」の日程調整に回答するフォームです。あなたの参加可能な日程を選択してください。`,
+    robots: {
+      index: false,
+      follow: true,
+    },
+    openGraph: {
+      title: `回答フォーム | ${siteConfig.name.full}`,
+      description: `「${eventTitle}」の日程調整に回答するフォームです。あなたの参加可能な日程を選択してください。`,
+      url: `${siteConfig.url}/event/${public_id}/input`,
+      images: [
+        {
+          url: siteConfig.ogImage,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+  };
+}
 
 export default async function EventInput({
   params,

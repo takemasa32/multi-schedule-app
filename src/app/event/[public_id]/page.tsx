@@ -8,6 +8,8 @@ import EventClientWrapper from "@/components/event-client/event-client-wrapper";
 import { EventHeader } from "@/components/event-header";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
+import siteConfig from "@/lib/site-config";
+import { Metadata, ResolvingMetadata } from "next";
 
 // Next.js 15.3.1でのParams型定義の変更に対応
 interface EventPageProps {
@@ -17,6 +19,53 @@ interface EventPageProps {
   searchParams: Promise<{
     admin?: string;
   }>;
+}
+
+// 動的メタデータ生成関数
+export async function generateMetadata(
+  { params }: { params: { public_id: string } },
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  // イベント情報を取得
+  const { public_id } = params;
+  const event = await getEvent(public_id);
+
+  if (!event) {
+    return {
+      title: `イベントが見つかりません | ${siteConfig.name.full}`,
+      description: `お探しのイベントは存在しないか、削除された可能性があります。`,
+    };
+  }
+
+  // イベントのタイトルを取得
+  const eventTitle = event.title;
+  const isFinalized = event.is_finalized;
+  
+  // 確定済みかどうかでタイトルと説明を変える
+  const title = isFinalized 
+    ? `${eventTitle} (日程確定済み) | ${siteConfig.name.full}` 
+    : `${eventTitle} | ${siteConfig.name.full}`;
+    
+  const description = isFinalized
+    ? `${eventTitle}の日程が確定しました。詳細を確認して予定に追加しましょう。`
+    : `${eventTitle}の日程調整ページです。あなたの参加可能な日程を選択して回答してください。`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${siteConfig.url}/event/${public_id}`,
+      images: [
+        {
+          url: siteConfig.ogImage,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+  };
 }
 
 export default async function EventPage({

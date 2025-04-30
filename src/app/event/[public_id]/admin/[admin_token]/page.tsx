@@ -1,6 +1,30 @@
 import { createSupabaseClient } from "@/lib/supabase";
 import AdminPasswordForm from "./password-form";
 import { adminRedirect } from "../actions";
+import siteConfig from "@/lib/site-config";
+import { Metadata } from "next";
+
+// 管理者ページのメタデータ設定
+export const metadata: Metadata = {
+  title: `管理者認証 | ${siteConfig.name.full}`,
+  description: `イベント管理のための認証ページです。管理者トークンまたはパスワードでイベントの管理機能を利用できます。`,
+  robots: {
+    index: false,
+    follow: false
+  },
+  openGraph: {
+    title: `管理者認証 | ${siteConfig.name.full}`,
+    description: `イベント管理のための認証ページです。管理者トークンまたはパスワードでイベントの管理機能を利用できます。`,
+    url: `${siteConfig.url}`,
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+      },
+    ],
+  }
+};
 
 // サーバーサイド用Supabaseクライアントの初期化
 const supabaseAdmin = createSupabaseClient();
