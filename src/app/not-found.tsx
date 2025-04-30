@@ -1,12 +1,12 @@
-import Link from 'next/link';
-import siteConfig from '@/lib/site-config';
+import Link from "next/link";
+import siteConfig from "@/lib/site-config";
 
 export const metadata = {
   title: `ページが見つかりません | ${siteConfig.name.full}`,
   description: `お探しのページは存在しないか、移動または削除された可能性があります。`,
   robots: {
     index: false,
-    follow: true
+    follow: true,
   },
 };
 
@@ -26,10 +26,10 @@ export default function NotFound() {
             URLが正しく入力されているかご確認ください。
           </p>
         </div>
-        
+
         <div className="pt-6 space-y-4">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="btn btn-primary inline-flex items-center justify-center"
           >
             <svg
@@ -48,14 +48,6 @@ export default function NotFound() {
             </svg>
             トップページに戻る
           </Link>
-          
-          <p className="text-sm text-base-content/60">
-            もしこのページに何度も遭遇する場合は、
-            <Link href="/terms" className="text-primary hover:underline">
-              お問い合わせ
-            </Link>
-            までご連絡ください。
-          </p>
         </div>
       </div>
     </div>
