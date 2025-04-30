@@ -436,12 +436,12 @@ export default function AvailabilityForm({
       setError("お名前を入力してください");
       return false;
     }
-    
+
     if (!termsAccepted) {
       setError("利用規約への同意が必要です");
       return false;
     }
-    
+
     return true;
   };
 
@@ -1032,7 +1032,11 @@ export default function AvailabilityForm({
             <input type="hidden" name="eventId" value={eventId} />
             <input type="hidden" name="publicToken" value={publicToken} />
 
-            <div>
+            <div
+              className={
+                isWeekdayModeActive ? "opacity-50 pointer-events-none" : ""
+              }
+            >
               <label
                 htmlFor="participant_name"
                 className="block text-sm font-medium mb-1"
@@ -1047,6 +1051,7 @@ export default function AvailabilityForm({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={isWeekdayModeActive}
               />
             </div>
 
@@ -1061,7 +1066,11 @@ export default function AvailabilityForm({
                   <div
                     role="group"
                     aria-label="表示形式の選択"
-                    className="join bg-base-200 rounded-lg"
+                    className={`join bg-base-200 rounded-lg ${
+                      isWeekdayModeActive
+                        ? "opacity-50 pointer-events-none"
+                        : ""
+                    }`}
                   >
                     <button
                       type="button"
@@ -1136,7 +1145,11 @@ export default function AvailabilityForm({
               </div>
 
               <div className="flex flex-col md:flex-row gap-3 mb-4">
-                <div className="bg-info/10 p-2 text-xs text-info rounded-lg border border-info/20 flex items-center flex-grow">
+                <div
+                  className={`bg-info/10 p-2 text-xs text-info rounded-lg border border-info/20 flex items-center flex-grow ${
+                    isWeekdayModeActive ? "opacity-50" : ""
+                  }`}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -1151,7 +1164,9 @@ export default function AvailabilityForm({
                     ></path>
                   </svg>
                   <span>
-                    セルをドラッグすると複数選択できます（タッチ操作も対応）
+                    {isWeekdayModeActive
+                      ? "曜日入力モード中です。設定を適用またはキャンセルしてから回答を送信してください。"
+                      : "セルをドラッグすると複数選択できます（タッチ操作も対応）"}
                   </span>
                 </div>
                 <button
@@ -1701,25 +1716,32 @@ export default function AvailabilityForm({
               )}
             </div>
 
-            <div className="pt-4 flex flex-wrap gap-2">
+            <div
+              className={`pt-4 flex flex-wrap gap-2 ${
+                isWeekdayModeActive ? "opacity-50" : ""
+              }`}
+            >
               <TermsCheckbox
                 isChecked={termsAccepted}
                 onChange={setTermsAccepted}
                 id="availability-form-terms"
+                disabled={isWeekdayModeActive}
               />
-              
+
               <button
                 type="submit"
                 className={`btn btn-primary w-full md:w-auto ${
-                  isSubmitting ? "opacity-70" : ""
+                  isSubmitting || isWeekdayModeActive ? "opacity-70" : ""
                 }`}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isWeekdayModeActive}
               >
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
                     {isEditing ? "保存中..." : "送信中..."}
                   </>
+                ) : isWeekdayModeActive ? (
+                  "曜日ごとの設定を完了してください"
                 ) : mode === "edit" ? (
                   "回答を更新する"
                 ) : (
@@ -1729,11 +1751,19 @@ export default function AvailabilityForm({
 
               {/* キャンセルボタン - 入力ページに戻る */}
               <a
-                href={isSubmitting ? "#" : `/event/${publicToken}`}
+                href={
+                  isSubmitting || isWeekdayModeActive
+                    ? "#"
+                    : `/event/${publicToken}`
+                }
                 className={`btn btn-outline w-full md:w-auto ${
-                  isSubmitting ? "opacity-60 pointer-events-none" : ""
+                  isSubmitting || isWeekdayModeActive
+                    ? "opacity-60 pointer-events-none"
+                    : ""
                 }`}
-                onClick={(e) => isSubmitting && e.preventDefault()}
+                onClick={(e) =>
+                  (isSubmitting || isWeekdayModeActive) && e.preventDefault()
+                }
               >
                 キャンセル
               </a>

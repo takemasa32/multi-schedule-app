@@ -64,6 +64,9 @@ export default function AvailabilitySummary({
     unavailableParticipants: [],
   });
 
+  // コンテナref追加 - ツールチップ外部クリック判定用
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // ツールチップ表示のためのポータル用参照
   const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
 
@@ -383,12 +386,27 @@ export default function AvailabilitySummary({
     });
   };
 
+  // タイプガードを定義
+  function isTouchEvent(
+    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
+  ): e is React.TouchEvent<HTMLElement> {
+    return "touches" in e || "changedTouches" in e;
+  }
+
   // ツールチップ表示処理（タッチ/クリック）
   const handleClick = (
-    event: React.MouseEvent | React.TouchEvent,
+    event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
     dateId: string
   ) => {
     event.stopPropagation(); // バブリングを防止
+    if (event.nativeEvent) {
+      event.nativeEvent.stopImmediatePropagation(); // ネイティブ伝播も止める
+    }
+
+    // タッチイベントの場合はデフォルト動作を防止
+    if (isTouchEvent(event)) {
+      event.preventDefault();
+    }
 
     // すでに同じ日程のツールチップが表示されている場合は閉じる
     if (tooltip.show && tooltip.dateId === dateId) {
@@ -400,12 +418,18 @@ export default function AvailabilitySummary({
       getParticipantsByDateId(dateId);
 
     // タッチ/クリック位置を取得
-    let x, y;
-    if ("touches" in event) {
+    let x: number, y: number;
+    if (isTouchEvent(event)) {
       // タッチイベントの場合
-      const touch = event.touches[0] || event.changedTouches[0];
-      x = Math.min(touch.clientX, window.innerWidth - 320);
-      y = Math.min(touch.clientY, window.innerHeight - 200);
+      const touch = event.touches?.[0] || event.changedTouches?.[0];
+      if (touch) {
+        x = Math.min(touch.clientX, window.innerWidth - 320);
+        y = Math.min(touch.clientY, window.innerHeight - 200);
+      } else {
+        // タッチが取得できない場合はデフォルト位置
+        x = window.innerWidth / 2 - 150;
+        y = window.innerHeight / 2 - 100;
+      }
     } else {
       // マウスイベントの場合
       x = Math.min(event.clientX, window.innerWidth - 320);
@@ -512,25 +536,34 @@ export default function AvailabilitySummary({
   };
 
   // ドキュメント全体のクリックとスクロールイベントを監視してツールチップを閉じる
-  const closeTooltipOnOutsideClick = useCallback(() => {
-    // ツールチップ表示中のみ処理
-    if (tooltip.show) {
-      setTooltip((prev) => ({ ...prev, show: false }));
-    }
-  }, [tooltip.show]);
+  const closeTooltipOnOutsideClick = useCallback(
+    (e: Event) => {
+      // ツールチップ表示中のみ処理
+      if (!tooltip.show) return;
+
+      // 可用性サマリーコンテナ内のクリックは無視
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setTooltip((prev) => ({ ...prev, show: false }));
+      }
+    },
+    [tooltip.show]
+  );
 
   // マウント時にグローバルイベントリスナーを追加
   useEffect(() => {
     // PCとタッチデバイス両方に対応
     document.addEventListener("click", closeTooltipOnOutsideClick);
-    document.addEventListener("touchstart", closeTooltipOnOutsideClick);
+    document.addEventListener("touchend", closeTooltipOnOutsideClick);
     // スクロール時にもツールチップを閉じる
     window.addEventListener("scroll", closeTooltipOnOutsideClick);
 
     // クリーンアップ関数
     return () => {
       document.removeEventListener("click", closeTooltipOnOutsideClick);
-      document.removeEventListener("touchstart", closeTooltipOnOutsideClick);
+      document.removeEventListener("touchend", closeTooltipOnOutsideClick);
       window.removeEventListener("scroll", closeTooltipOnOutsideClick);
     };
   }, [closeTooltipOnOutsideClick]);
@@ -642,7 +675,10 @@ export default function AvailabilitySummary({
   }
 
   return (
-    <div className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all">
+    <div
+      className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary"
+      ref={containerRef}
+    >
       <div className="p-2 sm:p-4">
         <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>
 
@@ -825,8 +861,28 @@ export default function AvailabilitySummary({
                             100
                           ); // 20〜100に制限
 
-                          // Tailwindの不透明度クラス名を生成
-                          const opacityClass = `bg-primary-500/${opacityValue}`;
+                          // Tailwindの不透明度クラス名をマップから取得
+                          const opacityClasses: Record<number, string> = {
+                            20: "bg-primary-500/20",
+                            25: "bg-primary-500/25",
+                            30: "bg-primary-500/30",
+                            35: "bg-primary-500/35",
+                            40: "bg-primary-500/40",
+                            45: "bg-primary-500/45",
+                            50: "bg-primary-500/50",
+                            55: "bg-primary-500/55",
+                            60: "bg-primary-500/60",
+                            65: "bg-primary-500/65",
+                            70: "bg-primary-500/70",
+                            75: "bg-primary-500/75",
+                            80: "bg-primary-500/80",
+                            85: "bg-primary-500/85",
+                            90: "bg-primary-500/90",
+                            95: "bg-primary-500/95",
+                            100: "bg-primary-500/100",
+                          };
+                          const opacityClass =
+                            opacityClasses[opacityValue] || "bg-primary-500/20";
 
                           // 確定済み日程用の追加クラス
                           const selectedClass = isSelected
