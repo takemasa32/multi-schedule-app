@@ -5,12 +5,13 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import siteConfig from "@/lib/site-config";
 import { ThemeProvider } from "@/components/theme-provider";
+import ExternalBrowserBanner from "@/components/browser-banner";
 
 export const metadata: Metadata = {
   title: siteConfig.meta.title,
   description: siteConfig.meta.description,
   viewport: {
-    width: 'device-width',
+    width: "device-width",
     initialScale: 1,
     maximumScale: 1,
   },
@@ -44,6 +45,7 @@ export default function RootLayout({
           defaultTheme="daysynth"
           enableSystem={false}
         >
+          <ExternalBrowserBanner />
           <Header />
           <main className="flex-grow container mx-auto px-4 py-6">
             {children}
