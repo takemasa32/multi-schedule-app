@@ -43,6 +43,12 @@ export default function AvailabilityForm({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false); // 更新モード用の状態
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
+  // 名前の重複確認用状態
+  const [showOverwriteConfirm, setShowOverwriteConfirm] =
+    useState<boolean>(false);
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  // フォーム送信の一時保存用
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   // すべての日程に対して初期状態を設定
   const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(
     () => {
@@ -445,16 +451,64 @@ export default function AvailabilityForm({
     return true;
   };
 
+  // 同じ名前の参加者がいるかチェックする関数
+  const checkExistingParticipant = async () => {
+    // 編集モードなら既に自分の回答なので確認不要
+    if (mode === "edit" || initialParticipant?.name === name) {
+      return false;
+    }
+
+    setIsCheckingName(true);
+
+    try {
+      const response = await fetch(
+        `/api/check-participant?eventId=${encodeURIComponent(
+          eventId
+        )}&name=${encodeURIComponent(name)}`
+      );
+      const data = await response.json();
+
+      setIsCheckingName(false);
+      return data.exists;
+    } catch (error) {
+      console.error("参加者チェックエラー:", error);
+      setIsCheckingName(false);
+      return false; // エラー時は存在しないとして扱う
+    }
+  };
+
   // この関数はServer Actionを呼び出す前の準備として使用
   const handleSubmit = async (e: React.FormEvent) => {
     if (!validateForm()) {
       e.preventDefault();
-    } else {
-      // 名前をLocalStorageに保存
-      localStorage.setItem("participantName", name);
-      setIsSubmitting(true);
-      // formのaction属性がServer Actionを呼び出すため
-      // ここでは送信準備のみ行う
+      return;
+    }
+
+    // フォームデータを取得
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    e.preventDefault(); // デフォルトの送信をキャンセル
+
+    // 名前をLocalStorageに保存
+    localStorage.setItem("participantName", name);
+
+    try {
+      // 既存の参加者がいるか確認
+      const exists = await checkExistingParticipant();
+
+      if (exists) {
+        // 既存の参加者がいる場合は確認ダイアログを表示
+        setPendingFormData(formData);
+        setShowOverwriteConfirm(true);
+      } else {
+        // 既存の参加者がいない場合はそのまま送信
+        setIsSubmitting(true);
+        await handleFormAction(formData);
+      }
+    } catch (error) {
+      console.error("送信エラー:", error);
+      setError("送信中にエラーが発生しました");
     }
   };
 
@@ -1015,7 +1069,6 @@ export default function AvailabilityForm({
           )}
 
           <form
-            action={handleFormAction}
             onSubmit={handleSubmit}
             className="space-y-4"
             onClick={(e) => {
@@ -1716,6 +1769,46 @@ export default function AvailabilityForm({
               )}
             </div>
 
+            {/* 名前重複時の確認ダイアログ */}
+            {showOverwriteConfirm && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                <div className="bg-base-100 p-6 rounded-lg shadow-xl max-w-md w-full">
+                  <h3 className="text-lg font-bold mb-4">
+                    同じ名前の回答が既に存在します
+                  </h3>
+                  <p className="mb-6">
+                    「{name}
+                    」さんの回答は既に登録されています。上書きしてもよろしいですか？
+                    <br />
+                    （以前の回答は削除されます）
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowOverwriteConfirm(false)}
+                      className="btn btn-outline"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setShowOverwriteConfirm(false);
+                        if (pendingFormData) {
+                          setIsSubmitting(true);
+                          await handleFormAction(pendingFormData);
+                          setPendingFormData(null);
+                        }
+                      }}
+                      className="btn btn-primary"
+                    >
+                      上書きする
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div
               className={`pt-4 flex flex-wrap gap-2 ${
                 isWeekdayModeActive ? "opacity-50" : ""
@@ -1731,14 +1824,21 @@ export default function AvailabilityForm({
               <button
                 type="submit"
                 className={`btn btn-primary w-full md:w-auto ${
-                  isSubmitting || isWeekdayModeActive ? "opacity-70" : ""
+                  isSubmitting || isWeekdayModeActive || isCheckingName
+                    ? "opacity-70"
+                    : ""
                 }`}
-                disabled={isSubmitting || isWeekdayModeActive}
+                disabled={isSubmitting || isWeekdayModeActive || isCheckingName}
               >
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
                     {isEditing ? "保存中..." : "送信中..."}
+                  </>
+                ) : isCheckingName ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm mr-2"></span>
+                    名前を確認中...
                   </>
                 ) : isWeekdayModeActive ? (
                   "曜日ごとの設定を完了してください"

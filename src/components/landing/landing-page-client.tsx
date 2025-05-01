@@ -10,9 +10,11 @@ import {
   Music,
   Gamepad2,
   Briefcase,
+  History,
 } from "lucide-react";
 import Card from "@/components/layout/Card";
 import siteConfig from "@/lib/site-config";
+import EventHistory from "@/components/event-history";
 
 /**
  * Responsive Landing Page
@@ -67,6 +69,46 @@ export default function LandingPageClient() {
       icon: Briefcase,
       title: "社内会議",
       desc: "部署横断のミーティング日程をスマートに。",
+    },
+  ];
+
+  // Comparison data
+  const comparisons = [
+    {
+      feature: "ログイン不要",
+      daysynth: "○",
+      tappy: "△",
+      chouseisan: "○",
+    },
+    {
+      feature: "ヒートマップ表示",
+      daysynth: "○",
+      tappy: "○",
+      chouseisan: "×",
+    },
+    {
+      feature: "複数予定管理",
+      daysynth: "○",
+      tappy: "○",
+      chouseisan: "△",
+    },
+    {
+      feature: "カレンダー連携",
+      daysynth: "○",
+      tappy: "×",
+      chouseisan: "×",
+    },
+    {
+      feature: "モバイル最適化",
+      daysynth: "○",
+      tappy: "○",
+      chouseisan: "○",
+    },
+    {
+      feature: "シンプルUI/UX",
+      daysynth: "○",
+      tappy: "△",
+      chouseisan: "△",
     },
   ];
 
@@ -264,6 +306,77 @@ export default function LandingPageClient() {
         </div>
       </section>
 
+      {/* COMPARISON */}
+      <section
+        id="comparison"
+        className="py-20 bg-gradient-to-b from-primary/10 to-base-200 px-4"
+      >
+        <div className="container mx-auto max-w-6xl">
+          <motion.h2
+            className="text-center text-3xl sm:text-4xl font-bold mb-4"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <span className="text-primary">DaySynth</span> の強み
+          </motion.h2>
+          <motion.p
+            className="text-center text-base-content/70 mb-10 max-w-2xl mx-auto"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={1}
+          >
+            他の日程調整サービスと比較すると、
+            <span className="font-bold text-primary">DaySynth</span>
+            の優位性が明確です。
+          </motion.p>
+          <div className="overflow-x-auto mb-8 shadow-lg rounded-lg">
+            <table className="table table-zebra w-full">
+              <thead className="bg-primary text-primary-content">
+                <tr>
+                  <th className="text-base">機能</th>
+                  <th className="text-base font-bold">DaySynth</th>
+                  <th className="text-base opacity-70">サービスT</th>
+                  <th className="text-base opacity-70">サービスC</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparisons.map((cmp) => (
+                  <tr key={cmp.feature}>
+                    <td className="font-medium">{cmp.feature}</td>
+                    <td className="font-bold text-primary">{cmp.daysynth}</td>
+                    <td>{cmp.tappy}</td>
+                    <td>{cmp.chouseisan}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <motion.div
+            className="text-center"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={2}
+          >
+            <div className="badge badge-primary badge-lg mb-4">
+              他にはない特徴
+            </div>
+            <p className="text-lg font-medium max-w-3xl mx-auto">
+              ヒートマップ表示とカレンダー連携を組み合わせた機能性、
+              ログイン不要の手軽さが
+              <span className="text-primary font-bold">DaySynth</span>
+              の最大の魅力です。
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section className="py-20 bg-base-100 px-4">
         <div className="container mx-auto max-w-4xl">
@@ -298,6 +411,42 @@ export default function LandingPageClient() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* EVENT HISTORY */}
+      <section className="py-16 bg-base-100 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            className="flex items-center justify-center gap-2 mb-6"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <History className="w-6 h-6 text-primary" />
+            <h2 className="text-center text-3xl font-bold">履歴</h2>
+          </motion.div>
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={1}
+          >
+            <EventHistory
+              maxDisplay={5}
+              title="過去に閲覧・作成したイベント"
+              showClearButton={true}
+            />
+
+            <div className="mt-4 text-center">
+              <Link href="/history" className="btn btn-outline btn-sm">
+                すべての履歴を見る
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 

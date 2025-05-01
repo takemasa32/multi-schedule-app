@@ -7,6 +7,7 @@ import siteConfig from "@/lib/site-config";
 import { ThemeProvider } from "@/components/theme-provider";
 import ExternalBrowserBanner from "@/components/browser-banner";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
+import AddToHomeScreenBanner from "@/components/add-to-home-screen";
 
 export const metadata: Metadata = {
   title: siteConfig.meta.title,
@@ -48,6 +49,7 @@ export default function RootLayout({
         >
           <GoogleAnalytics />
           <ExternalBrowserBanner />
+          <AddToHomeScreenBanner />
           <Header />
           <main className="flex-grow container mx-auto px-4 py-6">
             {children}

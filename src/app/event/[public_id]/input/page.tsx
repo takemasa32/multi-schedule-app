@@ -1,22 +1,50 @@
-import { getEvent } from "@/lib/actions";
-import { getEventDates } from "@/lib/actions";
-import { getParticipantById } from "@/lib/actions";
+// src/app/event/[public_id]/page.tsx
+import { getEvent, getEventDates, getParticipantById } from "@/lib/actions";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AvailabilityForm from "@/components/availability-form";
 import { EventHeader } from "@/components/event-header";
+import siteConfig from "@/lib/site-config";
+import { Metadata } from "next";
 
-export default async function EventInput({
+export async function generateMetadata({
   params,
-  searchParams,
 }: {
   params: Promise<{ public_id: string }>;
-  searchParams: Promise<{ participant_id?: string }>;
-}) {
-  // paramsとsearchParamsをawaitして取得
+}): Promise<Metadata> {
   const { public_id } = await params;
-  const awaitedSearchParams = await searchParams;
-  const participantId = awaitedSearchParams.participant_id;
+  const event = await getEvent(public_id);
+  if (!event) {
+    return {
+      title: `イベントが見つかりません | ${siteConfig.name.full}`,
+      description: `お探しのイベントは存在しないか、削除された可能性があります。`,
+    };
+  }
+  const eventTitle = event.title;
+  return {
+    title: `イベント詳細 | ${siteConfig.name.full}`,
+    description: `「${eventTitle}」の日程調整ページです。`,
+    robots: { index: false, follow: true },
+    openGraph: {
+      title: `イベント詳細 | ${siteConfig.name.full}`,
+      description: `「${eventTitle}」の日程調整ページです。`,
+      url: `${siteConfig.url}/event/${public_id}`,
+      images: [{ url: siteConfig.ogImage, width: 1200, height: 630 }],
+    },
+  };
+}
+
+type EventPageProps = {
+  params: Promise<{ public_id: string }>;
+  searchParams: Promise<{ participant_id?: string }>;
+};
+
+export default async function EventPage({
+  params,
+  searchParams,
+}: EventPageProps) {
+  const { public_id } = await params;
+  const { participant_id: participantId } = await searchParams;
 
   // イベント情報を取得
   const event = await getEvent(public_id);
@@ -65,7 +93,7 @@ export default async function EventInput({
       </div>
 
       <div className="bg-base rounded-lg shadow-md md:p-6">
-        <Suspense fallback={<div>フォームを読み込み中...</div>}>
+        <Suspense fallback={<div>読み込み中...</div>}>
           <AvailabilityForm
             eventId={event.id}
             eventDates={eventDates}
