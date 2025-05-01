@@ -10,9 +10,11 @@ import {
   Music,
   Gamepad2,
   Briefcase,
+  History,
 } from "lucide-react";
 import Card from "@/components/layout/Card";
 import siteConfig from "@/lib/site-config";
+import EventHistory from "@/components/event-history";
 
 /**
  * Responsive Landing Page
@@ -409,6 +411,42 @@ export default function LandingPageClient() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* EVENT HISTORY */}
+      <section className="py-16 bg-base-100 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            className="flex items-center justify-center gap-2 mb-6"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <History className="w-6 h-6 text-primary" />
+            <h2 className="text-center text-3xl font-bold">履歴</h2>
+          </motion.div>
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={1}
+          >
+            <EventHistory
+              maxDisplay={5}
+              title="過去に閲覧・作成したイベント"
+              showClearButton={true}
+            />
+
+            <div className="mt-4 text-center">
+              <Link href="/history" className="btn btn-outline btn-sm">
+                すべての履歴を見る
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { submitAvailability } from "@/app/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
+import CopyAvailabilityForm from "./copy-availability-form";
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -99,6 +100,9 @@ export default function AvailabilityForm({
     { value: 14, label: "2週間" },
     { value: 0, label: "すべて表示" },
   ];
+
+  // 予定コピー機能用の状態
+  const [showCopyForm, setShowCopyForm] = useState(false);
 
   // セルのスタイルと状態を返す関数
   const getCellStyle = useCallback(
@@ -1043,17 +1047,64 @@ export default function AvailabilityForm({
               >
                 お名前 <span className="text-error">*</span>
               </label>
-              <input
-                type="text"
-                id="participant_name"
-                name="participant_name"
-                className="input input-bordered w-full transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={isWeekdayModeActive}
-              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-grow">
+                  <input
+                    type="text"
+                    id="participant_name"
+                    name="participant_name"
+                    className="input input-bordered w-full transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    disabled={isWeekdayModeActive}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCopyForm(true)}
+                  className="btn btn-outline btn-sm normal-case"
+                  disabled={isWeekdayModeActive}
+                  aria-label="過去の予定をコピー"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  過去の予定をコピー
+                </button>
+              </div>
             </div>
+
+            {showCopyForm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="w-full max-w-lg">
+                  <CopyAvailabilityForm
+                    eventId={eventId}
+                    publicToken={publicToken}
+                    onSuccess={(message) => {
+                      setFeedback(message);
+                      setShowCopyForm(false);
+                      // ページをリロード
+                      if (typeof window !== "undefined") {
+                        window.location.href = `/event/${publicToken}`;
+                      }
+                    }}
+                    onClose={() => setShowCopyForm(false)}
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <div className="space-y-3">

@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { createEvent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import DateRangePicker from "./date-range-picker";
-import { TimeSlot } from "@/lib/utils";
+import { TimeSlot, addEventToHistory } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 
 export default function EventFormClient() {
@@ -51,6 +51,24 @@ export default function EventFormClient() {
       try {
         // サーバーアクションでイベント作成し、{ publicToken, adminToken } を返却する想定
         const result = await createEvent(formData);
+
+        // リダイレクト前に履歴に追加（ローカルストレージ）
+        if (
+          typeof window !== "undefined" &&
+          result &&
+          result.publicToken &&
+          result.adminToken
+        ) {
+          // イベントを履歴に追加
+          addEventToHistory({
+            id: result.publicToken,
+            title: title,
+            adminToken: result.adminToken,
+            createdAt: new Date().toISOString(),
+            isCreatedByMe: true,
+          });
+        }
+
         router.push(`${result.redirectUrl}`);
       } catch (err) {
         console.error("Form submission error:", err);
@@ -122,9 +140,9 @@ export default function EventFormClient() {
         <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
         <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
       </div>
-      <TermsCheckbox 
-        isChecked={termsAccepted} 
-        onChange={setTermsAccepted} 
+      <TermsCheckbox
+        isChecked={termsAccepted}
+        onChange={setTermsAccepted}
         id="event-form-terms"
       />
       <div className="flex justify-end mt-8">

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AvailabilitySummary from "@/components/availability-summary";
 import { CalendarLinks } from "@/components/calendar-links";
 import FinalizeEventSection from "@/components/finalize-event-section";
+import EventHistory from "@/components/event-history";
+import { addEventToHistory } from "@/lib/utils";
 
 type EventDate = {
   id: string;
@@ -46,6 +48,7 @@ export default function EventClientWrapper({
   participants,
   availabilities,
   finalizedDateIds,
+  isAdmin,
 }: EventClientWrapperProps) {
   // viewModeのステート追加
   const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
@@ -56,6 +59,18 @@ export default function EventClientWrapper({
   const finalizedDates = eventDates.filter((date) =>
     finalizedDateIds.includes(date.id)
   );
+
+  // ページロード時にイベント履歴に追加
+  useEffect(() => {
+    // イベント情報を履歴に追加
+    addEventToHistory({
+      id: event.public_token,
+      title: event.title,
+      adminToken: isAdmin ? event.admin_token ?? undefined : undefined,
+      createdAt: new Date().toISOString(),
+      isCreatedByMe: isAdmin,
+    });
+  }, [event.public_token, event.title, event.admin_token, isAdmin]);
 
   return (
     <>
@@ -249,6 +264,9 @@ export default function EventClientWrapper({
           />
         </div>
       </div>
+
+      {/* 過去のイベント履歴セクション */}
+      <EventHistory maxDisplay={3} />
     </>
   );
 }
