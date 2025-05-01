@@ -57,37 +57,36 @@ export default function AddToHomeScreenBanner() {
                 <li>
                   画面下部の
                   <span className="inline-flex items-center">
+                    {/* 正しい共有アイコン（四角＋上矢印） */}
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-4 w-4 mr-1"
-                      viewBox="0 0 20 20"
+                      viewBox="0 0 24 24"
                       fill="currentColor"
                     >
                       <path
-                        fillRule="evenodd"
-                        d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z"
-                        clipRule="evenodd"
+                        d="M12 3v12m0-12l-4 4m4-4l4 4"
+                        stroke="#000"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                      <rect
+                        x="4"
+                        y="13"
+                        width="16"
+                        height="8"
+                        rx="2"
+                        fill="#000"
+                        fillOpacity="0.1"
                       />
                     </svg>
                     共有
                   </span>
                   ボタンをタップ
                 </li>
-                <li>
-                  「
-                  <span className="inline-flex items-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-1"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                    </svg>
-                    ホーム画面に追加
-                  </span>
-                  」をタップ
-                </li>
+                <li>「ホーム画面に追加」をタップ</li>
                 <li>右上の「追加」をタップして完了</li>
               </ol>
             </div>
