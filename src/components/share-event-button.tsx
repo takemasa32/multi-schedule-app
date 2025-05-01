@@ -70,7 +70,7 @@ export default function ShareEventButton({
           d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a6 6 0 00-12 0v1a2 2 0 002 2h8a2 2 0 002-2v-1z"
         />
       </svg>
-      共有
+      イベントを共有
     </button>
   );
 }
