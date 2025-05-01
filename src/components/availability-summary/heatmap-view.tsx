@@ -1,5 +1,5 @@
 import React from "react";
-import { getOptimizedDateDisplay } from "./date-utils";
+import { getOptimizedDateDisplay, isTouchDevice } from "./date-utils";
 
 interface HeatmapViewProps {
   uniqueDates: Array<{
@@ -137,12 +137,15 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           hasData && onMouseEnter(e, cellData?.dateId || "")
                         }
                         onMouseLeave={() => hasData && onMouseLeave()}
-                        onClick={(e) =>
-                          hasData && onClick(e, cellData?.dateId || "")
-                        }
-                        onTouchEnd={(e) =>
-                          hasData && onClick(e, cellData?.dateId || "")
-                        }
+                        {...(isTouchDevice()
+                          ? {
+                              onTouchEnd: (e: React.TouchEvent<HTMLElement>) =>
+                                hasData && onClick(e, cellData?.dateId || ""),
+                            }
+                          : {
+                              onClick: (e: React.MouseEvent<HTMLElement>) =>
+                                hasData && onClick(e, cellData?.dateId || ""),
+                            })}
                       >
                         {hasData ? (
                           <div className="flex flex-col items-center justify-center h-full">
