@@ -255,6 +255,16 @@ export default function AvailabilitySummary({
     const { availableParticipants, unavailableParticipants } =
       getParticipantsByDateId(dateId);
 
+    // 日付・時間ラベルを取得
+    const eventDate = eventDates.find((d) => d.id === dateId);
+    const dateLabel = eventDate ? formatDate(eventDate.start_time) : "";
+    const timeLabel = eventDate
+      ? `${formatTime(eventDate.start_time, eventDates)}〜${formatTime(
+          eventDate.end_time,
+          eventDates
+        )}`
+      : "";
+
     // マウス位置を取得 - ウィンドウサイズに基づいて調整
     const x = Math.min(event.clientX, window.innerWidth - 320);
     const y = Math.min(event.clientY, window.innerHeight - 200);
@@ -266,6 +276,8 @@ export default function AvailabilitySummary({
       dateId,
       availableParticipants,
       unavailableParticipants,
+      dateLabel,
+      timeLabel,
     });
   };
 
@@ -295,6 +307,16 @@ export default function AvailabilitySummary({
 
     const { availableParticipants, unavailableParticipants } =
       getParticipantsByDateId(dateId);
+
+    // 日付・時間ラベルを取得
+    const eventDate = eventDates.find((d) => d.id === dateId);
+    const dateLabel = eventDate ? formatDate(eventDate.start_time) : "";
+    const timeLabel = eventDate
+      ? `${formatTime(eventDate.start_time, eventDates)}〜${formatTime(
+          eventDate.end_time,
+          eventDates
+        )}`
+      : "";
 
     // タッチ/クリック位置を取得
     let x: number, y: number;
@@ -326,6 +348,8 @@ export default function AvailabilitySummary({
       dateId,
       availableParticipants,
       unavailableParticipants,
+      dateLabel,
+      timeLabel,
     });
   };
 
