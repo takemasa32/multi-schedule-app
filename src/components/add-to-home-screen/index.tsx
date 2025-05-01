@@ -1,0 +1,114 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { isIOS, isMobileDevice, isStandalone } from "@/lib/utils";
+
+export default function AddToHomeScreenBanner() {
+  const [showBanner, setShowBanner] = useState(false);
+  const [isIOSDevice, setIsIOSDevice] = useState(false);
+
+  useEffect(() => {
+    // クライアントサイドでのみ実行
+    const mobile = isMobileDevice();
+    const ios = isIOS();
+    const standalone = isStandalone();
+
+    // ローカルストレージから以前に閉じた日時を取得
+    const lastClosed = localStorage.getItem("add_to_home_banner_closed");
+    const lastClosedDate = lastClosed ? new Date(parseInt(lastClosed)) : null;
+    const now = new Date();
+
+    // 7日間（604800000ミリ秒）経過していれば再表示
+    const shouldShowAgain =
+      !lastClosedDate || now.getTime() - lastClosedDate.getTime() > 604800000;
+
+    setIsIOSDevice(ios);
+    // モバイルデバイスで、すでにホーム画面に追加されていなくて、最近閉じていなければ表示
+    if (mobile && !standalone && shouldShowAgain) {
+      // すぐには表示せず、少し時間を置いてから表示
+      const timer = setTimeout(() => {
+        setShowBanner(true);
+      }, 3000); // 3秒後に表示
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // バナーを閉じる処理
+  const closeBanner = () => {
+    setShowBanner(false);
+    // 閉じた時間をローカルストレージに保存
+    localStorage.setItem("add_to_home_banner_closed", Date.now().toString());
+  };
+
+  if (!showBanner) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 p-4 bg-primary text-primary-content z-50 animate-slideUp">
+      <div className="container mx-auto flex items-start justify-between">
+        <div className="flex-1 pr-4">
+          <h3 className="font-bold text-lg mb-1">ホーム画面に追加しよう！</h3>
+          {isIOSDevice ? (
+            <div className="text-sm">
+              <p className="mb-2">iPhoneでより快適にご利用いただくには：</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>
+                  画面下部の
+                  <span className="inline-flex items-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 mr-1"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    共有
+                  </span>
+                  ボタンをタップ
+                </li>
+                <li>
+                  「
+                  <span className="inline-flex items-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 mr-1"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                    </svg>
+                    ホーム画面に追加
+                  </span>
+                  」をタップ
+                </li>
+                <li>右上の「追加」をタップして完了</li>
+              </ol>
+            </div>
+          ) : (
+            <div className="text-sm">
+              <p className="mb-2">より快適にご利用いただくには：</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>ブラウザの設定メニュー（⋮）をタップ</li>
+                <li>「ホーム画面に追加」を選択</li>
+              </ol>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={closeBanner}
+          className="btn btn-sm btn-circle btn-ghost text-primary-content"
+          aria-label="閉じる"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}

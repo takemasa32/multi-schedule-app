@@ -1,6 +1,41 @@
 /**
- * 日付フォーマット用ユーティリティ関数
+ * 日付フォーマット用ユーティリティ関数およびその他のユーティリティ
  */
+
+/**
+ * デバイス検出用のユーティリティ関数
+ */
+export function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
+
+export function isIOS(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+export function isAndroid(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return /Android/i.test(navigator.userAgent);
+}
+
+// Define an interface for iOS Navigator with standalone property
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
+export function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as NavigatorWithStandalone).standalone === true;
+}
 
 // Supabase クエリに関するインターフェース
 export interface SupabaseQueryInterface {
@@ -74,14 +109,14 @@ export function formatTime(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const hours = String(d.getHours()).padStart(2, "0");
   const minutes = String(d.getMinutes()).padStart(2, "0");
-  
+
   // 00:00は24:00として表示する条件があれば、ここでチェック
   if (hours === "00" && minutes === "00") {
     // 呼び出し側で前日の日付かどうかチェックが必要な場合は
     // そのロジックを追加する。基本的には単純に表示するだけ
     return "00:00";
   }
-  
+
   return `${hours}:${minutes}`;
 }
 
