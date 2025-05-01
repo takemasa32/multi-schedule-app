@@ -88,20 +88,16 @@ export default async function EventPage({
   // 有効な管理者かチェック（必ずboolean型に変換）
   const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
 
-  // 参加者を取得（ページネーション対応）
-  const participants = await getParticipants(event.id);
-
-  // イベント日程の時間帯を取得（ページネーション対応）
-  const eventDates = await getEventDates(event.id);
-
-  // 全回答データを取得（ページネーション対応）
-  const availabilities = await getAvailabilities(event.id);
-
-  // 確定した日程IDのリストを取得（新しい確定日程テーブルから）
-  let finalizedDateIds: string[] = [];
-  if (event.is_finalized) {
-    finalizedDateIds = await getFinalizedDateIds(event.id, event.final_date_id);
-  }
+  // 参加者・日程・出欠を並列取得
+  const [participants, eventDates, availabilities, finalizedDateIds] =
+    await Promise.all([
+      getParticipants(event.id),
+      getEventDates(event.id),
+      getAvailabilities(event.id),
+      event.is_finalized
+        ? getFinalizedDateIds(event.id, event.final_date_id)
+        : Promise.resolve([]),
+    ]);
 
   return (
     <>

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import AvailabilitySummary from "@/components/availability-summary";
 import { CalendarLinks } from "@/components/calendar-links";
 import FinalizeEventSection from "@/components/finalize-event-section";
 import EventHistory from "@/components/event-history";
 import { addEventToHistory } from "@/lib/utils";
+import AvailabilitySummary from "../availability-summary/index";
 
 type EventDate = {
   id: string;
