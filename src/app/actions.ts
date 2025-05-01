@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
@@ -71,9 +70,15 @@ export async function createEvent(formData: FormData) {
       throw new Error("候補日程の登録に失敗しました。イベント管理者に連絡してください。");
     }
 
-    // 成功時はイベント詳細ページへリダイレクト
-    // 管理者用クエリパラメータを追加
-    redirect(`/event/${publicToken}?admin=${adminToken}`);
+    // クライアントコンポーネントで履歴保存できるように情報を返す
+    const redirectUrl = `/event/${publicToken}?admin=${adminToken}`;
+
+    return {
+      success: true,
+      publicToken,
+      adminToken,
+      redirectUrl
+    };
 
   } catch (err) {
     // エラーログ出力

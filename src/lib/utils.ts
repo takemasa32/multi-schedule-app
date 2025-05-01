@@ -254,3 +254,92 @@ export async function fetchAllPaginatedWithOrder<T>(
 
   return allData;
 }
+
+/**
+ * 履歴に保存するイベント情報の型定義
+ */
+export interface EventHistoryItem {
+  id: string;           // イベントの公開ID
+  title: string;        // イベントのタイトル
+  adminToken?: string;  // 管理者トークン（作成したイベントの場合のみ）
+  createdAt: string;    // 作成日時またはアクセス日時（ISO文字列）
+  isCreatedByMe: boolean; // 自分が作成したかどうか
+}
+
+// ローカルストレージのキー
+const EVENT_HISTORY_KEY = 'multi_schedule_event_history';
+
+/**
+ * 過去のイベント履歴をローカルストレージから取得する
+ */
+export function getEventHistory(): EventHistoryItem[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const historyJson = localStorage.getItem(EVENT_HISTORY_KEY);
+    if (!historyJson) return [];
+
+    const history = JSON.parse(historyJson) as EventHistoryItem[];
+    return history;
+  } catch (error) {
+    console.error('イベント履歴の取得に失敗しました:', error);
+    return [];
+  }
+}
+
+/**
+ * イベントを履歴に追加する
+ * @param event 追加するイベント情報
+ * @param maxItems 履歴の最大保持数
+ */
+export function addEventToHistory(event: EventHistoryItem, maxItems = 10): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    let history = getEventHistory();
+
+    // 同じIDのイベントが既に存在する場合は削除（後で先頭に追加するため）
+    history = history.filter(item => item.id !== event.id);
+
+    // 新しいイベントを先頭に追加
+    history.unshift(event);
+
+    // 最大数を超えた場合、古いものから削除
+    if (history.length > maxItems) {
+      history = history.slice(0, maxItems);
+    }
+
+    // 保存
+    localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error('イベント履歴の保存に失敗しました:', error);
+  }
+}
+
+/**
+ * 特定のイベントを履歴から削除する
+ */
+export function removeEventFromHistory(eventId: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    let history = getEventHistory();
+    history = history.filter(item => item.id !== eventId);
+    localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error('イベント履歴の削除に失敗しました:', error);
+  }
+}
+
+/**
+ * 全てのイベント履歴を削除する
+ */
+export function clearEventHistory(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.removeItem(EVENT_HISTORY_KEY);
+  } catch (error) {
+    console.error('イベント履歴のクリアに失敗しました:', error);
+  }
+}

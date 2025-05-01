@@ -31,6 +31,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/history" className="hover:text-primary transition">
+                  閲覧履歴
+                </Link>
+              </li>
+              <li>
                 <Link href="/terms" className="hover:text-primary transition">
                   利用規約
                 </Link>

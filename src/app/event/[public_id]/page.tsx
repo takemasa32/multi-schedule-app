@@ -9,9 +9,8 @@ import { EventHeader } from "@/components/event-header";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 
-// Next.js 15.3.1でのParams型定義の変更に対応
 interface EventPageProps {
   params: Promise<{
     public_id: string;
@@ -20,6 +19,12 @@ interface EventPageProps {
     admin?: string;
   }>;
 }
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 // 動的メタデータ生成関数
 export async function generateMetadata({
