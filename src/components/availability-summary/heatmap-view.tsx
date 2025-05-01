@@ -146,6 +146,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                               onClick: (e: React.MouseEvent<HTMLElement>) =>
                                 hasData && onClick(e, cellData?.dateId || ""),
                             })}
+
                       >
                         {hasData ? (
                           <div className="flex flex-col items-center justify-center h-full">
