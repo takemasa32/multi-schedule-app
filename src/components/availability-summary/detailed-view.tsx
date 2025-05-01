@@ -12,11 +12,17 @@ interface DetailedViewProps {
     id: string;
     name: string;
   }>;
-  isParticipantAvailable: (participantId: string, dateId: string) => boolean | null;
+  isParticipantAvailable: (
+    participantId: string,
+    dateId: string
+  ) => boolean | null;
   finalizedDateIds: string[];
   onMouseEnter: (e: React.MouseEvent, dateId: string) => void;
   onMouseLeave: () => void;
-  onClick: (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>, dateId: string) => void;
+  onClick: (
+    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
+    dateId: string
+  ) => void;
   onEditClick?: (participantId: string, participantName: string) => void;
   publicToken?: string;
 }
@@ -38,10 +44,12 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   return (
     <div className="mt-4 overflow-x-auto fade-in">
       <div className="relative">
-        <table className="table w-full">
+        <table className="table table-xs w-full min-w-[400px]">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-base-200 z-10">参加者</th>
+              <th className="sticky left-0 bg-base-200 z-10 text-xs sm:text-sm">
+                参加者
+              </th>
               {eventDates.map((date, index, arr) => {
                 const currentDate = new Date(date.start_time);
                 let prevDate = null;
@@ -57,15 +65,15 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                   currentDate.getFullYear() === prevDate.getFullYear();
 
                 // 時刻表示を簡素化
-                const formattedTime = formatTime(date.start_time, eventDates).replace(
-                  /^0/,
-                  ""
-                );
+                const formattedTime = formatTime(
+                  date.start_time,
+                  eventDates
+                ).replace(/^0/, "");
 
                 return (
                   <th
                     key={date.id}
-                    className={`text-center whitespace-nowrap ${
+                    className={`text-center whitespace-nowrap text-xs sm:text-sm ${
                       finalizedDateIds?.includes(date.id)
                         ? "bg-success bg-opacity-10"
                         : ""

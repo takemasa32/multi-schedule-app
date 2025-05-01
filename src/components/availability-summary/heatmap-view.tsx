@@ -52,10 +52,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         </span>
       </div>
       <div className="overflow-x-auto">
-        <table className="table w-full text-center border-collapse">
+        <table className="table table-xs sm:table w-full text-center border-collapse min-w-[360px]">
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
-              <th className="text-left sticky left-0 top-0 bg-base-200 z-30 p-1 sm:p-2 text-xs sm:text-sm">
+              <th className="text-left sticky left-0 top-0 bg-base-200 z-30 p-1 sm:p-2 text-xs sm:text-sm min-w-[48px]">
                 時間
               </th>
               {uniqueDates.map((dateInfo, index, arr) => {
@@ -67,7 +67,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 return (
                   <th
                     key={dateInfo.date}
-                    className="text-center p-1 sm:px-2 sm:py-3 min-w-[50px] sm:min-w-[80px] text-xs sm:text-sm sticky top-0 bg-base-200 z-20"
+                    className="text-center p-1 sm:px-2 sm:py-3 min-w-[44px] sm:min-w-[80px] text-xs sm:text-sm sticky top-0 bg-base-200 z-20"
                   >
                     {optimizedDisplay.yearMonth && (
                       <>

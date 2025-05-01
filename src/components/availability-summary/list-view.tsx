@@ -14,23 +14,26 @@ interface ListViewProps {
   }>;
   onMouseEnter: (e: React.MouseEvent, dateId: string) => void;
   onMouseLeave: () => void;
-  onClick: (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>, dateId: string) => void;
+  onClick: (
+    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
+    dateId: string
+  ) => void;
   eventDates: Array<{ start_time: string; end_time: string }>;
 }
 
 /**
  * リスト表示モード
  */
-const ListView: React.FC<ListViewProps> = ({ 
-  summary, 
-  onMouseEnter, 
-  onMouseLeave, 
+const ListView: React.FC<ListViewProps> = ({
+  summary,
+  onMouseEnter,
+  onMouseLeave,
   onClick,
-  eventDates
+  eventDates,
 }) => {
   return (
     <div className="overflow-x-auto fade-in -mx-2 sm:mx-0">
-      <table className="table w-full">
+      <table className="table table-xs w-full min-w-[340px]">
         <thead>
           <tr>
             <th>日程</th>
@@ -47,19 +50,21 @@ const ListView: React.FC<ListViewProps> = ({
               } hover:bg-base-200 transition-colors`}
             >
               <td className="whitespace-nowrap">
-                <span className="font-medium">{item.formattedDate}</span>
+                <span className="font-medium text-xs sm:text-sm">
+                  {item.formattedDate}
+                </span>
                 {item.label && (
-                  <span className="ml-2 text-sm text-gray-500">
+                  <span className="ml-2 text-xs text-gray-500">
                     {item.label}
                   </span>
                 )}
                 {item.isSelected && (
-                  <span className="badge badge-success badge-sm ml-2">
+                  <span className="badge badge-success badge-xs ml-2">
                     確定
                   </span>
                 )}
               </td>
-              <td className="whitespace-nowrap">
+              <td className="whitespace-nowrap text-xs sm:text-sm">
                 {/* 時間表示を最適化 - 先頭の0を削除してコンパクトに */}
                 {formatTime(item.startTime, eventDates).replace(/^0/, "")}
                 <span className="text-xs text-gray-500">
@@ -77,16 +82,12 @@ const ListView: React.FC<ListViewProps> = ({
                 >
                   <div className="flex items-center">
                     <span className="w-3 h-3 rounded-full bg-success mr-1"></span>
-                    <span className="font-medium">
-                      {item.availableCount}
-                    </span>
+                    <span className="font-medium">{item.availableCount}</span>
                   </div>
                   <span>/</span>
                   <div className="flex items-center">
                     <span className="w-3 h-3 rounded-full bg-error mr-1"></span>
-                    <span className="font-medium">
-                      {item.unavailableCount}
-                    </span>
+                    <span className="font-medium">{item.unavailableCount}</span>
                   </div>
                 </div>
               </td>
