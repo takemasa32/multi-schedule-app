@@ -52,19 +52,22 @@ export default async function EventPage({
     notFound();
   }
 
-  // イベントの日程を取得
-  const eventDates = await getEventDates(event.id);
-
-  // 既存の参加者情報と回答を取得（編集モードの場合）
-  let existingParticipant = null;
-  let existingAvailabilities = null;
-
+  // 候補日程・既存参加者情報を並列取得
+  let eventDates,
+    existingParticipant = null,
+    existingAvailabilities = null;
   if (participantId) {
-    const result = await getParticipantById(participantId, event.id);
+    const [dates, result] = await Promise.all([
+      getEventDates(event.id),
+      getParticipantById(participantId, event.id),
+    ]);
+    eventDates = dates;
     if (result) {
       existingParticipant = result.participant;
       existingAvailabilities = result.availabilityMap;
     }
+  } else {
+    eventDates = await getEventDates(event.id);
   }
 
   const isEditMode = !!participantId && !!existingParticipant;

@@ -1020,25 +1020,6 @@ Next.js by Vercel - The React Framework
 。
 
 もし @tailwind base; や @tailwind components;、@tailwind utilities; を個別に使いたい場合は、代わりにそれぞれを明示的に書くスタイルにも移行可能です。
-```
 
-```
 
-3. Supabase プロジェクト設定: Supabase のウェブコンソールで新規プロジェクトを作成（無料枠内）。プロジェクト URL と Anon キー・Service キーを取得し、Next.js の環境変数（.env.local）に設定します。また、Postgres の拡張 uuid-ossp を有効化して UUID 生成関数を使えるようにします。RLS は全テーブルでデフォルト OFF なので、後でテーブル作成時に ON にします。
-4. データベーステーブル作成: Supabase の SQL エディタで前述のテーブルスキーマを実行し、events, event_dates, participants, availabilities を作成します。念のため ER 図を Supabase UI で確認し、FK の挙動（カスケード削除）が設定されているかチェックします。続いて各テーブルで ENABLE RLS を実行し、必要最低限のポリシーも SQL で追加します（ただし、最初は開発の利便のために「すべて許可」のポリシーを入れておき、動作検証後に厳密な条件に変更する方法もあり）。
-5. Supabase クライアント設定: Next.js プロジェクトに Supabase JS クライアント (@supabase/supabase-js) をインストールします。lib/supabase.ts にて createClient を使用し、Admin 用（service_role キー使用）のクライアントを初期化する関数を用意します。このとき型定義を楽にするため、Supabase の types ファイルを自動生成する（supabase gen types typescript --linked コマンド）ことも検討します。
-6. ページとコンポーネントの雛形作成: Next.js の App Router に沿って、app/page.tsx（イベント作成フォーム）と app/event/[public_id]/page.tsx（イベント詳細ページ）を作ります。ひとまず静的なフォームとダミーの表示でレイアウトを構築し、デザインを整えます。Tailwind クラスが適用されているかブラウザで確認します。まだ Server Action やデータ取得は実装せず、UI 骨組みを完成させます。
-7. イベント作成 Server Action 実装: フォームに<form action={createEvent}>を設定し、createEvent 関数をページコンポーネント内に実装します。まずはコンソールに入力値を表示する程度で疎通確認し、次に Supabase への INSERT を行って実際に DB にレコードが作成されることをテストします。成功したら redirect()で遷移させ、遷移先ページで public_token や admin_token を受け取れるようにします。ここは開発上難所になりうるため、挙動がおかしければ ChatGPT に質問しつつ解決します。
-8. イベント詳細ページのデータ読み込み: Server Components の機能で、event/[public_id]/page.tsx のコンポーネントを async 関数とし、props.params.public_id からイベント情報を Supabase 経由取得します。取得したイベントがなければ 404 を表示、有れば候補日程と集計用データも取得します（まずは単純に候補日程リストと参加者リストを別々に SELECT）。取得データをコンポーネントの JSX で表示し、ページ遷移時に実際の DB 内容が見えることを確認します。
-9. 参加者回答 Server Action 実装: submitAvailability 関数を event/[public_id]/page.tsx か別ファイルで実装します。フォーム要素を名前と checkbox 群に合わせて値を取得し、Supabase に INSERT/UPDATE します。最初はシンプルに participants と availabilities に無条件 INSERT して動作確認し、その後同名参加者の上書き対応などロジックを追加します。動作中にエラーが出たらコンソールログなどで調査し、必要ならトランザクション性を保つよう工夫します。開発時点では RLS は緩めているため、DB 操作エラーが起きにくいですが、ポリシー有効化後に問題ないかも意識します。
-10. 日程確定 Server Action 実装: 主催者モードでのみ出現するボタンに action を割り当て、finalizeEvent 関数を実装します。props.params.admin_token（admin 用ページ経由の場合）と確定する date_id を受け取り、events テーブルを UPDATE します。正常終了後は redirect ではなく同ページに留まるため revalidatePath でページを更新します。これにより確定状態の UI に切り替わるはずなので、その表示ロジック（is_finalized なら…）を実装しておきます。
-11. カレンダー連携機能実装: イベント確定後のページに、Google カレンダーリンクと ICS ダウンロードリンクを配置します。まず Google リンク文字列を組み立ててボタン（<a href={url} target="_blank">）にします。次に ICS 用に、Next.js の API Route (app/api/event/[public_id]/calendar/route.ts)を作成し、リクエストを受けて ICS を返す処理を書きます。簡単な静的文字列を返し、Outlook 等でインポートテストし問題ないか確認します。時間が合っていない等あればフォーマットを修正します。
-12. UI 仕上げとレスポンシブ対応: DaisyUI のテーマやコンポーネントを調整し、見た目を整えます。特にモバイル画面でのフォーム入力しやすさ（余白やボタン大きさ）を確認します。必要なら Grid や Flex でレイアウト微調整します。日本語文言の誤字や不自然な表現を校正します。
-13. エラーハンドリング改善: Server Action 内での throw を適切にキャッチし、ユーザーにフィードバックを出す処理を追加します。Next.js では Action 関数でエラーが起きると自動で error.js に飛ぶので、各ページに error.js を置いてメッセージを表示するか、あるいは Action 内で自前で結果コードを返す方式に変えるか検討します。簡易には error.js に「エラーが発生しました。時間をおいて再試行ください。」等を表示させます。
-14. E2E テスト/手動テスト実施: ローカルで全機能についてテストケースに沿って動作確認します。バリデーションが効いているか、データが正しく保存・表示されるかなどチェックリスト形式で確認します。不具合が見つかれば修正します。可能なら Playwright で一連の操作をスクリプト化し、CI で回せるようにしておきます。
-15. 本番デプロイ準備: Vercel プロジェクトを作成し、GitHub 連携で main ブランチからデプロイされるよう設定します。環境変数（Supabase の URL と anon キー、service キー）は Vercel の Dashboard に安全に登録します。本番用に RLS ポリシーを厳格版（トークンチェックあり）に更新し、Supabase の Anon キーを前端で使う場合に備えます。DNS やドメイン設定も行い、必要なら ourapp.example.com でアクセスできるようにします。
-16. 正式リリースと監視開始: デプロイが成功したら実際の URL で動作確認し、主催者となって 1 件イベントを試験的に運用します。あわせて、UptimeRobot・Sentry など監視ツールの設定を有効化します。友人に協力してもらい、外部からの使用感フィードバックを集めます。
-17. 改善サイクル: リリース後、フィードバックや自分の気づきをもとに機能追加や改善を続けます。LINE 通知の調査や、要望があれば参加者編集機能の実装など、優先順位を考慮して取り組みます。その際も ChatGPT を活用して実装方針を相談し、効率よく開発します。
-
-以上が今後の具体的アクションプランです。これらを順次遂行し、本仕様書に沿ったアプリケーションを完成させます。各ステップで問題が発生した場合は都度 AI やドキュメントを参照しつつ解決し、最終的に安定したサービスインを目指します。
 ```

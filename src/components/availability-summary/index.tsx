@@ -208,39 +208,45 @@ export default function AvailabilitySummary({
         availabilityRate:
           totalResponses > 0 ? availableCount / totalResponses : 0,
         formattedDate: formatDate(date.start_time),
-        formattedTime: `${formatTime(date.start_time, eventDates)}〜${formatTime(
-          date.end_time,
+        formattedTime: `${formatTime(
+          date.start_time,
           eventDates
-        )}`,
+        )}〜${formatTime(date.end_time, eventDates)}`,
         isSelected: finalizedDateIds?.includes(date.id) || false,
       };
     });
   }, [eventDates, availabilities, finalizedDateIds]);
 
   // 参加者が参加可能かどうかを判定
-  const isParticipantAvailable = useCallback((participantId: string, dateId: string) => {
-    const availability = availabilities.find(
-      (a) => a.participant_id === participantId && a.event_date_id === dateId
-    );
-    return availability ? availability.availability : null;
-  }, [availabilities]);
+  const isParticipantAvailable = useCallback(
+    (participantId: string, dateId: string) => {
+      const availability = availabilities.find(
+        (a) => a.participant_id === participantId && a.event_date_id === dateId
+      );
+      return availability ? availability.availability : null;
+    },
+    [availabilities]
+  );
 
   // 特定の日程に対して参加可能な参加者と不可能な参加者のリストを取得する関数
-  const getParticipantsByDateId = useCallback((dateId: string) => {
-    const availableParticipants: string[] = [];
-    const unavailableParticipants: string[] = [];
+  const getParticipantsByDateId = useCallback(
+    (dateId: string) => {
+      const availableParticipants: string[] = [];
+      const unavailableParticipants: string[] = [];
 
-    participants.forEach((participant) => {
-      const isAvailable = isParticipantAvailable(participant.id, dateId);
-      if (isAvailable === true) {
-        availableParticipants.push(participant.name);
-      } else if (isAvailable === false) {
-        unavailableParticipants.push(participant.name);
-      }
-    });
+      participants.forEach((participant) => {
+        const isAvailable = isParticipantAvailable(participant.id, dateId);
+        if (isAvailable === true) {
+          availableParticipants.push(participant.name);
+        } else if (isAvailable === false) {
+          unavailableParticipants.push(participant.name);
+        }
+      });
 
-    return { availableParticipants, unavailableParticipants };
-  }, [participants, isParticipantAvailable]);
+      return { availableParticipants, unavailableParticipants };
+    },
+    [participants, isParticipantAvailable]
+  );
 
   // ツールチップ表示処理
   const handleMouseEnter = (event: React.MouseEvent, dateId: string) => {
@@ -262,6 +268,9 @@ export default function AvailabilitySummary({
       unavailableParticipants,
     });
   };
+
+  // ツールチップを直近で開いたかどうかのフラグ
+  const justOpenedTooltipRef = useRef(false);
 
   // ツールチップ表示処理（タッチ/クリック）
   const handleClick = (
@@ -300,6 +309,10 @@ export default function AvailabilitySummary({
         x = window.innerWidth / 2 - 150;
         y = window.innerHeight / 2 - 100;
       }
+      justOpenedTooltipRef.current = true; // タッチで開いた直後はtrue
+      setTimeout(() => {
+        justOpenedTooltipRef.current = false;
+      }, 350); // 350ms後に解除
     } else {
       // マウスイベントの場合
       x = Math.min(event.clientX, window.innerWidth - 320);
@@ -376,21 +389,25 @@ export default function AvailabilitySummary({
   }, [eventDates, availabilities, finalizedDateIds]);
 
   // 参加者の回答データを取得して編集用に整形する
-  const getParticipantAvailabilities = useCallback((participantId: string) => {
-    const result: Record<string, boolean> = {};
+  const getParticipantAvailabilities = useCallback(
+    (participantId: string) => {
+      const result: Record<string, boolean> = {};
 
-    eventDates.forEach((date) => {
-      // 該当する参加者の回答を検索
-      const response = availabilities.find(
-        (a) => a.participant_id === participantId && a.event_date_id === date.id
-      );
+      eventDates.forEach((date) => {
+        // 該当する参加者の回答を検索
+        const response = availabilities.find(
+          (a) =>
+            a.participant_id === participantId && a.event_date_id === date.id
+        );
 
-      // 回答が見つかれば、その値を使用。なければデフォルトでfalse
-      result[date.id] = response ? response.availability : false;
-    });
+        // 回答が見つかれば、その値を使用。なければデフォルトでfalse
+        result[date.id] = response ? response.availability : false;
+      });
 
-    return result;
-  }, [eventDates, availabilities]);
+      return result;
+    },
+    [eventDates, availabilities]
+  );
 
   // 参加者の編集ボタンがクリックされたときの処理
   const handleEditClick = (participantId: string, participantName: string) => {
@@ -410,6 +427,11 @@ export default function AvailabilitySummary({
     (e: Event) => {
       // ツールチップ表示中のみ処理
       if (!tooltip.show) return;
+
+      // タッチ直後のtouchendは無視
+      if (e.type === "touchend" && justOpenedTooltipRef.current) {
+        return;
+      }
 
       // 可用性サマリーコンテナ内のクリックは無視
       if (

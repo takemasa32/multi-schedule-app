@@ -127,6 +127,7 @@ export async function submitAvailability(formData: FormData) {
 
     // 参加者の作成/特定
     let existingParticipantId = participantId;
+    let isNewParticipant = false;
 
     if (!existingParticipantId) {
       // 参加者IDが指定されていない場合は、名前で既存参加者を探す
@@ -158,6 +159,7 @@ export async function submitAvailability(formData: FormData) {
         }
 
         existingParticipantId = newParticipant.id;
+        isNewParticipant = true;
       }
     }
 
@@ -188,14 +190,27 @@ export async function submitAvailability(formData: FormData) {
       throw new Error("少なくとも1つの回答を入力してください");
     }
 
-    // 回答を登録
-    const { error: availabilityError } = await supabase
-      .from("availabilities")
-      .insert(availabilityEntries);
-
-    if (availabilityError) {
-      console.error("Availability submission error:", availabilityError);
-      throw new Error("回答の保存に失敗しました");
+    // 既存参加者の場合は削除とINSERTを並列化
+    if (!isNewParticipant) {
+      await Promise.all([
+        supabase
+          .from("availabilities")
+          .delete()
+          .eq("participant_id", existingParticipantId)
+          .eq("event_id", eventId),
+        supabase
+          .from("availabilities")
+          .insert(availabilityEntries)
+      ]);
+    } else {
+      // 新規参加者はINSERTのみ
+      const { error: availabilityError } = await supabase
+        .from("availabilities")
+        .insert(availabilityEntries);
+      if (availabilityError) {
+        console.error("Availability submission error:", availabilityError);
+        throw new Error("回答の保存に失敗しました");
+      }
     }
 
     // ページを再検証（キャッシュを更新）
