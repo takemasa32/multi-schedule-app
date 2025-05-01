@@ -45,7 +45,7 @@ const siteConfig: SiteConfig = {
   },
   logo: {
     main: "/logo/favicon.svg", // メインロゴ（すでに設定されているパス）
-    icon: "/favicon.ico", // アイコン（ファビコン）
+    icon: "/logo/favicon.ico", // アイコン（ファビコン）
     svg: "/logo/favicon.svg", // SVGロゴ（ヘッダーで使用）
     alt: "複数日程調整アプリ",
   },
