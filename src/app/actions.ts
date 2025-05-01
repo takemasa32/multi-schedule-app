@@ -213,6 +213,12 @@ export async function submitAvailability(formData: FormData) {
       }
     }
 
+    // 回答保存後にイベントの最終閲覧時刻を更新
+    await supabase
+      .from("events")
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq("id", eventId);
+
     // ページを再検証（キャッシュを更新）
     revalidatePath(`/event/${publicToken}`);
 
