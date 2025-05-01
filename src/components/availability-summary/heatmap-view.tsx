@@ -13,17 +13,23 @@ interface HeatmapViewProps {
     label: string;
     timeObj: Date;
   }>;
-  heatmapData: Map<string, {
-    dateId: string;
-    availableCount: number;
-    unavailableCount: number;
-    heatmapLevel: number;
-    isSelected: boolean;
-  }>;
+  heatmapData: Map<
+    string,
+    {
+      dateId: string;
+      availableCount: number;
+      unavailableCount: number;
+      heatmapLevel: number;
+      isSelected: boolean;
+    }
+  >;
   maxAvailable: number;
   onMouseEnter: (e: React.MouseEvent, dateId: string) => void;
   onMouseLeave: () => void;
-  onClick: (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>, dateId: string) => void;
+  onClick: (
+    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
+    dateId: string
+  ) => void;
 }
 
 /**
@@ -78,10 +84,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           <tbody>
             {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
               // 時間表示の最適化 - 1:00のような形式に変換
-              const formattedStartTime = timeSlot.startTime.replace(
-                /^0/,
-                ""
-              );
+              const formattedStartTime = timeSlot.startTime.replace(/^0/, "");
 
               // 時間が変わるときのみ表示する条件を追加
               const showTime =
@@ -108,62 +111,37 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
                     // テーマカラー単色スケール：最大参加者数に応じた不透明度
                     const ratio =
-                      maxAvailable > 0
-                        ? availableCount / maxAvailable
-                        : 0;
+                      maxAvailable > 0 ? availableCount / maxAvailable : 0;
 
                     // 不透明度を計算 - 5%刻みに丸める処理
                     const raw = 20 + ratio * 80; // 20〜100 の実数
                     const opacity5 = Math.round(raw / 5) * 5; // 5 の倍数へ丸め
-                    const opacityValue = Math.min(
-                      Math.max(opacity5, 20),
-                      100
-                    ); // 20〜100に制限
+                    const opacityValue =
+                      Math.min(Math.max(opacity5, 20), 100) / 100; // 0.2〜1.0に変換
 
-                    // Tailwindの不透明度クラス名をマップから取得
-                    const opacityClasses: Record<number, string> = {
-                      20: "bg-primary-500/20",
-                      25: "bg-primary-500/25",
-                      30: "bg-primary-500/30",
-                      35: "bg-primary-500/35",
-                      40: "bg-primary-500/40",
-                      45: "bg-primary-500/45",
-                      50: "bg-primary-500/50",
-                      55: "bg-primary-500/55",
-                      60: "bg-primary-500/60",
-                      65: "bg-primary-500/65",
-                      70: "bg-primary-500/70",
-                      75: "bg-primary-500/75",
-                      80: "bg-primary-500/80",
-                      85: "bg-primary-500/85",
-                      90: "bg-primary-500/90",
-                      95: "bg-primary-500/95",
-                      100: "bg-primary-500/100",
-                    };
-                    const opacityClass =
-                      opacityClasses[opacityValue] || "bg-primary-500/20";
-
-                    // 確定済み日程用の追加クラス
-                    const selectedClass = isSelected
-                      ? "border-2 border-success"
-                      : "";
+                    // セルの背景色と境界線のスタイル（動的な部分のみインラインスタイル）
+                    const cellStyle = {
+                      backgroundColor: hasData
+                        ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
+                        : "transparent",
+                    } as React.CSSProperties;
 
                     return (
                       <td
                         key={key}
-                        className={`relative p-0 sm:p-1 transition-all ${opacityClass} ${selectedClass} cursor-pointer`}
+                        style={cellStyle}
+                        className={`relative p-0 sm:p-1 transition-all cursor-pointer ${
+                          isSelected ? "border-2 border-success" : ""
+                        }`}
                         onMouseEnter={(e) =>
-                          hasData &&
-                          onMouseEnter(e, cellData?.dateId || "")
+                          hasData && onMouseEnter(e, cellData?.dateId || "")
                         }
                         onMouseLeave={() => hasData && onMouseLeave()}
                         onClick={(e) =>
-                          hasData &&
-                          onClick(e, cellData?.dateId || "")
+                          hasData && onClick(e, cellData?.dateId || "")
                         }
                         onTouchStart={(e) =>
-                          hasData &&
-                          onClick(e, cellData?.dateId || "")
+                          hasData && onClick(e, cellData?.dateId || "")
                         }
                       >
                         {hasData ? (
@@ -196,12 +174,16 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         <span>少ない</span>
         <div className="flex">
           {Array.from({ length: 11 }).map((_, i) => {
-            const opacity = 20 + i * 8; // Values from 20 to 100
+            const opacity = (20 + i * 8) / 100; // 0.2～1.0の値
             return (
               <div
                 key={i}
-                className={`w-2 h-2 sm:w-4 sm:h-4 border border-gray-200 bg-primary/${opacity}`}
-              ></div>
+                style={{
+                  backgroundColor: `rgba(var(--p-rgb, 87, 13, 248), ${opacity})`,
+                  border: "1px solid #e5e7eb",
+                }}
+                className="w-2 h-2 sm:w-4 sm:h-4"
+              />
             );
           })}
         </div>
