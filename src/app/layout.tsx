@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import ExternalBrowserBanner from "@/components/browser-banner";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
 import AddToHomeScreenBanner from "@/components/add-to-home-screen";
+import LineExternalBrowserRedirector from "@/components/browser-banner/LineExternalBrowserRedirector";
 
 export const metadata: Metadata = {
   title: siteConfig.meta.title,
@@ -48,6 +49,7 @@ export default function RootLayout({
           enableSystem={false}
         >
           <GoogleAnalytics />
+          <LineExternalBrowserRedirector />
           <ExternalBrowserBanner />
           <AddToHomeScreenBanner />
           <Header />
