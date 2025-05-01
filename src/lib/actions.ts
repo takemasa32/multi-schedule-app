@@ -165,6 +165,7 @@ export async function getParticipantById(participantId: string, eventId: string)
 export async function getEvent(publicToken: string) {
   const supabase = createSupabaseAdmin();
 
+  // 先にイベントを取得
   const { data, error } = await supabase
     .from('events')
     .select('*')
@@ -174,6 +175,14 @@ export async function getEvent(publicToken: string) {
   if (error) {
     console.error('イベント取得エラー:', error);
     return null;
+  }
+
+  if (data) {
+    // 最終閲覧時刻を更新
+    await supabase
+      .from('events')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('id', data.id);
   }
 
   return data;

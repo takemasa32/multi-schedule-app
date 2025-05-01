@@ -9,6 +9,8 @@ export interface TooltipState {
   dateId: string | null;
   availableParticipants: string[];
   unavailableParticipants: string[];
+  dateLabel?: string;
+  timeLabel?: string;
 }
 
 interface TooltipProps {
@@ -46,6 +48,20 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
       className="bg-base-100 border border-base-300 shadow-lg p-3 rounded-lg"
       onMouseEnter={(e) => e.stopPropagation()}
     >
+      {/* 日付・時間ラベルを先頭に表示 */}
+      {(tooltip.dateLabel || tooltip.timeLabel) && (
+        <div className="mb-2 text-base text-center">
+          {tooltip.dateLabel && (
+            <span className="font-bold text-primary">{tooltip.dateLabel}</span>
+          )}
+          {tooltip.dateLabel && tooltip.timeLabel && <span> </span>}
+          {tooltip.timeLabel && (
+            <span className="font-bold text-secondary">
+              {tooltip.timeLabel}
+            </span>
+          )}
+        </div>
+      )}
       {hasNoParticipants ? (
         <div className="text-center text-gray-500 py-2">
           <svg

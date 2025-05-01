@@ -1398,7 +1398,6 @@ export default function AvailabilityForm({
                 (viewMode === "heatmap" ||
                   viewMode === "table" ||
                   viewMode === "list") &&
-                pageSize > 0 &&
                 heatmapData.allDatesCount > pageSize && (
                   <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-4 bg-base-200 p-3 rounded-lg">
                     <div className="flex items-center gap-2">

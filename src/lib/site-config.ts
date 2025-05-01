@@ -34,8 +34,8 @@ interface SiteConfig {
 // サービス設定
 const siteConfig: SiteConfig = {
   name: {
-    full: "DaySynth - β版",
-    short: "DaySynth-β版",
+    full: "DaySynth",
+    short: "DaySynth",
     tagline: "みんなの予定を簡単調整",
   },
   meta: {
@@ -56,7 +56,7 @@ const siteConfig: SiteConfig = {
   url: "https://schedule.k-tkms.com/",
   ogImage: "/logo/web-app-manifest-512x512.png",
   illustrations: {
-    hero: "/logo/web-app-manifest-512x512.png", // Add the 'hero' property here
+    hero: "/logo/web-app-manifest-512x512.png",
   },
 };
 

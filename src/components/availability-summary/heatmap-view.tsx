@@ -1,5 +1,5 @@
 import React from "react";
-import { getOptimizedDateDisplay, isTouchDevice } from "./date-utils";
+import { getOptimizedDateDisplay } from "./date-utils";
 
 interface HeatmapViewProps {
   uniqueDates: Array<{
@@ -126,6 +126,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         : "transparent",
                     } as React.CSSProperties;
 
+                    // すべてのイベントハンドラを付与し、イベント内で分岐
                     return (
                       <td
                         key={key}
@@ -133,19 +134,43 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         className={`relative p-0 sm:p-1 transition-all cursor-pointer ${
                           isSelected ? "border-2 border-success" : ""
                         }`}
-                        onMouseEnter={(e) =>
-                          hasData && onMouseEnter(e, cellData?.dateId || "")
-                        }
-                        onMouseLeave={() => hasData && onMouseLeave()}
-                        {...(isTouchDevice()
-                          ? {
-                              onTouchEnd: (e: React.TouchEvent<HTMLElement>) =>
-                                hasData && onClick(e, cellData?.dateId || ""),
-                            }
-                          : {
-                              onClick: (e: React.MouseEvent<HTMLElement>) =>
-                                hasData && onClick(e, cellData?.dateId || ""),
-                            })}
+                        onMouseEnter={(e) => {
+                          if (!hasData) return;
+                          // タッチイベントではない場合のみ
+                          if (!("touches" in e)) {
+                            onMouseEnter(e, cellData?.dateId || "");
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          if (!hasData) return;
+                          onMouseLeave();
+                        }}
+                        onClick={(e) => {
+                          if (!hasData) return;
+                          // タッチイベントでなければ onClick
+                          if (!("touches" in e)) {
+                            onClick(e, cellData?.dateId || "");
+                          }
+                        }}
+                        onTouchEnd={(e) => {
+                          if (!hasData) return;
+                          if (e.cancelable) e.preventDefault();
+                          // 直前のタップから0.2秒未満の場合は無視（閉じない）
+                          // 型拡張: windowに_lastTouchEndを追加
+                          interface WindowWithLastTouchEnd extends Window {
+                            _lastTouchEnd?: number;
+                          }
+                          const win = window as WindowWithLastTouchEnd;
+                          if (
+                            win._lastTouchEnd &&
+                            Date.now() - win._lastTouchEnd < 200
+                          ) {
+                            // 何もしない（ツールチップを閉じない）
+                            return;
+                          }
+                          win._lastTouchEnd = Date.now();
+                          onClick(e, cellData?.dateId || "");
+                        }}
                       >
                         {hasData ? (
                           <div className="flex flex-col items-center justify-center h-full">

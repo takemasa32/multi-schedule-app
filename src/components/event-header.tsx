@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Card from "@/components/layout/Card";
+import ShareEventButton from "@/components/share-event-button";
 
 interface EventHeaderProps {
   title: string;
@@ -16,21 +16,12 @@ export function EventHeader({
   isFinalized,
   isAdmin,
 }: EventHeaderProps) {
-  const [copied, setCopied] = useState(false);
-
-  // 現在のURLをコピーする（adminパラメータを除外）
-  const copyEventLink = () => {
-    // 現在のURLから公開用URLのみを取得
+  // 現在のURLから公開用URLのみを取得
+  const getShareUrl = () => {
+    if (typeof window === "undefined") return "";
     const url = new URL(window.location.href);
-    url.searchParams.delete("admin"); // adminパラメータを削除
-
-    navigator.clipboard.writeText(url.toString()).then(
-      () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      },
-      (err) => console.error("URLのコピーに失敗しました", err)
-    );
+    url.searchParams.delete("admin");
+    return url.toString();
   };
 
   return (
@@ -52,50 +43,7 @@ export function EventHeader({
             </p>
           )}
         </div>
-        <button
-          onClick={copyEventLink}
-          className={`btn btn-sm ${
-            copied ? "btn-success" : "btn-outline"
-          } self-start whitespace-nowrap`}
-        >
-          {copied ? (
-            <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              コピー完了
-            </>
-          ) : (
-            <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5"
-                />
-              </svg>
-              共有リンクをコピー
-            </>
-          )}
-        </button>
+        <ShareEventButton url={getShareUrl()} className="self-start" />
       </div>
 
       {!isFinalized && isAdmin && (
@@ -113,9 +61,7 @@ export function EventHeader({
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span>
-            管理者として閲覧中です。このURLは参加者と共有しないでください。
-          </span>
+          <span>現在管理者として閲覧中です。</span>
         </div>
       )}
     </Card>
