@@ -140,7 +140,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         onClick={(e) =>
                           hasData && onClick(e, cellData?.dateId || "")
                         }
-                        onTouchStart={(e) =>
+                        onTouchEnd={(e) =>
                           hasData && onClick(e, cellData?.dateId || "")
                         }
                       >
