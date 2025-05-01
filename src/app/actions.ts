@@ -350,10 +350,23 @@ export async function getEventInfoFromUrl(eventUrl: string) {
       return { success: false, message: "イベント日程の取得に失敗しました" };
     }
 
+    // 参加者リストを取得
+    const { data: participants, error: participantsError } = await supabase
+      .from("participants")
+      .select("id, name")
+      .eq("event_id", event.id)
+      .order("created_at", { ascending: true });
+
+    if (participantsError) {
+      console.error("Participants retrieval error:", participantsError);
+      // 参加者取得エラーは致命的ではないので、処理は続行
+    }
+
     return {
       success: true,
       event,
-      eventDates
+      eventDates,
+      participants: participants || [] // 参加者リストがなければ空配列
     };
 
   } catch (err) {
@@ -435,15 +448,23 @@ export async function copyAvailabilityBetweenEvents(
       };
     }
 
-    // コピー元の出欠情報を取得
+    /**
+     * コピー元の出欠情報を取得
+     * 具体的なJOIN構文を使用して正確なデータ形式を取得
+     */
     const { data: sourceAvailabilities, error: availError } = await supabase
       .from("availabilities")
-      .select("event_date_id, availability, event_date:event_dates(start_time, end_time)")
+      .select("id, event_date_id, availability, event_dates!inner(id, start_time, end_time)")
       .eq("participant_id", sourceParticipant.id);
 
     if (availError || !sourceAvailabilities || sourceAvailabilities.length === 0) {
       console.error("Source availabilities retrieval error:", availError);
       return { success: false, message: "コピー元の回答データが見つかりません" };
+    }
+
+    // デバッグ：最初のアイテムをログ出力して構造を確認
+    if (sourceAvailabilities.length > 0) {
+      console.log("First availability item structure:", JSON.stringify(sourceAvailabilities[0], null, 2));
     }
 
     // 回答マッチング処理
@@ -470,14 +491,17 @@ export async function copyAvailabilityBetweenEvents(
       let matchFound = false;
 
       for (const sourceAvail of sourceAvailabilities) {
-        if (!sourceAvail.event_date) continue;
+        // イベント日程データがないものはスキップ
+        if (!sourceAvail.event_dates) continue;
 
-        // event_dateが配列の場合は最初の要素を取得し、そうでない場合はそのまま使用
-        const eventDate = Array.isArray(sourceAvail.event_date)
-          ? sourceAvail.event_date[0]
-          : sourceAvail.event_date;
+        // event_datesが配列かオブジェクトかを判断して適切に処理
+        const eventDate = Array.isArray(sourceAvail.event_dates)
+          ? sourceAvail.event_dates[0] // 配列の場合は最初の要素を使用
+          : sourceAvail.event_dates;   // オブジェクトの場合はそのまま使用
 
-        // eventDateがnullやundefinedでないことを確認
+        // デバッグ出力
+        console.log("eventDate structure:", JSON.stringify(eventDate, null, 2));
+
         if (!eventDate || !eventDate.start_time || !eventDate.end_time) continue;
 
         const sourceStart = new Date(eventDate.start_time);
@@ -537,7 +561,6 @@ export async function copyAvailabilityBetweenEvents(
         });
       }
     });
-
     // 既存の参加者を確認または作成
     let targetParticipantId;
 
