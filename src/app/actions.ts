@@ -299,3 +299,316 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
     };
   }
 }
+
+/**
+ * イベントURLから参加情報を取得
+ * @param eventUrl イベントのURL（例: https://domain.com/event/abc123） または publicToken
+ */
+export async function getEventInfoFromUrl(eventUrl: string) {
+  try {
+    let publicToken = eventUrl.trim();
+
+    // URLからトークンを抽出
+    if (publicToken.includes('/')) {
+      const urlParts = publicToken.split('/');
+      publicToken = urlParts[urlParts.length - 1];
+
+      // クエリパラメータの除去
+      if (publicToken.includes('?')) {
+        publicToken = publicToken.split('?')[0];
+      }
+    }
+
+    // トークンが空または無効な形式の場合
+    if (!publicToken || publicToken.length < 5) {
+      return { success: false, message: "無効なイベントURLまたはトークンです" };
+    }
+
+    const supabase = createSupabaseClient();
+
+    // イベント情報を取得
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, title, public_token, created_at")
+      .eq("public_token", publicToken)
+      .single();
+
+    if (eventError || !event) {
+      console.error("Event retrieval error:", eventError);
+      return { success: false, message: "イベントが見つかりません" };
+    }
+
+    // イベント日程を取得
+    const { data: eventDates, error: datesError } = await supabase
+      .from("event_dates")
+      .select("id, start_time, end_time")
+      .eq("event_id", event.id)
+      .order("start_time", { ascending: true });
+
+    if (datesError) {
+      console.error("Event dates retrieval error:", datesError);
+      return { success: false, message: "イベント日程の取得に失敗しました" };
+    }
+
+    return {
+      success: true,
+      event,
+      eventDates
+    };
+
+  } catch (err) {
+    console.error("Error in getEventInfoFromUrl:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+    };
+  }
+}
+
+/**
+ * イベント間で回答をコピー
+ * @param sourceEventUrl コピー元イベントURL
+ * @param targetEventId コピー先イベントID
+ * @param participantName 参加者名
+ * @param matchType マッチング方法（"exact"=完全一致、"time"=時間帯のみ一致、"day"=曜日のみ一致、"both"=時間帯と曜日の両方一致）
+ */
+export async function copyAvailabilityBetweenEvents(
+  sourceEventUrl: string,
+  targetEventId: string,
+  participantName: string,
+  matchType: "exact" | "time" | "day" | "both" = "both"
+) {
+  try {
+    if (!sourceEventUrl || !targetEventId || !participantName) {
+      return { success: false, message: "必須パラメータが不足しています" };
+    }
+
+    // コピー元イベント情報を取得
+    const sourceResult = await getEventInfoFromUrl(sourceEventUrl);
+    if (!sourceResult.success || !sourceResult.event) {
+      return sourceResult; // エラーを返す
+    }
+
+    const supabase = createSupabaseClient();
+
+    // コピー先イベント情報を取得
+    const { data: targetEvent, error: targetEventError } = await supabase
+      .from("events")
+      .select("id, public_token")
+      .eq("id", targetEventId)
+      .single();
+
+    if (targetEventError || !targetEvent) {
+      console.error("Target event retrieval error:", targetEventError);
+      return { success: false, message: "コピー先のイベントが見つかりません" };
+    }
+
+    // コピー先の日程を取得
+    const { data: targetDates, error: targetDatesError } = await supabase
+      .from("event_dates")
+      .select("id, start_time, end_time")
+      .eq("event_id", targetEventId);
+
+    if (targetDatesError || !targetDates || targetDates.length === 0) {
+      console.error("Target dates retrieval error:", targetDatesError);
+      return { success: false, message: "コピー先の日程情報が取得できません" };
+    }
+
+    // コピー元イベントの参加者を取得
+    const { data: sourceParticipant, error: participantError } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("event_id", sourceResult.event.id)
+      .eq("name", participantName)
+      .maybeSingle();
+
+    if (participantError) {
+      console.error("Source participant retrieval error:", participantError);
+      return { success: false, message: "参加者情報の取得に失敗しました" };
+    }
+
+    // 参加者が存在しない場合
+    if (!sourceParticipant) {
+      return {
+        success: false,
+        message: `コピー元のイベントに「${participantName}」という名前の参加者が見つかりません`
+      };
+    }
+
+    // コピー元の出欠情報を取得
+    const { data: sourceAvailabilities, error: availError } = await supabase
+      .from("availabilities")
+      .select("event_date_id, availability, event_date:event_dates(start_time, end_time)")
+      .eq("participant_id", sourceParticipant.id);
+
+    if (availError || !sourceAvailabilities || sourceAvailabilities.length === 0) {
+      console.error("Source availabilities retrieval error:", availError);
+      return { success: false, message: "コピー元の回答データが見つかりません" };
+    }
+
+    // 回答マッチング処理
+    interface AvailabilityMatch {
+      event_id: string;
+      event_date_id: string;
+      availability: boolean;
+      _sourceTimeKey?: string;
+      _targetTimeKey?: string;
+      _sourceDay?: number;
+      _targetDay?: number;
+    }
+
+    const availabilityMatches: AvailabilityMatch[] = [];
+
+    // マッチング方法に応じた処理
+    targetDates.forEach(targetDate => {
+      const targetStart = new Date(targetDate.start_time);
+      const targetEnd = new Date(targetDate.end_time);
+      const targetTimeKey = `${targetStart.getHours().toString().padStart(2, "0")}:${targetStart.getMinutes().toString().padStart(2, "0")}-${targetEnd.getHours().toString().padStart(2, "0")}:${targetEnd.getMinutes().toString().padStart(2, "0")}`;
+      const targetDay = targetStart.getDay(); // 0=日, 1=月, ..., 6=土
+
+      // 元の回答からマッチするものを探す
+      let matchFound = false;
+
+      for (const sourceAvail of sourceAvailabilities) {
+        if (!sourceAvail.event_date) continue;
+
+        // event_dateが配列の場合は最初の要素を取得し、そうでない場合はそのまま使用
+        const eventDate = Array.isArray(sourceAvail.event_date)
+          ? sourceAvail.event_date[0]
+          : sourceAvail.event_date;
+
+        // eventDateがnullやundefinedでないことを確認
+        if (!eventDate || !eventDate.start_time || !eventDate.end_time) continue;
+
+        const sourceStart = new Date(eventDate.start_time);
+        const sourceEnd = new Date(eventDate.end_time);
+        const sourceTimeKey = `${sourceStart.getHours().toString().padStart(2, "0")}:${sourceStart.getMinutes().toString().padStart(2, "0")}-${sourceEnd.getHours().toString().padStart(2, "0")}:${sourceEnd.getMinutes().toString().padStart(2, "0")}`;
+        const sourceDay = sourceStart.getDay();
+
+        // マッチング条件チェック
+        let isMatch = false;
+
+        switch (matchType) {
+          case "exact":
+            // 完全一致（日付と時間）- 現時点ではほぼ使わない
+            isMatch = sourceStart.toISOString() === targetStart.toISOString() &&
+                     sourceEnd.toISOString() === targetEnd.toISOString();
+            break;
+
+          case "time":
+            // 時間帯のみ一致
+            isMatch = sourceTimeKey === targetTimeKey;
+            break;
+
+          case "day":
+            // 曜日のみ一致
+            isMatch = sourceDay === targetDay;
+            break;
+
+          case "both":
+          default:
+            // 時間帯と曜日の両方一致（デフォルト）
+            isMatch = sourceTimeKey === targetTimeKey && sourceDay === targetDay;
+            break;
+        }
+
+        if (isMatch) {
+          availabilityMatches.push({
+            event_id: targetEventId,
+            event_date_id: targetDate.id,
+            availability: sourceAvail.availability,
+            // デバッグ用情報（実際には不要）
+            _sourceTimeKey: sourceTimeKey,
+            _targetTimeKey: targetTimeKey,
+            _sourceDay: sourceDay,
+            _targetDay: targetDay
+          });
+          matchFound = true;
+          break; // 最初のマッチで終了（複数マッチの場合は最初のみ採用）
+        }
+      }
+
+      // マッチしなかった場合はデフォルト（不参加=false）で追加
+      if (!matchFound) {
+        availabilityMatches.push({
+          event_id: targetEventId,
+          event_date_id: targetDate.id,
+          availability: false
+        });
+      }
+    });
+
+    // 既存の参加者を確認または作成
+    let targetParticipantId;
+
+    const { data: existingParticipant } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("event_id", targetEventId)
+      .eq("name", participantName)
+      .maybeSingle();
+
+    if (existingParticipant) {
+      // 既存参加者の過去の回答を削除
+      targetParticipantId = existingParticipant.id;
+
+      await supabase
+        .from("availabilities")
+        .delete()
+        .eq("participant_id", targetParticipantId);
+    } else {
+      // 新規参加者を作成
+      const responseToken = uuidv4();
+      const { data: newParticipant, error: newPartError } = await supabase
+        .from("participants")
+        .insert({
+          event_id: targetEventId,
+          name: participantName,
+          response_token: responseToken
+        })
+        .select("id")
+        .single();
+
+      if (newPartError || !newParticipant) {
+        console.error("Participant creation error:", newPartError);
+        return { success: false, message: "参加者の作成に失敗しました" };
+      }
+
+      targetParticipantId = newParticipant.id;
+    }
+
+    // 参加者IDをセット
+    const finalAvailabilities = availabilityMatches.map(item => ({
+      ...item,
+      participant_id: targetParticipantId
+    }));
+
+    // 回答を挿入
+    const { error: insertError } = await supabase
+      .from("availabilities")
+      .insert(finalAvailabilities.map(({_sourceTimeKey, _targetTimeKey, _sourceDay, _targetDay, ...rest}) => rest)); // デバッグ情報を除去
+
+    if (insertError) {
+      console.error("Availability insertion error:", insertError);
+      return { success: false, message: "回答のコピーに失敗しました" };
+    }
+
+    // 成功
+    revalidatePath(`/event/${targetEvent.public_token}`);
+
+    return {
+      success: true,
+      message: `${participantName}さんの回答をコピーしました`,
+      matches: availabilityMatches.filter(m => m.availability).length, // 参加可能な数
+      total: availabilityMatches.length, // 総数
+      participantId: targetParticipantId
+    };
+
+  } catch (err) {
+    console.error("Error in copyAvailabilityBetweenEvents:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+    };
+  }
+}
