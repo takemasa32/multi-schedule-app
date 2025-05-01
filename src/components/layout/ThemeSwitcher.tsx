@@ -19,7 +19,7 @@ export default function ThemeSwitcher() {
 
   const toggleTheme = () => {
     if (theme === "dark") {
-      setTheme("daysynth");
+      setTheme("light");
     } else {
       setTheme("dark");
     }
