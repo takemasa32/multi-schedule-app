@@ -47,7 +47,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
         <table className="table table-xs w-full min-w-[400px]">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-base-200 z-10 text-xs sm:text-sm">
+              <th className="sticky left-0 bg-base-200 z-20 text-xs sm:text-sm min-w-[90px] whitespace-nowrap shadow-md">
                 参加者
               </th>
               {eventDates.map((date, index, arr) => {
