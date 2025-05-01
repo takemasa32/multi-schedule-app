@@ -47,8 +47,15 @@ export default function AddToHomeScreenBanner() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 p-4 bg-primary text-primary-content z-50 animate-slideUp">
-      <div className="container mx-auto flex items-start justify-between">
-        <div className="flex-1 pr-4">
+      <div className="container mx-auto relative max-w-xl">
+        <button
+          onClick={closeBanner}
+          className="btn btn-sm btn-circle btn-ghost text-primary-content absolute top-2 right-2"
+          aria-label="閉じる"
+        >
+          ✕
+        </button>
+        <div className="pr-4">
           <h3 className="font-bold text-lg mb-1">ホーム画面に追加しよう！</h3>
           {isIOSDevice ? (
             <div className="text-sm">
@@ -100,13 +107,6 @@ export default function AddToHomeScreenBanner() {
             </div>
           )}
         </div>
-        <button
-          onClick={closeBanner}
-          className="btn btn-sm btn-circle btn-ghost text-primary-content"
-          aria-label="閉じる"
-        >
-          ✕
-        </button>
       </div>
     </div>
   );
