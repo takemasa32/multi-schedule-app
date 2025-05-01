@@ -483,6 +483,30 @@ export default function DateRangePicker({
                   >
                     2時間
                   </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="180"
+                  >
+                    3時間
+                  </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="360"
+                  >
+                    6時間
+                  </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="720"
+                  >
+                    12時間
+                  </option>
+                  <option
+                    className="bg-base-100 text-base-content hover:bg-primary hover:text-primary-content"
+                    value="1440"
+                  >
+                    24時間
+                  </option>
                 </select>
               </label>
             </div>
