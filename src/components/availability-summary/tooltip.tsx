@@ -122,12 +122,12 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                 <p>参加可能な方はいません</p>
               </div>
             )}
-          {tooltip.unavailableParticipants.length === 0 &&
+          {/* {tooltip.unavailableParticipants.length === 0 &&
             tooltip.availableParticipants.length > 0 && (
               <div className="mt-2 pt-2 border-t border-gray-200 text-gray-500 text-sm">
                 <p>参加不可の方はいません</p>
               </div>
-            )}
+            )} */}
         </>
       )}
     </div>,
