@@ -48,11 +48,11 @@ export default function RootLayout({
           defaultTheme="daysynth"
           enableSystem={false}
         >
+          <Header />
           <GoogleAnalytics />
           <LineExternalBrowserRedirector />
           <ExternalBrowserBanner />
           <AddToHomeScreenBanner />
-          <Header />
           <main className="flex-grow container mx-auto px-4 py-6">
             {children}
           </main>

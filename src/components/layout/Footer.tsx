@@ -44,18 +44,17 @@ export default function Footer() {
           </div>
 
           {/* 連絡先・著作権 */}
-          <div>
+          {/* <div>
             <h3 className="font-bold mb-4">お問い合わせ</h3>
             <p className="text-base-content/70 text-sm mb-4">
               ご質問やフィードバックがございましたら、お気軽にご連絡ください。
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* コピーライト */}
         <div className="border-t border-base-300 mt-6 pt-6 text-center text-sm text-base-content/60">
-          &copy; {siteConfig.copyright.year} {siteConfig.copyright.holder} All
-          Rights Reserved.
+          &copy; {siteConfig.copyright.year} {siteConfig.copyright.holder}
         </div>
       </div>
     </footer>

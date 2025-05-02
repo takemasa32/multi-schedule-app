@@ -26,7 +26,9 @@ export default function EventFormClient() {
       return;
     }
     if (timeSlots.length === 0) {
-      setError("少なくとも1つの時間枠を設定してください");
+      setError(
+        "イベント設定が正しくありません。少なくとも1つの時間枠を設定してください"
+      );
       return;
     }
     if (!termsAccepted) {
@@ -118,7 +120,12 @@ export default function EventFormClient() {
           onChange={(e) => setTitle(e.target.value)}
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
           disabled={isPending}
+          placeholder="例：〇〇の日程調整"
+          aria-describedby="title-hint"
         />
+        <p id="title-hint" className="text-xs text-gray-500 mt-1">
+          イベントの目的や内容が分かるタイトルを入力してください（必須）
+        </p>
       </div>
 
       <div>
@@ -133,12 +140,20 @@ export default function EventFormClient() {
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
           rows={3}
           disabled={isPending}
+          placeholder="（任意）備考や注意事項があれば記入してください。"
+          aria-describedby="description-hint"
         />
+        <p id="description-hint" className="text-xs text-gray-500 mt-1">
+          （任意）イベントの詳細や参加者へのメッセージを記入できます
+        </p>
       </div>
 
       <div className="card bg-base-100 shadow-sm border border-base-300 p-4">
         <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
         <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
+        <p className="text-xs text-gray-500 mt-2">
+          日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
+        </p>
       </div>
       <TermsCheckbox
         isChecked={termsAccepted}
