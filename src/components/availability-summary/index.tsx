@@ -63,6 +63,33 @@ export default function AvailabilitySummary({
     unavailableParticipants: [],
   });
 
+  // スクロール中かどうかを追跡するstate
+  const [isScrolling, setIsScrolling] = useState<boolean>(false);
+  const scrollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const touchMoveCountRef = useRef<number>(0);
+
+  // スクロール検出用のイベントハンドラ
+  const handleScroll = useCallback(() => {
+    // スクロール中はツールチップを非表示
+    if (tooltip.show) {
+      setTooltip((prev) => ({ ...prev, show: false }));
+    }
+
+    // スクロール中フラグを立てる
+    setIsScrolling(true);
+
+    // 既存のタイマーがあればクリア
+    if (scrollTimerRef.current) {
+      clearTimeout(scrollTimerRef.current);
+    }
+
+    // スクロール停止から少し待ってからフラグを戻す
+    scrollTimerRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 200); // 200msの待機時間
+  }, [tooltip.show]);
+
   // コンテナref追加 - ツールチップ外部クリック判定用
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -289,6 +316,9 @@ export default function AvailabilitySummary({
     event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
     dateId: string
   ) => {
+    // スクロール中は何もしない
+    if (isScrolling) return;
+
     event.stopPropagation(); // バブリングを防止
     if (event.nativeEvent) {
       event.nativeEvent.stopImmediatePropagation(); // ネイティブ伝播も止める
@@ -296,6 +326,12 @@ export default function AvailabilitySummary({
 
     // タッチイベントの場合はデフォルト動作を防止
     if (isTouchEvent(event)) {
+      // タッチムーブが多すぎる場合はスクロール操作と判断して何もしない
+      if (touchMoveCountRef.current > 3) {
+        touchMoveCountRef.current = 0;
+        return;
+      }
+
       event.preventDefault();
     }
 
@@ -352,6 +388,38 @@ export default function AvailabilitySummary({
       timeLabel,
     });
   };
+
+  // タッチ開始位置を記録
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (e.touches && e.touches[0]) {
+      touchStartPosRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+      touchMoveCountRef.current = 0;
+    }
+  }, []);
+
+  // タッチ移動でスクロール検出
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (!touchStartPosRef.current || !e.touches || !e.touches[0]) return;
+
+      const moveX = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+      const moveY = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+
+      // 少しでも動いたらカウント
+      if (moveX > 5 || moveY > 5) {
+        touchMoveCountRef.current += 1;
+
+        // 一定以上の移動が検出されたらスクロール中と判断
+        if (touchMoveCountRef.current > 3 && !isScrolling) {
+          handleScroll();
+        }
+      }
+    },
+    [handleScroll, isScrolling]
+  );
 
   // ツールチップ非表示処理
   const handleMouseLeave = () => {
@@ -474,15 +542,30 @@ export default function AvailabilitySummary({
     document.addEventListener("click", closeTooltipOnOutsideClick);
     document.addEventListener("touchend", closeTooltipOnOutsideClick);
     // スクロール時にもツールチップを閉じる
-    window.addEventListener("scroll", closeTooltipOnOutsideClick);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // タッチイベント検出
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
 
     // クリーンアップ関数
     return () => {
       document.removeEventListener("click", closeTooltipOnOutsideClick);
       document.removeEventListener("touchend", closeTooltipOnOutsideClick);
-      window.removeEventListener("scroll", closeTooltipOnOutsideClick);
+      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
     };
-  }, [closeTooltipOnOutsideClick]);
+  }, [
+    closeTooltipOnOutsideClick,
+    handleScroll,
+    handleTouchStart,
+    handleTouchMove,
+  ]);
 
   // 参加者がまだいない場合は表示しない
   if (participants.length === 0) {
@@ -493,6 +576,9 @@ export default function AvailabilitySummary({
     <div
       className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary"
       ref={containerRef}
+      onScroll={handleScroll}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       <div className="p-2 sm:p-4">
         <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>

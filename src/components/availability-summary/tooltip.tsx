@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 // ツールチップの状態を表す型
@@ -22,7 +22,26 @@ interface TooltipProps {
  * 参加者情報を表示するツールチップコンポーネント
  */
 export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
-  if (!tooltip.show || !portalElement) return null;
+  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(portalElement);
+  // portalElementが渡されない場合のフォールバック生成
+  useEffect(() => {
+    if (portalElement) {
+      setRootEl(portalElement);
+      return;
+    }
+    const id = "tooltip-portal";
+    let elem = document.getElementById(id) as HTMLDivElement | null;
+    if (!elem) {
+      elem = document.createElement("div");
+      elem.id = id;
+      document.body.appendChild(elem);
+    }
+    setRootEl(elem);
+    return () => {
+      // クリーンアップ不要（永続的にbodyに置く）
+    };
+  }, [portalElement]);
+  if (!tooltip.show || !rootEl) return null;
 
   const tooltipStyle = {
     position: "fixed",
@@ -47,6 +66,11 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
       style={tooltipStyle}
       className="bg-base-100 border border-base-300 shadow-lg p-3 rounded-lg"
       onMouseEnter={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }}
     >
       {/* 日付・時間ラベルを先頭に表示 */}
       {(tooltip.dateLabel || tooltip.timeLabel) && (
@@ -131,7 +155,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
         </>
       )}
     </div>,
-    portalElement
+    rootEl
   );
 };
 

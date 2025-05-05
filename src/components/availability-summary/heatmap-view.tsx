@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { getOptimizedDateDisplay } from "./date-utils";
 
 interface HeatmapViewProps {
@@ -44,6 +44,49 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   onMouseLeave,
   onClick,
 }) => {
+  // タッチ操作の状態を追跡
+  const [isTouchDragging, setIsTouchDragging] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // タッチ開始位置を記録
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches && e.touches.length === 1) {
+      touchStartXRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
+      setIsTouchDragging(false);
+    }
+  };
+
+  // タッチ移動量がしきい値を超えたらスクロール操作と判断
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (
+      touchStartXRef.current !== null &&
+      touchStartYRef.current !== null &&
+      e.touches &&
+      e.touches.length === 1
+    ) {
+      const diffX = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+      const diffY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+
+      // 小さな移動はタップとして扱い、大きな移動はスクロールと判断
+      if (diffX > 10 || diffY > 10) {
+        setIsTouchDragging(true);
+      }
+    }
+  };
+
+  // タッチ終了時の処理
+  const handleTouchEnd = () => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    // タッチ終了後も少しの間はドラッグ状態を維持（誤タップ防止）
+    setTimeout(() => {
+      setIsTouchDragging(false);
+    }, 100);
+  };
+
   return (
     <div className="fade-in">
       <div className="bg-base-100 p-1 sm:p-2 mb-2 text-xs sm:text-sm">
@@ -51,7 +94,13 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           色が濃いほど参加可能な人が多い時間帯です
         </span>
       </div>
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-x-auto"
+        ref={tableRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <table className="table table-xs sm:table w-full text-center border-collapse min-w-[360px]">
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
@@ -146,15 +195,16 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           onMouseLeave();
                         }}
                         onClick={(e) => {
-                          if (!hasData) return;
+                          if (!hasData || isTouchDragging) return;
                           // タッチイベントでなければ onClick
                           if (!("touches" in e)) {
                             onClick(e, cellData?.dateId || "");
                           }
                         }}
                         onTouchEnd={(e) => {
-                          if (!hasData) return;
+                          if (!hasData || isTouchDragging) return;
                           if (e.cancelable) e.preventDefault();
+
                           // 直前のタップから0.2秒未満の場合は無視（閉じない）
                           // 型拡張: windowに_lastTouchEndを追加
                           interface WindowWithLastTouchEnd extends Window {
