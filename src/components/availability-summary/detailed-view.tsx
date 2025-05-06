@@ -17,12 +17,6 @@ interface DetailedViewProps {
     dateId: string
   ) => boolean | null;
   finalizedDateIds: string[];
-  onMouseEnter: (e: React.MouseEvent, dateId: string) => void;
-  onMouseLeave: () => void;
-  onClick: (
-    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
-    dateId: string
-  ) => void;
   onEditClick?: (participantId: string, participantName: string) => void;
   publicToken?: string;
 }
@@ -35,9 +29,6 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   participants,
   isParticipantAvailable,
   finalizedDateIds,
-  onMouseEnter,
-  onMouseLeave,
-  onClick,
   onEditClick,
   publicToken,
 }) => {
@@ -154,13 +145,9 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                   return (
                     <td
                       key={date.id}
-                      className={`text-center transition-colors cursor-pointer ${
+                      className={`text-center transition-colors ${
                         isFinalized ? "bg-success bg-opacity-10" : ""
                       }`}
-                      onMouseEnter={(e) => onMouseEnter(e, date.id)}
-                      onMouseLeave={onMouseLeave}
-                      onClick={(e) => onClick(e, date.id)}
-                      onTouchStart={(e) => onClick(e, date.id)}
                     >
                       {isAvailable === true && (
                         <div className="text-success font-bold w-6 h-6 rounded-full bg-success bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">

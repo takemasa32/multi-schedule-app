@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 // ツールチップの状態を表す型
@@ -15,6 +15,8 @@ export interface TooltipState {
   lastEvent?: string;
   /** デバッグ用: 最後に更新されたタイムスタンプ */
   lastUpdate?: number;
+  /** 最後に開いたPointer種別（"touch"|"mouse"|"pen"） */
+  lastPointerType?: "touch" | "mouse" | "pen";
 }
 
 interface TooltipProps {
@@ -23,39 +25,15 @@ interface TooltipProps {
 }
 
 /**
- * デバッグ用: TooltipState の内容とデバイスタイプを表示するコンポーネント
- * 不要になったらこのブロックごと削除してください
- */
-const TooltipDebug: React.FC<{ tooltip: TooltipState }> = ({ tooltip }) => {
-  const [deviceType, setDeviceType] = React.useState<string>("判定中");
-  React.useEffect(() => {
-    const updateType = () => {
-      if (typeof window !== "undefined") {
-        setDeviceType(window.innerWidth < 640 ? "スマホ用" : "PC用");
-      }
-    };
-    updateType();
-    window.addEventListener("resize", updateType);
-    return () => window.removeEventListener("resize", updateType);
-  }, []);
-  return (
-    <div className="fixed bottom-2 right-2 z-[2000] bg-base-200 text-xs p-2 rounded shadow border border-base-300 max-w-xs break-all opacity-90">
-      <div className="font-bold mb-1 text-secondary">Tooltipデバッグ情報</div>
-      <div className="mb-1">
-        デバイスタイプ: <span className="font-mono">{deviceType}</span>
-      </div>
-      <pre className="whitespace-pre-wrap text-xs leading-tight">
-        {JSON.stringify(tooltip, null, 2)}
-      </pre>
-    </div>
-  );
-};
-
-/**
  * 参加者情報を表示するツールチップコンポーネント
  */
 export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(portalElement);
+  // 自動非表示タイマー用ref
+  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // タッチ操作中フラグ
+  const isTouchActiveRef = useRef<boolean>(false);
+
   // portalElementが渡されない場合のフォールバック生成
   useEffect(() => {
     if (portalElement) {
@@ -75,40 +53,52 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
     };
   }, [portalElement]);
 
-  // --- デバッグ表示: tooltip.showに関係なく常に表示 ---
-  // 不要になったら <TooltipDebug ... /> を削除してください
-  //
-  // 画面右下にデバッグ情報を表示
-  //
-  // ...既存のreturnの前に追加...
-  //
-  //
-  // ...existing code...
-  //
-  // ツールチップ本体の表示（show=falseでもデバッグは出る）
-  //
-  // ...existing code...
+  // スマホタッチで開いた場合は一定時間後に自動で非表示
+  useEffect(() => {
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+      autoHideTimerRef.current = null;
+    }
+    if (tooltip.show && tooltip.lastPointerType === "touch") {
+      autoHideTimerRef.current = setTimeout(() => {
+        if (tooltip.show && !isTouchActiveRef.current) {
+          window.dispatchEvent(new CustomEvent("tooltip:autohide"));
+        }
+      }, 3000);
+    }
+    return () => {
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current);
+        autoHideTimerRef.current = null;
+      }
+    };
+  }, [tooltip.show, tooltip.lastPointerType]);
 
   // 参加者情報が全くない場合
   const hasNoParticipants =
     tooltip.availableParticipants.length === 0 &&
     tooltip.unavailableParticipants.length === 0;
 
-  // --- デバッグ表示 ---
-  // show=falseでも必ずデバッグ情報を表示
-  //
-  // 既存のreturnの前にデバッグ表示を返す
-  //
-  //
-  // ...existing code...
-  //
-  // show=falseならツールチップ本体は出さずデバッグのみ返す
-  if (!rootEl) return <TooltipDebug tooltip={tooltip} />;
-  if (!tooltip.show) return <TooltipDebug tooltip={tooltip} />;
+  // ツールチップ自体へのポインターイベントハンドラ
+  const handleTooltipPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (e.pointerType === "touch") {
+      isTouchActiveRef.current = true;
+    }
+  };
+
+  const handleTooltipPointerUp = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (e.pointerType === "touch") {
+      isTouchActiveRef.current = false;
+    }
+  };
+
+  if (!rootEl) return null;
+  if (!tooltip.show) return null;
 
   return (
     <>
-      <TooltipDebug tooltip={tooltip} />
       {createPortal(
         <div
           style={{
@@ -124,11 +114,25 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             fontSize: "14px",
           }}
           className="bg-base-100 border border-base-300 shadow-lg p-3 rounded-lg"
-          onMouseEnter={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => {
+          onPointerDown={handleTooltipPointerDown}
+          onPointerUp={handleTooltipPointerUp}
+          onPointerEnter={(e) => {
             e.stopPropagation();
-            e.preventDefault();
+            if (autoHideTimerRef.current) {
+              clearTimeout(autoHideTimerRef.current);
+              autoHideTimerRef.current = null;
+            }
+          }}
+          onPointerLeave={(e) => {
+            e.stopPropagation();
+            if (tooltip.lastPointerType === "touch") {
+              autoHideTimerRef.current = setTimeout(() => {
+                window.dispatchEvent(new CustomEvent("tooltip:autohide"));
+              }, 3000);
+            }
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
           }}
         >
           {/* 日付・時間ラベルを先頭に表示 */}

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { isTouchDevice } from "./date-utils";
-import { Tooltip, TooltipState, isTouchEvent } from "./tooltip";
+import { Tooltip, TooltipState } from "./tooltip";
 import ListView from "./list-view";
 import HeatmapView from "./heatmap-view";
 import DetailedView from "./detailed-view";
 import { formatDate, formatTime, getDateString } from "./date-utils";
 import useDragScrollBlocker from "../../hooks/useDragScrollBlocker";
+import { useDeviceDetect } from "../../hooks/useDeviceDetect";
+import MobileInfoPanel from "./mobile-info-panel";
 import {
   calcTooltipPosition,
   buildDateTimeLabel,
@@ -59,6 +60,8 @@ export default function AvailabilitySummary({
   setViewMode,
   publicToken,
 }: AvailabilitySummaryProps) {
+  // useDeviceDetectは必ずトップレベルで呼び出す
+  const { isMobile } = useDeviceDetect();
   // ツールチップの状態
   const [tooltip, setTooltip] = useState<TooltipState>({
     show: false,
@@ -261,29 +264,9 @@ export default function AvailabilitySummary({
     [availabilities]
   );
 
-  // 特定の日程に対して参加可能な参加者と不可能な参加者のリストを取得する関数
-  const getParticipantsByDateId = useCallback(
-    (dateId: string) => {
-      const availableParticipants: string[] = [];
-      const unavailableParticipants: string[] = [];
-
-      participants.forEach((participant) => {
-        const isAvailable = isParticipantAvailable(participant.id, dateId);
-        if (isAvailable === true) {
-          availableParticipants.push(participant.name);
-        } else if (isAvailable === false) {
-          unavailableParticipants.push(participant.name);
-        }
-      });
-
-      return { availableParticipants, unavailableParticipants };
-    },
-    [participants, isParticipantAvailable]
-  );
-
   // ツールチップ表示処理（Pointerイベント）
   const handlePointerEnter = (
-    event: React.PointerEvent<HTMLElement>,
+    event: React.PointerEvent<Element>,
     dateId: string
   ) => {
     const { availableParticipants, unavailableParticipants } =
@@ -304,14 +287,41 @@ export default function AvailabilitySummary({
     });
   };
 
+  /**
+   * ツールチップ/モバイルパネル表示処理（Pointerイベント）
+   */
   const handlePointerClick = (
-    event: React.PointerEvent<HTMLElement>,
+    event: React.PointerEvent<Element>,
     dateId: string
   ) => {
     event.stopPropagation();
     if (event.nativeEvent) {
       event.nativeEvent.stopImmediatePropagation();
     }
+    const { availableParticipants, unavailableParticipants } =
+      fetchParticipantsByDate(participants, availabilities, dateId);
+    const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
+    if (isMobile) {
+      // モバイルは下部パネルで表示
+      if (tooltip.show && tooltip.dateId === dateId) {
+        setTooltip((prev) => ({ ...prev, show: false }));
+      } else {
+        setTooltip({
+          show: true,
+          x: 0,
+          y: 0,
+          dateId,
+          availableParticipants,
+          unavailableParticipants,
+          dateLabel,
+          timeLabel,
+          lastEvent: "mobile-tap",
+          lastUpdate: Date.now(),
+        });
+      }
+      return;
+    }
+    // ...既存のPC用ツールチップ表示ロジック...
     if (tooltip.show && tooltip.dateId === dateId) {
       setTooltip((prev) => ({
         ...prev,
@@ -321,9 +331,6 @@ export default function AvailabilitySummary({
       }));
       return;
     }
-    const { availableParticipants, unavailableParticipants } =
-      fetchParticipantsByDate(participants, availabilities, dateId);
-    const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
     setTooltip({
       show: true,
@@ -336,13 +343,11 @@ export default function AvailabilitySummary({
       timeLabel,
       lastEvent: `pointerup:${event.pointerType}`,
       lastUpdate: Date.now(),
+      lastPointerType: event.pointerType as "touch" | "mouse" | "pen",
     });
   };
 
-  const handlePointerEnd = (
-    event: React.PointerEvent<HTMLElement>,
-    dateId: string
-  ) => {
+  const handlePointerEnd = (event: React.PointerEvent<Element>) => {
     setTooltip((prev) => ({
       ...prev,
       show: false,
@@ -382,12 +387,6 @@ export default function AvailabilitySummary({
     },
     [handleScroll, isScrolling]
   );
-
-  // ツールチップ非表示処理
-  const handleMouseLeave = () => {
-    if (isTouchDevice()) return; // タッチデバイスではホバーイベントをスキップ
-    setTooltip((prev) => ({ ...prev, show: false }));
-  };
 
   // 最大参加可能者数を算出（セルごとの availableCount の最大値）
   const maxAvailable = useMemo(() => {
@@ -476,6 +475,9 @@ export default function AvailabilitySummary({
     }
   };
 
+  // ツールチップが直前に開かれたかを追跡するref
+  const justOpenedTooltipRef = useRef<boolean>(false);
+
   // ドキュメント全体のクリックとスクロールイベントを監視してツールチップを閉じる
   const closeTooltipOnOutsideClick = useCallback(
     (e: Event) => {
@@ -528,6 +530,13 @@ export default function AvailabilitySummary({
     handleTouchStart,
     handleTouchMove,
   ]);
+
+  // Tooltip自動非表示（スマホタップ時）
+  useEffect(() => {
+    const handler = () => setTooltip((prev) => ({ ...prev, show: false }));
+    window.addEventListener("tooltip:autohide", handler);
+    return () => window.removeEventListener("tooltip:autohide", handler);
+  }, []);
 
   // ドラッグ・スクロール判定
   const isDragging = useDragScrollBlocker(10);
@@ -584,13 +593,7 @@ export default function AvailabilitySummary({
 
         {/* リスト表示モード */}
         {viewMode === "list" && (
-          <ListView
-            summary={summary}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleClick}
-            eventDates={eventDates}
-          />
+          <ListView summary={summary} eventDates={eventDates} />
         )}
 
         {/* ヒートマップ表示モード */}
@@ -600,8 +603,8 @@ export default function AvailabilitySummary({
             uniqueTimeSlots={uniqueTimeSlots}
             heatmapData={heatmapData}
             maxAvailable={maxAvailable}
-            onPointerTooltipStart={handlePointerEnter}
-            onPointerTooltipEnd={handlePointerEnd}
+            onPointerTooltipStart={isMobile ? () => {} : handlePointerEnter}
+            onPointerTooltipEnd={isMobile ? () => {} : handlePointerEnd}
             onPointerTooltipClick={handlePointerClick}
             isDragging={isDragging}
           />
@@ -614,16 +617,26 @@ export default function AvailabilitySummary({
             participants={participants}
             isParticipantAvailable={isParticipantAvailable}
             finalizedDateIds={finalizedDateIds}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleClick}
             onEditClick={onShowParticipantForm ? handleEditClick : undefined}
             publicToken={publicToken}
           />
         )}
       </div>
-      {/* ツールチップコンポーネントをレンダリング */}
-      <Tooltip tooltip={tooltip} portalElement={tooltipPortalRef.current} />
+      {/* PCのみツールチップ */}
+      {!isMobile && (
+        <Tooltip tooltip={tooltip} portalElement={tooltipPortalRef.current} />
+      )}
+      {/* モバイルのみ下部パネル */}
+      {isMobile && (
+        <MobileInfoPanel
+          show={tooltip.show}
+          dateLabel={tooltip.dateLabel}
+          timeLabel={tooltip.timeLabel}
+          availableParticipants={tooltip.availableParticipants || []}
+          unavailableParticipants={tooltip.unavailableParticipants || []}
+          onClose={() => setTooltip((prev) => ({ ...prev, show: false }))}
+        />
+      )}
     </div>
   );
 }

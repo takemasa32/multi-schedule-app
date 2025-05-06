@@ -1,65 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import { getOptimizedDateDisplay } from "./date-utils";
-
-// デバッグ用タッチ情報型
-interface TouchDebugInfo {
-  lastEvent: string;
-  touchX: number;
-  touchY: number;
-  touchCount: number;
-  isDragging: boolean;
-  moveDistance: number;
-}
-
-// デバッグ表示コンポーネント（不要になったらこの行と下のコンポーネントを削除するだけでOK）
-const TouchDebugDisplay: React.FC<{ info: TouchDebugInfo }> = ({ info }) => (
-  <div className="my-4 p-3 bg-base-200 rounded-lg text-sm">
-    <h3 className="font-bold mb-2 text-xs text-secondary">
-      デバッグ情報 (開発用)
-    </h3>
-    <div className="grid grid-cols-2 gap-2 touch-none">
-      <div className="col-span-2 p-2 bg-base-100 rounded">
-        <span>
-          最後のイベント: <span className="font-mono">{info.lastEvent}</span>
-        </span>
-      </div>
-      <div className="p-2 bg-base-100 rounded">
-        <span>
-          X: <span className="font-mono">{info.touchX}</span>
-        </span>
-      </div>
-      <div className="p-2 bg-base-100 rounded">
-        <span>
-          Y: <span className="font-mono">{info.touchY}</span>
-        </span>
-      </div>
-      <div className="p-2 bg-base-100 rounded">
-        <span>
-          タッチ数: <span className="font-mono">{info.touchCount}</span>
-        </span>
-      </div>
-      <div className="p-2 bg-base-100 rounded">
-        <span>
-          ドラッグ状態:{" "}
-          <span className="font-mono">
-            {info.isDragging ? "はい" : "いいえ"}
-          </span>
-        </span>
-      </div>
-      <div className="col-span-2 p-2 bg-base-100 rounded">
-        <span>
-          移動距離:{" "}
-          <span className="font-mono">{info.moveDistance.toFixed(2)}px</span>
-        </span>
-      </div>
-      <div className="col-span-2 text-center mt-2">
-        <span className="text-xs text-gray-500">
-          ↑ ヒートマップ表全体のタッチ操作がここに反映されます
-        </span>
-      </div>
-    </div>
-  </div>
-);
 
 interface HeatmapViewProps {
   uniqueDates: Array<{
@@ -84,10 +24,13 @@ interface HeatmapViewProps {
     }
   >;
   maxAvailable: number;
-  onPointerTooltipStart: (e: React.PointerEvent, dateId: string) => void;
-  onPointerTooltipEnd: (e: React.PointerEvent, dateId: string) => void;
+  onPointerTooltipStart: (
+    e: React.PointerEvent<Element>,
+    dateId: string
+  ) => void;
+  onPointerTooltipEnd: (e: React.PointerEvent<Element>, dateId: string) => void;
   onPointerTooltipClick: (
-    e: React.PointerEvent<HTMLElement>,
+    e: React.PointerEvent<Element>,
     dateId: string
   ) => void;
   isDragging?: boolean;
@@ -112,16 +55,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   const touchStartYRef = useRef<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  // デバッグ用タッチ情報
-  const [touchDebug, setTouchDebug] = useState<TouchDebugInfo>({
-    lastEvent: "なし",
-    touchX: 0,
-    touchY: 0,
-    touchCount: 0,
-    isDragging: false,
-    moveDistance: 0,
-  });
-
   // タッチ開始位置を記録
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches && e.touches.length === 1) {
@@ -130,14 +63,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
       touchStartXRef.current = x;
       touchStartYRef.current = y;
       isDraggingRef.current = false;
-      setTouchDebug({
-        lastEvent: "start",
-        touchX: x,
-        touchY: y,
-        touchCount: e.touches.length,
-        isDragging: false,
-        moveDistance: 0,
-      });
     }
   };
 
@@ -153,30 +78,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
       const y = e.touches[0].clientY;
       const diffX = Math.abs(x - touchStartXRef.current);
       const diffY = Math.abs(y - touchStartYRef.current);
-      const moveDistance = Math.sqrt(diffX * diffX + diffY * diffY);
       if (diffX > 10 || diffY > 10) {
         isDraggingRef.current = true;
       }
-      setTouchDebug({
-        lastEvent: "move",
-        touchX: x,
-        touchY: y,
-        touchCount: e.touches.length,
-        isDragging: isDraggingRef.current,
-        moveDistance,
-      });
     }
   };
 
   // タッチ終了時の処理
   const handleTouchEnd = () => {
-    setTouchDebug((prev) => ({
-      ...prev,
-      lastEvent: "end",
-      touchCount: 0,
-      isDragging: false,
-      moveDistance: 0,
-    }));
     touchStartXRef.current = null;
     touchStartYRef.current = null;
     isDraggingRef.current = false;
@@ -291,6 +200,9 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           if (!hasData || isDragging) return;
                           onPointerTooltipEnd?.(e, cellData?.dateId || "");
                         }}
+                        /**
+                         * セルのPointerUpでツールチップ表示（スマホはタップで即表示）
+                         */
                         onPointerUp={(e) => {
                           if (!hasData || isDragging) return;
                           onPointerTooltipClick?.(e, cellData?.dateId || "");
@@ -341,9 +253,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         </div>
         <span>多い</span>
       </div>
-
-      {/* デバッグ情報表示（不要になったら下行を削除するだけでOK） */}
-      <TouchDebugDisplay info={touchDebug} />
     </div>
   );
 };
