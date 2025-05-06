@@ -102,8 +102,6 @@ export default function AvailabilityForm({
     { value: 3, label: "3日" },
     { value: 5, label: "5日" },
     { value: 7, label: "1週間" },
-    { value: 14, label: "2週間" },
-    { value: 0, label: "すべて表示" },
   ];
 
   // セルのスタイルと状態を返す関数
