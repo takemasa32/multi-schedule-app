@@ -125,7 +125,7 @@ export default function LandingPageClient() {
 
   return (
     <>
-      {/* HERO */}
+      {/* HERO + ブランドメッセージ */}
       <section className="bg-gradient-to-b from-primary/20 to-base-100 pt-24 pb-16 md:pb-24 px-4">
         <div className="container mx-auto max-w-6xl flex flex-col md:flex-row items-center gap-12">
           <motion.div
@@ -136,25 +136,37 @@ export default function LandingPageClient() {
             variants={fadeUp}
             custom={0}
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-              複数の日程から <br />
-              <span className="text-primary">最適な予定</span> を見つけよう
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-4">
+              <span className="text-primary">DaySynth</span>
             </h1>
-            <p className="text-lg sm:text-xl text-base-content/70 mb-10">
-              候補日リンクを共有するだけ。ログイン不要で全員のスケジュールが一目瞭然。
+            <div className="mb-4">
+              <span className="inline-block text-lg font-bold text-primary bg-primary/10 rounded px-2 py-1 mr-2">
+                候補を重ね、最適日を可視化する。
+              </span>
+            </div>
+            <p className="text-lg sm:text-xl text-base-content/80 mb-2">
+              「Synth」には“合成”だけでなく「重ねる」意味も込めています。
             </p>
-            <div className="flex flex-wrap gap-4">
+            <p className="text-base-content/70 mb-6">
+              参加者それぞれの予定を重ね合わせ、
+              <br className="hidden md:inline" />
+              <span className="font-bold text-primary">
+                重なり合う情報からベストな日程を一瞬で導き出す
+              </span>
+              新しい日程調整体験を。
+            </p>
+            <div className="flex flex-wrap gap-4 mb-4">
               <Link href="/create" className="btn btn-primary btn-lg shadow-lg">
                 今すぐイベントを作成
               </Link>
-              <Link href="#features" className="btn btn-outline btn-lg">
-                詳しく見る
+              <Link href="#concept" className="btn btn-outline btn-lg">
+                サービスの特徴
               </Link>
             </div>
           </motion.div>
 
           <motion.div
-            className="relative md:w-1/2 h-64 md:h-[28rem]"
+            className="relative md:w-1/2 h-64 md:h-[28rem] overflow-hidden"
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{
               opacity: 1,
@@ -168,9 +180,78 @@ export default function LandingPageClient() {
               alt={siteConfig.logo.alt}
               fill
               priority
-              className="object-contain drop-shadow-xl"
+              className="object-contain drop-shadow-xl max-w-full max-h-full"
             />
+            {/* レイヤー重ね合わせのイメージを追加 */}
+            <div className="absolute left-8 top-8 w-40 max-w-full h-8 bg-primary/20 rounded-lg blur-sm z-10 rotate-6" />
+            <div className="absolute left-16 top-16 w-40 max-w-full h-8 bg-secondary/20 rounded-lg blur-sm z-20 -rotate-3" />
+            <div className="absolute left-24 top-24 w-40 max-w-full h-8 bg-accent/20 rounded-lg blur-sm z-30 rotate-2" />
           </motion.div>
+        </div>
+      </section>
+
+      {/* サービス名の由来・Layeringコンセプト説明 */}
+      <section
+        id="concept"
+        className="py-16 bg-base-100 px-4 border-b border-base-200"
+      >
+        <div className="container mx-auto max-w-4xl">
+          <motion.h2
+            className="text-2xl sm:text-3xl font-bold mb-4 text-center"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={0}
+          >
+            サービス名「DaySynth」に込めた意味
+          </motion.h2>
+          <motion.div
+            className="text-base-content/80 text-center mb-8"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={1}
+          >
+            <p className="mb-2">
+              <span className="font-bold text-primary">Synth</span>{" "}
+              には「合成（Synthesis）」と「重ね合わせ（Layering）」の2つの意味を込めています。
+            </p>
+            <p>
+              参加者それぞれの予定を重ねて全体像を可視化し、
+              <br className="hidden md:inline" />
+              <span className="font-bold">
+                重なり合う情報を一望しながら最適日を生み出す
+              </span>
+              ──
+              <br />
+              それが <span className="font-bold text-primary">DaySynth</span>
+              のコンセプトです。
+            </p>
+          </motion.div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="bg-primary/10">
+              <div className="font-bold text-primary mb-1">Day</div>
+              <div className="text-base-content/80">
+                一日単位のスケジュール、日付を象徴
+              </div>
+            </Card>
+            <Card className="bg-secondary/10">
+              <div className="font-bold text-secondary mb-1">
+                Synth = Synthesis
+              </div>
+              <div className="text-base-content/80">
+                複数の候補情報をまとめて最適解を導き出す
+              </div>
+            </Card>
+            <Card className="bg-accent/10">
+              <div className="font-bold text-accent mb-1">Synth = Layering</div>
+              <div className="text-base-content/80">
+                各参加者の予定や時間帯のレイヤーを重ね、全体像を可視化
+              </div>
+            </Card>
+          </div>
         </div>
       </section>
 

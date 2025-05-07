@@ -1,6 +1,9 @@
 import React from "react";
 import { formatTime } from "./date-utils";
 
+/**
+ * リスト表示モードのプロパティ
+ */
 interface ListViewProps {
   summary: Array<{
     dateId: string;
@@ -12,10 +15,19 @@ interface ListViewProps {
     isSelected: boolean;
     formattedDate: string;
   }>;
-  onMouseEnter: (e: React.MouseEvent, dateId: string) => void;
-  onMouseLeave: () => void;
-  onClick: (
-    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
+  /**
+   * ツールチップ表示用: Pointerイベントで呼ばれる
+   */
+  onPointerTooltipStart?: (
+    e: React.PointerEvent<Element>,
+    dateId: string
+  ) => void;
+  onPointerTooltipEnd?: (
+    e: React.PointerEvent<Element>,
+    dateId: string
+  ) => void;
+  onPointerTooltipClick?: (
+    e: React.PointerEvent<Element>,
     dateId: string
   ) => void;
   eventDates: Array<{ start_time: string; end_time: string }>;
@@ -26,9 +38,9 @@ interface ListViewProps {
  */
 const ListView: React.FC<ListViewProps> = ({
   summary,
-  onMouseEnter,
-  onMouseLeave,
-  onClick,
+  onPointerTooltipStart,
+  onPointerTooltipEnd,
+  onPointerTooltipClick,
   eventDates,
 }) => {
   return (
@@ -75,10 +87,11 @@ const ListView: React.FC<ListViewProps> = ({
               <td className="text-center">
                 <div
                   className="flex items-center justify-center gap-2 cursor-pointer"
-                  onMouseEnter={(e) => onMouseEnter(e, item.dateId)}
-                  onMouseLeave={onMouseLeave}
-                  onClick={(e) => onClick(e, item.dateId)}
-                  onTouchStart={(e) => onClick(e, item.dateId)}
+                  onPointerEnter={(e) =>
+                    onPointerTooltipStart?.(e, item.dateId)
+                  }
+                  onPointerLeave={(e) => onPointerTooltipEnd?.(e, item.dateId)}
+                  onPointerUp={(e) => onPointerTooltipClick?.(e, item.dateId)}
                 >
                   <div className="flex items-center">
                     <span className="w-3 h-3 rounded-full bg-success mr-1"></span>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { getOptimizedDateDisplay } from "./date-utils";
 
 interface HeatmapViewProps {
@@ -24,12 +24,16 @@ interface HeatmapViewProps {
     }
   >;
   maxAvailable: number;
-  onMouseEnter: (e: React.MouseEvent, dateId: string) => void;
-  onMouseLeave: () => void;
-  onClick: (
-    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
+  onPointerTooltipStart: (
+    e: React.PointerEvent<Element>,
     dateId: string
   ) => void;
+  onPointerTooltipEnd: (e: React.PointerEvent<Element>, dateId: string) => void;
+  onPointerTooltipClick: (
+    e: React.PointerEvent<Element>,
+    dateId: string
+  ) => void;
+  isDragging?: boolean;
 }
 
 /**
@@ -40,18 +44,72 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   uniqueTimeSlots,
   heatmapData,
   maxAvailable,
-  onMouseEnter,
-  onMouseLeave,
-  onClick,
+  onPointerTooltipStart,
+  onPointerTooltipEnd,
+  onPointerTooltipClick,
+  isDragging,
 }) => {
+  // タッチ操作の状態をuseRefで管理
+  const isDraggingRef = useRef(false);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // タッチ開始位置を記録
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches && e.touches.length === 1) {
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+      touchStartXRef.current = x;
+      touchStartYRef.current = y;
+      isDraggingRef.current = false;
+    }
+  };
+
+  // タッチ移動量がしきい値を超えたらスクロール操作と判断
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (
+      touchStartXRef.current !== null &&
+      touchStartYRef.current !== null &&
+      e.touches &&
+      e.touches.length === 1
+    ) {
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+      const diffX = Math.abs(x - touchStartXRef.current);
+      const diffY = Math.abs(y - touchStartYRef.current);
+      if (diffX > 10 || diffY > 10) {
+        isDraggingRef.current = true;
+      }
+    }
+  };
+
+  // タッチ終了時の処理
+  const handleTouchEnd = () => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    isDraggingRef.current = false;
+  };
+
   return (
-    <div className="fade-in">
+    <div
+      className="fade-in"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="bg-base-100 p-1 sm:p-2 mb-2 text-xs sm:text-sm">
         <span className="font-medium">
           色が濃いほど参加可能な人が多い時間帯です
         </span>
       </div>
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-x-auto"
+        ref={tableRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <table className="table table-xs sm:table w-full text-center border-collapse min-w-[360px]">
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
@@ -134,42 +192,20 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         className={`relative p-0 sm:p-1 transition-all cursor-pointer ${
                           isSelected ? "border-2 border-success" : ""
                         }`}
-                        onMouseEnter={(e) => {
-                          if (!hasData) return;
-                          // タッチイベントではない場合のみ
-                          if (!("touches" in e)) {
-                            onMouseEnter(e, cellData?.dateId || "");
-                          }
+                        onPointerEnter={(e) => {
+                          if (!hasData || isDragging) return;
+                          onPointerTooltipStart?.(e, cellData?.dateId || "");
                         }}
-                        onMouseLeave={() => {
-                          if (!hasData) return;
-                          onMouseLeave();
+                        onPointerLeave={(e) => {
+                          if (!hasData || isDragging) return;
+                          onPointerTooltipEnd?.(e, cellData?.dateId || "");
                         }}
-                        onClick={(e) => {
-                          if (!hasData) return;
-                          // タッチイベントでなければ onClick
-                          if (!("touches" in e)) {
-                            onClick(e, cellData?.dateId || "");
-                          }
-                        }}
-                        onTouchEnd={(e) => {
-                          if (!hasData) return;
-                          if (e.cancelable) e.preventDefault();
-                          // 直前のタップから0.2秒未満の場合は無視（閉じない）
-                          // 型拡張: windowに_lastTouchEndを追加
-                          interface WindowWithLastTouchEnd extends Window {
-                            _lastTouchEnd?: number;
-                          }
-                          const win = window as WindowWithLastTouchEnd;
-                          if (
-                            win._lastTouchEnd &&
-                            Date.now() - win._lastTouchEnd < 200
-                          ) {
-                            // 何もしない（ツールチップを閉じない）
-                            return;
-                          }
-                          win._lastTouchEnd = Date.now();
-                          onClick(e, cellData?.dateId || "");
+                        /**
+                         * セルのPointerUpでツールチップ表示（スマホはタップで即表示）
+                         */
+                        onPointerUp={(e) => {
+                          if (!hasData || isDragging) return;
+                          onPointerTooltipClick?.(e, cellData?.dateId || "");
                         }}
                       >
                         {hasData ? (
