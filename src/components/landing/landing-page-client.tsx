@@ -141,7 +141,7 @@ export default function LandingPageClient() {
             </h1>
             <div className="mb-4">
               <span className="inline-block text-lg font-bold text-primary bg-primary/10 rounded px-2 py-1 mr-2">
-                候補を重ね、最適日をシンセする。
+                候補を重ね、最適日を可視化する。
               </span>
             </div>
             <p className="text-lg sm:text-xl text-base-content/80 mb-2">
@@ -162,10 +162,6 @@ export default function LandingPageClient() {
               <Link href="#concept" className="btn btn-outline btn-lg">
                 サービスの特徴
               </Link>
-            </div>
-            <div className="text-base-content/60 text-sm">
-              <span className="font-semibold">タグライン：</span>
-              「あなたのレイヤーを合成し、理想の一日へ。」
             </div>
           </motion.div>
 
@@ -230,9 +226,7 @@ export default function LandingPageClient() {
               </span>
               ──
               <br />
-              それが <span className="font-bold text-primary">
-                DaySynth
-              </span>{" "}
+              それが <span className="font-bold text-primary">DaySynth</span>
               のコンセプトです。
             </p>
           </motion.div>
@@ -257,12 +251,6 @@ export default function LandingPageClient() {
                 各参加者の予定や時間帯のレイヤーを重ね、全体像を可視化
               </div>
             </Card>
-          </div>
-          <div className="mt-8 text-center text-base-content/70">
-            <span className="font-semibold">ブランドメッセージ：</span>
-            <span className="ml-2">
-              「情報を重ね合わせ、ベストな日程を一瞬で見つける。」
-            </span>
           </div>
         </div>
       </section>
