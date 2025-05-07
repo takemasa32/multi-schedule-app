@@ -69,7 +69,6 @@ export default function AvailabilityForm({
   // ドラッグ選択関連の状態
   const [isDragging, setIsDragging] = useState(false);
   // この変数は将来の機能拡張のために保持しています
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [dragStartId, setDragStartId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<boolean | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
@@ -147,8 +146,28 @@ export default function AvailabilityForm({
       // 熱マップセル（date-id）の処理
       const dateId = el.dataset.dateId;
       if (isDragging && dragState !== null && dateId) {
+        // --- ここから範囲選択ロジック追加 ---
+        if (dragStartId && dragStartId !== dateId) {
+          // eventDatesの並び順でdragStartIdとdateIdの間の全セルを一括で更新
+          const ids = eventDates.map((d) => d.id);
+          const startIdx = ids.indexOf(dragStartId);
+          const endIdx = ids.indexOf(dateId);
+          if (startIdx !== -1 && endIdx !== -1) {
+            const [from, to] =
+              startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+            setSelectedDates((prev) => {
+              const updated = { ...prev };
+              for (let i = from; i <= to; i++) {
+                updated[ids[i]] = dragState;
+              }
+              return updated;
+            });
+            return;
+          }
+        }
+        // --- ここまで範囲選択ロジック ---
+        // 1セルのみの場合は従来通り
         setSelectedDates((prev) => {
-          // 同じ値の場合は状態を更新しない（パフォーマンス最適化）
           if (prev[dateId] === dragState) return prev;
           return { ...prev, [dateId]: dragState };
         });
@@ -190,6 +209,8 @@ export default function AvailabilityForm({
       isDraggingMatrix,
       matrixDragState,
       weekdaySelections,
+      eventDates,
+      dragStartId,
     ]
   );
 
@@ -243,7 +264,7 @@ export default function AvailabilityForm({
       document.body.classList.add("no-scroll");
       const el = e.currentTarget;
 
-      // ───── 熱マップセルの場合 ─────
+      // ───── 表マップセルの場合 ─────
       const dateId = el.dataset.dateId;
       if (dateId) {
         const newState = !selectedDates[dateId];
@@ -368,6 +389,8 @@ export default function AvailabilityForm({
     isDraggingMatrix,
     handleMatrixDragEnd,
     handleMatrixTouchMove,
+    handleNativePointerMove,
+    handleNativePointerUp,
     commonPointerEnter,
     commonPointerUp,
   ]);
