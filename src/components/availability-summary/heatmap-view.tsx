@@ -210,7 +210,12 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       >
                         {hasData ? (
                           <div className="flex flex-col items-center justify-center h-full">
-                            <span className="font-bold text-xs sm:text-base">
+                            <span
+                              className={
+                                `font-bold text-xs sm:text-base` +
+                                (opacityValue >= 0.6 ? " text-white" : "")
+                              }
+                            >
                               {availableCount}
                             </span>
                             {unavailableCount > 0 && (
