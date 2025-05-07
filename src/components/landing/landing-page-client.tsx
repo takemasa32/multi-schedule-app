@@ -166,7 +166,7 @@ export default function LandingPageClient() {
           </motion.div>
 
           <motion.div
-            className="relative md:w-1/2 h-64 md:h-[28rem]"
+            className="relative md:w-1/2 h-64 md:h-[28rem] overflow-hidden"
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{
               opacity: 1,
@@ -180,12 +180,12 @@ export default function LandingPageClient() {
               alt={siteConfig.logo.alt}
               fill
               priority
-              className="object-contain drop-shadow-xl"
+              className="object-contain drop-shadow-xl max-w-full max-h-full"
             />
             {/* レイヤー重ね合わせのイメージを追加 */}
-            <div className="absolute left-8 top-8 w-40 h-8 bg-primary/20 rounded-lg blur-sm z-10 rotate-6" />
-            <div className="absolute left-16 top-16 w-40 h-8 bg-secondary/20 rounded-lg blur-sm z-20 -rotate-3" />
-            <div className="absolute left-24 top-24 w-40 h-8 bg-accent/20 rounded-lg blur-sm z-30 rotate-2" />
+            <div className="absolute left-8 top-8 w-40 max-w-full h-8 bg-primary/20 rounded-lg blur-sm z-10 rotate-6" />
+            <div className="absolute left-16 top-16 w-40 max-w-full h-8 bg-secondary/20 rounded-lg blur-sm z-20 -rotate-3" />
+            <div className="absolute left-24 top-24 w-40 max-w-full h-8 bg-accent/20 rounded-lg blur-sm z-30 rotate-2" />
           </motion.div>
         </div>
       </section>
