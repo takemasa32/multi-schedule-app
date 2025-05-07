@@ -16,8 +16,8 @@ interface ThemeProviderProps {
 export function ThemeProvider({
   children,
   attribute = "data-theme" as Attribute,
-  defaultTheme = "daysynth",
-  enableSystem = false, // システム設定よりも手動設定を優先する
+  defaultTheme = "system",
+  enableSystem = true, // OSのカラースキーム設定を優先
   ...props
 }: ThemeProviderProps) {
   return (
