@@ -46,25 +46,30 @@ export default function AddToHomeScreenBanner() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 p-4 bg-primary text-primary-content z-50 animate-slideUp">
-      <div className="container mx-auto relative max-w-xl">
+    <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-4 bg-primary/95 text-primary-content z-[100] animate-slideUp shadow-2xl rounded-t-2xl border-t-4 border-primary-focus transition-all duration-200">
+      <div className="container mx-auto relative max-w-xl flex flex-col items-center">
+        {/* ドラッグバー風アクセント */}
+        <div className="w-12 h-1.5 bg-primary-content/40 rounded-full mb-3" />
         <button
           onClick={closeBanner}
-          className="btn btn-sm btn-circle btn-ghost text-primary-content absolute top-2 right-2"
+          className="btn btn-md btn-circle btn-ghost text-primary-content absolute top-2 right-2"
           aria-label="閉じる"
         >
           ✕
         </button>
-        <div className="pr-4">
-          <h3 className="font-bold text-lg mb-1">ホーム画面に追加しよう！</h3>
+        <div className="pr-2 w-full flex flex-col items-center">
+          <h3 className="font-bold text-lg mb-2 text-center tracking-wide drop-shadow-sm">
+            ホーム画面に追加しよう！
+          </h3>
           {isIOSDevice ? (
-            <div className="text-sm">
-              <p className="mb-2">iPhoneでより快適にご利用いただくには：</p>
-              <ol className="list-decimal pl-5 space-y-1">
+            <div className="text-sm text-center">
+              <p className="mb-2 font-medium">
+                iPhoneでより快適にご利用いただくには：
+              </p>
+              <ol className="list-decimal pl-5 space-y-1 text-left inline-block mx-auto">
                 <li>
                   画面下部の
-                  <span className="inline-flex items-center">
-                    {/* 正しい共有アイコン（四角＋上矢印） */}
+                  <span className="inline-flex items-center font-semibold">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-4 w-4 mr-1"
@@ -98,10 +103,13 @@ export default function AddToHomeScreenBanner() {
               </ol>
             </div>
           ) : (
-            <div className="text-sm">
-              <p className="mb-2">より快適にご利用いただくには：</p>
-              <ol className="list-decimal pl-5 space-y-1">
-                <li>ブラウザの設定メニュー（⋮）をタップ</li>
+            <div className="text-sm text-center">
+              <p className="mb-2 font-medium">より快適にご利用いただくには：</p>
+              <ol className="list-decimal pl-5 space-y-1 text-left inline-block mx-auto">
+                <li>
+                  ブラウザの設定メニュー（<span className="font-bold">⋮</span>
+                  ）をタップ
+                </li>
                 <li>「ホーム画面に追加」を選択</li>
               </ol>
             </div>
