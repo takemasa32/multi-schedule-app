@@ -16,6 +16,7 @@ interface SiteConfig {
     title: string;        // ページタイトル (SEO用)
     description: string;  // サイト説明 (SEO用)
     themeColor: string;   // テーマカラー (マニフェスト用)
+    keywords?: string;    // 検索キーワード (SEO用)
   };
   // ロゴ設定
   logo: {
@@ -39,9 +40,10 @@ const siteConfig: SiteConfig = {
     tagline: "みんなの予定を簡単調整",
   },
   meta: {
-    title: "DaySynth - みんなの予定を簡単調整",
-    description: "イベント・会議・集まりの日程調整を簡単に。複数の候補日から参加者の都合を集計し、最適な日程を見つけます。ログイン不要、リンク共有だけで誰でも簡単に回答できます。",
-    themeColor: "#6366f1", // Primary color from theme.css
+    title: "DaySynth（デイシンス／でいしんす） - みんなの予定を簡単調整",
+    description: "DaySynth（デイシンス／でいしんす）は、複数の日程から最適な予定を見つける、シンプルで使いやすい日程調整アプリです。バンド練習やゲーム会、会議など、グループのスケジュール調整に最適。候補日を重ねて合成し、全員の都合を一目で把握できます。ログイン不要・無料。",
+    themeColor: "#6366f1",
+    keywords: "DaySynth, デイシンス, でいしんす, daysynth, 日程調整, スケジュール調整, 候補日, バンド練習, ゲーム会, 会議, イベント, カレンダー, 無料, ログイン不要,簡単, シンプル, 使いやすい, グループ, スケジュール, ",
   },
   logo: {
     main: "/logo/favicon.svg", // メインロゴ（すでに設定されているパス）
