@@ -2,13 +2,14 @@ import LandingPageClient from "@/components/landing/landing-page-client";
 import siteConfig from "@/lib/site-config";
 
 export const metadata = {
-  title: "DaySynth",
+  title: "日程調整 DaySynth｜最適日がすぐに見つかる・ログイン不要・無料",
   description:
-    "複数の日程から最適な予定を見つける、シンプルで使いやすい日程調整アプリです。",
+    "バンド練習や会議、ゲームイベントなど複数候補から最適な日程をすぐに決定。ログイン不要・無料・広告なしのシンプルな日程調整アプリ。スマホ・PC両対応。",
   openGraph: {
-    title: siteConfig.name,
+    title:
+      "日程調整アプリ DaySynth｜最適日がすぐに見つかる・ログイン不要・無料",
     description:
-      "複数の日程から最適な予定を見つける、シンプルで使いやすい日程調整アプリです。",
+      "バンド練習や会議、ゲームイベントなど複数候補から最適な日程をすぐに決定。ログイン不要・無料・広告なしのシンプルな日程調整アプリ。スマホ・PC両対応。",
     url: siteConfig.url,
     images: [
       {
