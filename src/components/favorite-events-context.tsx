@@ -1,8 +1,15 @@
+"use client";
 /**
  * @fileoverview お気に入りイベントのグローバル状態管理用Context/Provider/フック
  * @module FavoriteEventsContext
  */
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 /**
  * お気に入りイベント情報の型
@@ -34,7 +41,9 @@ interface FavoriteEventsContextType {
 
 const FAVORITE_KEY = "favoriteEvents";
 
-const FavoriteEventsContext = createContext<FavoriteEventsContextType | undefined>(undefined);
+const FavoriteEventsContext = createContext<
+  FavoriteEventsContextType | undefined
+>(undefined);
 
 /**
  * ローカルストレージからお気に入りイベント一覧を取得
@@ -65,7 +74,11 @@ function setFavoriteEventsToStorage(events: FavoriteEvent[]) {
  * @param {ReactNode} props.children
  * @returns {JSX.Element}
  */
-export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) => {
+export const FavoriteEventsProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
   const [favorites, setFavorites] = useState<FavoriteEvent[]>([]);
 
   useEffect(() => {
@@ -77,8 +90,8 @@ export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) =>
    * @param {FavoriteEvent} event
    */
   const addFavorite = (event: FavoriteEvent) => {
-    setFavorites(prev => {
-      const updated = [event, ...prev.filter(ev => ev.id !== event.id)];
+    setFavorites((prev) => {
+      const updated = [event, ...prev.filter((ev) => ev.id !== event.id)];
       setFavoriteEventsToStorage(updated);
       return updated;
     });
@@ -89,8 +102,8 @@ export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) =>
    * @param {string} id
    */
   const removeFavorite = (id: string) => {
-    setFavorites(prev => {
-      const updated = prev.filter(ev => ev.id !== id);
+    setFavorites((prev) => {
+      const updated = prev.filter((ev) => ev.id !== id);
       setFavoriteEventsToStorage(updated);
       return updated;
     });
@@ -104,7 +117,9 @@ export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) =>
   };
 
   return (
-    <FavoriteEventsContext.Provider value={{ favorites, addFavorite, removeFavorite, refreshFavorites }}>
+    <FavoriteEventsContext.Provider
+      value={{ favorites, addFavorite, removeFavorite, refreshFavorites }}
+    >
       {children}
     </FavoriteEventsContext.Provider>
   );
@@ -117,6 +132,9 @@ export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) =>
  */
 export function useFavoriteEvents() {
   const ctx = useContext(FavoriteEventsContext);
-  if (!ctx) throw new Error("useFavoriteEvents must be used within FavoriteEventsProvider");
+  if (!ctx)
+    throw new Error(
+      "useFavoriteEvents must be used within FavoriteEventsProvider"
+    );
   return ctx;
 }

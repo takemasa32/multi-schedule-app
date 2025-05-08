@@ -10,6 +10,7 @@ import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
+import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 
 interface EventPageProps {
   params: Promise<{
@@ -100,7 +101,7 @@ export default async function EventPage({
     ]);
 
   return (
-    <>
+    <FavoriteEventsProvider>
       <div className="bg-base-200 mb-6 py-4">
         <div className="container mx-auto max-w-5xl px-4">
           <Breadcrumbs items={[{ label: "イベント詳細" }]} />
@@ -130,6 +131,6 @@ export default async function EventPage({
           />
         </div>
       </div>
-    </>
+    </FavoriteEventsProvider>
   );
 }
