@@ -2,7 +2,7 @@
   "name": "複数日程調整アプリ",
   "short_name": "日程調整",
   "description": "イベント・会議・集まりの日程調整を簡単に。",
-  "start_url": "/",
+  "start_url": "/home",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",

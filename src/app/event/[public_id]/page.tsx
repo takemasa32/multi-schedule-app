@@ -110,6 +110,7 @@ export default async function EventPage({
       <div className="container mx-auto max-w-5xl px-4 pb-12">
         <div className="fade-in">
           <EventHeader
+            eventId={public_id}
             title={event.title}
             description={event.description}
             isFinalized={event.is_finalized}
