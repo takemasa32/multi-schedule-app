@@ -1,6 +1,11 @@
 # COPILOT リポジトリ用カスタム指示
 
-- 仕様書（[仕様書ファイル](./specifications/specification.md)）を参照しながら実装を進めてください。
+- 仕様書（[仕様書ファイル](../specifications/specification.md)）を参照しながら実装を進めてください。
+- PWA（Progressive Web App）対応の詳細仕様については、[pwa-specification](../specifications/pwa-specification.md) を参照してください。
+- お気に入りイベント機能仕様書は、[favorite-feature](../specifications/favorite-feature.md) を参照してください。
+- 最近アクセス履歴機能仕様書は、[event-history-feature](../specifications/event-history-feature.md) を参照してください。
+- イベント URL/ID から開く機能仕様書は、[open-by-url-feature](../specifications/open-by-url-feature.md) を参照してください。
+- サイト情報管理機能仕様書は、[site-config-feature](../specifications/site-config-feature.md) を参照してください。
 - コメントやコミットメッセージはすべて日本語で記述してください。
 - 適切な粒度でコミットを忘れずに行い、実装内容がわかるコミットメッセージを記述してください。
 - JSDoc を用いて、常に最新の API ドキュメントを生成可能な状態に保ってください。

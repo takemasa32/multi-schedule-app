@@ -43,6 +43,7 @@ type AvailabilitySummaryProps = {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   publicToken?: string;
+  excludedParticipantIds?: string[];
 };
 
 type ViewMode = "list" | "heatmap" | "detailed";
@@ -59,6 +60,7 @@ export default function AvailabilitySummary({
   viewMode,
   setViewMode,
   publicToken,
+  excludedParticipantIds = [],
 }: AvailabilitySummaryProps) {
   // useDeviceDetectは必ずトップレベルで呼び出す
   const { isMobile } = useDeviceDetect();
@@ -71,6 +73,20 @@ export default function AvailabilitySummary({
     availableParticipants: [],
     unavailableParticipants: [],
   });
+
+  // 除外されていない参加者リストを作成
+  const filteredParticipants = useMemo(
+    () => participants.filter((p) => !excludedParticipantIds.includes(p.id)),
+    [participants, excludedParticipantIds]
+  );
+  // 除外されていない参加者のみでavailabilitiesもフィルタ
+  const filteredAvailabilities = useMemo(
+    () =>
+      availabilities.filter(
+        (a) => !excludedParticipantIds.includes(a.participant_id)
+      ),
+    [availabilities, excludedParticipantIds]
+  );
 
   // スクロール中かどうかを追跡するstate
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
@@ -211,10 +227,10 @@ export default function AvailabilitySummary({
   // 集計計算: 日程ごとの参加可能者数
   const summary = useMemo(() => {
     return eventDates.map((date) => {
-      const availableCount = availabilities.filter(
+      const availableCount = filteredAvailabilities.filter(
         (a) => a.event_date_id === date.id && a.availability
       ).length;
-      const unavailableCount = availabilities.filter(
+      const unavailableCount = filteredAvailabilities.filter(
         (a) => a.event_date_id === date.id && !a.availability
       ).length;
 
@@ -251,17 +267,17 @@ export default function AvailabilitySummary({
         isSelected: finalizedDateIds?.includes(date.id) || false,
       };
     });
-  }, [eventDates, availabilities, finalizedDateIds]);
+  }, [eventDates, filteredAvailabilities, finalizedDateIds]);
 
   // 参加者が参加可能かどうかを判定
   const isParticipantAvailable = useCallback(
     (participantId: string, dateId: string) => {
-      const availability = availabilities.find(
+      const availability = filteredAvailabilities.find(
         (a) => a.participant_id === participantId && a.event_date_id === dateId
       );
       return availability ? availability.availability : null;
     },
-    [availabilities]
+    [filteredAvailabilities]
   );
 
   // ツールチップ表示処理（Pointerイベント）
@@ -270,7 +286,11 @@ export default function AvailabilitySummary({
     dateId: string
   ) => {
     const { availableParticipants, unavailableParticipants } =
-      fetchParticipantsByDate(participants, availabilities, dateId);
+      fetchParticipantsByDate(
+        filteredParticipants,
+        filteredAvailabilities,
+        dateId
+      );
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
     setTooltip({
@@ -299,7 +319,11 @@ export default function AvailabilitySummary({
       event.nativeEvent.stopImmediatePropagation();
     }
     const { availableParticipants, unavailableParticipants } =
-      fetchParticipantsByDate(participants, availabilities, dateId);
+      fetchParticipantsByDate(
+        filteredParticipants,
+        filteredAvailabilities,
+        dateId
+      );
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     if (isMobile) {
       // モバイルは下部パネルで表示
@@ -391,12 +415,12 @@ export default function AvailabilitySummary({
   // 最大参加可能者数を算出（セルごとの availableCount の最大値）
   const maxAvailable = useMemo(() => {
     return eventDates.reduce((max, date) => {
-      const cnt = availabilities.filter(
+      const cnt = filteredAvailabilities.filter(
         (a) => a.event_date_id === date.id && a.availability
       ).length;
       return Math.max(max, cnt);
     }, 0);
-  }, [eventDates, availabilities]);
+  }, [eventDates, filteredAvailabilities]);
 
   // ヒートマップデータの取得 - 日付×時間のマトリックス
   const heatmapData = useMemo(() => {
@@ -417,10 +441,10 @@ export default function AvailabilitySummary({
         .padStart(2, "0")}`;
       const key = `${dateStr}_${timeStr}`;
 
-      const availableCount = availabilities.filter(
+      const availableCount = filteredAvailabilities.filter(
         (a) => a.event_date_id === date.id && a.availability
       ).length;
-      const unavailableCount = availabilities.filter(
+      const unavailableCount = filteredAvailabilities.filter(
         (a) => a.event_date_id === date.id && !a.availability
       ).length;
 
@@ -439,7 +463,7 @@ export default function AvailabilitySummary({
     });
 
     return cellMap;
-  }, [eventDates, availabilities, finalizedDateIds]);
+  }, [eventDates, filteredAvailabilities, finalizedDateIds]);
 
   // 参加者の回答データを取得して編集用に整形する
   const getParticipantAvailabilities = useCallback(
@@ -448,7 +472,7 @@ export default function AvailabilitySummary({
 
       eventDates.forEach((date) => {
         // 該当する参加者の回答を検索
-        const response = availabilities.find(
+        const response = filteredAvailabilities.find(
           (a) =>
             a.participant_id === participantId && a.event_date_id === date.id
         );
@@ -459,7 +483,7 @@ export default function AvailabilitySummary({
 
       return result;
     },
-    [eventDates, availabilities]
+    [eventDates, filteredAvailabilities]
   );
 
   // 参加者の編集ボタンがクリックされたときの処理
@@ -542,8 +566,10 @@ export default function AvailabilitySummary({
   const isDragging = useDragScrollBlocker(10);
 
   // 参加者がまだいない場合は表示しない
-  if (participants.length === 0) {
-    return null;
+  if (filteredParticipants.length === 0) {
+    return (
+      <div className="text-sm text-gray-500 p-4">表示中の参加者はいません</div>
+    );
   }
 
   return (
@@ -614,7 +640,7 @@ export default function AvailabilitySummary({
         {viewMode === "detailed" && (
           <DetailedView
             eventDates={eventDates}
-            participants={participants}
+            participants={filteredParticipants}
             isParticipantAvailable={isParticipantAvailable}
             finalizedDateIds={finalizedDateIds}
             onEditClick={onShowParticipantForm ? handleEditClick : undefined}

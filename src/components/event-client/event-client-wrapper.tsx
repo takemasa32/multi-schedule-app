@@ -54,6 +54,10 @@ export default function EventClientWrapper({
   const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
     "heatmap"
   );
+  // 参加者の表示/非表示トグル用ステート
+  const [excludedParticipantIds, setExcludedParticipantIds] = useState<
+    string[]
+  >([]);
 
   // 確定された日程の詳細情報を取得
   const finalizedDates = eventDates.filter((date) =>
@@ -71,6 +75,13 @@ export default function EventClientWrapper({
       isCreatedByMe: isAdmin,
     });
   }, [event.public_token, event.title, event.admin_token, isAdmin]);
+
+  // 参加者名バッジのトグルUI
+  const handleToggleParticipant = (id: string) => {
+    setExcludedParticipantIds((prev) =>
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+    );
+  };
 
   return (
     <>
@@ -225,7 +236,39 @@ export default function EventClientWrapper({
             publicToken={event.public_token}
             viewMode={viewMode}
             setViewMode={setViewMode}
+            excludedParticipantIds={excludedParticipantIds}
           />
+          {/* 参加者名リスト（表示/非表示トグル） */}
+          {participants.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center">
+              <span className="text-sm text-gray-500 mr-2">表示しない人:</span>
+              {participants.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`badge px-3 py-2 cursor-pointer transition-all border-2 ${
+                    excludedParticipantIds.includes(p.id)
+                      ? "badge-outline border-error text-error bg-error/10"
+                      : "badge-primary border-primary"
+                  }`}
+                  aria-pressed={excludedParticipantIds.includes(p.id)}
+                  onClick={() => handleToggleParticipant(p.id)}
+                  title={
+                    excludedParticipantIds.includes(p.id)
+                      ? "表示に戻す"
+                      : "非表示にする"
+                  }
+                >
+                  {excludedParticipantIds.includes(p.id) ? (
+                    <span className="mr-1">🚫</span>
+                  ) : (
+                    <span className="mr-1">👤</span>
+                  )}
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
