@@ -1,10 +1,9 @@
 import { GET } from "@/app/api/generate-ics/route";
 import { NextRequest } from "next/server";
 import { generateGoogleCalendarUrl } from "../utils";
+import { createSupabaseClient } from "@/lib/supabase";
 
-jest.mock("@/lib/supabase", () => ({
-  createSupabaseClient: jest.fn(),
-}));
+jest.mock("@/lib/supabase");
 
 describe("/api/generate-ics/route.ts", () => {
   const createRequest = (url: string) => ({ url } as NextRequest);
@@ -19,7 +18,7 @@ describe("/api/generate-ics/route.ts", () => {
   });
 
   it("イベントが存在しない場合は404", async () => {
-    require("@/lib/supabase").createSupabaseClient.mockReturnValue({
+    createSupabaseClient.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -31,7 +30,7 @@ describe("/api/generate-ics/route.ts", () => {
   });
 
   it("確定日程がない場合は400", async () => {
-    require("@/lib/supabase").createSupabaseClient.mockReturnValue({
+    createSupabaseClient.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -54,7 +53,7 @@ describe("/api/generate-ics/route.ts", () => {
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
       });
-    require("@/lib/supabase").createSupabaseClient.mockReturnValue({ from: fromMock });
+    createSupabaseClient.mockReturnValue({ from: fromMock });
     const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
     expect(res.status).toBe(404);
   });
@@ -71,7 +70,7 @@ describe("/api/generate-ics/route.ts", () => {
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { start_time: "2025-05-10T10:00:00Z", end_time: "2025-05-10T11:00:00Z" }, error: null }),
       });
-    require("@/lib/supabase").createSupabaseClient.mockReturnValue({ from: fromMock });
+    createSupabaseClient.mockReturnValue({ from: fromMock });
     const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
     expect(res.status).toBe(200);
     const text = await res.text();

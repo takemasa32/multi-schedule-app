@@ -1,4 +1,5 @@
 import { createEvent, submitAvailability, finalizeEvent } from '../actions';
+import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase', () => ({
   createSupabaseAdmin: jest.fn(() => ({
@@ -52,7 +53,7 @@ describe('createEvent', () => {
       update: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
     }));
-    require('../supabase').createSupabaseAdmin.mockReturnValue({ from: mockFrom });
+    createSupabaseAdmin.mockReturnValue({ from: mockFrom });
     // event_dates insert
     mockFrom.mockReturnValueOnce({
       insert: mockInsert,
@@ -106,7 +107,7 @@ describe('createEvent', () => {
       update: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
     }));
-    require('../supabase').createSupabaseAdmin.mockReturnValue({ from: mockFrom });
+    createSupabaseAdmin.mockReturnValue({ from: mockFrom });
     await expect(createEvent(formData)).rejects.toThrow('イベントの作成に失敗しました: DBエラー');
   });
 });
@@ -135,7 +136,7 @@ describe('submitAvailability', () => {
       single: jest.fn().mockResolvedValue({ data: { id: 'eventid' }, error: null }),
       order: jest.fn().mockReturnThis(),
     }));
-    require('../supabase').createSupabaseClient.mockReturnValue({ from: mockFrom });
+    createSupabaseClient.mockReturnValue({ from: mockFrom });
 
     const result = await submitAvailability(formData);
     expect(result.success).toBe(true);
@@ -154,7 +155,7 @@ describe('submitAvailability', () => {
     formData.set('eventId', 'eventid');
     formData.set('publicToken', 'pubtoken');
     formData.set('participant_name', 'テスト太郎');
-    require('../supabase').createSupabaseClient.mockReturnValue({
+    createSupabaseClient.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -172,7 +173,7 @@ describe('submitAvailability', () => {
     formData.set('publicToken', 'pubtoken');
     formData.set('participant_name', 'テスト太郎');
     // availability_が1件もない
-    require('../supabase').createSupabaseClient.mockReturnValue({
+    createSupabaseClient.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -206,7 +207,7 @@ describe('submitAvailability', () => {
       single: jest.fn().mockResolvedValue({ data: { id: 'eventid' }, error: null }),
       order: jest.fn().mockReturnThis(),
     }));
-    require('../supabase').createSupabaseClient.mockReturnValue({ from: mockFrom });
+    createSupabaseClient.mockReturnValue({ from: mockFrom });
     const result = await submitAvailability(formData);
     expect(result.success).toBe(true);
     expect(result.message).toMatch(/回答を送信しました/);
@@ -230,7 +231,7 @@ describe('finalizeEvent', () => {
       eq: jest.fn().mockReturnThis(),
       single: jest.fn().mockResolvedValue({ data: null, error: { message: 'not found' } }),
     }));
-    require('../supabase').createSupabaseClient.mockReturnValue({ from: mockFrom });
+    createSupabaseClient.mockReturnValue({ from: mockFrom });
     const result = await finalizeEvent('eventid', ['dateid']);
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/イベントが見つかりません/);
@@ -243,7 +244,7 @@ describe('finalizeEvent', () => {
       single: jest.fn().mockResolvedValue({ data: { id: 'eventid', public_token: 'pubtok' }, error: null }),
       in: jest.fn().mockResolvedValue({ data: [], error: null }),
     }));
-    require('../supabase').createSupabaseClient.mockReturnValue({ from: mockFrom });
+    createSupabaseClient.mockReturnValue({ from: mockFrom });
     const result = await finalizeEvent('eventid', ['dateid']);
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/選択された日程が見つかりません/);
@@ -259,7 +260,7 @@ describe('finalizeEvent', () => {
       delete: jest.fn().mockResolvedValue({}),
       insert: jest.fn().mockResolvedValue({ error: null }),
     }));
-    require('../supabase').createSupabaseClient.mockReturnValue({ from: mockFrom });
+    createSupabaseClient.mockReturnValue({ from: mockFrom });
     const result = await finalizeEvent('eventid', ['dateid']);
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/イベント確定に失敗しました/);
@@ -275,7 +276,7 @@ describe('finalizeEvent', () => {
       delete: jest.fn().mockResolvedValue({}),
       insert: jest.fn().mockResolvedValue({ error: null }),
     }));
-    require('../supabase').createSupabaseClient.mockReturnValue({ from: mockFrom });
+    createSupabaseClient.mockReturnValue({ from: mockFrom });
     const result = await finalizeEvent('eventid', ['dateid']);
     expect(result.success).toBe(true);
   });

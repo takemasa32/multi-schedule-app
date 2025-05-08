@@ -2,15 +2,16 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import PwaHomePage from "@/app/home/page";
 
-jest.mock("@/components/favorite-events", () => () => (
-  <div>お気に入りイベント一覧Mock</div>
-));
-jest.mock("@/components/event-history", () => () => (
-  <div>最近アクセスMock</div>
-));
-jest.mock("@/components/add-to-home-screen", () => () => (
-  <div>PWAバナーMock</div>
-));
+const FavoriteEventsMock = () => <div>お気に入りイベント一覧Mock</div>;
+FavoriteEventsMock.displayName = "FavoriteEventsMock";
+const EventHistoryMock = () => <div>最近アクセスMock</div>;
+EventHistoryMock.displayName = "EventHistoryMock";
+const AddToHomeScreenMock = () => <div>PWAバナーMock</div>;
+AddToHomeScreenMock.displayName = "AddToHomeScreenMock";
+
+jest.mock("@/components/favorite-events", () => FavoriteEventsMock);
+jest.mock("@/components/event-history", () => EventHistoryMock);
+jest.mock("@/components/add-to-home-screen", () => AddToHomeScreenMock);
 
 // siteConfigのモック
 jest.mock("@/lib/site-config", () => ({
@@ -62,7 +63,7 @@ describe("PwaHomePage", () => {
     ).toBeInTheDocument();
     // 正しいID
     delete window.location;
-    window.location = { href: "" } as any;
+    window.location = { href: "" } as Location;
     fireEvent.change(input, { target: { value: "abcdefgh" } });
     fireEvent.click(button);
     expect(window.location.href).toBe("/event/abcdefgh");
