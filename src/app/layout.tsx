@@ -53,7 +53,7 @@ export default function RootLayout({
           <LineExternalBrowserRedirector />
           <ExternalBrowserBanner />
           <AddToHomeScreenBanner />
-          <main className="flex-grow container mx-auto px-4 py-6">
+          <main className="flex-grow container mx-auto px-4 py-6 pt-16">
             {children}
           </main>
           <Footer />
