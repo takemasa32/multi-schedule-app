@@ -62,8 +62,12 @@ describe("PwaHomePage", () => {
       screen.getByText(/有効なイベントIDまたはURLを入力してください/)
     ).toBeInTheDocument();
     // 正しいID
-    delete window.location;
-    window.location = { href: "" } as Location;
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { href: "" },
+      writable: true,
+      configurable: true,
+    });
     fireEvent.change(input, { target: { value: "abcdefgh" } });
     fireEvent.click(button);
     expect(window.location.href).toBe("/event/abcdefgh");
@@ -73,5 +77,7 @@ describe("PwaHomePage", () => {
     });
     fireEvent.click(button);
     expect(window.location.href).toBe("/event/ijklmnop");
+    // 後始末
+    Object.defineProperty(window, "location", { value: originalLocation });
   });
 });

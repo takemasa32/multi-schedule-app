@@ -22,10 +22,10 @@ describe("お気に入りイベント機能", () => {
     // 初期状態: お気に入りなし
     expect(screen.getByText("お気に入りイベントはありません。"));
     // 追加
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "お気に入り登録" }));
     expect(screen.getByText(TEST_EVENT.title)).toBeInTheDocument();
-    // 解除
-    fireEvent.click(screen.getByRole("button"));
+    // 解除（「お気に入り解除」ボタンをクリック）
+    fireEvent.click(screen.getByRole("button", { name: "お気に入り解除" }));
     expect(screen.getByText("お気に入りイベントはありません。"));
   });
 });

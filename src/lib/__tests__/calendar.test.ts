@@ -4,6 +4,37 @@ import { generateGoogleCalendarUrl } from "../utils";
 import { createSupabaseClient } from "@/lib/supabase";
 
 jest.mock("@/lib/supabase");
+const mockedCreateSupabaseClient = createSupabaseClient as jest.Mock;
+
+// Jest環境用の簡易Responseクラスをグローバル定義
+if (typeof global.Response === 'undefined') {
+  global.Response = class {
+    status: number;
+    _text: string;
+    _headers: Record<string, string>;
+    constructor(text: string, { status = 200, headers = {} } = {}) {
+      this.status = status;
+      this._text = text;
+      // keyを小文字化して格納
+      this._headers = {};
+      for (const k in headers) {
+        if (Object.prototype.hasOwnProperty.call(headers, k)) {
+          this._headers[k.toLowerCase()] = headers[k];
+        }
+      }
+    }
+    text() {
+      return Promise.resolve(this._text);
+    }
+    get headers() {
+      return {
+        get: (key: string) => {
+          return this._headers[key.toLowerCase()] || '';
+        },
+      };
+    }
+  };
+}
 
 describe("/api/generate-ics/route.ts", () => {
   const createRequest = (url: string) => ({ url } as NextRequest);
@@ -18,7 +49,7 @@ describe("/api/generate-ics/route.ts", () => {
   });
 
   it("イベントが存在しない場合は404", async () => {
-    createSupabaseClient.mockReturnValue({
+    mockedCreateSupabaseClient.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -30,7 +61,7 @@ describe("/api/generate-ics/route.ts", () => {
   });
 
   it("確定日程がない場合は400", async () => {
-    createSupabaseClient.mockReturnValue({
+    mockedCreateSupabaseClient.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -53,7 +84,7 @@ describe("/api/generate-ics/route.ts", () => {
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
       });
-    createSupabaseClient.mockReturnValue({ from: fromMock });
+    mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
     const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
     expect(res.status).toBe(404);
   });
@@ -70,7 +101,7 @@ describe("/api/generate-ics/route.ts", () => {
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { start_time: "2025-05-10T10:00:00Z", end_time: "2025-05-10T11:00:00Z" }, error: null }),
       });
-    createSupabaseClient.mockReturnValue({ from: fromMock });
+    mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
     const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
     expect(res.status).toBe(200);
     const text = await res.text();
@@ -105,9 +136,10 @@ describe("generateGoogleCalendarUrl", () => {
       description: "詳細: テスト\n改行もOK",
       location: "大阪・梅田"
     });
-    expect(url).toContain(encodeURIComponent("会議 & 打合せ"));
-    expect(url).toContain(encodeURIComponent("詳細: テスト\n改行もOK"));
-    expect(url).toContain(encodeURIComponent("大阪・梅田"));
+    // +と%20の違いを許容するため正規表現で判定
+    expect(url).toMatch(new RegExp(encodeURIComponent("会議 & 打合せ").replace(/%20/g, "(\\+|%20)")));
+    expect(url).toMatch(new RegExp(encodeURIComponent("詳細: テスト\n改行もOK").replace(/%20/g, "(\\+|%20)")));
+    expect(url).toMatch(new RegExp(encodeURIComponent("大阪・梅田").replace(/%20/g, "(\\+|%20)")));
     expect(url).toContain("dates=20251201T093000Z%2F20251201T103000Z");
   });
 
