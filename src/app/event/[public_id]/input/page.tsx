@@ -36,7 +36,7 @@ export async function generateMetadata({
 
 type EventPageProps = {
   params: { public_id: string };
-  searchParams: { participant_id?: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 };
 
 export default async function EventPage({
@@ -44,7 +44,10 @@ export default async function EventPage({
   searchParams,
 }: EventPageProps) {
   const { public_id } = params;
-  const { participant_id: participantId } = searchParams;
+  const participantId =
+    typeof searchParams.participant_id === "string"
+      ? searchParams.participant_id
+      : undefined;
 
   // イベント情報を取得
   const event = await getEvent(public_id);

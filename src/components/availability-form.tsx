@@ -698,17 +698,20 @@ export default function AvailabilityForm({
   }, [eventDates, currentPage, pageSize]);
 
   // start_time と end_time から時間帯のキーを生成する関数
-  const getTimeKey = (startTime: string, endTime: string): string => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    return `${start.getHours().toString().padStart(2, "0")}:${start
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  const getTimeKey = useCallback(
+    (startTime: string, endTime: string): string => {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      return `${start.getHours().toString().padStart(2, "0")}:${start
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
+    },
+    []
+  );
 
   // 週入力モード用の時間帯スロットを初期化する関数
   const initializeWeekdayTimeSlots = () => {
