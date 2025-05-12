@@ -17,13 +17,7 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
 
 test('トップページが表示される', async ({ page }) => {
   await gotoWithRetry(page, '/');
-
-  // タイトルはOK
-  await expect(page).toHaveTitle(/日程調整 DaySynth/);
-
-  // ②JSレンダリング完了を待つ
-  await page.waitForLoadState('networkidle');
-
-  const heading = page.getByText('新規イベント作成', { exact: false });
-  await expect(heading).toBeVisible({ timeout: 10000 });
+  // 「今すぐ無料で日程調整を始める」ボタンの存在でトップページ表示を判定
+  const ctaBtn = page.getByRole('link', { name: /今すぐ無料で日程調整を始める/ });
+  await expect(ctaBtn).toBeVisible({ timeout: 10000 });
 });

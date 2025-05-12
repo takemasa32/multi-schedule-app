@@ -137,3 +137,20 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 ## PWA/Workbox 生成ファイルについて
 
 `public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています。
+
+## e2e テストについて
+
+e2e テストは Playwright を使用しており、以下のようなテストケースをカバーしています：
+
+- イベント作成 → リンク共有 → 参加者回答 → 主催者確定 → カレンダー連携
+- PWA インストール・オフライン・お気に入り・履歴・URL 直遷移
+- サーバー・Supabase 同時起動、ヘッドレス実行、HTML レポート出力
+
+### 使用方法
+
+- `npm run test:e2e` でテストを実行します。
+- テストはヘッドレスモードで実行され、結果は HTML レポートとして出力されます。
+- テストは Supabase のローカル環境を使用しており、実際のデータベースに影響を与えないように設計されています。
+- テストの実行には、Supabase のローカル環境が起動している必要があります。起動していない場合は、`npx supabase start` で起動してください。
+- テストの実行後、`e2e/test-results/` ディレクトリに HTML レポートが生成されます。レポートをブラウザで開くことで、テスト結果を確認できます。
+- `npx playwright show-report` を実行することで、テスト結果をブラウザで確認できます。

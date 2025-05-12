@@ -80,3 +80,8 @@ yarn-error.log*
 
 # --- Ignore build artifacts ---
 *.tsbuildinfo
+
+
+# e2eテスト用のファイル
+test-results/
+playwright-report/
