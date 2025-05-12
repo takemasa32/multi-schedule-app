@@ -10,14 +10,15 @@ import GoogleAnalytics from "@/components/analytics/google-analytics";
 import AddToHomeScreenBanner from "@/components/add-to-home-screen";
 import LineExternalBrowserRedirector from "@/components/browser-banner/LineExternalBrowserRedirector";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata: Metadata = {
   title: siteConfig.meta.title,
   description: siteConfig.meta.description,
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },

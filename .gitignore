@@ -48,3 +48,11 @@ next-env.d.ts
 .env
 .env.local
 .env.development.local
+
+
+# PWA: 自動生成される Service Worker／Workbox ファイル
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js.map
+/public/worker-*.js
+/public/worker-*.js.map

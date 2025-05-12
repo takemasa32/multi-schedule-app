@@ -343,3 +343,39 @@ export function clearEventHistory(): void {
     console.error('イベント履歴のクリアに失敗しました:', error);
   }
 }
+
+/**
+ * Googleカレンダー予定作成画面のURLを生成する
+ * @param title イベントタイトル
+ * @param start ISO8601形式の開始日時（例: 2025-05-10T10:00:00Z）
+ * @param end ISO8601形式の終了日時（例: 2025-05-10T11:00:00Z）
+ * @param description イベント説明（省略可）
+ * @param location 開催場所（省略可）
+ * @returns Googleカレンダー予定作成画面のURL
+ */
+export function generateGoogleCalendarUrl({
+  title,
+  start,
+  end,
+  description = "",
+  location = ""
+}: {
+  title: string;
+  start: string;
+  end: string;
+  description?: string;
+  location?: string;
+}): string {
+  // Googleカレンダーの日時形式: YYYYMMDDTHHmmssZ
+  const format = (iso: string) => {
+    const d = new Date(iso);
+    return d.toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z");
+  };
+  const params = new URLSearchParams({
+    text: title,
+    dates: `${format(start)}/${format(end)}`,
+    details: description,
+    location
+  });
+  return `https://calendar.google.com/calendar/r/eventedit?${params.toString()}`;
+}
