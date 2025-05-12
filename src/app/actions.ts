@@ -19,11 +19,11 @@ export async function createEvent(formData: FormData) {
 
     // バリデーション
     if (!title || !title.trim()) {
-      throw new Error("タイトルを入力してください");
+      return { success: false, message: "タイトルを入力してください" };
     }
 
     if (!startTimes.length || !endTimes.length || startTimes.length !== endTimes.length) {
-      throw new Error("候補日程の情報が正しくありません");
+      return { success: false, message: "候補日程の情報が正しくありません" };
     }
 
     // トークン生成
@@ -47,7 +47,7 @@ export async function createEvent(formData: FormData) {
 
     if (eventError || !eventData) {
       console.error("イベント作成エラー:", eventError);
-      throw new Error("イベント作成に失敗しました。もう一度お試しください。");
+      return { success: false, message: "DBエラー: イベント作成に失敗しました。もう一度お試しください。" };
     }
 
     // 候補日程を登録
@@ -66,8 +66,7 @@ export async function createEvent(formData: FormData) {
 
     if (datesError) {
       console.error("候補日程登録エラー:", datesError);
-      // イベントは作成済みだがロールバックはせず、エラーを返す
-      throw new Error("候補日程の登録に失敗しました。イベント管理者に連絡してください。");
+      return { success: false, message: "DBエラー: 候補日程の登録に失敗しました。イベント管理者に連絡してください。" };
     }
 
     // クライアントコンポーネントで履歴保存できるように情報を返す
@@ -90,7 +89,7 @@ export async function createEvent(formData: FormData) {
     }
 
     // それ以外のエラーは適切なメッセージにラップして返す
-    throw new Error(err instanceof Error ? err.message : "予期せぬエラーが発生しました");
+    return { success: false, message: err instanceof Error ? err.message : "予期せぬエラーが発生しました" };
   }
 }
 
@@ -155,7 +154,7 @@ export async function submitAvailability(formData: FormData) {
 
         if (participantError || !newParticipant) {
           console.error("Participant creation error:", participantError);
-          throw new Error("参加者登録に失敗しました");
+          return { success: false, message: "参加者登録に失敗しました" };
         }
 
         existingParticipantId = newParticipant.id;
@@ -187,7 +186,7 @@ export async function submitAvailability(formData: FormData) {
 
     // 回答がない場合
     if (availabilityEntries.length === 0) {
-      throw new Error("少なくとも1つの回答を入力してください");
+      return { success: false, message: "少なくとも1つの回答を入力してください" };
     }
 
     // 既存参加者の場合は削除とINSERTを並列化
@@ -209,7 +208,7 @@ export async function submitAvailability(formData: FormData) {
         .insert(availabilityEntries);
       if (availabilityError) {
         console.error("Availability submission error:", availabilityError);
-        throw new Error("回答の保存に失敗しました");
+        return { success: false, message: "回答の保存に失敗しました" };
       }
     }
 

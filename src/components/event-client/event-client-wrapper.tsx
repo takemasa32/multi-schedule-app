@@ -241,7 +241,7 @@ export default function EventClientWrapper({
           {/* 参加者名リスト（表示/非表示トグル） */}
           {participants.length > 0 && (
             <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center">
-              <span className="text-sm text-gray-500 mr-2">表示しない人:</span>
+              <span className="text-sm text-gray-500 mr-2">表示選択:</span>
               {participants.map((p) => (
                 <button
                   key={p.id}

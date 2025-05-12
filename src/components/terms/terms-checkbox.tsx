@@ -23,7 +23,6 @@ export default function TermsCheckbox({
           className="checkbox checkbox-primary"
           checked={isChecked}
           onChange={(e) => onChange(e.target.checked)}
-          required
           disabled={disabled}
         />
         <span className="label-text">

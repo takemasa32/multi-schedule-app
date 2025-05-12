@@ -458,7 +458,7 @@ export default function AvailabilityForm({
   };
 
   // フォーム送信前のバリデーション用
-  const validateForm = () => {
+  const validateForm = async () => {
     if (!name.trim()) {
       setError("お名前を入力してください");
       return false;
@@ -500,7 +500,7 @@ export default function AvailabilityForm({
 
   // この関数はServer Actionを呼び出す前の準備として使用
   const handleSubmit = async (e: React.FormEvent) => {
-    if (!validateForm()) {
+    if (!(await validateForm())) {
       e.preventDefault();
       return;
     }
@@ -698,17 +698,20 @@ export default function AvailabilityForm({
   }, [eventDates, currentPage, pageSize]);
 
   // start_time と end_time から時間帯のキーを生成する関数
-  const getTimeKey = (startTime: string, endTime: string): string => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    return `${start.getHours().toString().padStart(2, "0")}:${start
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  const getTimeKey = useCallback(
+    (startTime: string, endTime: string): string => {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      return `${start.getHours().toString().padStart(2, "0")}:${start
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
+    },
+    []
+  );
 
   // 週入力モード用の時間帯スロットを初期化する関数
   const initializeWeekdayTimeSlots = () => {
@@ -1027,7 +1030,7 @@ export default function AvailabilityForm({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M9 12l2 2 4-4m6 2a9 9 011-18 0 0118 0 0118 0z"
               />
             </svg>
             <span>{feedback}</span>
@@ -1071,7 +1074,11 @@ export default function AvailabilityForm({
           </h2>
 
           {error && (
-            <div className="alert alert-error mb-4">
+            <div
+              className="alert alert-error mb-4"
+              role="alert"
+              aria-live="assertive"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="stroke-current shrink-0 h-6 w-6"
@@ -1082,7 +1089,7 @@ export default function AvailabilityForm({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 011-18 0 0118 0 0118 0z"
                 />
               </svg>
               <span>{error}</span>
@@ -1124,7 +1131,7 @@ export default function AvailabilityForm({
                 className="input input-bordered w-full transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required
+                required={false}
                 disabled={isWeekdayModeActive}
               />
             </div>
@@ -1162,7 +1169,7 @@ export default function AvailabilityForm({
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
-                        <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        <path d="M5 3a2 2 00-2 2v2a2 2 002 2h2a2 2 002-2V5a2 2 00-2-2H5zM5 11a2 2 00-2 2v2a2 2 002 2h2a2 2 002-2v-2a2 2 00-2-2H5zM11 5a2 2 012-2h2a2 2 012 2v2a2 2 01-2 2h-2a2 2 01-2-2V5zM11 13a2 2 012-2h2a2 2 012 2v2a2 2 01-2 2h-2a2 2 01-2-2v-2z" />
                       </svg>
                       表
                     </button>
@@ -1184,7 +1191,7 @@ export default function AvailabilityForm({
                       >
                         <path
                           fillRule="evenodd"
-                          d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                          d="M3 4a1 1 011-1h12a1 1 0110 2H4a1 1 01-1-1zm0 4a1 1 011-1h12a1 1 0110 2H4a1 1 01-1-1zm0 4a1 1 011-1h12a1 1 0110 2H4a1 1 01-1-1z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -1208,7 +1215,7 @@ export default function AvailabilityForm({
                       >
                         <path
                           fillRule="evenodd"
-                          d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"
+                          d="M5 4a3 3 000-3v6a3 3 003 3h10a3 3 003-3V7a3 3 00-3-3H5zm-1 9v-1h5v2H5a1 1 01-1-1zm7 1h4a1 1 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -1234,7 +1241,7 @@ export default function AvailabilityForm({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 011-18 0 0118 0 0118 0z"
                     ></path>
                   </svg>
                   <span>
@@ -1265,7 +1272,7 @@ export default function AvailabilityForm({
                   >
                     <path
                       fillRule="evenodd"
-                      d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                      d="M6 2a1 1 000-1v1H4a2 2 000-2v10a2 2 002 2h12a2 2 002-2V6a2 2 00-2-2h-1V3a1 1 100-2 0v1H7V3a1 1 00-1-1zm0 5a1 1 000 2h8a1 1 100-2H6z"
                       clipRule="evenodd"
                     />
                   </svg>
