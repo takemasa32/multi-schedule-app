@@ -7,6 +7,25 @@ jest.mock("@/app/actions", () => ({
 }));
 import { submitAvailability } from "@/app/actions";
 
+// jsdomのrequestSubmit未実装対策
+if (!HTMLFormElement.prototype.requestSubmit) {
+  HTMLFormElement.prototype.requestSubmit = function () {
+    this.submit();
+  };
+}
+
+// fetchのグローバルモック
+beforeAll(() => {
+  global.fetch = jest
+    .fn()
+    .mockResolvedValue({ json: async () => ({ exists: false }) });
+  // window.location.hrefのモック
+  Object.defineProperty(window, "location", {
+    writable: true,
+    value: { href: "" },
+  });
+});
+
 describe("AvailabilityForm", () => {
   const eventDates = [
     {
@@ -35,13 +54,12 @@ describe("AvailabilityForm", () => {
 
   it("名前未入力時はバリデーションエラーを表示する", async () => {
     render(<AvailabilityForm {...defaultProps} />);
-    // 利用規約に同意
     fireEvent.click(screen.getByLabelText(/利用規約/));
-    // 送信
     fireEvent.click(screen.getByRole("button", { name: /回答を送信/ }));
-    expect(
-      await screen.findByText(/お名前を入力してください/)
-    ).toBeInTheDocument();
+    const alert = await screen.findByRole("alert");
+    await waitFor(() => {
+      expect(alert).toHaveTextContent("お名前を入力してください");
+    });
   });
 
   it("利用規約未同意時はバリデーションエラーを表示する", async () => {
@@ -52,9 +70,11 @@ describe("AvailabilityForm", () => {
     });
     // 送信
     fireEvent.click(screen.getByRole("button", { name: /回答を送信/ }));
-    expect(
-      await screen.findByText(/利用規約への同意が必要です/)
-    ).toBeInTheDocument();
+    // エラー領域を取得し、文言を検証
+    const alert = await screen.findByRole("alert");
+    await waitFor(() => {
+      expect(alert).toHaveTextContent("利用規約への同意が必要です");
+    });
   });
 
   it("正常入力時にsubmitAvailabilityが呼ばれる", async () => {

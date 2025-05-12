@@ -8,7 +8,7 @@ module.exports = {
   setupFilesAfterEnv: ["@testing-library/jest-dom"],
   testEnvironment: "jsdom",
   transform: {
-    "^.+\\.(ts|tsx|js|jsx)$": "babel-jest",
+    "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "tsconfig.json" }],
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",

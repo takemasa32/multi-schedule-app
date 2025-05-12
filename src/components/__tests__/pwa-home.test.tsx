@@ -1,3 +1,10 @@
+// jsdomのrequestSubmit未実装対策
+if (!HTMLFormElement.prototype.requestSubmit) {
+  HTMLFormElement.prototype.requestSubmit = function () {
+    this.submit();
+  };
+}
+
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import PwaHomePage from "@/app/home/page";

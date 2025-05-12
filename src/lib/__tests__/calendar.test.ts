@@ -1,3 +1,10 @@
+// jsdomのrequestSubmit未実装対策
+if (!HTMLFormElement.prototype.requestSubmit) {
+  HTMLFormElement.prototype.requestSubmit = function() {
+    this.submit();
+  };
+}
+
 import { GET } from "@/app/api/generate-ics/route";
 import { NextRequest } from "next/server";
 import { generateGoogleCalendarUrl } from "../utils";
@@ -8,11 +15,16 @@ const mockedCreateSupabaseClient = createSupabaseClient as jest.Mock;
 
 // Jest環境用の簡易Responseクラスをグローバル定義
 if (typeof global.Response === 'undefined') {
-  global.Response = class {
+  class TestResponse {
     status: number;
     _text: string;
     _headers: Record<string, string>;
-    constructor(text: string, { status = 200, headers = {} } = {}) {
+    ok = true;
+    redirected = false;
+    statusText = '';
+    type = 'basic';
+    url = '';
+    constructor(text: string, { status = 200, headers = {} as Record<string, string> } = {}) {
       this.status = status;
       this._text = text;
       // keyを小文字化して格納
@@ -33,7 +45,13 @@ if (typeof global.Response === 'undefined') {
         },
       };
     }
-  };
+    // 型エラー回避のためダミーのstaticメソッドを追加
+    static error(_?: unknown) { return undefined; }
+    static json(_?: unknown, __?: unknown) { return undefined; }
+    static redirect(_?: unknown, __?: unknown) { return undefined; }
+  }
+  // @ts-expect-error Jest用のResponseモックのため型不一致を許容
+  global.Response = TestResponse;
 }
 
 describe("/api/generate-ics/route.ts", () => {

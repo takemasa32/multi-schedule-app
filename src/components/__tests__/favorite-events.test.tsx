@@ -2,6 +2,14 @@
  * @file お気に入りイベント機能のユニットテスト雛形
  * @see src/components/favorite-events-context.tsx
  */
+
+// jsdomのrequestSubmit未実装対策
+if (!HTMLFormElement.prototype.requestSubmit) {
+  HTMLFormElement.prototype.requestSubmit = function () {
+    this.submit();
+  };
+}
+
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { FavoriteEventsProvider } from "../favorite-events-context";
