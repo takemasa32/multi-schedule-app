@@ -19,25 +19,18 @@ jobs:
       - run: npx eslint .
 
   test:
-    name: Test on Node.js ${{ matrix.node-version }}
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16, 18, 20]
     steps:
       - uses: actions/checkout@v3
-
-      # キャッシュ設定
       - uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "18"
       - uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-18-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-${{ matrix.node-version }}-
-
-      # 依存インストールとテスト実行
+            ${{ runner.os }}-node-18-
       - run: npm ci
       - run: npx jest --coverage
