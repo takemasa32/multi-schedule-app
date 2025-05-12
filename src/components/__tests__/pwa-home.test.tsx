@@ -16,9 +16,21 @@ EventHistoryMock.displayName = "EventHistoryMock";
 const AddToHomeScreenMock = () => <div>PWAバナーMock</div>;
 AddToHomeScreenMock.displayName = "AddToHomeScreenMock";
 
-jest.mock("@/components/favorite-events", () => FavoriteEventsMock);
-jest.mock("@/components/event-history", () => EventHistoryMock);
-jest.mock("@/components/add-to-home-screen", () => AddToHomeScreenMock);
+jest.mock("@/components/favorite-events", () => {
+  const Mock = () => <div>お気に入りイベント一覧Mock</div>;
+  Mock.displayName = "FavoriteEventsMock";
+  return Mock;
+});
+jest.mock("@/components/event-history", () => {
+  const Mock = () => <div>最近アクセスMock</div>;
+  Mock.displayName = "EventHistoryMock";
+  return Mock;
+});
+jest.mock("@/components/add-to-home-screen", () => {
+  const Mock = () => <div>PWAバナーMock</div>;
+  Mock.displayName = "AddToHomeScreenMock";
+  return Mock;
+});
 
 // siteConfigのモック
 jest.mock("@/lib/site-config", () => ({

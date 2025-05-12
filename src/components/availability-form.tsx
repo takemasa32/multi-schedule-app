@@ -1030,7 +1030,7 @@ export default function AvailabilityForm({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 011-18 0 0118 0 0118 0z"
+                d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 1 9 0 0 1 18 0z"
               />
             </svg>
             <span>{feedback}</span>
@@ -1057,7 +1057,7 @@ export default function AvailabilityForm({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 1 1 3.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
               />
             </svg>
             回答を更新する
@@ -1089,7 +1089,7 @@ export default function AvailabilityForm({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 011-18 0 0118 0 0118 0z"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 1 1-18 0 1 9 0 0 1 18 0z"
                 />
               </svg>
               <span>{error}</span>
@@ -1169,7 +1169,7 @@ export default function AvailabilityForm({
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
-                        <path d="M5 3a2 2 00-2 2v2a2 2 002 2h2a2 2 002-2V5a2 2 00-2-2H5zM5 11a2 2 00-2 2v2a2 2 002 2h2a2 2 002-2v-2a2 2 00-2-2H5zM11 5a2 2 012-2h2a2 2 012 2v2a2 2 01-2 2h-2a2 2 01-2-2V5zM11 13a2 2 012-2h2a2 2 012 2v2a2 2 01-2 2h-2a2 2 01-2-2v-2z" />
+                        <path d="M5 3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H5zm6-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5zm0 8a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2z" />
                       </svg>
                       表
                     </button>
@@ -1191,7 +1191,7 @@ export default function AvailabilityForm({
                       >
                         <path
                           fillRule="evenodd"
-                          d="M3 4a1 1 011-1h12a1 1 0110 2H4a1 1 01-1-1zm0 4a1 1 011-1h12a1 1 0110 2H4a1 1 01-1-1zm0 4a1 1 011-1h12a1 1 0110 2H4a1 1 01-1-1z"
+                          d="M3 4a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -1215,7 +1215,7 @@ export default function AvailabilityForm({
                       >
                         <path
                           fillRule="evenodd"
-                          d="M5 4a3 3 000-3v6a3 3 003 3h10a3 3 003-3V7a3 3 00-3-3H5zm-1 9v-1h5v2H5a1 1 01-1-1zm7 1h4a1 1 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"
+                          d="M5 4a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H5zm-1 9v-1h5v2H5a1 1 0 0 1-1-1zm7 1h4a1 1 0 0 0 1-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -1241,7 +1241,7 @@ export default function AvailabilityForm({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 011-18 0 0118 0 0118 0z"
+                      d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 1 1-18 0 1 9 0 0 1 18 0z"
                     ></path>
                   </svg>
                   <span>
@@ -1272,7 +1272,7 @@ export default function AvailabilityForm({
                   >
                     <path
                       fillRule="evenodd"
-                      d="M6 2a1 1 000-1v1H4a2 2 000-2v10a2 2 002 2h12a2 2 002-2V6a2 2 00-2-2h-1V3a1 1 100-2 0v1H7V3a1 1 00-1-1zm0 5a1 1 000 2h8a1 1 100-2H6z"
+                      d="M6 2a1 1 0 0 1 1-1v1h8V1a1 1 0 1 1 2 0v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zm0 5a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H6z"
                       clipRule="evenodd"
                     />
                   </svg>

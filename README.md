@@ -106,12 +106,13 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 
 ## テストの実行方法
 
-本プロジェクトでは、主要なロジック・API・UI コンポーネントに対して Jest（TypeScript 対応）によるユニットテスト・結合テストを実装しています。
+本プロジェクトは Jest（TypeScript 対応）によるユニットテスト・結合テストを実装しています。
 
 - すべてのテストは `npm test` または `npm run test` で実行できます。
+- テストは Next.js 公式推奨の`next/jest`プリセットを利用しており、babel や ts-jest は不要です。
 - TypeScript 型エラーや Lint エラーが残っている場合、テストは失敗します。必ず型・Lint が通る状態で実行してください。
-- jsdom の `requestSubmit` 未実装警告を抑制するため、各テストファイルでポリフィルを導入しています。
-- グローバルな API（例: Response）をテスト用にモックする場合、型安全性・linter 要件を満たすよう `@ts-expect-error` などを適切に記述しています。
+- jsdom の`requestSubmit`未実装警告は各テストファイルでポリフィルを導入済みです。
+- テストの詳細・注意事項は`src/components/__tests__/`および`src/lib/__tests__/`ディレクトリの各テストファイルを参照してください。
 
 ### 主なテスト内容
 
@@ -130,5 +131,9 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 
 - テストは必ず型エラー・Lint エラーがない状態で実行・コミットしてください。
 - テスト追加時は仕様書に沿ったケースを網羅し、必要に応じてグローバルモックやポリフィルも追加してください。
-- Jest のグローバルモックや `@ts-expect-error` には必ず理由コメントを添えてください。
+- Jest のグローバルモックや`@ts-expect-error`には必ず理由コメントを添えてください。
 - テストの実装・修正内容は必ずコミットメッセージや PR 本文に明記してください。
+
+## PWA/Workbox 生成ファイルについて
+
+`public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています。
