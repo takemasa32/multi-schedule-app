@@ -76,6 +76,7 @@ export default async function EventPage({
   return (
     <div className="container mx-auto md:px-4 py-8">
       <EventHeader
+        eventId={event.id}
         title={event.title}
         description={event.description}
         isFinalized={event.is_finalized}

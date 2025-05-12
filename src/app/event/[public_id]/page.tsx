@@ -10,6 +10,7 @@ import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
+import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 
 interface EventPageProps {
   params: Promise<{
@@ -100,7 +101,7 @@ export default async function EventPage({
     ]);
 
   return (
-    <>
+    <FavoriteEventsProvider>
       <div className="bg-base-200 mb-6 py-4">
         <div className="container mx-auto max-w-5xl px-4">
           <Breadcrumbs items={[{ label: "イベント詳細" }]} />
@@ -110,6 +111,7 @@ export default async function EventPage({
       <div className="container mx-auto max-w-5xl px-4 pb-12">
         <div className="fade-in">
           <EventHeader
+            eventId={public_id}
             title={event.title}
             description={event.description}
             isFinalized={event.is_finalized}
@@ -129,6 +131,6 @@ export default async function EventPage({
           />
         </div>
       </div>
-    </>
+    </FavoriteEventsProvider>
   );
 }
