@@ -10,9 +10,9 @@ import { Metadata } from "next";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ public_id: string }>;
+  params: { public_id: string };
 }): Promise<Metadata> {
-  const { public_id } = await params;
+  const { public_id } = params;
   const event = await getEvent(public_id);
   if (!event) {
     return {
@@ -35,16 +35,16 @@ export async function generateMetadata({
 }
 
 type EventPageProps = {
-  params: Promise<{ public_id: string }>;
-  searchParams: Promise<{ participant_id?: string }>;
+  params: { public_id: string };
+  searchParams: { participant_id?: string };
 };
 
 export default async function EventPage({
   params,
   searchParams,
 }: EventPageProps) {
-  const { public_id } = await params;
-  const { participant_id: participantId } = await searchParams;
+  const { public_id } = params;
+  const { participant_id: participantId } = searchParams;
 
   // イベント情報を取得
   const event = await getEvent(public_id);
