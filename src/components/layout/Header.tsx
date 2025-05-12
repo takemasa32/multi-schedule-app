@@ -54,7 +54,6 @@ export default function Header() {
           <Link
             href="/create"
             className="btn btn-sm btn-primary hidden sm:inline-flex"
-            name=""
           >
             新規イベント作成
           </Link>
