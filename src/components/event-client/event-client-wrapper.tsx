@@ -73,7 +73,7 @@ export default function EventClientWrapper({
       adminToken: isAdmin ? event.admin_token ?? undefined : undefined,
       createdAt: new Date().toISOString(),
       isCreatedByMe: isAdmin,
-    });
+    }, 30); // 履歴保存件数を30件に拡張
   }, [event.public_token, event.title, event.admin_token, isAdmin]);
 
   // 参加者名バッジのトグルUI

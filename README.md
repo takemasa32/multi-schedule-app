@@ -108,7 +108,7 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 
 本プロジェクトは Jest（TypeScript 対応）によるユニットテスト・結合テストを実装しています。
 
-- すべてのテストは `npm test` または `npm run test` で実行できます。
+- すべてのテストは `npx jest` で実行できます。
 - テストは Next.js 公式推奨の`next/jest`プリセットを利用しており、babel や ts-jest は不要です。
 - TypeScript 型エラーや Lint エラーが残っている場合、テストは失敗します。必ず型・Lint が通る状態で実行してください。
 - jsdom の`requestSubmit`未実装警告は各テストファイルでポリフィルを導入済みです。
