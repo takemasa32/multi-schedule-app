@@ -26,15 +26,19 @@ type Availability = {
   availability: boolean;
 };
 
+// event型にfinal_date_idを追加
+interface EventWithFinalDateId {
+  id: string;
+  title: string;
+  description: string | null;
+  public_token: string;
+  admin_token: string | null;
+  is_finalized: boolean;
+  final_date_id?: string | null;
+}
+
 interface EventClientWrapperProps {
-  event: {
-    id: string;
-    title: string;
-    description: string | null;
-    public_token: string;
-    admin_token: string | null;
-    is_finalized: boolean;
-  };
+  event: EventWithFinalDateId;
   eventDates: EventDate[];
   participants: Participant[];
   availabilities: Availability[];
@@ -59,21 +63,34 @@ export default function EventClientWrapper({
     string[]
   >([]);
 
+  // finalizedDateIdsが空かつfinal_date_idが存在する場合はそれを使う
+  let effectiveFinalizedDateIds = finalizedDateIds;
+  if (
+    event.is_finalized &&
+    (!finalizedDateIds || finalizedDateIds.length === 0) &&
+    event.final_date_id
+  ) {
+    effectiveFinalizedDateIds = [event.final_date_id];
+  }
+
   // 確定された日程の詳細情報を取得
   const finalizedDates = eventDates.filter((date) =>
-    finalizedDateIds.includes(date.id)
+    effectiveFinalizedDateIds.includes(date.id)
   );
 
   // ページロード時にイベント履歴に追加
   useEffect(() => {
     // イベント情報を履歴に追加
-    addEventToHistory({
-      id: event.public_token,
-      title: event.title,
-      adminToken: isAdmin ? event.admin_token ?? undefined : undefined,
-      createdAt: new Date().toISOString(),
-      isCreatedByMe: isAdmin,
-    }, 30); // 履歴保存件数を30件に拡張
+    addEventToHistory(
+      {
+        id: event.public_token,
+        title: event.title,
+        adminToken: isAdmin ? event.admin_token ?? undefined : undefined,
+        createdAt: new Date().toISOString(),
+        isCreatedByMe: isAdmin,
+      },
+      30
+    ); // 履歴保存件数を30件に拡張
   }, [event.public_token, event.title, event.admin_token, isAdmin]);
 
   // 参加者名バッジのトグルUI

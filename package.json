@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "next test",
+    "test:e2e": "playwright test --headed",
     "e2e": "concurrently -k -s first -n next,supabase,wait,playwright \"next start\" \"supabase start\" \"wait-on http://localhost:3000\" \"playwright test\"",
     "e2e:dev": "concurrently -k -s first -n next,wait,playwright \"next dev\" \"wait-on http://localhost:3000\" \"playwright test\"",
     "e2e:headless": "concurrently -k -s first -n next,wait,playwright \"next start\" \"wait-on http://localhost:3000\" \"playwright test --headless\"",

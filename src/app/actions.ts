@@ -128,6 +128,25 @@ export async function submitAvailability(formData: FormData) {
     let existingParticipantId = participantId;
     let isNewParticipant = false;
 
+    if (existingParticipantId) {
+      // 既存参加者の名前が変更された場合はupdate
+      const { data: currentParticipant } = await supabase
+        .from("participants")
+        .select("name")
+        .eq("id", existingParticipantId)
+        .maybeSingle();
+      if (currentParticipant && currentParticipant.name !== participantName) {
+        const { error: updateError } = await supabase
+          .from("participants")
+          .update({ name: participantName })
+          .eq("id", existingParticipantId);
+        if (updateError) {
+          console.error("Participant name update error:", updateError);
+          return { success: false, message: "参加者名の更新に失敗しました" };
+        }
+      }
+    }
+
     if (!existingParticipantId) {
       // 参加者IDが指定されていない場合は、名前で既存参加者を探す
       const { data: existingParticipant } = await supabase
