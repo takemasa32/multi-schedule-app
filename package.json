@@ -2,16 +2,21 @@
   "name": "multi-schedule-app",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
+"scripts": {
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test": "next test",
-    "e2e": "concurrently -k -s first -n next,supabase,wait,playwright \"next start\" \"supabase start\" \"wait-on http://localhost:3000\" \"playwright test\"",
-    "e2e:dev": "concurrently -k -s first -n next,wait,playwright \"next dev\" \"wait-on http://localhost:3000\" \"playwright test\"",
-    "e2e:headless": "concurrently -k -s first -n next,wait,playwright \"next start\" \"wait-on http://localhost:3000\" \"playwright test --headless\"",
-    "e2e:ci": "concurrently -k -s first -n next,wait,playwright \"next start\" \"wait-on http://localhost:3000\" \"playwright test --reporter=dot\""
+
+    "test": "jest --watch",
+
+    "test:ci": "jest --ci --passWithNoTests",
+
+    "e2e:dev": "concurrently \"npm run dev\" \"npx playwright test --headed\"",
+
+    "e2e": "npm run build && concurrently \"npm run start\" \"npx playwright test\"",
+
+    "e2e:headless": "npm run build && npm run start & npx playwright test --reporter=dot",
+    "e2e:ci": "npm run e2e:headless"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
