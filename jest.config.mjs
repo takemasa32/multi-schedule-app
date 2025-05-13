@@ -12,6 +12,7 @@ const customJestConfig = {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@/lib/supabase$": "<rootDir>/src/lib/__mocks__/supabase.ts",
   },
+  testPathIgnorePatterns: ["<rootDir>/e2e/"],
 };
 
 export default createJestConfig(customJestConfig);

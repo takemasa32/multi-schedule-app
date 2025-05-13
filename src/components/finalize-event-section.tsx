@@ -68,9 +68,7 @@ export default function FinalizeEventSection({
 
       // 成功時はServer Actionでページが再検証されるため、
       // ユーザーにフィードバックを表示してからリロード
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      window.location.reload();
     } catch (error) {
       console.error("確定処理でエラーが発生しました:", error);
       setError(

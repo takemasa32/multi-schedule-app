@@ -1,17 +1,18 @@
+import { TextEncoder, TextDecoder } from "util";
+import {
+  ReadableStream,
+  WritableStream,
+  TransformStream,
+} from "web-streams-polyfill";
+
 // Jestセットアップ: Node.js環境でWeb APIのグローバルポリフィル
 
 // TextEncoder/TextDecoderのポリフィル
 if (typeof global.TextEncoder === "undefined") {
-  const { TextEncoder, TextDecoder } = require("util");
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
 }
 // Web Streams APIのポリフィル（undici用）
-const {
-  ReadableStream,
-  WritableStream,
-  TransformStream,
-} = require("web-streams-polyfill");
 if (typeof global.ReadableStream === "undefined") {
   global.ReadableStream = ReadableStream;
 }

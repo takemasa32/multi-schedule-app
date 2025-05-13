@@ -259,6 +259,11 @@ export async function getFinalizedDateIds(eventId: string, finalDateId: string |
     return [finalDateId];
   }
 
+  // event.is_finalizedがtrueかつfinalDateIdが存在する場合は必ず返す
+  if ((!data || data.length === 0) && finalDateId) {
+    return [finalDateId];
+  }
+
   return [];
 }
 

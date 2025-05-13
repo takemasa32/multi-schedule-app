@@ -156,7 +156,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                     >
                       <path d="M19,4H18V2H16V4H8V2H6V4H5A2,2,0,0,0,3,6V20a2,2,0,0,0,2,2H19a2,2,0,0,0,2-2V6A2,2,0,0,0,19,4Zm0,16H5V10H19ZM19,8H5V6H19ZM7,12h4v4H7Z" />
                     </svg>
-                    Google カレンダーに追加
+                    Googleカレンダー
                   </>
                 )}
               </a>
@@ -183,7 +183,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                       <path d="M12,16a1,1,0,0,1-1-1V4a1,1,0,0,1,2,0V15A1,1,0,0,1,12,16Z" />
                       <path d="M19,20H5a1,1,0,0,1,0-2H19a1,1,0,0,1,0,2Z" />
                     </svg>
-                    iCalendarに追加
+                    カレンダーに追加
                   </>
                 )}
               </a>

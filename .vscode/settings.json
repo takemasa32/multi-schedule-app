@@ -19,5 +19,5 @@
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
-  "cSpell.words": ["chouseisan", "daysynth", "tappy"]
+  "cSpell.words": ["chouseisan", "daysynth", "networkidle", "tappy"]
 }
