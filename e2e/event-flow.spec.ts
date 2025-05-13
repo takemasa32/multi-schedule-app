@@ -15,7 +15,7 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
   throw lastErr;
 }
 
-test('イベント作成→参加r者回e答→週表示回答→既存回答編集→q主催者確u定→カレンダー連携', async ({ page, context, request }) => {
+test('イベント作成→参加者回答→週表示回答→既存回答編集→主催者確定→カレンダー連携', async ({ page, context, request }) => {
   // 1. トップページから新規イベント作成ページへ遷移
   await gotoWithRetry(page, '/create');
   await expect(page.getByLabel('イベントタイトル')).toBeVisible();
