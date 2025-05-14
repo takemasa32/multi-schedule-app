@@ -108,4 +108,43 @@
 
 ---
 
+## 6. データベース（RLS/SQL）テスト戦略・CI 自動化
+
+### 6.1 DB レイヤーの RLS/SQL テスト
+
+- Supabase CLI ＋ pgTAP で DB レイヤーの RLS・制約を自動テスト
+- テストは`supabase/tests/`配下に SQL ファイルで管理し、`supabase test db`で一括実行
+- 各テストはトランザクションで囲み、ロールバックでアイソレーション
+- シードデータ（`supabase/seed.sql`）で初期状態を保証
+- RLS（認証/匿名ユーザー）の CRUD 成功・失敗ケースを網羅
+- 例：events/participants/availabilities テーブルの RLS 成功・失敗、他イベントのトークンでのアクセス不可など
+
+### 6.2 CI/CD 自動化
+
+- GitHub Actions 等で以下を自動化
+  1. Supabase CLI セットアップ
+  2. ローカルスタック起動
+  3. マイグレーション・シード適用
+  4. DB テスト（`supabase test db`）
+  5. ユニット・E2E テスト
+  6. レポート集約
+- PR ごとに自動テストを回し、マージ前に品質担保
+
+### 6.3 E2E テストの DB 初期化
+
+- Playwright ＋ Supawright 等で E2E 前後に DB 初期化・クリーンアップを自動化
+- テスト用 DB は`supabase db reset --force --seed`で毎回初期化
+- 主要なユーザーフロー（イベント作成 → 回答 → 確定 → カレンダー連携等）を網羅
+
+---
+
+## 7. 参考・補足
+
+- Supabase 公式: https://supabase.com/docs/guides/database/testing
+- pgTAP: https://pgtap.org/
+- Supawright: https://github.com/isaacharrisholt/supawright
+- Basejump: https://usebasejump.com/blog/testing-on-supabase-with-pgtap
+
+---
+
 この仕様書は今後のテスト実装・運用の指針とします。
