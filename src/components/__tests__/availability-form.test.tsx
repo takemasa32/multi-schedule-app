@@ -1,3 +1,10 @@
+// --- JSDOMのrequestSubmit未実装対策（テスト安定化のため最上部で必ず定義）
+if (!window.HTMLFormElement.prototype.requestSubmit) {
+  window.HTMLFormElement.prototype.requestSubmit = function () {
+    this.submit();
+  };
+}
+
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import AvailabilityForm from "../availability-form";
@@ -6,13 +13,6 @@ jest.mock("@/app/actions", () => ({
   submitAvailability: jest.fn(),
 }));
 import { submitAvailability } from "@/app/actions";
-
-// jsdomのrequestSubmit未実装対策
-if (!HTMLFormElement.prototype.requestSubmit) {
-  HTMLFormElement.prototype.requestSubmit = function () {
-    this.submit();
-  };
-}
 
 // fetchのグローバルモック
 beforeAll(() => {
@@ -24,6 +24,14 @@ beforeAll(() => {
     writable: true,
     value: { href: "" },
   });
+});
+
+afterAll(() => {
+  // fetch, locationのモックをリセット
+  // @ts-expect-error テスト用リセット
+  global.fetch = undefined;
+  // @ts-expect-error テスト用リセット
+  delete window.location;
 });
 
 describe("AvailabilityForm", () => {

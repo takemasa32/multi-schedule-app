@@ -1,9 +1,3 @@
-// jsdomのrequestSubmit未実装対策
-if (!HTMLFormElement.prototype.requestSubmit) {
-  HTMLFormElement.prototype.requestSubmit = function() {
-    this.submit();
-  };
-}
 import { createEvent, submitAvailability, finalizeEvent } from '../../app/actions';
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
@@ -16,39 +10,31 @@ jest.mock("@/lib/supabase", () => ({
   createSupabaseAdmin: jest.fn(() => ({ from: jest.fn() })),
 }));
 
-// 汎用的なSupabaseチェーンモック
+// 汎用的なSupabaseチェーンモック（多段チェーン対応・再帰的）
 function createSupabaseChainMock(result: Record<string, unknown> = { data: [], error: null }) {
-  // チェーン用の型を定義
-  type SupabaseChain = {
-    insert: (data?: Record<string, unknown>) => SupabaseChain;
-    select: (columns?: string) => SupabaseChain;
-    eq: (column: string, value: unknown) => SupabaseChain;
-    in: (column: string, values: unknown[]) => SupabaseChain;
-    single: () => Promise<Record<string, unknown>>;
-    maybeSingle: () => Promise<Record<string, unknown>>;
-    order: (column: string, options?: { ascending?: boolean; nullsFirst?: boolean; foreignTable?: string }) => SupabaseChain;
-    delete: () => SupabaseChain;
-    update: (data: Record<string, unknown>) => SupabaseChain;
-    range: (from: number, to: number) => SupabaseChain;
-    then: (resolve: (v: unknown) => unknown) => Promise<unknown>;
-    catch: (reject: (err: unknown) => unknown) => SupabaseChain;
-  };
 
-  const chain: SupabaseChain = {
-    insert: jest.fn((): SupabaseChain => chain),
-    select: jest.fn((): SupabaseChain => chain),
-    eq: jest.fn((): SupabaseChain => chain),
-    in: jest.fn((): SupabaseChain => chain),
-    single: jest.fn(() => Promise.resolve(result)),
-    maybeSingle: jest.fn(() => Promise.resolve(result)),
-    order: jest.fn((): SupabaseChain => chain),
-    delete: jest.fn((): SupabaseChain => chain),
-    update: jest.fn((): SupabaseChain => chain),
-    range: jest.fn((): SupabaseChain => chain),
-    then: jest.fn((resolve: (v: unknown) => unknown) => Promise.resolve(result).then(resolve)),
-    catch: jest.fn((): SupabaseChain => chain),
-  };
-  return chain;
+  const methods = [
+    "insert", "select", "eq", "in", "order", "update", "delete", "range",
+    "from", "not", "or", "like", "ilike", "limit"
+  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function makeChain(res: any) {
+    // 新しいチェーンオブジェクト
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {};
+    methods.forEach((m) => {
+      chain[m] = jest.fn(() => makeChain(res));
+    });
+    chain.single = jest.fn(() => Promise.resolve(res));
+    chain.maybeSingle = jest.fn(() => Promise.resolve(res));
+    chain.then = jest.fn((onFulfilled) => Promise.resolve(res).then(onFulfilled));
+    chain.catch = jest.fn((onRejected) => {
+      if (res.error) return Promise.reject(res.error).catch(onRejected);
+      return Promise.resolve(res);
+    });
+    return chain;
+  }
+  return makeChain(result);
 }
 
 describe('createEvent', () => {
@@ -72,14 +58,11 @@ describe('createEvent', () => {
     formData.append('startTimes', '10:00');
     formData.append('endDates', '2025-05-10');
     formData.append('endTimes', '11:00');
+    // データはUUID形式で返す
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (_table: string) => ({
-        insert: jest.fn(() => ({
-          select: jest.fn(() => Promise.resolve({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token' }],
-            error: null,
-          })),
-        })),
+      from: (_table: string) => createSupabaseChainMock({
+        data: [{ id: 'eventid', public_token: '123e4567-e89b-12d3-a456-426614174000', admin_token: '123e4567-e89b-12d3-a456-426614174001' }],
+        error: null,
       }),
     }));
     const uuidRegex = /^[0-9a-fA-F-]{36}$/;
@@ -124,14 +107,8 @@ describe('createEvent', () => {
     formData.set('title', 'テストイベント');
     formData.append('startTimes', '2025-05-10T10:00:00.000Z');
     formData.append('endTimes', '2025-05-10T11:00:00.000Z');
-    mockedCreateSupabaseClient.mockImplementation(() => ({
-      from: (_table: string) => ({
-        insert: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn(() => Promise.resolve({ data: null, error: { message: 'DBエラー' } }))
-          }))
-        })),
-      }),
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (_table: string) => createSupabaseChainMock({ data: null, error: { message: 'DBエラー' } }),
     }));
     const result = await createEvent(formData);
     expect(result.success).toBe(false);
@@ -143,10 +120,21 @@ describe('submitAvailability', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (_table: string) => createSupabaseChainMock({
-        data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
-        error: null,
-      }),
+      from: (table: string) => {
+        if (table === 'events') {
+          return createSupabaseChainMock({
+            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            error: null,
+          });
+        }
+        if (table === 'participants') {
+          return createSupabaseChainMock({ data: [], error: null });
+        }
+        if (table === 'availabilities') {
+          return createSupabaseChainMock({ data: [], error: null });
+        }
+        return createSupabaseChainMock();
+      },
     }));
     mockedCreateSupabaseClient.mockImplementation(() => ({
       from: (_table: string) => createSupabaseChainMock(),
@@ -155,29 +143,13 @@ describe('submitAvailability', () => {
 
   it('正常な入力で回答が保存される', async () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) => {
-        if (table === 'events') {
-          return {
-            select: jest.fn(() => Promise.resolve({
-              data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
-              error: null,
-            })),
-          };
-        }
-        if (table === 'participants') {
-          return {
-            select: jest.fn(() => Promise.resolve({ data: [], error: null })),
-            insert: jest.fn(() => ({ select: jest.fn(() => Promise.resolve({ data: [{ id: 'partid', name: 'テスト太郎' }], error: null })) })),
-            delete: jest.fn(() => Promise.resolve({ data: [], error: null })),
-          };
-        }
-        if (table === 'availabilities') {
-          return {
-            insert: jest.fn(() => Promise.resolve({ data: [], error: null })),
-          };
-        }
-        return {};
-      },
+      from: (table: string) => createSupabaseChainMock(
+        table === 'events'
+          ? { data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }], error: null }
+          : table === 'participants'
+          ? { data: [], error: null }
+          : { data: [], error: null }
+      ),
     }));
     const formData = new FormData();
     formData.set('eventId', 'eventid');
@@ -198,17 +170,13 @@ describe('submitAvailability', () => {
   });
 
   it('イベントが存在しない場合はエラー', async () => {
-    // すべてのテーブルでチェーンモックを返す
-    mockedCreateSupabaseClient.mockImplementation(() => ({
-      from: (_table: string) => ({
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            eq: jest.fn(() => ({
-              single: jest.fn(() => Promise.resolve({ data: null, error: null }))
-            }))
-          }))
-        }))
-      }),
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (table: string) => {
+        if (table === 'events') {
+          return createSupabaseChainMock({ data: null, error: null });
+        }
+        return createSupabaseChainMock();
+      },
     }));
     const formData = new FormData();
     formData.set('eventId', 'eventid');
@@ -235,26 +203,18 @@ describe('submitAvailability', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => {
         if (table === 'events') {
-          return {
-            select: jest.fn(() => Promise.resolve({
-              data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
-              error: null,
-            })),
-          };
+          return createSupabaseChainMock({
+            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            error: null,
+          });
         }
         if (table === 'participants') {
-          return {
-            select: jest.fn(() => Promise.resolve({ data: [{ id: 'partid', name: 'テスト太郎' }], error: null })),
-            delete: jest.fn(() => Promise.resolve({ data: [], error: null })),
-            insert: jest.fn(() => ({ select: jest.fn(() => Promise.resolve({ data: [{ id: 'partid', name: 'テスト太郎' }], error: null })) })),
-          };
+          return createSupabaseChainMock({ data: [{ id: 'partid', name: 'テスト太郎' }], error: null });
         }
         if (table === 'availabilities') {
-          return {
-            insert: jest.fn(() => Promise.resolve({ data: [], error: null })),
-          };
+          return createSupabaseChainMock({ data: [], error: null });
         }
-        return {};
+        return createSupabaseChainMock();
       },
     }));
     const formData = new FormData();
@@ -272,10 +232,18 @@ describe('finalizeEvent', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (_table: string) => createSupabaseChainMock({
-        data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
-        error: null,
-      }),
+      from: (table: string) => {
+        if (table === 'events') {
+          return createSupabaseChainMock({
+            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            error: null,
+          });
+        }
+        if (table === 'event_dates') {
+          return createSupabaseChainMock({ data: [{ id: 'dateid' }], error: null });
+        }
+        return createSupabaseChainMock();
+      },
     }));
     mockedCreateSupabaseClient.mockImplementation(() => ({
       from: (_table: string) => createSupabaseChainMock(),
@@ -292,16 +260,12 @@ describe('finalizeEvent', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => {
         if (table === 'events') {
-          return {
-            select: jest.fn(() => Promise.resolve({ data: [], error: null })),
-          };
+          return createSupabaseChainMock({ data: [], error: null });
         }
         if (table === 'event_dates') {
-          return {
-            select: jest.fn(() => Promise.resolve({ data: null, error: null })),
-          };
+          return createSupabaseChainMock({ data: null, error: null });
         }
-        return {};
+        return createSupabaseChainMock();
       },
     }));
     const result = await finalizeEvent('eventid', ['dateid']);
@@ -313,19 +277,15 @@ describe('finalizeEvent', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => {
         if (table === 'events') {
-          return {
-            select: jest.fn(() => Promise.resolve({
-              data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
-              error: null,
-            })),
-          };
+          return createSupabaseChainMock({
+            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            error: null,
+          });
         }
         if (table === 'event_dates') {
-          return {
-            select: jest.fn(() => Promise.resolve({ data: null, error: null })),
-          };
+          return createSupabaseChainMock({ data: null, error: null });
         }
-        return {};
+        return createSupabaseChainMock();
       },
     }));
     const result = await finalizeEvent('eventid', ['dateid']);
@@ -337,19 +297,15 @@ describe('finalizeEvent', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => {
         if (table === 'events') {
-          return {
-            select: jest.fn(() => Promise.resolve({
-              data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
-              error: null,
-            })),
-          };
+          return createSupabaseChainMock({
+            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            error: null,
+          });
         }
         if (table === 'event_dates') {
-          return {
-            select: jest.fn(() => Promise.resolve({ data: null, error: { message: 'DBエラー' } })),
-          };
+          return createSupabaseChainMock({ data: null, error: { message: 'DBエラー' } });
         }
-        return {};
+        return createSupabaseChainMock();
       },
     }));
     const result = await finalizeEvent('eventid', ['dateid']);
