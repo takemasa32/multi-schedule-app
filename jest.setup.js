@@ -34,3 +34,19 @@ if (typeof global.Request === "undefined") {
   };
 }
 // Responseのポリフィルは削除（API Routeテストで個別にモック）
+
+// JSDOM: HTMLFormElement.prototype.requestSubmit ポリフィル
+if (
+  typeof HTMLFormElement !== "undefined" &&
+  typeof HTMLFormElement.prototype.requestSubmit !== "function"
+) {
+  HTMLFormElement.prototype.requestSubmit = function (submitter) {
+    // submitterが指定された場合はsubmitイベントを発火
+    if (submitter) {
+      const evt = new Event("submit", { bubbles: true, cancelable: true });
+      submitter.dispatchEvent(evt);
+    } else {
+      this.submit();
+    }
+  };
+}

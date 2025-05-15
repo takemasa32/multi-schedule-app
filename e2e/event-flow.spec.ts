@@ -207,4 +207,25 @@ test.describe.serial('イベントE2Eフロー', () => {
     expect(redirectUrl).toMatch(/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
     await adminPage.close();
   });
+
+  test('イベント共有ボタンのURLが公開URLと一致する', async ({ page }) => {
+    // イベント詳細ページへ遷移
+    await gotoWithRetry(page, eventUrl);
+    // 共有ボタンを取得
+    const shareBtn = page.getByRole('button', { name: /共有|イベントURLを共有/ });
+    await expect(shareBtn).toBeVisible();
+    // クリップボードAPIをモック
+    await page.evaluate(() => {
+      // @ts-expect-error テスト用にwindowへ一時プロパティ追加
+      window._copiedText = '';
+      // @ts-expect-error navigator.clipboardのwriteTextをモック
+      navigator.clipboard = { writeText: (text) => { window._copiedText = text; return Promise.resolve(); } };
+    });
+    await shareBtn.click();
+    // クリップボードにコピーされた内容がeventUrl（adminクエリ除く）と一致するか
+    // @ts-expect-error テスト用windowプロパティ参照
+    const copied = await page.evaluate(() => window._copiedText);
+    const expectedUrl = eventUrl.replace(/\?admin=.*/, '');
+    expect(copied).toBe(expectedUrl);
+  });
 });
