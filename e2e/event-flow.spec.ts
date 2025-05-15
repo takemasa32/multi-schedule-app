@@ -21,6 +21,14 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
 let eventUrl: string;
 let participantName: string;
 
+// Playwrightのテストでwindow.navigator.clipboardをモックするための型定義
+declare global {
+  interface Window {
+    /** Playwright の addInitScript で設定するカスタムプロパティ */
+    _copiedText: string;
+  }
+}
+
 // 直列でE2Eフローを分割
 
 test.describe.serial('イベントE2Eフロー', () => {
@@ -162,12 +170,12 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
     await page.waitForTimeout(1000);
     await page.getByRole('button', { name: '回答を更新する' }).click();
-    await page.waitForTimeout(1000);
     const backToSummaryBtn = page.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
     if (await backToSummaryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
     await expect(page.url()).not.toContain('/input');
     const verifyPage = await context.newPage();
     await gotoWithRetry(verifyPage, eventUrl);
@@ -209,23 +217,42 @@ test.describe.serial('イベントE2Eフロー', () => {
   });
 
   test('イベント共有ボタンのURLが公開URLと一致する', async ({ page }) => {
+    // ページ読み込み前に確実に走らせる
+    await page.addInitScript(() => {
+      // navigator.share を無効化
+      Object.defineProperty(navigator, 'share', {
+        value: undefined,
+        configurable: true
+      });
+
+      // clipboard.writeText をモックして window._copiedText に書き込む
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: (text: string) => {
+            window._copiedText = text;
+            return Promise.resolve();
+          }
+        },
+        configurable: true
+      });
+
+      // テスト用変数も初期化
+      window._copiedText = '';
+    });
+
     // イベント詳細ページへ遷移
     await gotoWithRetry(page, eventUrl);
-    // 共有ボタンを取得
+
+    // 共有ボタンをクリック
     const shareBtn = page.getByRole('button', { name: /共有|イベントURLを共有/ });
     await expect(shareBtn).toBeVisible();
-    // クリップボードAPIをモック
-    await page.evaluate(() => {
-      // @ts-expect-error テスト用にwindowへ一時プロパティ追加
-      window._copiedText = '';
-      // @ts-expect-error navigator.clipboardのwriteTextをモック
-      navigator.clipboard = { writeText: (text) => { window._copiedText = text; return Promise.resolve(); } };
-    });
     await shareBtn.click();
-    // クリップボードにコピーされた内容がeventUrl（adminクエリ除く）と一致するか
-    // @ts-expect-error テスト用windowプロパティ参照
+
+    // クリップボードにコピーされた内容を取得
     const copied = await page.evaluate(() => window._copiedText);
     const expectedUrl = eventUrl.replace(/\?admin=.*/, '');
+
     expect(copied).toBe(expectedUrl);
   });
+
 });
