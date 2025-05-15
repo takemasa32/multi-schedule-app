@@ -509,6 +509,16 @@ export default function AvailabilityForm({
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
 
+    // // デバッグ: hiddenフィールドと名前を出力
+    // console.log(
+    //   "[E2E DEBUG] eventId:",
+    //   formData.get("eventId"),
+    //   "publicToken:",
+    //   formData.get("publicToken"),
+    //   "participant_name:",
+    //   formData.get("participant_name")
+    // );
+
     e.preventDefault(); // デフォルトの送信をキャンセル
 
     // 名前をLocalStorageに保存

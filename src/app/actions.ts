@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseClient } from "@/lib/supabase";
+import {createSupabaseAdmin} from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 
@@ -31,7 +32,7 @@ export async function createEvent(formData: FormData) {
     const adminToken = uuidv4();
 
     // Supabaseクライアント取得
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     // イベント作成
     const { data: eventData, error: eventError } = await supabase
@@ -110,7 +111,7 @@ export async function submitAvailability(formData: FormData) {
       return { success: false, message: "必須項目が未入力です" };
     }
 
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     // イベントの存在確認
     const { data: event, error: eventError } = await supabase
@@ -271,7 +272,7 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
       return { success: false, message: "必須パラメータが不足しています" };
     }
 
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     // イベント情報を取得
     const { data: event, error: eventError } = await supabase

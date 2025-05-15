@@ -4,6 +4,9 @@ CREATE SCHEMA IF NOT EXISTS public;
 -- UUID拡張を有効化
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- pgTAP拡張を有効化
+CREATE EXTENSION IF NOT EXISTS pgtap;
+
 -- イベントテーブル
 CREATE TABLE events (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -66,8 +69,11 @@ ALTER TABLE event_dates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE availabilities ENABLE ROW LEVEL SECURITY;
 
--- 開発中は全テーブルに対して一時的に全許可ポリシーを設定
-CREATE POLICY "Allow all for development" ON events FOR ALL USING (true);
-CREATE POLICY "Allow all for development" ON event_dates FOR ALL USING (true);
-CREATE POLICY "Allow all for development" ON participants FOR ALL USING (true);
-CREATE POLICY "Allow all for development" ON availabilities FOR ALL USING (true);
+-- events: anonはSELECTのみ許可（他操作はポリシー無し＝デフォルト拒否）
+CREATE POLICY "select_public_events" ON events FOR SELECT USING (true);
+-- event_dates: anonはSELECTのみ許可
+CREATE POLICY "select_public_event_dates" ON event_dates FOR SELECT USING (true);
+-- participants: anonはSELECTのみ許可
+CREATE POLICY "select_public_participants" ON participants FOR SELECT USING (true);
+-- availabilities: anonはSELECTのみ許可
+CREATE POLICY "select_public_availabilities" ON availabilities FOR SELECT USING (true);

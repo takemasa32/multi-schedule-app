@@ -46,7 +46,7 @@
 - **ディレクトリ構成**
   - `src/lib/__tests__/` ... サーバーアクション・ユーティリティ
   - `src/components/__tests__/` ... UI コンポーネント
-  - `e2e/` ... Playwright E2E
+  - `e2e/` ... Playwright E2E :実行時--debug オプションは使用しないこと
 - **命名規則**
   - `*.test.ts(x)`、E2E は`*.spec.ts`
 - **データ管理**
@@ -144,6 +144,14 @@
 - pgTAP: https://pgtap.org/
 - Supawright: https://github.com/isaacharrisholt/supawright
 - Basejump: https://usebasejump.com/blog/testing-on-supabase-with-pgtap
+
+---
+
+## 8. 個人情報・プライバシーに関する方針
+
+- 本アプリは個人情報（氏名・連絡先・識別子等）を保存しない設計方針とする。
+- RLS/制約テストは「個人情報を保存しない」前提で必要十分な範囲に限定し、過剰なテストやデータ保持は行わない。
+- これにより、プライバシーリスクを最小化し、テストデータの管理・運用も簡素化する。
 
 ---
 

@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "debug": "NODE_OPTIONS='--inspect' next dev",
     "test": "jest --watch",
     "test:ci": "jest --ci --passWithNoTests",
     "e2e:dev": "concurrently \"npm run dev\" \"npx playwright test --headed\"",
+    "test:e2e": "npx playwright test --headed",
     "e2e": "npm run build && concurrently \"npm run start\" \"npx playwright test\"",
     "e2e:headless": "npm run build && npm run start & npx playwright test --reporter=dot",
     "e2e:ci": "npm run e2e:headless"
