@@ -95,12 +95,22 @@ const ListView: React.FC<ListViewProps> = ({
                 >
                   <div className="flex items-center">
                     <span className="w-3 h-3 rounded-full bg-success mr-1"></span>
-                    <span className="font-medium">{item.availableCount}</span>
+                    <span
+                      className="font-medium"
+                      data-testid={`available-count-${item.dateId}`}
+                    >
+                      {item.availableCount}
+                    </span>
                   </div>
                   <span>/</span>
                   <div className="flex items-center">
                     <span className="w-3 h-3 rounded-full bg-error mr-1"></span>
-                    <span className="font-medium">{item.unavailableCount}</span>
+                    <span
+                      className="font-medium"
+                      data-testid={`unavailable-count-${item.dateId}`}
+                    >
+                      {item.unavailableCount}
+                    </span>
                   </div>
                 </div>
               </td>

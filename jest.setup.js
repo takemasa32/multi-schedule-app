@@ -1,17 +1,18 @@
+import { TextEncoder, TextDecoder } from "util";
+import {
+  ReadableStream,
+  WritableStream,
+  TransformStream,
+} from "web-streams-polyfill";
+
 // Jestセットアップ: Node.js環境でWeb APIのグローバルポリフィル
 
 // TextEncoder/TextDecoderのポリフィル
 if (typeof global.TextEncoder === "undefined") {
-  const { TextEncoder, TextDecoder } = require("util");
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
 }
 // Web Streams APIのポリフィル（undici用）
-const {
-  ReadableStream,
-  WritableStream,
-  TransformStream,
-} = require("web-streams-polyfill");
 if (typeof global.ReadableStream === "undefined") {
   global.ReadableStream = ReadableStream;
 }
@@ -33,3 +34,19 @@ if (typeof global.Request === "undefined") {
   };
 }
 // Responseのポリフィルは削除（API Routeテストで個別にモック）
+
+// JSDOM: HTMLFormElement.prototype.requestSubmit ポリフィル
+if (
+  typeof HTMLFormElement !== "undefined" &&
+  typeof HTMLFormElement.prototype.requestSubmit !== "function"
+) {
+  HTMLFormElement.prototype.requestSubmit = function (submitter) {
+    // submitterが指定された場合はsubmitイベントを発火
+    if (submitter) {
+      const evt = new Event("submit", { bubbles: true, cancelable: true });
+      submitter.dispatchEvent(evt);
+    } else {
+      this.submit();
+    }
+  };
+}

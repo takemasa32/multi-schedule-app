@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseClient } from "@/lib/supabase";
+import {createSupabaseAdmin} from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 
@@ -31,7 +32,7 @@ export async function createEvent(formData: FormData) {
     const adminToken = uuidv4();
 
     // Supabaseクライアント取得
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     // イベント作成
     const { data: eventData, error: eventError } = await supabase
@@ -110,7 +111,7 @@ export async function submitAvailability(formData: FormData) {
       return { success: false, message: "必須項目が未入力です" };
     }
 
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     // イベントの存在確認
     const { data: event, error: eventError } = await supabase
@@ -127,6 +128,25 @@ export async function submitAvailability(formData: FormData) {
     // 参加者の作成/特定
     let existingParticipantId = participantId;
     let isNewParticipant = false;
+
+    if (existingParticipantId) {
+      // 既存参加者の名前が変更された場合はupdate
+      const { data: currentParticipant } = await supabase
+        .from("participants")
+        .select("name")
+        .eq("id", existingParticipantId)
+        .maybeSingle();
+      if (currentParticipant && currentParticipant.name !== participantName) {
+        const { error: updateError } = await supabase
+          .from("participants")
+          .update({ name: participantName })
+          .eq("id", existingParticipantId);
+        if (updateError) {
+          console.error("Participant name update error:", updateError);
+          return { success: false, message: "参加者名の更新に失敗しました" };
+        }
+      }
+    }
 
     if (!existingParticipantId) {
       // 参加者IDが指定されていない場合は、名前で既存参加者を探す
@@ -252,7 +272,7 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
       return { success: false, message: "必須パラメータが不足しています" };
     }
 
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     // イベント情報を取得
     const { data: event, error: eventError } = await supabase

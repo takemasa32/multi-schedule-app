@@ -68,8 +68,14 @@ describe("AvailabilitySummary", () => {
       ).length
     ).toBeGreaterThan(0);
     // ○人数/×人数（2 / 1 などの組み合わせで検証）
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("1").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("available-count-date1")).toHaveTextContent("2");
+    expect(screen.getByTestId("unavailable-count-date1")).toHaveTextContent(
+      "1"
+    );
+    expect(screen.getByTestId("available-count-date2")).toHaveTextContent("2");
+    expect(screen.getByTestId("unavailable-count-date2")).toHaveTextContent(
+      "1"
+    );
   });
 
   it("参加者ごとの回答マトリクスが正しく描画される（個別表示）", () => {
