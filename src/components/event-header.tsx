@@ -19,12 +19,11 @@ export function EventHeader({
   isFinalized,
   isAdmin,
 }: EventHeaderProps) {
-  // 現在のURLから公開用URLのみを取得
+  // イベント公開用URLを生成
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
-    const url = new URL(window.location.href);
-    url.searchParams.delete("admin");
-    return url.toString();
+    const { protocol, host } = window.location;
+    return `${protocol}//${host}/event/${eventId}`;
   };
 
   return (
