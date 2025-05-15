@@ -49,7 +49,12 @@ export function EventHeader({
             </p>
           )}
         </div>
-        <ShareEventButton url={getShareUrl()} className="self-start" />
+        <ShareEventButton
+          url={getShareUrl()}
+          className="self-start"
+          title={`${title}|daySynth-日程調整`}
+          text={`${title} の予定を入力してください。`}
+        />
       </div>
 
       {!isFinalized && isAdmin && (
