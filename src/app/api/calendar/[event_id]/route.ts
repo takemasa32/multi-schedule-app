@@ -139,7 +139,8 @@ export async function GET(
           action: 'TEMPLATE',
           text: `${event.title} ${finalDates.length > 1 ? `(1/${finalDates.length})` : ''}`,
           details: event.description || '',
-          dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`
+          dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
+          ctz:     "Asia/Tokyo",
         });
 
         // Google Calendarリンクにリダイレクト
@@ -228,6 +229,5 @@ function formatGoogleDate(date: Date): string {
   // 日本時間として解釈してからUTC形式に変換
   return dayjs(date)
     .tz("Asia/Tokyo")
-    .utc()
-    .format("YYYYMMDDTHHmmss") + "Z";
+    .format("YYYYMMDDTHHmmss");
 }
