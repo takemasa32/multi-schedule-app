@@ -312,7 +312,6 @@ export default function FinalizeEventSection({
                           )
                         : 0;
 
-                    // 該当する時間枠が存在しない場合
                     if (!dateId) {
                       return (
                         <td
@@ -324,31 +323,24 @@ export default function FinalizeEventSection({
                       );
                     }
 
-                    // 参加率に応じた色の設定（赤→黄→緑のグラデーション）
-                    // 直接インラインでスタイルを設定
+                    // セルの色・バッジは「現在の選択状態（selectedDateIds）」で判定
                     let bgStyle = {};
-
                     if (availabilityPercent >= 75) {
-                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.8)" }; // 緑：高参加率
+                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.8)" };
                     } else if (availabilityPercent >= 50) {
-                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.6)" }; // 緑（薄め）：中〜高参加率
+                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.6)" };
                     } else if (availabilityPercent >= 25) {
-                      bgStyle = { backgroundColor: "rgba(251, 191, 36, 0.6)" }; // 黄：中参加率
+                      bgStyle = { backgroundColor: "rgba(251, 191, 36, 0.6)" };
                     } else if (availabilityPercent > 0) {
-                      bgStyle = { backgroundColor: "rgba(239, 68, 68, 0.4)" }; // 赤（薄め）：低参加率
+                      bgStyle = { backgroundColor: "rgba(239, 68, 68, 0.4)" };
                     } else {
-                      bgStyle = { backgroundColor: "rgba(243, 244, 246, 0.8)" }; // 参加者なし
+                      bgStyle = { backgroundColor: "rgba(243, 244, 246, 0.8)" };
                     }
 
+                    // 選択状態で色・枠・バッジを切り替え
                     const cellStyle = {
                       ...bgStyle,
-                      ...(dateId && finalizedDateIds.includes(dateId)
-                        ? {
-                            backgroundColor: "rgba(52, 211, 153, 0.3)",
-                            borderWidth: "2px",
-                            borderColor: "rgb(52, 211, 153)",
-                          }
-                        : isSelected
+                      ...(isSelected
                         ? {
                             backgroundColor: "rgba(6, 182, 212, 0.5)",
                             borderWidth: "2px",
@@ -362,13 +354,7 @@ export default function FinalizeEventSection({
                         key={`${date.dateStr}-${slot.start}`}
                         className={`
                           text-center cursor-pointer transition-all p-1 md:p-2 z-10
-                          ${
-                            dateId && finalizedDateIds.includes(dateId)
-                              ? "border-2 border-success"
-                              : isSelected
-                              ? "border-2 border-accent"
-                              : ""
-                          }
+                          ${isSelected ? "border-2 border-accent" : ""}
                         `}
                         style={cellStyle}
                         onClick={() => dateId && handleDateToggle(dateId)}
@@ -380,15 +366,11 @@ export default function FinalizeEventSection({
                           <span className="text-xs hidden md:block">
                             {availabilityPercent}%
                           </span>
-                          {isSelected &&
-                            !finalizedDateIds.includes(dateId as string) && (
-                              <span className="badge badge-accent badge-xs md:badge-sm mt-1">
-                                選択
-                              </span>
-                            )}
-                          {dateId && finalizedDateIds.includes(dateId) && (
-                            <span className="badge badge-success badge-xs md:badge-sm mt-1">
-                              確定
+                          {isSelected && (
+                            <span className="badge badge-accent badge-xs md:badge-sm mt-1">
+                              {finalizedDateIds.includes(dateId)
+                                ? "確定"
+                                : "選択"}
                             </span>
                           )}
                         </div>
@@ -479,7 +461,7 @@ export default function FinalizeEventSection({
       <div className="flex items-center gap-2 mb-2">
         <h3 className="text-xl font-bold">日程の確定</h3>
         <button
-          className="btn btn-sm btn-outline btn-primary ml-2"
+          className="btn btn-sm  btn-secondary ml-2"
           aria-expanded={isOpen}
           onClick={() => setIsOpen((prev) => !prev)}
         >
