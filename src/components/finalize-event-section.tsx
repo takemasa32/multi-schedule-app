@@ -35,6 +35,7 @@ export default function FinalizeEventSection({
     useState<string[]>(finalizedDateIds); // 確定済みの日程IDで初期化
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false); // 折りたたみ状態
 
   const handleDateToggle = (dateId: string) => {
     setSelectedDateIds((prev) =>
@@ -229,8 +230,6 @@ export default function FinalizeEventSection({
     if (!dateId) return false;
     return selectedDateIds.includes(dateId);
   };
-
-  // 未使用の関数を削除しました
 
   // マトリクス表示用の日程と時間帯のセル生成
   const renderTimeSlotMatrix = () => {
@@ -477,155 +476,174 @@ export default function FinalizeEventSection({
 
   return (
     <div className="mt-8 border-t pt-6">
-      <h3 className="text-xl font-bold mb-4">日程の確定</h3>
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="text-xl font-bold">日程の確定</h3>
+        <button
+          className="btn btn-sm btn-outline btn-primary ml-2"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((prev) => !prev)}
+        >
+          {isOpen ? "閉じる" : "日程の確定を開く"}
+        </button>
+      </div>
+      {isOpen && (
+        <div className="animate-fade-in">
+          {error && (
+            <div className="alert alert-error mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
 
-      {error && (
-        <div className="alert alert-error mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{error}</span>
-        </div>
-      )}
+          {isConfirming ? (
+            <div className="bg-info bg-opacity-15 p-4 rounded-lg border border-info shadow-sm">
+              <h4 className="font-bold mb-2 text-info-content">
+                以下の日程で確定しますか？
+              </h4>
 
-      {isConfirming ? (
-        <div className="bg-info bg-opacity-15 p-4 rounded-lg border border-info shadow-sm">
-          <h4 className="font-bold mb-2 text-info-content">
-            以下の日程で確定しますか？
-          </h4>
+              {/* 既存の確定済み日程がある場合に表示 */}
+              {finalizedDateIds.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="font-semibold text-sm mb-1">
+                    既に確定済みの日程:
+                  </h5>
+                  <ul className="list-disc pl-5 mb-2 text-sm">
+                    {finalizedDateIds.map((dateId) => {
+                      const date = eventDates.find((d) => d.id === dateId);
+                      // 選択中の日程に含まれていない場合は「解除される」日程として表示
+                      const willBeRemoved = !selectedDateIds.includes(dateId);
+                      return date ? (
+                        <li
+                          key={dateId}
+                          className={
+                            willBeRemoved ? "text-error line-through" : ""
+                          }
+                        >
+                          {formatDate(date.start_time)}{" "}
+                          {formatTime(date.start_time)}〜
+                          {formatTime(date.end_time)}
+                          {willBeRemoved && (
+                            <span className="ml-2 text-xs badge badge-error badge-sm">
+                              解除されます
+                            </span>
+                          )}
+                        </li>
+                      ) : null;
+                    })}
+                  </ul>
+                  {finalizedDateIds.some(
+                    (id) => !selectedDateIds.includes(id)
+                  ) && (
+                    <p className="text-xs text-error">
+                      ※ 取り消し線の日程は選択が解除されます。
+                    </p>
+                  )}
+                </div>
+              )}
 
-          {/* 既存の確定済み日程がある場合に表示 */}
-          {finalizedDateIds.length > 0 && (
-            <div className="mb-4">
-              <h5 className="font-semibold text-sm mb-1">
-                既に確定済みの日程:
+              <h5 className="font-semibold mb-1">
+                {finalizedDateIds.length > 0
+                  ? "確定する日程:"
+                  : "以下の日程を確定します:"}
               </h5>
-              <ul className="list-disc pl-5 mb-2 text-sm">
-                {finalizedDateIds.map((dateId) => {
+              <ul className="list-disc pl-5 mb-4">
+                {selectedDateIds.map((dateId) => {
                   const date = eventDates.find((d) => d.id === dateId);
-                  // 選択中の日程に含まれていない場合は「解除される」日程として表示
-                  const willBeRemoved = !selectedDateIds.includes(dateId);
+                  const isNewlySelected = !finalizedDateIds.includes(dateId);
                   return date ? (
-                    <li
-                      key={dateId}
-                      className={willBeRemoved ? "text-error line-through" : ""}
-                    >
+                    <li key={dateId}>
                       {formatDate(date.start_time)}{" "}
                       {formatTime(date.start_time)}〜{formatTime(date.end_time)}
-                      {willBeRemoved && (
-                        <span className="ml-2 text-xs badge badge-error badge-sm">
-                          解除されます
+                      <span className="ml-2 text-sm">
+                        (参加可能: {getAvailableParticipantsCount(dateId)}人)
+                      </span>
+                      {isNewlySelected && finalizedDateIds.length > 0 && (
+                        <span className="badge badge-accent badge-sm ml-2">
+                          新規
                         </span>
                       )}
                     </li>
                   ) : null;
                 })}
               </ul>
-              {finalizedDateIds.some((id) => !selectedDateIds.includes(id)) && (
-                <p className="text-xs text-error">
-                  ※ 取り消し線の日程は選択が解除されます。
+
+              <div className="mb-4">
+                <p className="text-sm font-medium">
+                  <strong>
+                    全ての選択日程で参加可能:{" "}
+                    {getParticipantsForAllSelectedDates().length}人
+                  </strong>
                 </p>
-              )}
-            </div>
-          )}
+                {getParticipantsForAllSelectedDates().length > 0 && (
+                  <p className="text-sm text-neutral-content">
+                    {getParticipantsForAllSelectedDates().join(", ")}
+                  </p>
+                )}
+              </div>
 
-          <h5 className="font-semibold mb-1">
-            {finalizedDateIds.length > 0
-              ? "確定する日程:"
-              : "以下の日程を確定します:"}
-          </h5>
-          <ul className="list-disc pl-5 mb-4">
-            {selectedDateIds.map((dateId) => {
-              const date = eventDates.find((d) => d.id === dateId);
-              const isNewlySelected = !finalizedDateIds.includes(dateId);
-              return date ? (
-                <li key={dateId}>
-                  {formatDate(date.start_time)} {formatTime(date.start_time)}〜
-                  {formatTime(date.end_time)}
-                  <span className="ml-2 text-sm">
-                    (参加可能: {getAvailableParticipantsCount(dateId)}人)
-                  </span>
-                  {isNewlySelected && finalizedDateIds.length > 0 && (
-                    <span className="badge badge-accent badge-sm ml-2">
-                      新規
-                    </span>
-                  )}
-                </li>
-              ) : null;
-            })}
-          </ul>
-
-          <div className="mb-4">
-            <p className="text-sm font-medium">
-              <strong>
-                全ての選択日程で参加可能:{" "}
-                {getParticipantsForAllSelectedDates().length}人
-              </strong>
-            </p>
-            {getParticipantsForAllSelectedDates().length > 0 && (
-              <p className="text-sm text-neutral-content">
-                {getParticipantsForAllSelectedDates().join(", ")}
+              <p className="text-error mb-4 text-sm font-medium flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                確定後も必要に応じて変更可能です（この画面から再選択して確定し直せます）。
               </p>
-            )}
-          </div>
 
-          <p className="text-error mb-4 text-sm font-medium flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            確定後も必要に応じて変更可能です（この画面から再選択して確定し直せます）。
-          </p>
-
-          <div className="flex gap-3">
-            <button
-              onClick={confirmFinalize}
-              disabled={isProcessing}
-              className="btn btn-primary"
-            >
-              {isProcessing ? (
-                <>
-                  <span className="loading loading-spinner"></span>
-                  処理中...
-                </>
-              ) : selectedDateIds.length === finalizedDateIds.length &&
-                selectedDateIds.every((id) => finalizedDateIds.includes(id)) ? (
-                "現在の確定内容を維持する"
-              ) : (
-                "確定する"
-              )}
-            </button>
-            <button
-              onClick={cancelConfirm}
-              disabled={isProcessing}
-              className="btn btn-ghost"
-            >
-              キャンセル
-            </button>
-          </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmFinalize}
+                  disabled={isProcessing}
+                  className="btn btn-primary"
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="loading loading-spinner"></span>
+                      処理中...
+                    </>
+                  ) : selectedDateIds.length === finalizedDateIds.length &&
+                    selectedDateIds.every((id) =>
+                      finalizedDateIds.includes(id)
+                    ) ? (
+                    "現在の確定内容を維持する"
+                  ) : (
+                    "確定する"
+                  )}
+                </button>
+                <button
+                  onClick={cancelConfirm}
+                  disabled={isProcessing}
+                  className="btn btn-ghost"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          ) : (
+            renderTimeSlotMatrix()
+          )}
         </div>
-      ) : (
-        renderTimeSlotMatrix()
       )}
     </div>
   );

@@ -191,6 +191,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await gotoWithRetry(adminPage, eventUrl);
     await adminPage.waitForLoadState('networkidle');
     await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
+    // 日程の確定セクションを展開
+    const openFinalizeBtn = await adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    await openFinalizeBtn.click();
     const selectableCell = await adminPage.locator('td.cursor-pointer').filter({ hasText: /人/ }).first();
     await selectableCell.click();
     await expect(adminPage.getByText(/選択中: *1件/)).toBeVisible({ timeout: 3000 });
