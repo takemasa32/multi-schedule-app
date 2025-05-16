@@ -219,6 +219,35 @@ test.describe.serial('イベントE2Eフロー', () => {
     await adminPage.close();
   });
 
+  test('主催者が確定解除（全日程の確定をキャンセル）できる', async ({ context }) => {
+    const adminPage = await context.newPage();
+    await gotoWithRetry(adminPage, eventUrl);
+    await adminPage.waitForLoadState('networkidle');
+    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
+    // 日程の確定セクションを展開
+    const openFinalizeBtn = await adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    await openFinalizeBtn.click();
+    // 既に確定済みのセルをすべてクリックして選択解除
+    const selectedCells = await adminPage.locator('td.border-accent').all();
+    for (const cell of selectedCells) {
+      await cell.click();
+    }
+    // 「選択中: 0件の日程」表示を確認
+    await expect(adminPage.getByText(/選択中: *0件/)).toBeVisible({ timeout: 3000 });
+    // 確定ボタンを押す
+    const finalizeBtn = await adminPage.getByRole('button', { name: /選択した日程で確定する|確定する/ });
+    await finalizeBtn.click();
+    // 確認ダイアログで「全ての確定を解除しますか？」が表示されていること
+    await expect(adminPage.getByText('全ての確定を解除しますか？')).toBeVisible();
+    // 「確定を解除する」ボタンを押す
+    const confirmBtn = await adminPage.getByRole('button', { name: /確定を解除する/ });
+    await confirmBtn.click();
+    await adminPage.waitForLoadState('networkidle');
+    // 解除後、確定済み日程のアラートが消えていること（または確定済み日程が0件であること）
+    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible();
+    await adminPage.close();
+  });
+
   test('イベント共有ボタンのURLが公開URLと一致する', async ({ page }) => {
     // ページ読み込み前に確実に走らせる
     await page.addInitScript(() => {
