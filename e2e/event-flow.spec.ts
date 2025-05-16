@@ -175,7 +175,7 @@ test.describe.serial('イベントE2Eフロー', () => {
       await backToSummaryBtn.click();
     }
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
     await expect(page.url()).not.toContain('/input');
     const verifyPage = await context.newPage();
     await gotoWithRetry(verifyPage, eventUrl);
@@ -191,7 +191,12 @@ test.describe.serial('イベントE2Eフロー', () => {
     await gotoWithRetry(adminPage, eventUrl);
     await adminPage.waitForLoadState('networkidle');
     await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
-    const selectableCell = await adminPage.locator('td.cursor-pointer').filter({ hasText: /人/ }).first();
+    await adminPage.pause();
+    // 日程の確定セクションを展開
+    const openFinalizeBtn = await adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    await openFinalizeBtn.click();
+    const selectableCell = await adminPage.getByRole('button', { name: '人 50%' }).first();
+
     await selectableCell.click();
     await expect(adminPage.getByText(/選択中: *1件/)).toBeVisible({ timeout: 3000 });
     const finalizeBtn = await adminPage.getByRole('button', { name: /選択した日程で確定する|確定する/ });
@@ -213,6 +218,34 @@ test.describe.serial('イベントE2Eフロー', () => {
     expect(apiResponse.status()).toBe(307);
     const redirectUrl = apiResponse.headers()['location'];
     expect(redirectUrl).toMatch(/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+    await adminPage.close();
+  });
+
+  test('主催者が確定解除（全日程の確定をキャンセル）できる', async ({ context }) => {
+    const adminPage = await context.newPage();
+    await gotoWithRetry(adminPage, eventUrl);
+    await adminPage.waitForLoadState('networkidle');
+    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
+    // 日程の確定セクションを展開
+    const openFinalizeBtn = await adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    await openFinalizeBtn.click();
+    // 既に確定済みのセルをすべてクリックして選択解除
+    const selectedCells = await adminPage.locator('td.border-accent').all();
+    for (const cell of selectedCells) {
+      await cell.click();
+    }
+    // 「選択中: 0件の日程」表示を確認
+    await expect(adminPage.getByText(/選択中: *0件/)).toBeVisible({ timeout: 3000 });
+    // 確定ボタンを押す
+    const finalizeBtn = await adminPage.getByRole('button', { name: /確定を解除する|解除する/ });
+    await finalizeBtn.click();
+
+    // // 「確定を解除する」ボタンを押す
+    // const confirmBtn = await adminPage.getByRole('button', { name: /確定を解除する/ });
+    // await confirmBtn.click();
+    await adminPage.waitForLoadState('networkidle');
+    // 解除後、確定済み日程のアラートが消えていること（または確定済み日程が0件であること）
+    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible();
     await adminPage.close();
   });
 

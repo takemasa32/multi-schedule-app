@@ -35,6 +35,7 @@ export default function FinalizeEventSection({
     useState<string[]>(finalizedDateIds); // 確定済みの日程IDで初期化
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false); // 折りたたみ状態
 
   const handleDateToggle = (dateId: string) => {
     setSelectedDateIds((prev) =>
@@ -45,7 +46,8 @@ export default function FinalizeEventSection({
   };
 
   const handleProceedToConfirm = () => {
-    if (selectedDateIds.length === 0) {
+    // 「全解除」も許可: 既存確定がある場合は選択ゼロでもOK
+    if (selectedDateIds.length === 0 && finalizedDateIds.length === 0) {
       setError("少なくとも1つの日程を選択してください");
       return;
     }
@@ -54,9 +56,16 @@ export default function FinalizeEventSection({
   };
 
   const confirmFinalize = async () => {
-    if (selectedDateIds.length === 0) return;
-
     setIsProcessing(true);
+    setError(null);
+
+    // eventId/selectedDateIdsのバリデーション
+    if (!eventId || !Array.isArray(selectedDateIds)) {
+      setError("必須パラメータが不足しています");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const result = await finalizeEvent(eventId, selectedDateIds);
 
@@ -66,8 +75,6 @@ export default function FinalizeEventSection({
         return;
       }
 
-      // 成功時はServer Actionでページが再検証されるため、
-      // ユーザーにフィードバックを表示してからリロード
       window.location.reload();
     } catch (error) {
       console.error("確定処理でエラーが発生しました:", error);
@@ -230,8 +237,6 @@ export default function FinalizeEventSection({
     return selectedDateIds.includes(dateId);
   };
 
-  // 未使用の関数を削除しました
-
   // マトリクス表示用の日程と時間帯のセル生成
   const renderTimeSlotMatrix = () => {
     return (
@@ -313,7 +318,6 @@ export default function FinalizeEventSection({
                           )
                         : 0;
 
-                    // 該当する時間枠が存在しない場合
                     if (!dateId) {
                       return (
                         <td
@@ -325,31 +329,24 @@ export default function FinalizeEventSection({
                       );
                     }
 
-                    // 参加率に応じた色の設定（赤→黄→緑のグラデーション）
-                    // 直接インラインでスタイルを設定
+                    // セルの色・バッジは「現在の選択状態（selectedDateIds）」で判定
                     let bgStyle = {};
-
                     if (availabilityPercent >= 75) {
-                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.8)" }; // 緑：高参加率
+                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.8)" };
                     } else if (availabilityPercent >= 50) {
-                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.6)" }; // 緑（薄め）：中〜高参加率
+                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.6)" };
                     } else if (availabilityPercent >= 25) {
-                      bgStyle = { backgroundColor: "rgba(251, 191, 36, 0.6)" }; // 黄：中参加率
+                      bgStyle = { backgroundColor: "rgba(251, 191, 36, 0.6)" };
                     } else if (availabilityPercent > 0) {
-                      bgStyle = { backgroundColor: "rgba(239, 68, 68, 0.4)" }; // 赤（薄め）：低参加率
+                      bgStyle = { backgroundColor: "rgba(239, 68, 68, 0.4)" };
                     } else {
-                      bgStyle = { backgroundColor: "rgba(243, 244, 246, 0.8)" }; // 参加者なし
+                      bgStyle = { backgroundColor: "rgba(243, 244, 246, 0.8)" };
                     }
 
+                    // 選択状態で色・枠・バッジを切り替え
                     const cellStyle = {
                       ...bgStyle,
-                      ...(dateId && finalizedDateIds.includes(dateId)
-                        ? {
-                            backgroundColor: "rgba(52, 211, 153, 0.3)",
-                            borderWidth: "2px",
-                            borderColor: "rgb(52, 211, 153)",
-                          }
-                        : isSelected
+                      ...(isSelected
                         ? {
                             backgroundColor: "rgba(6, 182, 212, 0.5)",
                             borderWidth: "2px",
@@ -361,38 +358,32 @@ export default function FinalizeEventSection({
                     return (
                       <td
                         key={`${date.dateStr}-${slot.start}`}
-                        className={`
-                          text-center cursor-pointer transition-all p-1 md:p-2 z-10
-                          ${
-                            dateId && finalizedDateIds.includes(dateId)
-                              ? "border-2 border-success"
-                              : isSelected
-                              ? "border-2 border-accent"
-                              : ""
-                          }
-                        `}
+                        className={`text-center transition-all p-1 md:p-2 z-10 ${
+                          isSelected ? "border-2 border-accent" : ""
+                        }`}
                         style={cellStyle}
-                        onClick={() => dateId && handleDateToggle(dateId)}
                       >
-                        <div className="flex flex-col items-center justify-center">
+                        <button
+                          type="button"
+                          className="w-full h-full flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-accent rounded"
+                          aria-pressed={isSelected}
+                          tabIndex={0}
+                          onClick={() => dateId && handleDateToggle(dateId)}
+                        >
                           <span className="font-semibold text-xs md:text-sm">
                             {availableCount}人
                           </span>
                           <span className="text-xs hidden md:block">
                             {availabilityPercent}%
                           </span>
-                          {isSelected &&
-                            !finalizedDateIds.includes(dateId as string) && (
-                              <span className="badge badge-accent badge-xs md:badge-sm mt-1">
-                                選択
-                              </span>
-                            )}
-                          {dateId && finalizedDateIds.includes(dateId) && (
-                            <span className="badge badge-success badge-xs md:badge-sm mt-1">
-                              確定
+                          {isSelected && (
+                            <span className="badge badge-accent badge-xs md:badge-sm mt-1">
+                              {finalizedDateIds.includes(dateId)
+                                ? "確定"
+                                : "選択"}
                             </span>
                           )}
-                        </div>
+                        </button>
                       </td>
                     );
                   })}
@@ -425,9 +416,15 @@ export default function FinalizeEventSection({
           <button
             onClick={handleProceedToConfirm}
             className="btn btn-accent"
-            disabled={selectedDateIds.length === 0}
+            disabled={
+              selectedDateIds.length === 0 && finalizedDateIds.length === 0
+            }
           >
-            選択した日程で確定する ({selectedDateIds.length}件選択中)
+            {selectedDateIds.length === 0 && finalizedDateIds.length > 0
+              ? "確定を解除する"
+              : "選択した日程で確定する (" +
+                selectedDateIds.length +
+                "件選択中)"}
           </button>
         </div>
 
@@ -475,96 +472,107 @@ export default function FinalizeEventSection({
     );
   };
 
-  return (
-    <div className="mt-8 border-t pt-6">
-      <h3 className="text-xl font-bold mb-4">日程の確定</h3>
-
-      {error && (
-        <div className="alert alert-error mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {isConfirming ? (
+  // --- 確認ダイアログの分岐整理 ---
+  const renderConfirmDialog = () => {
+    // 全解除モード
+    if (finalizedDateIds.length > 0 && selectedDateIds.length === 0) {
+      return (
         <div className="bg-info bg-opacity-15 p-4 rounded-lg border border-info shadow-sm">
           <h4 className="font-bold mb-2 text-info-content">
-            以下の日程で確定しますか？
+            全ての確定を解除しますか？
           </h4>
-
-          {/* 既存の確定済み日程がある場合に表示 */}
-          {finalizedDateIds.length > 0 && (
-            <div className="mb-4">
-              <h5 className="font-semibold text-sm mb-1">
-                既に確定済みの日程:
-              </h5>
-              <ul className="list-disc pl-5 mb-2 text-sm">
-                {finalizedDateIds.map((dateId) => {
-                  const date = eventDates.find((d) => d.id === dateId);
-                  // 選択中の日程に含まれていない場合は「解除される」日程として表示
-                  const willBeRemoved = !selectedDateIds.includes(dateId);
-                  return date ? (
-                    <li
-                      key={dateId}
-                      className={willBeRemoved ? "text-error line-through" : ""}
-                    >
-                      {formatDate(date.start_time)}{" "}
-                      {formatTime(date.start_time)}〜{formatTime(date.end_time)}
-                      {willBeRemoved && (
-                        <span className="ml-2 text-xs badge badge-error badge-sm">
-                          解除されます
-                        </span>
-                      )}
-                    </li>
-                  ) : null;
-                })}
-              </ul>
-              {finalizedDateIds.some((id) => !selectedDateIds.includes(id)) && (
-                <p className="text-xs text-error">
-                  ※ 取り消し線の日程は選択が解除されます。
-                </p>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={confirmFinalize}
+              disabled={isProcessing}
+              className="btn btn-primary"
+            >
+              {isProcessing ? (
+                <>
+                  <span className="loading loading-spinner"></span>
+                  処理中...
+                </>
+              ) : (
+                "確定を解除する"
               )}
-            </div>
-          )}
-
-          <h5 className="font-semibold mb-1">
-            {finalizedDateIds.length > 0
-              ? "確定する日程:"
-              : "以下の日程を確定します:"}
-          </h5>
-          <ul className="list-disc pl-5 mb-4">
-            {selectedDateIds.map((dateId) => {
-              const date = eventDates.find((d) => d.id === dateId);
-              const isNewlySelected = !finalizedDateIds.includes(dateId);
-              return date ? (
-                <li key={dateId}>
-                  {formatDate(date.start_time)} {formatTime(date.start_time)}〜
-                  {formatTime(date.end_time)}
-                  <span className="ml-2 text-sm">
-                    (参加可能: {getAvailableParticipantsCount(dateId)}人)
-                  </span>
-                  {isNewlySelected && finalizedDateIds.length > 0 && (
-                    <span className="badge badge-accent badge-sm ml-2">
-                      新規
+            </button>
+            <button
+              onClick={cancelConfirm}
+              disabled={isProcessing}
+              className="btn btn-ghost"
+            >
+              キャンセル
+            </button>
+          </div>
+        </div>
+      );
+    }
+    // 新規確定 or 変更モード
+    return (
+      <div className="bg-info bg-opacity-15 p-4 rounded-lg border border-info shadow-sm">
+        <h4 className="font-bold mb-2 text-info-content">
+          以下の日程で確定しますか？
+        </h4>
+        {finalizedDateIds.length > 0 && (
+          <div className="mb-4">
+            <h5 className="font-semibold text-sm mb-1">既に確定済みの日程:</h5>
+            <ul className="list-disc pl-5 mb-2 text-sm">
+              {finalizedDateIds.map((dateId) => {
+                const date = eventDates.find((d) => d.id === dateId);
+                const willBeRemoved = !selectedDateIds.includes(dateId);
+                return date ? (
+                  <li
+                    key={dateId}
+                    className={willBeRemoved ? "text-error line-through" : ""}
+                  >
+                    {formatDate(date.start_time)} {formatTime(date.start_time)}
+                    〜{formatTime(date.end_time)}
+                    {willBeRemoved && (
+                      <span className="ml-2 text-xs badge badge-error badge-sm">
+                        解除されます
+                      </span>
+                    )}
+                  </li>
+                ) : null;
+              })}
+            </ul>
+            {finalizedDateIds.some((id) => !selectedDateIds.includes(id)) && (
+              <p className="text-xs text-error">
+                ※ 取り消し線の日程は選択が解除されます。
+              </p>
+            )}
+          </div>
+        )}
+        {selectedDateIds.length > 0 && (
+          <>
+            <h5 className="font-semibold mb-1">
+              {finalizedDateIds.length > 0
+                ? "確定する日程:"
+                : "以下の日程を確定します:"}
+            </h5>
+            <ul className="list-disc pl-5 mb-4">
+              {selectedDateIds.map((dateId) => {
+                const date = eventDates.find((d) => d.id === dateId);
+                const isNewlySelected = !finalizedDateIds.includes(dateId);
+                return date ? (
+                  <li key={dateId}>
+                    {formatDate(date.start_time)} {formatTime(date.start_time)}
+                    〜{formatTime(date.end_time)}
+                    <span className="ml-2 text-sm">
+                      (参加可能: {getAvailableParticipantsCount(dateId)}人)
                     </span>
-                  )}
-                </li>
-              ) : null;
-            })}
-          </ul>
-
+                    {isNewlySelected && finalizedDateIds.length > 0 && (
+                      <span className="badge badge-accent badge-sm ml-2">
+                        新規
+                      </span>
+                    )}
+                  </li>
+                ) : null;
+              })}
+            </ul>
+          </>
+        )}
+        {selectedDateIds.length > 0 && (
           <div className="mb-4">
             <p className="text-sm font-medium">
               <strong>
@@ -578,54 +586,97 @@ export default function FinalizeEventSection({
               </p>
             )}
           </div>
-
-          <p className="text-error mb-4 text-sm font-medium flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            確定後も必要に応じて変更可能です（この画面から再選択して確定し直せます）。
-          </p>
-
-          <div className="flex gap-3">
-            <button
-              onClick={confirmFinalize}
-              disabled={isProcessing}
-              className="btn btn-primary"
-            >
-              {isProcessing ? (
-                <>
-                  <span className="loading loading-spinner"></span>
-                  処理中...
-                </>
-              ) : selectedDateIds.length === finalizedDateIds.length &&
-                selectedDateIds.every((id) => finalizedDateIds.includes(id)) ? (
-                "現在の確定内容を維持する"
-              ) : (
-                "確定する"
-              )}
-            </button>
-            <button
-              onClick={cancelConfirm}
-              disabled={isProcessing}
-              className="btn btn-ghost"
-            >
-              キャンセル
-            </button>
-          </div>
+        )}
+        <p className="text-error mb-4 text-sm font-medium flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          確定後も必要に応じて変更可能です（この画面から再選択して確定し直せます）。
+        </p>
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={confirmFinalize}
+            disabled={isProcessing}
+            className="btn btn-primary"
+          >
+            {isProcessing ? (
+              <>
+                <span className="loading loading-spinner"></span>
+                処理中...
+              </>
+            ) : (
+              "確定する"
+            )}
+          </button>
+          <button
+            onClick={cancelConfirm}
+            disabled={isProcessing}
+            className="btn btn-ghost"
+          >
+            キャンセル
+          </button>
+          {/* 現状維持ボタン: 変更がない場合のみ */}
+          {selectedDateIds.length === finalizedDateIds.length &&
+            selectedDateIds.every((id) => finalizedDateIds.includes(id)) && (
+              <button
+                onClick={cancelConfirm}
+                disabled={isProcessing}
+                className="btn btn-outline"
+              >
+                現在の確定内容を維持する
+              </button>
+            )}
         </div>
-      ) : (
-        renderTimeSlotMatrix()
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-8 border-t pt-6">
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="text-xl font-bold">日程の確定</h3>
+        <button
+          className="btn btn-sm  btn-secondary ml-2"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((prev) => !prev)}
+        >
+          {isOpen ? "閉じる" : "日程の確定を開く"}
+        </button>
+      </div>
+      {isOpen && (
+        <div className="animate-fade-in">
+          {error && (
+            <div className="alert alert-error mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {isConfirming ? renderConfirmDialog() : renderTimeSlotMatrix()}
+        </div>
       )}
     </div>
   );

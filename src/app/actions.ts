@@ -268,7 +268,7 @@ export async function submitAvailability(formData: FormData) {
  */
 export async function finalizeEvent(eventId: string, dateIds: string[]) {
   try {
-    if (!eventId || !dateIds || dateIds.length === 0) {
+    if (!eventId || !dateIds) {
       return { success: false, message: "必須パラメータが不足しています" };
     }
 
@@ -286,6 +286,41 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
       return { success: false, message: "イベントが見つかりません" };
     }
 
+    // 全解除モード（dateIds.length === 0）の場合、確定を解除する
+    if (dateIds.length === 0) {
+      // イベントの確定状態を解除
+      const { error: unfinalizeError } = await supabase
+        .from("events")
+        .update({
+          is_finalized: false,
+          final_date_id: null  // 確定日程IDもクリア
+        })
+        .eq("id", eventId);
+
+      if (unfinalizeError) {
+        console.error("Unfinalize error:", unfinalizeError);
+        return { success: false, message: "イベント確定解除に失敗しました" };
+      }
+
+      // 確定日程テーブルからも削除
+      await supabase
+        .from("finalized_dates")
+        .delete()
+        .eq("event_id", eventId);
+
+      // ページを再検証
+      try {
+        revalidatePath(`/event/${event.public_token}`);
+      } catch (e) {
+        if (process.env.NODE_ENV !== 'test') {
+          console.error('revalidatePath error:', e);
+        }
+      }
+
+      return { success: true, message: "イベント確定を解除しました" };
+    }
+
+    // 通常の確定モード（日程指定あり）の場合
     // 選択された日程が存在するか確認
     const { data: dateCheck, error: dateCheckError } = await supabase
       .from("event_dates")

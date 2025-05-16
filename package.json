@@ -26,6 +26,7 @@
     "bcryptjs": "^3.0.2",
     "daisyui": "^5.0.28",
     "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dayjs": "^1.11.13",
     "detect-inapp": "^1.4.0",
     "framer-motion": "^12.9.2",

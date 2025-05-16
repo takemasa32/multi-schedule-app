@@ -67,7 +67,9 @@ export async function GET(request: NextRequest, { params }: any) {
           endDate: new Date(date.end_time),
           title: event.title,
           description: event.description || '',
-          eventId: `${event.id}-${date.id}`
+          eventId: `${event.id}-${date.id}`,
+          // タイムゾーン情報を追加（日本時間として扱う）
+          timezone: 'Asia/Tokyo'
         }))
       });
 

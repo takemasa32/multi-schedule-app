@@ -7,7 +7,9 @@ import FinalizeEventSection from "@/components/finalize-event-section";
 import EventHistory from "@/components/event-history";
 import { addEventToHistory } from "@/lib/utils";
 import AvailabilitySummary from "../availability-summary/index";
+import { toZonedTime } from "date-fns-tz";
 
+const TIME_ZONE = "Asia/Tokyo";
 type EventDate = {
   id: string;
   start_time: string;
@@ -73,10 +75,18 @@ export default function EventClientWrapper({
     effectiveFinalizedDateIds = [event.final_date_id];
   }
 
-  // 確定された日程の詳細情報を取得
-  const finalizedDates = eventDates.filter((date) =>
-    effectiveFinalizedDateIds.includes(date.id)
-  );
+  const finalizedDates = eventDates
+    .filter((date) => effectiveFinalizedDateIds.includes(date.id))
+    .map((date) => {
+      // server から来る date.start_time が ISO 文字列 (例: "2025-05-20T00:00:00Z") なら…
+      const startJst = toZonedTime(date.start_time, TIME_ZONE);
+      const endJst = toZonedTime(date.end_time, TIME_ZONE);
+      return {
+        ...date,
+        startJst,
+        endJst,
+      };
+    });
 
   // ページロード時にイベント履歴に追加
   useEffect(() => {
