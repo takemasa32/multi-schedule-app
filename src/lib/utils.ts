@@ -121,19 +121,35 @@ export function formatTime(date: Date | string): string {
 }
 
 /**
- * Googleカレンダー用の日時フォーマットに変換する
+ * Googleカレンダー用の日時フォーマットに変換する（UTC形式）
  * 形式: YYYYMMDDTHHmmssZ
  */
 export function formatGoogleCalendarDate(date: Date): string {
-  return date.toISOString().replace(/-|:|\.\d{3}/g, "");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+
+  // GoogleカレンダーではUTC形式（Z付き）
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
 }
 
 /**
- * ICS形式の日時フォーマットに変換する
- * 形式: YYYYMMDDTHHmmssZ
+ * ICS形式の日時フォーマットに変換する（日本時間）
+ * 形式: YYYYMMDDTHHmmss
  */
 export function formatIcsDate(date: Date): string {
-  return date.toISOString().replace(/-|:|\.\d{3}/g, "");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  // ICS形式（日本時間を想定）
+  return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 }
 
 /**
@@ -369,7 +385,13 @@ export function generateGoogleCalendarUrl({
   // Googleカレンダーの日時形式: YYYYMMDDTHHmmssZ
   const format = (iso: string) => {
     const d = new Date(iso);
-    return d.toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z");
+    // Google Calendar format: YYYYMMDDTHHmmssZ (UTC形式)
+    return d.getUTCFullYear().toString() +
+      (d.getUTCMonth() + 1).toString().padStart(2, "0") +
+      d.getUTCDate().toString().padStart(2, "0") + "T" +
+      d.getUTCHours().toString().padStart(2, "0") +
+      d.getUTCMinutes().toString().padStart(2, "0") +
+      d.getUTCSeconds().toString().padStart(2, "0") + "Z";
   };
   const params = new URLSearchParams({
     text: title,

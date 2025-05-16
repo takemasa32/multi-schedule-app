@@ -140,28 +140,40 @@ interface IcsEventProps {
 }
 
 function generateIcsContent({ events }: IcsEventProps): string {
-  const now = new Date();
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//MultiScheduleApp//JP',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
+    'BEGIN:VTIMEZONE',
+    'TZID:Asia/Tokyo',
+    'X-LIC-LOCATION:Asia/Tokyo',
+    'BEGIN:STANDARD',
+    'DTSTART:19700101T000000',
+    'TZOFFSETFROM:+0900',
+    'TZOFFSETTO:+0900',
+    'TZNAME:JST',
+    'END:STANDARD',
+    'END:VTIMEZONE',
   ];
 
-  // 複数のイベントをサポート
+    // 複数のイベントをサポート
   events.forEach(event => {
     lines.push(
       'BEGIN:VEVENT',
       `UID:${event.eventId}@multischeduleapp.example.com`,
-      `DTSTAMP:${formatIcsDate(now)}`,
-      `DTSTART:${formatIcsDate(event.startDate)}`,
-      `DTEND:${formatIcsDate(event.endDate)}`,
+      // 生成日時は UTCで出したい場合は別途toISOString()系を使ってZ付き
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,
+      // JST（Asia/Tokyo）として明示する
+      `DTSTART;TZID=Asia/Tokyo:${formatIcsDate(event.startDate)}`,
+      `DTEND;TZID=Asia/Tokyo:${formatIcsDate(event.endDate)}`,
       `SUMMARY:${escapeIcsValue(event.title)}`,
       `DESCRIPTION:${escapeIcsValue(event.description)}`,
       'END:VEVENT'
     );
   });
+
 
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
