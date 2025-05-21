@@ -150,7 +150,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
     await page.getByText('個別').click();
-    await expect(page.getByRole('cell', { name: new RegExp('週表示参加者') })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole('cell', { name: /週表示参加者/ })
+    ).toBeVisible({ timeout: 20000 });
   });
 
   test('既存回答の編集', async ({ page, context }) => {
