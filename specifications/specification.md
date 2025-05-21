@@ -293,14 +293,14 @@ project-root/  # 実際のプロジェクトルート
 
    - id (UUID, PK): 候補日程の ID。
    - event_id (UUID, 外部キー references events.id on delete cascade): 所属するイベントの ID。親イベントが削除されたら候補も削除。
-   - start_time timestamp NOT NULL, end_time timestamp NOT NULL: 候補。タイムゾーンは UTC に統一し、また実装簡易化のため、表示時などにもタイムゾーンは考慮しない処理にする。
+   - start_time timestamp NOT NULL, end_time timestamp NOT NULL: 候補。**タイムゾーン情報は付与せず、入力値をそのまま保存・利用します。UTCやJST等への変換・補正は一切行いません。**
      例）`      const dateKey = [
   start.getFullYear(),
   String(start.getMonth() + 1).padStart(2, "0"),
   String(start.getDate()).padStart(2, "0"),
 ].join("-");`
 
-   > 候補日程は「日時」ではなく「時間帯」として管理され、各レコードは開始時刻 (start_time) と終了時刻 (end_time) の範囲を持つ構成とします。例：2024-04-02 10:00 ～ 2024-04-02 11:00
+   > 【補足】候補日程は「日時」ではなく「時間帯」として管理され、各レコードは開始時刻 (start_time) と終了時刻 (end_time) の範囲を持つ構成とします。例：2024-04-02 10:00 ～ 2024-04-02 11:00。**この値はローカルタイムとして保存・表示され、タイムゾーン変換は行いません。**
 
    - label (text, NULL 可): 日程の補足ラベル。例えば「予備日」等任意の名称を付けたい場合用。通常は NULL で日時がそのまま表示されます。
    - created_at (timestamp): 作成日時。
@@ -1037,3 +1037,8 @@ Next.js by Vercel - The React Framework
 
 
 ```
+
+- .ics ファイルや Google カレンダー連携時も、DB に保存された日時値（ローカルタイム）をそのまま利用し、タイムゾーン変換や UTC 化は行いません。
+- 例：2024-04-02 10:00 ～ 11:00 と保存されていれば、そのまま 10:00 ～ 11:00 としてカレンダーに登録されます。
+- 仕様上、カレンダーアプリ側でタイムゾーンを自動解釈する場合がありますが、本アプリでは「ローカルタイムとして扱う」ことを前提とします。
+- 自動解釈で表示時とずれることが無いよう気を付けて実装すること。

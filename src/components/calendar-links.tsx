@@ -139,7 +139,10 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm"
-                onClick={() => setLoading(date.id, "google", true)}
+                onClick={() => {
+                  setLoading(date.id, "google", true);
+                  setTimeout(() => setLoading(date.id, "google", false), 3000);
+                }}
               >
                 {isGoogleLoading(date.id) ? (
                   <>
@@ -165,7 +168,10 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
               <a
                 href={generateIcsDownloadLink(date.id)}
                 className="btn btn-secondary btn-sm"
-                onClick={() => setLoading(date.id, "ics", true)}
+                onClick={() => {
+                  setLoading(date.id, "ics", true);
+                  setTimeout(() => setLoading(date.id, "ics", false), 3000);
+                }}
               >
                 {isIcsLoading(date.id) ? (
                   <>

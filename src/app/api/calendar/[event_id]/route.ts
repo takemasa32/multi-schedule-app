@@ -84,7 +84,8 @@ export async function GET(
           action: 'TEMPLATE',
           text: event.title,
           details: event.description || '',
-          dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`
+          dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
+          ctz: 'Asia/Tokyo', // タイムゾーンを明示
         });
 
         // Google Calendarリンクにリダイレクト
@@ -140,7 +141,7 @@ export async function GET(
           text: `${event.title} ${finalDates.length > 1 ? `(1/${finalDates.length})` : ''}`,
           details: event.description || '',
           dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
-          ctz:     "Asia/Tokyo",
+          ctz: 'Asia/Tokyo', // タイムゾーンを明示
         });
 
         // Google Calendarリンクにリダイレクト
@@ -224,10 +225,8 @@ function escapeIcsValue(value: string): string {
     .replace(/\n/g, '\\n');
 }
 
-// Google Calendar用の日付フォーマット（YYYYMMDDTHHMMSSZ形式）
+// Google Calendar用の日付フォーマット（YYYYMMDDTHHMMSS形式、Zなしローカルタイム）
 function formatGoogleDate(date: Date): string {
-  // 日本時間として解釈してからUTC形式に変換
-  return dayjs(date)
-    .tz("Asia/Tokyo")
-    .format("YYYYMMDDTHHmmss");
+  // 入力値をそのままローカルタイムで出力
+  return dayjs(date).format("YYYYMMDDTHHmmss");
 }
