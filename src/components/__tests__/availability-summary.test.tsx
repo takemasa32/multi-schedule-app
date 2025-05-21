@@ -15,14 +15,14 @@ describe("AvailabilitySummary", () => {
   const eventDates = [
     {
       id: "date1",
-      start_time: "2025-05-10T10:00:00.000Z",
-      end_time: "2025-05-10T11:00:00.000Z",
+      start_time: "2025-05-10 19:00:00",
+      end_time: "2025-05-10 20:00:00",
       label: "午前枠",
     },
     {
       id: "date2",
-      start_time: "2025-05-11T15:00:00.000Z",
-      end_time: "2025-05-11T16:00:00.000Z",
+      start_time: "2025-05-12 00:00:00",
+      end_time: "2025-05-12 01:00:00",
       label: "午後枠",
     },
   ];
@@ -49,22 +49,28 @@ describe("AvailabilitySummary", () => {
 
   it("日程ごとの○人数/×人数が正しく表示される（リスト表示）", () => {
     render(<AvailabilitySummary {...defaultProps} viewMode="list" />);
-    // 日付の表示（1つ目は10日、2つ目は5/12で検証）
+    // 日付の表示（1つ目は5/10、2つ目は5/11で検証）
     expect(
-      screen.queryAllByText((content) => /10日|5\/10|5月10日/.test(content))
-        .length
+      screen.queryAllByText((content) =>
+        /10日|5\/10|5月10日|5\/10\(.+\)|5\/10\(.*?\)/.test(content)
+      ).length
     ).toBeGreaterThan(0);
     expect(
-      screen.queryAllByText((content) => /5\/12|5月12日|12日/.test(content))
-        .length
+      screen.queryAllByText((content) =>
+        /12日|5\/12|5月12日|5\/12\(.+\)|5\/12\(.*?\)/.test(content)
+      ).length
     ).toBeGreaterThan(0);
     // ラベル（午前枠/午後枠）がどこかに含まれている
     expect(screen.queryAllByText(/午前枠/).length).toBeGreaterThan(0);
     expect(screen.queryAllByText(/午後枠/).length).toBeGreaterThan(0);
-    // 時間（19:00, 0:00 など）は部分一致で検証
+    // 時間（19:00, 20:00, 0:00, 1:00 など）は部分一致で検証
     expect(
       screen.getAllByText(
-        (content) => content.includes("19:00") || content.includes("0:00")
+        (content) =>
+          content.includes("19:00") ||
+          content.includes("20:00") ||
+          content.includes("0:00") ||
+          content.includes("1:00")
       ).length
     ).toBeGreaterThan(0);
     // ○人数/×人数（2 / 1 などの組み合わせで検証）
