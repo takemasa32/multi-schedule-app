@@ -7,7 +7,7 @@ import siteConfig from "@/lib/site-config";
 import { ThemeProvider } from "@/components/theme-provider";
 import ExternalBrowserBanner from "@/components/browser-banner";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
-import AddToHomeScreenBanner from "@/components/add-to-home-screen";
+// import AddToHomeScreenBanner from "@/components/add-to-home-screen";
 import LineExternalBrowserRedirector from "@/components/browser-banner/LineExternalBrowserRedirector";
 
 export const viewport = {
@@ -53,7 +53,7 @@ export default function RootLayout({
           <GoogleAnalytics />
           <LineExternalBrowserRedirector />
           <ExternalBrowserBanner />
-          <AddToHomeScreenBanner />
+          {/* <AddToHomeScreenBanner /> */}
           <main className="flex-grow container mx-auto px-4 py-6 pt-16">
             {children}
           </main>

@@ -82,6 +82,8 @@ yarn-error.log*
 *.tsbuildinfo
 
 
+# テスト用ファイル
+junit.xml
 # e2eテスト用のファイル
 test-results/
 playwright-report/
