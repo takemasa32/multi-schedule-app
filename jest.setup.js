@@ -50,3 +50,13 @@ if (
     }
   };
 }
+
+// --- JSDOMのrequestSubmit未実装対策（全テスト共通で必ず定義）
+if (
+  typeof window !== "undefined" &&
+  !window.HTMLFormElement.prototype.requestSubmit
+) {
+  window.HTMLFormElement.prototype.requestSubmit = function () {
+    this.submit();
+  };
+}
