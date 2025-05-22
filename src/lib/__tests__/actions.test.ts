@@ -371,6 +371,11 @@ describe('addEventDates', () => {
     jest.clearAllMocks();
   });
 
+  // Define interface for the global object with addEventDates
+  interface GlobalWithDates {
+    addEventDates?: (formData: FormData) => Promise<{ success: boolean; message?: string }>;
+  }
+
   it('正常な入力で日程が追加できる', async () => {
     // event_datesテーブルへのinsertが成功するケース
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
@@ -389,9 +394,10 @@ describe('addEventDates', () => {
     formData.set('eventId', 'eventid');
     formData.set('start', '2025-06-01T10:00');
     formData.set('end', '2025-06-01T11:00');
-    // 仮のaddEventDates関数（実装時にimport）
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- グローバルテスト用の型回避
-    const result = await (global as any).addEventDates?.(formData) ?? { success: true };
+
+    // Use unknown as intermediate step for type casting
+    const g = global as unknown as GlobalWithDates;
+    const result = await g.addEventDates?.(formData) ?? { success: true };
     expect(result.success).toBe(true);
   });
 
@@ -409,8 +415,10 @@ describe('addEventDates', () => {
     formData.set('eventId', 'eventid');
     formData.set('start', '2025-06-01T10:00');
     formData.set('end', '2025-06-01T11:00');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- グローバルテスト用の型回避
-    const result = await (global as any).addEventDates?.(formData) ?? { success: false, message: '重複' };
+
+    // Use unknown as intermediate step for type casting
+    const g = global as unknown as GlobalWithDates;
+    const result = await g.addEventDates?.(formData) ?? { success: false, message: '重複' };
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/重複/);
   });
