@@ -74,10 +74,16 @@ describe("EventFormClient", () => {
       target: { value: "テストイベント" },
     });
     // 日程追加: 開始日・終了日・時間帯を入力して時間枠を生成
-    const startDateInput = screen.getByLabelText(/開始日/);
-    const endDateInput = screen.getByLabelText(/終了日/);
-    fireEvent.change(startDateInput, { target: { value: "2099-01-01" } });
-    fireEvent.change(endDateInput, { target: { value: "2099-01-01" } });
+    const startDateInputs = screen.getAllByLabelText(/開始日/);
+    const startDateInput = startDateInputs.find(
+      (el) => el.tagName === "INPUT" && el.getAttribute("type") === "date"
+    );
+    const endDateInputs = screen.getAllByLabelText(/終了日/);
+    const endDateInput = endDateInputs.find(
+      (el) => el.tagName === "INPUT" && el.getAttribute("type") === "date"
+    );
+    fireEvent.change(startDateInput!, { target: { value: "2099-01-01" } });
+    fireEvent.change(endDateInput!, { target: { value: "2099-01-01" } });
     // 時間帯（開始・終了）もデフォルトでOKだが、念のため明示的に設定
     const startTimeInput = screen.getAllByDisplayValue("00:00")[0];
     const endTimeInput = screen.getAllByDisplayValue("00:00")[1];
@@ -86,11 +92,8 @@ describe("EventFormClient", () => {
     // 利用規約に同意
     fireEvent.click(screen.getByLabelText(/利用規約/));
     fireEvent.click(screen.getByRole("button", { name: /イベントを作成/ }));
-    // バリデーションエラーが出ることを許容
     await waitFor(() => {
-      expect(
-        screen.queryByText(/少なくとも1つの時間枠を設定してください/)
-      ).toBeInTheDocument();
+      expect(createEvent).toHaveBeenCalled();
     });
   });
 

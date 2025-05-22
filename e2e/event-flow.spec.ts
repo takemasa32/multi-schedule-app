@@ -289,4 +289,39 @@ test.describe.serial('イベントE2Eフロー', () => {
     expect(copied).toBe(expectedUrl);
   });
 
+  test('日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
+    await gotoWithRetry(page, eventUrl);
+    await page.waitForTimeout(1000);
+    // 日程追加セクションを展開
+    const addSection = page.getByText('日程を追加する', { exact: false });
+    await addSection.click();
+    // DateRangePickerの開始日・終了日・時間帯を入力
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate() + 1).padStart(2, '0'); // 明日
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    await page.getByLabel('開始日', { exact: true }).fill(dateStr);
+    await page.getByLabel('終了日', { exact: true }).fill(dateStr);
+    await page.getByLabel('開始時間', { exact: true }).fill('09:00');
+    await page.getByLabel('終了時間', { exact: true }).fill('10:00');
+    // 追加ボタン押下
+    await page.getByRole('button', { name: /日程を追加/ }).click();
+    // 確認モーダルのOKボタン押下
+    await page.getByRole('button', { name: /^OK$/ }).click();
+    // 完了ダイアログのOKボタン押下
+    await expect(page.getByRole('dialog').getByText('日程を追加しました')).toBeVisible({ timeout: 6000 });
+    await page.getByRole('button', { name: /^OK$/ }).click();
+    // 完了ダイアログが閉じるのを待つ
+    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+    // 同じ日程を再度追加し、重複エラーを検証
+    await page.getByLabel('開始日', { exact: true }).fill(dateStr);
+    await page.getByLabel('終了日', { exact: true }).fill(dateStr);
+    await page.getByLabel('開始時間', { exact: true }).fill('09:00');
+    await page.getByLabel('終了時間', { exact: true }).fill('10:00');
+    await page.getByRole('button', { name: /日程を追加/ }).click();
+    await page.getByRole('button', { name: /^OK$/ }).click();
+    await expect(page.getByText(/重複/)).toBeVisible({ timeout: 5000 });
+  });
+
 });

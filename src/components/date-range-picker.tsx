@@ -349,6 +349,7 @@ export default function DateRangePicker({
                 type="button"
                 tabIndex={-1}
                 className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                aria-label="開始日ヘルプ"
               >
                 ?
               </button>
@@ -359,6 +360,7 @@ export default function DateRangePicker({
             className="input input-bordered w-full mt-1"
             value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
             onChange={handleStartDateChange}
+            aria-label="開始日"
           />
         </label>
         <label className="form-control w-full">
@@ -372,6 +374,7 @@ export default function DateRangePicker({
                 type="button"
                 tabIndex={-1}
                 className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                aria-label="終了日ヘルプ"
               >
                 ?
               </button>
@@ -382,6 +385,7 @@ export default function DateRangePicker({
             className="input input-bordered w-full mt-1"
             value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
             onChange={handleEndDateChange}
+            aria-label="終了日"
           />
         </label>
       </div>
@@ -463,6 +467,7 @@ export default function DateRangePicker({
                     type="button"
                     tabIndex={-1}
                     className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                    aria-label="開始時間ヘルプ"
                   >
                     ?
                   </button>
@@ -473,6 +478,7 @@ export default function DateRangePicker({
                 className="input input-bordered w-full mt-1"
                 value={defaultStartTime}
                 onChange={handleDefaultStartTimeChange}
+                aria-label="開始時間"
               />
             </label>
             <label className="form-control w-full">
@@ -486,6 +492,7 @@ export default function DateRangePicker({
                     type="button"
                     tabIndex={-1}
                     className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                    aria-label="終了時間ヘルプ"
                   >
                     ?
                   </button>
@@ -496,6 +503,7 @@ export default function DateRangePicker({
                 className="input input-bordered w-full mt-1"
                 value={defaultEndTime === "24:00" ? "00:00" : defaultEndTime}
                 onChange={handleDefaultEndTimeChange}
+                aria-label="終了時間"
               />
               <span className="label-text-alt text-info mt-1">
                 00:00は翌日0:00として扱われます
