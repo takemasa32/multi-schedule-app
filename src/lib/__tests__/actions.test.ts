@@ -390,6 +390,7 @@ describe('addEventDates', () => {
     formData.set('start', '2025-06-01T10:00');
     formData.set('end', '2025-06-01T11:00');
     // 仮のaddEventDates関数（実装時にimport）
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- グローバルテスト用の型回避
     const result = await (global as any).addEventDates?.(formData) ?? { success: true };
     expect(result.success).toBe(true);
   });
@@ -408,6 +409,7 @@ describe('addEventDates', () => {
     formData.set('eventId', 'eventid');
     formData.set('start', '2025-06-01T10:00');
     formData.set('end', '2025-06-01T11:00');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- グローバルテスト用の型回避
     const result = await (global as any).addEventDates?.(formData) ?? { success: false, message: '重複' };
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/重複/);
