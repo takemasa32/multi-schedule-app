@@ -706,3 +706,49 @@ export async function copyAvailabilityBetweenEvents(
     };
   }
 }
+
+/**
+ * イベント日程追加アクション（バッチ対応）
+ * @param formData FormData（eventId, start, end など複数）
+ * @returns { success: boolean, message?: string }
+ */
+export async function addEventDates(formData: FormData) {
+  try {
+    const eventId = formData.get("eventId") as string;
+    const starts = formData.getAll("start") as string[];
+    const ends = formData.getAll("end") as string[];
+    if (!eventId || !starts.length || !ends.length || starts.length !== ends.length) {
+      return { success: false, message: "日程追加に必要な情報が不足しています" };
+    }
+    const supabase = createSupabaseAdmin();
+    // 既存日程との重複チェック（まとめて）
+    // 1件でも重複があれば全体NG
+    for (let i = 0; i < starts.length; i++) {
+      const start = starts[i];
+      const end = ends[i];
+      const { data: overlaps, error: overlapError } = await supabase
+        .from("event_dates")
+        .select("id, start_time, end_time")
+        .eq("event_id", eventId)
+        .lt("start_time", end)
+        .gt("end_time", start);
+      if (overlapError) {
+        return { success: false, message: "重複チェック時にエラーが発生しました" };
+      }
+      if (overlaps && overlaps.length > 0) {
+        return { success: false, message: "既存の日程と重複しています" };
+      }
+    }
+    // 日程一括追加
+    const rows = starts.map((start, i) => ({ event_id: eventId, start_time: start, end_time: ends[i] }));
+    const { error: insertError } = await supabase
+      .from("event_dates")
+      .insert(rows);
+    if (insertError) {
+      return { success: false, message: "日程の追加に失敗しました" };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : "予期せぬエラーが発生しました" };
+  }
+}

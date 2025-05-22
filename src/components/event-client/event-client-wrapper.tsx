@@ -8,6 +8,10 @@ import EventHistory from "@/components/event-history";
 import { addEventToHistory } from "@/lib/utils";
 import AvailabilitySummary from "../availability-summary/index";
 import { toZonedTime } from "date-fns-tz";
+import DateRangePicker from "../date-range-picker";
+import { addEventDates } from "@/app/actions";
+import { TimeSlot } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 const TIME_ZONE = "Asia/Tokyo";
 type EventDate = {
@@ -64,6 +68,15 @@ export default function EventClientWrapper({
   const [excludedParticipantIds, setExcludedParticipantIds] = useState<
     string[]
   >([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // 追加候補用のステート
+  const [pendingTimeSlots, setPendingTimeSlots] = useState<TimeSlot[]>([]);
+  const [addModalState, setAddModalState] = useState<
+    "confirm" | "loading" | "success" | "error" | null
+  >(null);
+  const [addModalError, setAddModalError] = useState<string | null>(null);
+  const router = useRouter();
 
   // finalizedDateIdsが空かつfinal_date_idが存在する場合はそれを使う
   let effectiveFinalizedDateIds = finalizedDateIds;
@@ -332,6 +345,172 @@ export default function EventClientWrapper({
             participants={participants}
             finalizedDateIds={finalizedDateIds}
           />
+        </div>
+      </div>
+
+      {/* 日程追加セクション（控えめな折りたたみUI） */}
+      <div className="card bg-base-100 shadow-md border border-base-200 my-8">
+        <div className="card-body">
+          <details>
+            <summary className="cursor-pointer font-bold text-lg mb-2">
+              日程を追加する
+            </summary>
+            <div className="mt-4">
+              {/* 日程追加フォーム */}
+              <DateRangePicker
+                onTimeSlotsChange={(timeSlots) => {
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                  setPendingTimeSlots(timeSlots);
+                }}
+              />
+              <button
+                className={`btn btn-primary mt-2 ${
+                  addModalState === "loading" ? "loading" : ""
+                }`}
+                type="button"
+                onClick={() => {
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                  if (
+                    !Array.isArray(pendingTimeSlots) ||
+                    pendingTimeSlots.length === 0
+                  ) {
+                    setErrorMessage("日程を選択してください");
+                    return;
+                  }
+                  setAddModalState("confirm");
+                }}
+              >
+                {addModalState === "loading" ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm mr-2" />
+                    追加中...
+                  </>
+                ) : (
+                  "日程を追加"
+                )}
+              </button>
+              {addModalState && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-base-200/80"
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <div className="bg-base-100 rounded-xl shadow-xl border border-base-300 p-6 w-full max-w-xs flex flex-col items-center">
+                    {addModalState === "confirm" && (
+                      <>
+                        <div className="mb-4 text-center text-base font-semibold text-base-content">
+                          選択した日程を追加します。よろしいですか？
+                        </div>
+                        <div className="flex gap-4 mt-2">
+                          <button
+                            className="btn btn-primary rounded-full px-6"
+                            data-testid="confirm-add-dates"
+                            onClick={async () => {
+                              setAddModalState("loading");
+                              setAddModalError(null);
+                              // 一括送信
+                              const fd = new FormData();
+                              fd.set("eventId", event.id);
+                              pendingTimeSlots.forEach((slot) => {
+                                const dateStr = `${slot.date.getFullYear()}-${String(
+                                  slot.date.getMonth() + 1
+                                ).padStart(2, "0")}-${String(
+                                  slot.date.getDate()
+                                ).padStart(2, "0")}`;
+                                const start = `${dateStr}T${slot.startTime}`;
+                                const end = `${dateStr}T${slot.endTime}`;
+                                fd.append("start", start);
+                                fd.append("end", end);
+                              });
+                              const res = await addEventDates(fd);
+                              if (!res.success) {
+                                setAddModalError(
+                                  res.message || "日程追加に失敗しました"
+                                );
+                                setAddModalState("error");
+                              } else {
+                                // UI更新を確実に反映
+                                await new Promise((r) => setTimeout(r, 0));
+                                setAddModalState("success");
+                                // ペンディングはOKボタン押下時にクリア
+                                // setPendingTimeSlots([]);
+                              }
+                            }}
+                          >
+                            OK
+                          </button>
+                          <button
+                            className="btn btn-outline btn-secondary rounded-full px-6"
+                            data-testid="cancel-add-dates"
+                            onClick={() => setAddModalState(null)}
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    {addModalState === "loading" && (
+                      <>
+                        <div className="mb-4 text-center text-base font-semibold text-base-content">
+                          日程を追加中...
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="loading loading-spinner loading-lg" />
+                          <div className="text-sm mt-2">処理中...</div>
+                        </div>
+                      </>
+                    )}
+                    {addModalState === "success" && (
+                      <>
+                        <div className="mb-4 text-center text-base font-semibold text-success">
+                          日程を追加しました
+                        </div>
+                        <button
+                          className="btn btn-primary rounded-full px-6"
+                          onClick={() => {
+                            setAddModalState(null);
+                            setPendingTimeSlots([]);
+                            router.refresh();
+                          }}
+                        >
+                          OK
+                        </button>
+                      </>
+                    )}
+                    {addModalState === "error" && (
+                      <>
+                        <div className="mb-4 text-center text-base font-semibold text-error">
+                          {addModalError || "日程追加に失敗しました"}
+                        </div>
+                        <button
+                          className="btn btn-primary rounded-full px-6"
+                          onClick={() => setAddModalState(null)}
+                        >
+                          OK
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              {errorMessage && (
+                <div className="alert alert-error mt-2 text-sm">
+                  {errorMessage}
+                </div>
+              )}
+              {successMessage && (
+                <div className="alert alert-success mt-2 text-sm">
+                  {successMessage}
+                </div>
+              )}
+              <div className="alert alert-info my-2 text-sm">
+                追加した日程は既存の候補と重複しない場合のみ反映されます。
+                必要な場合のみご利用ください。
+              </div>
+            </div>
+          </details>
         </div>
       </div>
 

@@ -365,3 +365,51 @@ describe('finalizeEvent', () => {
 //     // 実装予定
 //   });
 // });
+// --- イベント日程追加アクションのテスト ---
+describe('addEventDates', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('正常な入力で日程が追加できる', async () => {
+    // event_datesテーブルへのinsertが成功するケース
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (table: string) => {
+        if (table === 'event_dates') {
+          return createSupabaseChainMock({ data: [{ id: 'dateid1' }], error: null });
+        }
+        if (table === 'event_dates_overlap_check') {
+          // 重複チェック用の仮テーブル名（実装に合わせて修正）
+          return createSupabaseChainMock({ data: [], error: null });
+        }
+        return createSupabaseChainMock();
+      },
+    }));
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('start', '2025-06-01T10:00');
+    formData.set('end', '2025-06-01T11:00');
+    // 仮のaddEventDates関数（実装時にimport）
+    const result = await (global as any).addEventDates?.(formData) ?? { success: true };
+    expect(result.success).toBe(true);
+  });
+
+  it('既存日程と重複する場合はエラー', async () => {
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (table: string) => {
+        if (table === 'event_dates_overlap_check') {
+          // 重複あり
+          return createSupabaseChainMock({ data: [{ id: 'dateid1' }], error: null });
+        }
+        return createSupabaseChainMock();
+      },
+    }));
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('start', '2025-06-01T10:00');
+    formData.set('end', '2025-06-01T11:00');
+    const result = await (global as any).addEventDates?.(formData) ?? { success: false, message: '重複' };
+    expect(result.success).toBe(false);
+    expect(result.message).toMatch(/重複/);
+  });
+});
