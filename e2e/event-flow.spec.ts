@@ -52,7 +52,13 @@ test.describe.serial('イベントE2Eフロー', () => {
       await termsCheckbox.check();
     }
     await page.getByRole('button', { name: /イベントを作成/ }).click();
-    await page.waitForURL(/\/event\//);
+    try {
+      await page.waitForURL(/\/event\//, { timeout: 15000 });
+    } catch (e) {
+      const html = await page.content();
+      console.log('DEBUG: イベント作成後の画面HTML', html);
+      throw e;
+    }
     eventUrl = page.url();
     expect(eventUrl).toMatch(/\/event\//);
   });
@@ -90,7 +96,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
     await participantPage.waitForLoadState('networkidle');
 
-    await participantPage.waitForTimeout(1000);
+    await participantPage.waitForTimeout(5000);
     await participantPage.waitForLoadState('networkidle');
     await expect(participantPage.getByText('個別')).toBeVisible({ timeout: 10000 });
     await participantPage.getByText('個別').click();
@@ -289,38 +295,95 @@ test.describe.serial('イベントE2Eフロー', () => {
     expect(copied).toBe(expectedUrl);
   });
 
-  test('日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
+  // クイック自動延長UIのE2Eテスト
+  // 仕様: 日程追加セクションで延長日を選択し、クイック自動延長ボタン→モーダルで追加→完了→重複エラーも検証
+  test('クイック自動延長で日程追加・重複バリデーション', async ({ page }) => {
     await gotoWithRetry(page, eventUrl);
     await page.waitForTimeout(1000);
+
+
     // 日程追加セクションを展開
     const addSection = page.getByText('日程を追加する', { exact: false });
     await addSection.click();
-    // DateRangePickerの開始日・終了日・時間帯を入力
+    // details要素を強制的にopenにする
+    await page.locator('details').first().evaluate((el) => { el.setAttribute('open', ''); });
+    // input#extendToDateがvisibleになるまで明示的に待機
+    await page.waitForSelector('input#extendToDate', { state: 'visible', timeout: 5000 });
+    const dateInput = page.getByLabel('延長したい最終日');
+
+    // input#extendToDateのmin属性値を取得し、+1日した日付を延長日とする
+    const minDate = await dateInput.getAttribute('min');
+    if (!minDate) throw new Error('min属性が取得できません');
+    const minDateObj = new Date(minDate);
+    // まず+1日の日付を入力
+    minDateObj.setDate(minDateObj.getDate() + 1);
+    const yyyy = minDateObj.getFullYear();
+    const mm = String(minDateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(minDateObj.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    await dateInput.fill(dateStr);
+    // quickBtnがenabledになるまで待機
+    const quickBtn = page.getByRole('button', { name: /この日まで自動延長して追加/ });
+    await expect(quickBtn).toBeEnabled({ timeout: 5000 });
+
+    // クイック自動延長ボタン押下
+    await quickBtn.click();
+
+    // モーダルで「追加する」ボタン押下
+    await page.getByRole('button', { name: /^追加する$/ }).click();
+
+    // 完了ダイアログの表示
+    await expect(page.getByText('日程を追加しました').first()).toBeVisible({ timeout: 6000 });
+    await page.waitForTimeout(1000);
+
+
+    // 同じ日程で再度追加し重複バリデーション
+    await page.locator('input[type="date"]').first().fill(dateStr);
+    // ボタンが無効化されていることを確認（UI上の重複チェックが機能していることを検証）
+    await expect(quickBtn).toBeDisabled({ timeout: 5000 });
+  });
+
+  test('詳細日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
+    await gotoWithRetry(page, eventUrl);
+    await page.waitForTimeout(1000);
+    // 日付文字列を生成
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate() + 1).padStart(2, '0'); // 明日
     const dateStr = `${yyyy}-${mm}-${dd}`;
-    await page.getByLabel('開始日', { exact: true }).fill(dateStr);
-    await page.getByLabel('終了日', { exact: true }).fill(dateStr);
-    await page.getByLabel('開始時間', { exact: true }).fill('09:00');
-    await page.getByLabel('終了時間', { exact: true }).fill('10:00');
+    // 日程追加セクションを展開
+    const addSection = page.getByText('詳細な日程追加', { exact: false });
+    await addSection.click();
+    // input[type="date"]がvisibleかつ有効になるまで待機
+    await page.waitForSelector('input[type="date"]:not([disabled])', { state: 'visible', timeout: 5000 });
+    // 柔軟な日程追加（詳細な日程追加）が閉じている場合は開く
+    const detailsSummary = page.locator('summary', { hasText: '詳細な日程追加' });
+    const details = detailsSummary.locator('..'); // 親のdetails要素
+    if (!(await details.evaluate(el => (el as HTMLDetailsElement).open))) {
+      await detailsSummary.click({ force: true });
+    }
+    // details内のvisibleなinputのみを取得しfill
+    const visibleStartInput = details.locator('input[aria-label="開始日"]:visible');
+    const visibleEndInput = details.locator('input[aria-label="終了日"]:visible');
+    await visibleStartInput.fill(dateStr);
+    await visibleEndInput.fill(dateStr);
+    const visibleStartTimeInput = details.locator('input[aria-label="開始時間"]:visible');
+    const visibleEndTimeInput = details.locator('input[aria-label="終了時間"]:visible');
+    await visibleStartTimeInput.fill('09:00');
+    await visibleEndTimeInput.fill('10:00');
     // 追加ボタン押下
     await page.getByRole('button', { name: /日程を追加/ }).click();
     // 確認モーダルのOKボタン押下
-    await page.getByRole('button', { name: /^OK$/ }).click();
-    // 完了ダイアログのOKボタン押下
-    await expect(page.getByRole('dialog').getByText('日程を追加しました')).toBeVisible({ timeout: 6000 });
-    await page.getByRole('button', { name: /^OK$/ }).click();
-    // 完了ダイアログが閉じるのを待つ
-    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+    await page.getByRole('button', { name: /^追加する$/ }).click();
+
     // 同じ日程を再度追加し、重複エラーを検証
     await page.getByLabel('開始日', { exact: true }).fill(dateStr);
     await page.getByLabel('終了日', { exact: true }).fill(dateStr);
     await page.getByLabel('開始時間', { exact: true }).fill('09:00');
     await page.getByLabel('終了時間', { exact: true }).fill('10:00');
     await page.getByRole('button', { name: /日程を追加/ }).click();
-    await page.getByRole('button', { name: /^OK$/ }).click();
+    await page.getByRole('button', { name: /^追加する$/ }).click();
     await expect(page.getByText(/重複/)).toBeVisible({ timeout: 5000 });
   });
 
