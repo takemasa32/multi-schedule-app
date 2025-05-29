@@ -15,7 +15,6 @@ import {
 import Card from "@/components/layout/Card";
 import siteConfig from "@/lib/site-config";
 import EventHistory from "@/components/event-history";
-import { useEffect, useState } from "react";
 
 /**
  * Responsive Landing Page
@@ -123,13 +122,6 @@ export default function LandingPageClient() {
       a: "ユーザー体験を損なう広告は現在、一切表示しません。",
     },
   ];
-
-  // CTA表示制御: 初期表示では非表示、2秒後に表示
-  const [showCta, setShowCta] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setShowCta(true), 2000);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <>
@@ -243,18 +235,6 @@ export default function LandingPageClient() {
             <div className="absolute left-12 top-16 w-28 h-6 bg-accent/20 rounded-lg blur-sm z-30 rotate-2" />
           </motion.div>
         </div>
-        {/* Sticky CTA for mobile */}
-        {showCta && (
-          <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center sm:hidden pointer-events-none">
-            <Link
-              href="/create"
-              className="btn btn-primary btn-lg w-[90vw] max-w-md shadow-lg pointer-events-auto focus-visible:ring-4 focus-visible:ring-primary/40"
-              style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-            >
-              今すぐ無料で日程調整を始める
-            </Link>
-          </div>
-        )}
       </section>
 
       {/* サービス名の由来・Layeringコンセプト説明 */}
