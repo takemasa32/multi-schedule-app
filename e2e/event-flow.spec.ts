@@ -34,6 +34,7 @@ declare global {
 test.describe.serial('イベントE2Eフロー', () => {
   test('イベント作成', async ({ page }) => {
     await gotoWithRetry(page, '/create');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByLabel('イベントタイトル')).toBeVisible();
     await page.getByLabel('イベントタイトル').fill('E2Eテストイベント');
     await page.getByLabel('説明').fill('E2E自動テスト用イベント');
@@ -54,6 +55,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: /イベントを作成/ }).click();
     try {
       await page.waitForURL(/\/event\//, { timeout: 15000 });
+      await page.waitForLoadState('networkidle');
     } catch (e) {
       const html = await page.content();
       console.log('DEBUG: イベント作成後の画面HTML', html);
@@ -66,6 +68,7 @@ test.describe.serial('イベントE2Eフロー', () => {
   test('参加者がheatmapで回答', async ({ context }) => {
     const participantPage = await context.newPage();
     await gotoWithRetry(participantPage, eventUrl.replace('?admin=', '?dummy='));
+    await participantPage.waitForLoadState('networkidle');
     await expect(participantPage.getByRole('link', { name: /新しく回答する/ })).toBeVisible();
     await participantPage.getByRole('link', { name: /新しく回答する/ }).click();
     await participantPage.waitForURL(/\/input/);
@@ -113,6 +116,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('週表示で別参加者が回答', async ({ page }) => {
     await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
     await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible({ timeout: 10000 });
     // 参加者が1人以上いることを検証
@@ -163,6 +167,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('既存回答の編集', async ({ page, context }) => {
     await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
     await page.getByRole('button', { name: /既存の回答を編集/ }).click();
 
@@ -197,6 +202,7 @@ test.describe.serial('イベントE2Eフロー', () => {
   test('主催者確定・カレンダー連携', async ({ context }) => {
     const adminPage = await context.newPage();
     await gotoWithRetry(adminPage, eventUrl);
+    await adminPage.waitForLoadState('networkidle');
     await adminPage.waitForLoadState('networkidle');
     await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
     // 日程の確定セクションを展開
@@ -282,6 +288,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
     // イベント詳細ページへ遷移
     await gotoWithRetry(page, eventUrl);
+    await page.waitForLoadState('networkidle');
 
     // 共有ボタンをクリック
     const shareBtn = page.getByRole('button', { name: /共有|イベントURLを共有/ });
@@ -299,6 +306,7 @@ test.describe.serial('イベントE2Eフロー', () => {
   // 仕様: 日程追加セクションで延長日を選択し、クイック自動延長ボタン→モーダルで追加→完了→重複エラーも検証
   test('クイック自動延長で日程追加・重複バリデーション', async ({ page }) => {
     await gotoWithRetry(page, eventUrl);
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
 
@@ -345,6 +353,9 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('詳細日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
     await gotoWithRetry(page, eventUrl);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    // 日程追加セクションを展開
     const addSection2 = page.getByText('日程を追加する', { exact: false });
     await addSection2.click();
     await page.waitForTimeout(1000);
