@@ -1,3 +1,4 @@
+import HeroSection from "@/components/landing/hero-section";
 import LandingPageClient from "@/components/landing/landing-page-client";
 import siteConfig from "@/lib/site-config";
 
@@ -27,5 +28,10 @@ export const metadata = {
  * - metadataを設定し、クライアントコンポーネントのLandingPageClientを呼び出す
  */
 export default function LandingPage() {
-  return <LandingPageClient />;
+  return (
+    <>
+      <HeroSection />
+      <LandingPageClient />
+    </>
+  );
 }

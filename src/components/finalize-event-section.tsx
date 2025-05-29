@@ -576,7 +576,7 @@ export default function FinalizeEventSection({
           <div className="mb-4">
             <p className="text-sm font-medium">
               <strong>
-                全ての選択日程で参加可能:{" "}
+                全ての選択日程で参加可能:
                 {getParticipantsForAllSelectedDates().length}人
               </strong>
             </p>
@@ -643,12 +643,12 @@ export default function FinalizeEventSection({
   };
 
   return (
-    <div className="mt-8 border-t pt-6">
-      <div className="flex items-center gap-2 mb-2">
-        <h3 className="text-xl font-bold">日程の確定</h3>
+    <div className="mt-0">
+      <h3 className="text-xl font-bold">日程の確定</h3>
+      <div className="my-4 flex flex-col gap-4">
         <button
-          className="btn btn-sm  btn-secondary ml-2"
-          aria-expanded={isOpen}
+          className="btn btn-outline btn-secondary mb-4"
+          type="button"
           onClick={() => setIsOpen((prev) => !prev)}
         >
           {isOpen ? "閉じる" : "日程の確定を開く"}

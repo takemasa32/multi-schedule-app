@@ -345,6 +345,8 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('詳細日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
     await gotoWithRetry(page, eventUrl);
+    const addSection2 = page.getByText('日程を追加する', { exact: false });
+    await addSection2.click();
     await page.waitForTimeout(1000);
     // 日付文字列を生成
     const today = new Date();

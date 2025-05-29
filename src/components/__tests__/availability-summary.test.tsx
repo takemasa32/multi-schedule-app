@@ -43,13 +43,13 @@ describe("AvailabilitySummary", () => {
     eventDates,
     participants,
     availabilities,
-    viewMode: "list" as const,
-    setViewMode: jest.fn(),
   };
 
   it("日程ごとの○人数/×人数が正しく表示される（リスト表示）", () => {
-    render(<AvailabilitySummary {...defaultProps} viewMode="list" />);
-    // 日付の表示（1つ目は5/10、2つ目は5/11で検証）
+    render(<AvailabilitySummary {...defaultProps} />);
+    // リスト表示タブをクリック
+    fireEvent.click(screen.getByText("リスト表示"));
+    // 日付の表示
     expect(
       screen.queryAllByText((content) =>
         /10日|5\/10|5月10日|5\/10\(.+\)|5\/10\(.*?\)/.test(content)
@@ -85,7 +85,9 @@ describe("AvailabilitySummary", () => {
   });
 
   it("参加者ごとの回答マトリクスが正しく描画される（個別表示）", () => {
-    render(<AvailabilitySummary {...defaultProps} viewMode="detailed" />);
+    render(<AvailabilitySummary {...defaultProps} />);
+    // 個別表示タブをクリック
+    fireEvent.click(screen.getByText("個別表示"));
     // 参加者名
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -96,7 +98,9 @@ describe("AvailabilitySummary", () => {
   });
 
   it("ヒートマップ表示でセルが正しく描画される", () => {
-    render(<AvailabilitySummary {...defaultProps} viewMode="heatmap" />);
+    render(<AvailabilitySummary {...defaultProps} />);
+    // ヒートマップ表示タブをクリック
+    fireEvent.click(screen.getByText("ヒートマップ表示"));
     // セルの○人数がどこかに表示されていること
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
     // 不可人数は括弧付き(1)で表示されるのでそれで検証
@@ -115,19 +119,21 @@ describe("AvailabilitySummary", () => {
   });
 
   it("タブ切り替えで各ビューが切り替わる", () => {
-    const setViewMode = jest.fn();
-    render(
-      <AvailabilitySummary
-        {...defaultProps}
-        setViewMode={setViewMode}
-        viewMode="list"
-      />
-    );
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
-    expect(setViewMode).toHaveBeenCalledWith("heatmap");
+    render(<AvailabilitySummary {...defaultProps} />);
+    // デフォルトはヒートマップ
+    expect(
+      screen.getByText("色が濃いほど参加可能な人が多い時間帯です")
+    ).toBeInTheDocument();
+    // 個別表示
     fireEvent.click(screen.getByText("個別表示"));
-    expect(setViewMode).toHaveBeenCalledWith("detailed");
+    expect(screen.getByText("参加者")).toBeInTheDocument();
+    // リスト表示
     fireEvent.click(screen.getByText("リスト表示"));
-    expect(setViewMode).toHaveBeenCalledWith("list");
+    expect(screen.getByText("参加可能 / 不可")).toBeInTheDocument();
+    // ヒートマップ表示
+    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    expect(
+      screen.getByText("色が濃いほど参加可能な人が多い時間帯です")
+    ).toBeInTheDocument();
   });
 });

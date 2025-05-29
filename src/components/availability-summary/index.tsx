@@ -40,13 +40,11 @@ type AvailabilitySummaryProps = {
     participantName: string,
     participantAvailabilities: Record<string, boolean>
   ) => void;
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
   publicToken?: string;
   excludedParticipantIds?: string[];
 };
 
-type ViewMode = "list" | "heatmap" | "detailed";
+// type ViewMode = "list" | "heatmap" | "detailed";
 
 /**
  * イベントの参加可能状況を表示するコンポーネント
@@ -57,11 +55,13 @@ export default function AvailabilitySummary({
   availabilities,
   finalizedDateIds = [],
   onShowParticipantForm,
-  viewMode,
-  setViewMode,
   publicToken,
   excludedParticipantIds = [],
 }: AvailabilitySummaryProps) {
+  // viewModeは内部でuseState管理
+  const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
+    "heatmap"
+  );
   // useDeviceDetectは必ずトップレベルで呼び出す
   const { isMobile } = useDeviceDetect();
   // ツールチップの状態

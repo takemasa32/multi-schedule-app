@@ -6,7 +6,7 @@ import { CalendarLinks } from "@/components/calendar-links";
 import FinalizeEventSection from "@/components/finalize-event-section";
 import EventHistory from "@/components/event-history";
 import { addEventToHistory } from "@/lib/utils";
-import AvailabilitySummary from "../availability-summary/index";
+// import AvailabilitySummary from "../availability-summary/index";
 import { toZonedTime } from "date-fns-tz";
 import DateRangePicker from "../date-range-picker";
 import { addEventDates } from "@/app/actions";
@@ -61,9 +61,10 @@ export default function EventClientWrapper({
   isAdmin,
 }: EventClientWrapperProps) {
   // viewModeのステート追加
-  const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
-    "heatmap"
-  );
+  // 回答状況（集計）はサーバー側で描画するためviewModeは不要
+  // const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
+  //   "heatmap"
+  // );
   // 参加者の表示/非表示トグル用ステート
   const [excludedParticipantIds, setExcludedParticipantIds] = useState<
     string[]
@@ -353,7 +354,8 @@ export default function EventClientWrapper({
           <h2 className="p-4 border-b border-base-200 font-bold text-xl">
             回答状況
           </h2>
-          <AvailabilitySummary
+          {/* 回答状況（集計）はサーバー側で描画するためここでは非表示に */}
+          {/* <AvailabilitySummary
             participants={participants}
             eventDates={eventDates}
             availabilities={availabilities}
@@ -362,7 +364,7 @@ export default function EventClientWrapper({
             viewMode={viewMode}
             setViewMode={setViewMode}
             excludedParticipantIds={excludedParticipantIds}
-          />
+          /> */}
           {/* 参加者名リスト（表示/非表示トグル） */}
           {participants.length > 0 && (
             <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center">

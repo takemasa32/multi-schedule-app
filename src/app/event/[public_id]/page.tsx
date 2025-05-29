@@ -4,13 +4,18 @@ import { getParticipants } from "@/lib/actions";
 import { getAvailabilities } from "@/lib/actions";
 import { getFinalizedDateIds } from "@/lib/actions";
 import { notFound } from "next/navigation";
-import EventClientWrapper from "@/components/event-client/event-client-wrapper";
 import { EventHeader } from "@/components/event-header";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
 import { FavoriteEventsProvider } from "@/components/favorite-events-context";
+import { Suspense } from "react";
+import AvailabilitySummarySkeleton from "@/components/availability-summary/skeleton";
+import AvailabilitySummaryServer from "@/components/availability-summary/server";
+import EventFormSection from "@/components/event-client/event-form-section";
+import EventDetailsSection from "@/components/event-client/event-details-section";
+import type { EventDate } from "@/components/event-client/event-details-section";
 
 interface EventPageProps {
   params: Promise<{
@@ -86,19 +91,12 @@ export default async function EventPage({
     console.error("Event not found");
     notFound();
   }
-  // 有効な管理者かチェック（必ずboolean型に変換）
   const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
 
-  // 参加者・日程・出欠を並列取得
-  const [participants, eventDates, availabilities, finalizedDateIds] =
-    await Promise.all([
-      getParticipants(event.id),
-      getEventDates(event.id),
-      getAvailabilities(event.id),
-      event.is_finalized
-        ? getFinalizedDateIds(event.id, event.final_date_id)
-        : Promise.resolve([]),
-    ]);
+  // eventDatesのみ先に取得
+  const eventDates = await getEventDates(event.id);
+  // 参加者一覧も取得
+  const participants = await getParticipants(event.id);
 
   return (
     <FavoriteEventsProvider>
@@ -107,7 +105,6 @@ export default async function EventPage({
           <Breadcrumbs items={[{ label: "イベント詳細" }]} />
         </div>
       </div>
-
       <div className="container mx-auto max-w-5xl px-4 pb-12">
         <div className="fade-in">
           <EventHeader
@@ -117,20 +114,89 @@ export default async function EventPage({
             isFinalized={event.is_finalized}
             isAdmin={isAdmin}
           />
-
           <SectionDivider title="イベント情報" />
-
-          {/* クライアントラッパーに全ての必要なデータを渡す */}
-          <EventClientWrapper
+          {/* フォーム・日程追加など主要UIは即時描画 */}
+          <EventFormSection
             event={event}
             eventDates={eventDates || []}
             participants={participants || []}
-            availabilities={availabilities || []}
-            finalizedDateIds={finalizedDateIds}
-            isAdmin={isAdmin}
           />
+          {/* 回答状況（集計）は従来通りサスペンス＋スケルトン */}
+          <div className="card bg-base-100 shadow-md border border-base-200 mb-8">
+            <div className="card-body p-0">
+              <h2 className="p-4 border-b border-base-200 font-bold text-xl">
+                回答状況
+              </h2>
+              <Suspense fallback={<AvailabilitySummarySkeleton />}>
+                <AvailabilitySummaryServer
+                  eventId={event.id}
+                  finalizedDateIds={[]}
+                  publicToken={event.public_token}
+                />
+              </Suspense>
+            </div>
+          </div>
+          {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
+          <Suspense
+            fallback={
+              <div className="my-8">
+                <div className="flex flex-col gap-4">
+                  <div className="skeleton h-8 w-1/2" />
+                  <div className="skeleton h-6 w-full" />
+                  <div className="skeleton h-6 w-5/6" />
+                  <div className="skeleton h-6 w-2/3" />
+                </div>
+              </div>
+            }
+          >
+            {/* サーバー側で必要なデータを取得して渡す */}
+            <EventDetailsSectionLoader
+              event={{
+                id: event.id,
+                title: event.title,
+                public_token: event.public_token,
+                is_finalized: event.is_finalized,
+                final_date_id: event.final_date_id,
+              }}
+              eventDates={eventDates || []}
+            />
+          </Suspense>
         </div>
       </div>
     </FavoriteEventsProvider>
+  );
+}
+
+// EventDetailsSection用のラッパー（サーバー側でデータ取得）
+type EventDetailsSectionEvent = {
+  id: string;
+  title: string;
+  public_token: string;
+  is_finalized: boolean;
+  final_date_id?: string | null;
+};
+
+async function EventDetailsSectionLoader({
+  event,
+  eventDates,
+}: {
+  event: EventDetailsSectionEvent;
+  eventDates: EventDate[];
+}) {
+  const [participants, availabilities, finalizedDateIds] = await Promise.all([
+    getParticipants(event.id),
+    getAvailabilities(event.id),
+    event.is_finalized
+      ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
+      : Promise.resolve([]),
+  ]);
+  return (
+    <EventDetailsSection
+      event={event}
+      eventDates={eventDates}
+      participants={participants || []}
+      availabilities={availabilities || []}
+      finalizedDateIds={finalizedDateIds}
+    />
   );
 }
