@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from "@vercel/og";
 import { NextRequest } from "next/server";
 import siteConfig from "@/lib/site-config";
@@ -16,21 +17,14 @@ export async function GET(req: NextRequest) {
     return url.searchParams;
   })();
   const type = searchParams.get("type");
-
-  // ロゴURL（環境に応じてhost優先、siteConfig.urlはフォールバック）
+  // 本番はsiteConfig.url、ローカル開発時のみreqからhostを取得
+  let baseUrl = siteConfig.url.replace(/\/$/, "");
   let logoUrl = siteConfig.logo.svg;
-  let baseUrl = "";
-  try {
-    // Edge APIではreq.headers.get('host')が使える
-    const url = new URL(req.url);
-    const host = url.host;
-    // ローカル開発ならhttp、本番はhttps
+  if (process.env.NODE_ENV !== "production" && req.headers.get("host")) {
+    const host = req.headers.get("host")!;
     const isLocal =
       host.startsWith("localhost") || host.startsWith("127.0.0.1");
     baseUrl = `${isLocal ? "http" : "https"}://${host}`;
-  } catch {
-    // フォールバック
-    baseUrl = siteConfig.url.replace(/\/$/, "");
   }
   if (!/^https?:\/\//.test(logoUrl)) {
     logoUrl = `${baseUrl}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}`;
@@ -75,7 +69,6 @@ export async function GET(req: NextRequest) {
       }}
     />
   );
-
   if (type === "home") {
     return new ImageResponse(
       (
