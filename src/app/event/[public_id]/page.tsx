@@ -11,6 +11,9 @@ import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
 import { FavoriteEventsProvider } from "@/components/favorite-events-context";
+import { Suspense } from "react";
+import AvailabilitySummarySkeleton from "@/components/availability-summary/skeleton";
+import AvailabilitySummaryServer from "@/components/availability-summary/server";
 
 interface EventPageProps {
   params: Promise<{
@@ -120,7 +123,23 @@ export default async function EventPage({
 
           <SectionDivider title="イベント情報" />
 
-          {/* クライアントラッパーに全ての必要なデータを渡す */}
+          {/* 回答状況（集計）部分のみサスペンス＋サーバーコンポーネント化 */}
+          <div className="card bg-base-100 shadow-md border border-base-200 mb-8">
+            <div className="card-body p-0">
+              <h2 className="p-4 border-b border-base-200 font-bold text-xl">
+                回答状況
+              </h2>
+              <Suspense fallback={<AvailabilitySummarySkeleton />}>
+                <AvailabilitySummaryServer
+                  eventId={event.id}
+                  finalizedDateIds={finalizedDateIds}
+                  publicToken={event.public_token}
+                />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* クライアントラッパー（フォームや確定UIなど） */}
           <EventClientWrapper
             event={event}
             eventDates={eventDates || []}
