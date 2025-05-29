@@ -14,7 +14,7 @@ export const metadata = {
     url: siteConfig.url,
     images: [
       {
-        url: siteConfig.ogImage,
+        url: "/api/og?type=home",
         width: 1200,
         height: 630,
       },

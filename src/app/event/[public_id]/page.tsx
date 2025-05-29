@@ -70,7 +70,7 @@ export async function generateMetadata({
       url: `${siteConfig.url}/event/${public_id}`,
       images: [
         {
-          url: siteConfig.ogImage,
+          url: `/api/og?type=event&title=${encodeURIComponent(eventTitle)}`,
           width: 1200,
           height: 630,
         },
