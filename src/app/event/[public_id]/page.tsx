@@ -11,8 +11,6 @@ import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
 import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 import { Suspense } from "react";
-import AvailabilitySummarySkeleton from "@/components/availability-summary/skeleton";
-import AvailabilitySummaryServer from "@/components/availability-summary/server";
 import EventFormSection from "@/components/event-client/event-form-section";
 import EventDetailsSection from "@/components/event-client/event-details-section";
 import type { EventDate } from "@/components/event-client/event-details-section";
@@ -121,21 +119,7 @@ export default async function EventPage({
             eventDates={eventDates || []}
             participants={participants || []}
           />
-          {/* 回答状況（集計）は従来通りサスペンス＋スケルトン */}
-          <div className="card bg-base-100 shadow-md border border-base-200 mb-8">
-            <div className="card-body p-0">
-              <h2 className="p-4 border-b border-base-200 font-bold text-xl">
-                回答状況
-              </h2>
-              <Suspense fallback={<AvailabilitySummarySkeleton />}>
-                <AvailabilitySummaryServer
-                  eventId={event.id}
-                  finalizedDateIds={[]}
-                  publicToken={event.public_token}
-                />
-              </Suspense>
-            </div>
-          </div>
+
           {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
           <Suspense
             fallback={
