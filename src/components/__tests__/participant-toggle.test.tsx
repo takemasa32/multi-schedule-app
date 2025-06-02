@@ -11,7 +11,11 @@ if (!HTMLFormElement.prototype.requestSubmit) {
 // 必要なコンポーネントをモック
 jest.mock("@/components/finalize-event-section", () => {
   return function MockFinalizeEventSection() {
-    return <div data-testid="mock-finalize-event-section">Finalize Event Section</div>;
+    return (
+      <div data-testid="mock-finalize-event-section">
+        Finalize Event Section
+      </div>
+    );
   };
 });
 
@@ -23,7 +27,11 @@ jest.mock("@/components/event-history", () => {
 
 jest.mock("@/components/event-client/event-date-add-section", () => {
   return function MockEventDateAddSection() {
-    return <div data-testid="mock-event-date-add-section">Event Date Add Section</div>;
+    return (
+      <div data-testid="mock-event-date-add-section">
+        Event Date Add Section
+      </div>
+    );
   };
 });
 
@@ -324,10 +332,13 @@ describe("参加者トグル機能", () => {
   });
 
   test("参加者リストが多い場合のレイアウト（flex-wrap）が正しく設定される", () => {
-    const manyParticipants: Participant[] = Array.from({ length: 10 }, (_, i) => ({
-      id: `participant${i + 1}`,
-      name: `参加者${i + 1}`,
-    }));
+    const manyParticipants: Participant[] = Array.from(
+      { length: 10 },
+      (_, i) => ({
+        id: `participant${i + 1}`,
+        name: `参加者${i + 1}`,
+      })
+    );
 
     render(
       <EventDetailsSection
@@ -347,7 +358,7 @@ describe("参加者トグル機能", () => {
   test("excludedParticipantIds状態が回答集計コンポーネントに正しく渡される", () => {
     // AvailabilitySummaryコンポーネントがexcludedParticipantIdsを受け取っているかを検証
     // 実際のDOM変化ではなく、propの渡し方の確認のため、より実装に近いテストが必要
-    
+
     render(
       <EventDetailsSection
         event={mockEvent}
@@ -423,7 +434,9 @@ describe("参加者トグル機能", () => {
     expect(screen.getByText("とても長い名前の参加者さん")).toBeInTheDocument();
     expect(screen.getByText("もう一人の長い名前の参加者")).toBeInTheDocument();
 
-    const longNameButton = screen.getByText("とても長い名前の参加者さん").closest("button");
+    const longNameButton = screen
+      .getByText("とても長い名前の参加者さん")
+      .closest("button");
     expect(longNameButton).toHaveClass("badge", "px-3", "py-2");
   });
 
@@ -440,16 +453,16 @@ describe("参加者トグル機能", () => {
 
     mockParticipants.forEach((participant) => {
       const button = screen.getByText(participant.name).closest("button");
-      
+
       // type="button"属性が設定されている
       expect(button).toHaveAttribute("type", "button");
-      
+
       // aria-pressed属性が設定されている
       expect(button).toHaveAttribute("aria-pressed");
-      
+
       // title属性が設定されている
       expect(button).toHaveAttribute("title");
-      
+
       // tabindexが設定されていることを確認（デフォルトの0）
       expect(button).not.toHaveAttribute("tabindex", "-1");
     });
@@ -467,7 +480,7 @@ describe("参加者トグル機能", () => {
     );
 
     const taroButton = screen.getByText("田中太郎").closest("button");
-    
+
     // フォーカスを設定
     taroButton!.focus();
     expect(document.activeElement).toBe(taroButton);
@@ -475,7 +488,7 @@ describe("参加者トグル機能", () => {
     // Enterキーでクリックイベントをシミュレート
     fireEvent.keyDown(taroButton!, { key: "Enter", code: "Enter" });
     fireEvent.keyUp(taroButton!, { key: "Enter", code: "Enter" });
-    
+
     // 状態が変更されることを確認（実際のキーボードイベントではfireEvent.clickを使用）
     fireEvent.click(taroButton!);
     expect(taroButton).toHaveClass("badge-outline", "border-error");
@@ -516,9 +529,11 @@ describe("参加者トグル機能", () => {
     expect(screen.getByText("新規参加者")).toBeInTheDocument();
 
     // 新しい参加者のバッジも正常に動作する
-    const newParticipantButton = screen.getByText("新規参加者").closest("button");
+    const newParticipantButton = screen
+      .getByText("新規参加者")
+      .closest("button");
     expect(newParticipantButton).toHaveClass("badge-primary");
-    
+
     fireEvent.click(newParticipantButton!);
     expect(newParticipantButton).toHaveClass("badge-outline", "border-error");
   });

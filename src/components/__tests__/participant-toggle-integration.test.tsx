@@ -12,7 +12,11 @@ if (!HTMLFormElement.prototype.requestSubmit) {
 // 必要なコンポーネントをモック
 jest.mock("@/components/finalize-event-section", () => {
   return function MockFinalizeEventSection() {
-    return <div data-testid="mock-finalize-event-section">Finalize Event Section</div>;
+    return (
+      <div data-testid="mock-finalize-event-section">
+        Finalize Event Section
+      </div>
+    );
   };
 });
 
@@ -24,7 +28,11 @@ jest.mock("@/components/event-history", () => {
 
 jest.mock("@/components/event-client/event-date-add-section", () => {
   return function MockEventDateAddSection() {
-    return <div data-testid="mock-event-date-add-section">Event Date Add Section</div>;
+    return (
+      <div data-testid="mock-event-date-add-section">
+        Event Date Add Section
+      </div>
+    );
   };
 });
 
@@ -69,15 +77,47 @@ const mockParticipants: Participant[] = [
 
 const mockAvailabilities: Availability[] = [
   // date1: 田中○、佐藤○、鈴木×、高橋○ => 3人参加可能
-  { participant_id: "participant1", event_date_id: "date1", availability: true },
-  { participant_id: "participant2", event_date_id: "date1", availability: true },
-  { participant_id: "participant3", event_date_id: "date1", availability: false },
-  { participant_id: "participant4", event_date_id: "date1", availability: true },
+  {
+    participant_id: "participant1",
+    event_date_id: "date1",
+    availability: true,
+  },
+  {
+    participant_id: "participant2",
+    event_date_id: "date1",
+    availability: true,
+  },
+  {
+    participant_id: "participant3",
+    event_date_id: "date1",
+    availability: false,
+  },
+  {
+    participant_id: "participant4",
+    event_date_id: "date1",
+    availability: true,
+  },
   // date2: 田中×、佐藤○、鈴木○、高橋× => 2人参加可能
-  { participant_id: "participant1", event_date_id: "date2", availability: false },
-  { participant_id: "participant2", event_date_id: "date2", availability: true },
-  { participant_id: "participant3", event_date_id: "date2", availability: true },
-  { participant_id: "participant4", event_date_id: "date2", availability: false },
+  {
+    participant_id: "participant1",
+    event_date_id: "date2",
+    availability: false,
+  },
+  {
+    participant_id: "participant2",
+    event_date_id: "date2",
+    availability: true,
+  },
+  {
+    participant_id: "participant3",
+    event_date_id: "date2",
+    availability: true,
+  },
+  {
+    participant_id: "participant4",
+    event_date_id: "date2",
+    availability: false,
+  },
 ];
 
 const mockFinalizedDateIds: string[] = [];
@@ -109,7 +149,7 @@ describe("参加者トグル機能の統合テスト", () => {
     // 除外後の集計確認
     // date1: 田中除外後 -> 2人参加可能、1人参加不可（佐藤○、鈴木×、高橋○）
     // date2: 田中除外後 -> 2人参加可能、1人参加不可（佐藤○、鈴木○、高橋×）
-    
+
     // バッジが非表示状態になっていることを確認
     expect(taroButton).toHaveClass("badge-outline", "border-error");
   });
@@ -136,12 +176,20 @@ describe("参加者トグル機能の統合テスト", () => {
     expect(table).toHaveTextContent("高橋美咲");
 
     // トグルボタンを取得（バッジ部分から）
-    const participantButtons = screen.getAllByRole("button").filter(button => 
-      button.textContent?.includes("田中太郎") || button.textContent?.includes("高橋美咲")
+    const participantButtons = screen
+      .getAllByRole("button")
+      .filter(
+        (button) =>
+          button.textContent?.includes("田中太郎") ||
+          button.textContent?.includes("高橋美咲")
+      );
+    const taroButton = participantButtons.find((button) =>
+      button.textContent?.includes("田中太郎")
     );
-    const taroButton = participantButtons.find(button => button.textContent?.includes("田中太郎"));
-    const misakiButton = participantButtons.find(button => button.textContent?.includes("高橋美咲"));
-    
+    const misakiButton = participantButtons.find((button) =>
+      button.textContent?.includes("高橋美咲")
+    );
+
     fireEvent.click(taroButton!);
     fireEvent.click(misakiButton!);
 
@@ -168,13 +216,13 @@ describe("参加者トグル機能の統合テスト", () => {
     // 佐藤花子を一度除外
     const hanakoButton = screen.getByText("佐藤花子").closest("button");
     fireEvent.click(hanakoButton!);
-    
+
     // 除外状態を確認
     expect(hanakoButton).toHaveClass("badge-outline", "border-error");
 
     // 再度クリックして表示に戻す
     fireEvent.click(hanakoButton!);
-    
+
     // 表示状態に戻ったことを確認
     expect(hanakoButton).toHaveClass("badge-primary");
     expect(hanakoButton).not.toHaveClass("badge-outline", "border-error");
@@ -257,7 +305,9 @@ describe("参加者トグル機能の統合テスト", () => {
 
     // ヒートマップ表示
     fireEvent.click(screen.getByText("ヒートマップ表示"));
-    expect(screen.getByText("色が濃いほど参加可能な人が多い時間帯です")).toBeInTheDocument();
+    expect(
+      screen.getByText("色が濃いほど参加可能な人が多い時間帯です")
+    ).toBeInTheDocument();
 
     // リスト表示
     fireEvent.click(screen.getByText("リスト表示"));
@@ -288,23 +338,33 @@ describe("参加者トグル機能の統合テスト", () => {
     // 初期状態の集計を確認（data-testidを使用）
     // date1: 田中○、佐藤○、鈴木×、高橋○ => ○3名/×1名
     expect(screen.getByTestId("available-count-date1")).toHaveTextContent("3");
-    expect(screen.getByTestId("unavailable-count-date1")).toHaveTextContent("1");
+    expect(screen.getByTestId("unavailable-count-date1")).toHaveTextContent(
+      "1"
+    );
     // date2: 田中×、佐藤○、鈴木○、高橋× => ○2名/×2名
     expect(screen.getByTestId("available-count-date2")).toHaveTextContent("2");
-    expect(screen.getByTestId("unavailable-count-date2")).toHaveTextContent("2");
+    expect(screen.getByTestId("unavailable-count-date2")).toHaveTextContent(
+      "2"
+    );
 
     // 田中太郎を除外（参加者トグル部分のボタンを選択）
     const toggleSection = screen.getByText("表示選択:").parentElement!;
-    const tanakaToggle = within(toggleSection).getByRole("button", { name: /田中太郎/ });
+    const tanakaToggle = within(toggleSection).getByRole("button", {
+      name: /田中太郎/,
+    });
     fireEvent.click(tanakaToggle);
 
     // 集計結果が更新される
     // date1: 佐藤○、鈴木×、高橋○ => ○2名/×1名
     expect(screen.getByTestId("available-count-date1")).toHaveTextContent("2");
-    expect(screen.getByTestId("unavailable-count-date1")).toHaveTextContent("1");
+    expect(screen.getByTestId("unavailable-count-date1")).toHaveTextContent(
+      "1"
+    );
     // date2: 佐藤○、鈴木○、高橋× => ○2名/×1名
     expect(screen.getByTestId("available-count-date2")).toHaveTextContent("2");
-    expect(screen.getByTestId("unavailable-count-date2")).toHaveTextContent("1");
+    expect(screen.getByTestId("unavailable-count-date2")).toHaveTextContent(
+      "1"
+    );
   });
 
   test("個別表示での参加者除外効果をテスト", () => {
@@ -330,14 +390,16 @@ describe("参加者トグル機能の統合テスト", () => {
 
     // 佐藤花子を除外（参加者トグル部分のボタンを選択）
     const toggleSection = screen.getByText("表示選択:").parentElement!;
-    const hanakoToggle = within(toggleSection).getByRole("button", { name: /佐藤花子/ });
+    const hanakoToggle = within(toggleSection).getByRole("button", {
+      name: /佐藤花子/,
+    });
     fireEvent.click(hanakoToggle);
 
     // 個別表示から佐藤花子が除外される（AvailabilitySummaryコンポーネント内の表示）
     // 除外された参加者はテーブルに表示されない
     const tableAfterExclusion = screen.getByRole("table");
     expect(tableAfterExclusion).not.toHaveTextContent("佐藤花子");
-    
+
     // 他の参加者はテーブルに表示されたまま
     expect(tableAfterExclusion).toHaveTextContent("田中太郎");
     expect(tableAfterExclusion).toHaveTextContent("鈴木次郎");
@@ -363,9 +425,11 @@ describe("参加者トグル機能の統合テスト", () => {
     fireEvent.click(jiroButton!);
 
     // ヒートマップから鈴木次郎が除外される
-    const heatmapDisplay = screen.getByText("色が濃いほど参加可能な人が多い時間帯です").closest("div");
+    const heatmapDisplay = screen
+      .getByText("色が濃いほど参加可能な人が多い時間帯です")
+      .closest("div");
     expect(heatmapDisplay).not.toHaveTextContent("鈴木次郎");
-    
+
     // 他の参加者は表示されたまま
     expect(screen.getByText("田中太郎")).toBeInTheDocument();
     expect(screen.getByText("佐藤花子")).toBeInTheDocument();
@@ -424,7 +488,9 @@ describe("参加者トグル機能の統合テスト", () => {
     // 全参加者を除外（参加者トグル部分のボタンを使用）
     const toggleSection = screen.getByText("表示選択:").parentElement!;
     mockParticipants.forEach((participant) => {
-      const button = within(toggleSection).getByRole("button", { name: new RegExp(participant.name) });
+      const button = within(toggleSection).getByRole("button", {
+        name: new RegExp(participant.name),
+      });
       fireEvent.click(button);
     });
 

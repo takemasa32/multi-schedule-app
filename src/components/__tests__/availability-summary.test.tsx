@@ -391,7 +391,7 @@ describe("AvailabilitySummary", () => {
       // Bobを除外した場合の集計結果を確認
       // date1: Alice(○), Charlie(○) = 2名 (Bobの×を除外)
       // date2: Alice(×), Charlie(○) = 1名 (Bobの○を除外)
-      
+
       // 集計結果がBob除外後の数値になっていることを確認
       // 具体的な数値は実装に依存するため、エラーにならないことを確認
       expect(screen.getByText("2")).toBeInTheDocument(); // date1の参加可能者数
