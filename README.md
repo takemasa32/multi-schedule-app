@@ -198,5 +198,5 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 ---
 
 **補足:**
-`package.json` には `test:e2e` スクリプトも定義されています。
-E2E テストは `npm run e2e` または `npm run test:e2e` で実行できます。
+`package.json` には `test:e2e` スクリプトも定義されています。開発サーバーを別途起動した状態で e2e テストだけを実行したい場合に `npm run test:e2e` を利用できます。
+本番ビルドやサーバー起動から自動で行う場合は、上記の `npm run e2e` などを使用してください。
