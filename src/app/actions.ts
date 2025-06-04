@@ -102,6 +102,7 @@ export async function submitAvailability(formData: FormData) {
     const eventId = formData.get("eventId") as string;
     const publicToken = formData.get("publicToken") as string;
     const participantName = formData.get("participant_name") as string;
+    const comment = (formData.get("comment") as string) || null;
 
     // 編集モードの場合、既存の参加者IDが提供される
     const participantId = formData.get("participantId") as string | null;
@@ -136,14 +137,20 @@ export async function submitAvailability(formData: FormData) {
         .select("name")
         .eq("id", existingParticipantId)
         .maybeSingle();
-      if (currentParticipant && currentParticipant.name !== participantName) {
+      if (currentParticipant) {
+        const updateData: { name?: string; comment: string | null } = {
+          comment,
+        };
+        if (currentParticipant.name !== participantName) {
+          updateData.name = participantName;
+        }
         const { error: updateError } = await supabase
           .from("participants")
-          .update({ name: participantName })
+          .update(updateData)
           .eq("id", existingParticipantId);
         if (updateError) {
-          console.error("Participant name update error:", updateError);
-          return { success: false, message: "参加者名の更新に失敗しました" };
+          console.error("Participant update error:", updateError);
+          return { success: false, message: "参加者情報の更新に失敗しました" };
         }
       }
     }
@@ -159,6 +166,10 @@ export async function submitAvailability(formData: FormData) {
 
       if (existingParticipant) {
         existingParticipantId = existingParticipant.id;
+        await supabase
+          .from("participants")
+          .update({ comment })
+          .eq("id", existingParticipantId);
       } else {
         // 新規参加者を作成
         const responseToken = uuidv4();
@@ -167,7 +178,8 @@ export async function submitAvailability(formData: FormData) {
           .insert({
             event_id: eventId,
             name: participantName,
-            response_token: responseToken
+            response_token: responseToken,
+            comment
           })
           .select("id")
           .single();
