@@ -137,39 +137,41 @@ describe("AvailabilitySummary", () => {
     ).toBeInTheDocument();
   });
 
-  it("excludedParticipantIdsで指定された参加者が除外される", () => {
-    // Alice（p1）を除外する
-    render(
-      <AvailabilitySummary {...defaultProps} excludedParticipantIds={["p1"]} />
-    );
+  describe("excludedParticipantIds", () => {
+    it("指定された参加者が除外される", () => {
+      // Alice（p1）を除外する
+      render(
+        <AvailabilitySummary {...defaultProps} excludedParticipantIds={["p1"]} />
+      );
 
-    // 個別表示に切り替えて参加者リストを確認
-    fireEvent.click(screen.getByText("個別表示"));
+      // 個別表示に切り替えて参加者リストを確認
+      fireEvent.click(screen.getByText("個別表示"));
 
-    // Aliceが表示されていない
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
-    // Bob、Charlieは表示されている
-    expect(screen.getByText("Bob")).toBeInTheDocument();
-    expect(screen.getByText("Charlie")).toBeInTheDocument();
-  });
+      // Aliceが表示されていない
+      expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+      // Bob、Charlieは表示されている
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+    });
 
-  it("複数の参加者が除外される", () => {
-    // AliceとBobを除外する
-    render(
-      <AvailabilitySummary
-        {...defaultProps}
-        excludedParticipantIds={["p1", "p2"]}
-      />
-    );
+    it("複数の参加者が除外される", () => {
+      // AliceとBobを除外する
+      render(
+        <AvailabilitySummary
+          {...defaultProps}
+          excludedParticipantIds={["p1", "p2"]}
+        />
+      );
 
-    // 個別表示に切り替えて参加者リストを確認
-    fireEvent.click(screen.getByText("個別表示"));
+      // 個別表示に切り替えて参加者リストを確認
+      fireEvent.click(screen.getByText("個別表示"));
 
-    // Alice、Bobが表示されていない
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
-    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
-    // Charlieのみ表示されている
-    expect(screen.getByText("Charlie")).toBeInTheDocument();
+      // Alice、Bobが表示されていない
+      expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+      expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+      // Charlieのみ表示されている
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+    });
   });
 
   it("全ての参加者が除外された場合は適切なメッセージが表示される", () => {
