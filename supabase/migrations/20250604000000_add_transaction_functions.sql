@@ -72,8 +72,8 @@ DECLARE
   date_record jsonb;
 BEGIN
   -- イベントを作成
-  INSERT INTO events (title, description, public_token, admin_token, last_accessed_at)
-  VALUES (p_title, p_description, p_public_token, p_admin_token, now())
+  INSERT INTO events (title, description, public_token, admin_token)
+  VALUES (p_title, p_description, p_public_token, p_admin_token)
   RETURNING id INTO new_event_id;
 
   -- 候補日程を挿入
