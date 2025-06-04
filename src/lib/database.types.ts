@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -128,6 +129,7 @@ export type Database = {
           final_date_id: string | null
           id: string
           is_finalized: boolean
+          last_accessed_at: string | null
           public_token: string
           title: string
         }
@@ -140,6 +142,7 @@ export type Database = {
           final_date_id?: string | null
           id?: string
           is_finalized?: boolean
+          last_accessed_at?: string | null
           public_token?: string
           title: string
         }
@@ -152,6 +155,7 @@ export type Database = {
           final_date_id?: string | null
           id?: string
           is_finalized?: boolean
+          last_accessed_at?: string | null
           public_token?: string
           title?: string
         }
@@ -203,6 +207,7 @@ export type Database = {
       }
       participants: {
         Row: {
+          comment: string | null
           created_at: string
           event_id: string
           id: string
@@ -210,6 +215,7 @@ export type Database = {
           response_token: string | null
         }
         Insert: {
+          comment?: string | null
           created_at?: string
           event_id: string
           id?: string
@@ -217,6 +223,7 @@ export type Database = {
           response_token?: string | null
         }
         Update: {
+          comment?: string | null
           created_at?: string
           event_id?: string
           id?: string
@@ -238,7 +245,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_event_dates_safe: {
+        Args: { p_event_id: string; p_event_dates: Json }
+        Returns: boolean
+      }
+      create_event_with_dates: {
+        Args: {
+          p_title: string
+          p_description: string
+          p_public_token: string
+          p_admin_token: string
+          p_event_dates: Json
+        }
+        Returns: {
+          event_id: string
+          public_token: string
+          admin_token: string
+        }[]
+      }
+      finalize_event_safe: {
+        Args: { p_event_id: string; p_date_ids: Json }
+        Returns: boolean
+      }
+      find_old_events: {
+        Args: { threshold: string }
+        Returns: {
+          id: string
+        }[]
+      }
+      update_participant_availability: {
+        Args: {
+          p_participant_id: string
+          p_event_id: string
+          p_availabilities: Json
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
