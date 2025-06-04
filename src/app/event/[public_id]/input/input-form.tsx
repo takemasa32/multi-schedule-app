@@ -162,19 +162,6 @@ export default function InputForm({
         />
       </div>
 
-      <div className="form-control w-full">
-        <label className="label">
-          <span className="label-text">コメント・メモ</span>
-        </label>
-        <textarea
-          className="textarea textarea-bordered w-full"
-          placeholder="コメントを入力してください"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          disabled={isSubmitting}
-        />
-      </div>
-
       <div className="divider">候補日程の参加可否</div>
 
       <div className="space-y-4">
@@ -197,6 +184,19 @@ export default function InputForm({
             </label>
           </div>
         ))}
+      </div>
+
+      <div className="form-control w-full">
+        <label className="label">
+          <span className="label-text">コメント・メモ</span>
+        </label>
+        <textarea
+          className="textarea textarea-bordered w-full"
+          placeholder="コメントを入力してください"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          disabled={isSubmitting}
+        />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">

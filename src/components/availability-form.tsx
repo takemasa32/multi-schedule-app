@@ -1139,32 +1139,17 @@ export default function AvailabilityForm({
               >
                 お名前 <span className="text-error">*</span>
               </label>
-            <input
-              type="text"
-              id="participant_name"
-              name="participant_name"
-              className="input input-bordered w-full transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required={false}
-              disabled={isWeekdayModeActive}
-            />
-          </div>
-
-          <div className="mt-4">
-            <label htmlFor="comment" className="block text-sm font-medium mb-1">
-              コメント・メモ
-            </label>
-            <textarea
-              id="comment"
-              name="comment"
-              className="textarea textarea-bordered w-full"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              disabled={isWeekdayModeActive}
-            />
-          </div>
+              <input
+                type="text"
+                id="participant_name"
+                name="participant_name"
+                className="input input-bordered w-full transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required={false}
+                disabled={isWeekdayModeActive}
+              />
+            </div>
 
             <div>
               <div className="space-y-3">
@@ -1824,6 +1809,24 @@ export default function AvailabilityForm({
                   )}
                 </>
               )}
+            </div>
+
+            <div className="mt-4">
+              <label
+                htmlFor="comment"
+                className="block text-sm font-medium mb-1"
+              >
+                コメント・メモ
+              </label>
+              <textarea
+                id="comment"
+                name="comment"
+                className="textarea textarea-bordered w-full"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                disabled={isWeekdayModeActive}
+              />
             </div>
 
             {/* 名前重複時の確認ダイアログ */}
