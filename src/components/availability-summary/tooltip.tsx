@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import type { ParticipantSummary } from "@/types/participant";
 
 // ツールチップの状態を表す型
 export interface TooltipState {
@@ -7,8 +8,8 @@ export interface TooltipState {
   x: number;
   y: number;
   dateId: string | null;
-  availableParticipants: { name: string; comment?: string | null }[];
-  unavailableParticipants: { name: string; comment?: string | null }[];
+  availableParticipants: ParticipantSummary[];
+  unavailableParticipants: ParticipantSummary[];
   dateLabel?: string;
   timeLabel?: string;
   /** デバッグ用: 最後にトリガーとなったイベント名 */

@@ -1,11 +1,12 @@
 import React from "react";
+import type { ParticipantSummary } from "@/types/participant";
 
 interface MobileInfoPanelProps {
   show: boolean;
   dateLabel?: string;
   timeLabel?: string;
-  availableParticipants: { name: string; comment?: string | null }[];
-  unavailableParticipants: { name: string; comment?: string | null }[];
+  availableParticipants: ParticipantSummary[];
+  unavailableParticipants: ParticipantSummary[];
   onClose: () => void;
 }
 

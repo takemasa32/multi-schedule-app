@@ -1,4 +1,5 @@
 import React from "react";
+import type { Participant } from "@/types/participant";
 import { formatDate, formatTime } from "./date-utils";
 
 interface DetailedViewProps {
@@ -8,11 +9,7 @@ interface DetailedViewProps {
     end_time: string;
     label?: string;
   }>;
-  participants: Array<{
-    id: string;
-    name: string;
-    comment?: string | null;
-  }>;
+  participants: Participant[];
   isParticipantAvailable: (
     participantId: string,
     dateId: string
