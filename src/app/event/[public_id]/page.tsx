@@ -11,8 +11,6 @@ import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
 import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 import { Suspense } from "react";
-import AvailabilitySummarySkeleton from "@/components/availability-summary/skeleton";
-import AvailabilitySummaryServer from "@/components/availability-summary/server";
 import EventFormSection from "@/components/event-client/event-form-section";
 import EventDetailsSection from "@/components/event-client/event-details-section";
 import type { EventDate } from "@/components/event-client/event-details-section";
@@ -93,10 +91,8 @@ export default async function EventPage({
   }
   const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
 
-  // eventDatesのみ先に取得
-  const eventDates = await getEventDates(event.id);
-  // 参加者一覧も取得
-  const participants = await getParticipants(event.id);
+  const eventDatesPromise = getEventDates(event.id);
+  const participantsPromise = getParticipants(event.id);
 
   return (
     <FavoriteEventsProvider>
@@ -115,27 +111,25 @@ export default async function EventPage({
             isAdmin={isAdmin}
           />
           <SectionDivider title="イベント情報" />
-          {/* フォーム・日程追加など主要UIは即時描画 */}
-          <EventFormSection
-            event={event}
-            eventDates={eventDates || []}
-            participants={participants || []}
-          />
-          {/* 回答状況（集計）は従来通りサスペンス＋スケルトン */}
-          <div className="card bg-base-100 shadow-md border border-base-200 mb-8">
-            <div className="card-body p-0">
-              <h2 className="p-4 border-b border-base-200 font-bold text-xl">
-                回答状況
-              </h2>
-              <Suspense fallback={<AvailabilitySummarySkeleton />}>
-                <AvailabilitySummaryServer
-                  eventId={event.id}
-                  finalizedDateIds={[]}
-                  publicToken={event.public_token}
-                />
-              </Suspense>
-            </div>
-          </div>
+          {/* フォーム・日程追加など主要UIもストリーミング表示 */}
+          <Suspense
+            fallback={
+              <div className="my-8">
+                <div className="flex flex-col gap-4">
+                  <div className="skeleton h-8 w-1/2" />
+                  <div className="skeleton h-6 w-full" />
+                  <div className="skeleton h-12 w-3/4" />
+                </div>
+              </div>
+            }
+          >
+            <EventFormSectionLoader
+              event={event}
+              eventDates={eventDatesPromise}
+              participants={participantsPromise}
+            />
+          </Suspense>
+
           {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
           <Suspense
             fallback={
@@ -149,7 +143,6 @@ export default async function EventPage({
               </div>
             }
           >
-            {/* サーバー側で必要なデータを取得して渡す */}
             <EventDetailsSectionLoader
               event={{
                 id: event.id,
@@ -158,7 +151,8 @@ export default async function EventPage({
                 is_finalized: event.is_finalized,
                 final_date_id: event.final_date_id,
               }}
-              eventDates={eventDates || []}
+              eventDates={eventDatesPromise}
+              participants={participantsPromise}
             />
           </Suspense>
         </div>
@@ -176,25 +170,55 @@ type EventDetailsSectionEvent = {
   final_date_id?: string | null;
 };
 
+async function EventFormSectionLoader({
+  event,
+  eventDates,
+  participants,
+}: {
+  event: {
+    id: string;
+    title: string;
+    description: string | null;
+    public_token: string;
+    is_finalized: boolean;
+    final_date_id?: string | null;
+  };
+  eventDates: Promise<EventDate[]>;
+  participants: Promise<{ id: string; name: string }[]>;
+}) {
+  const [dates, participantList] = await Promise.all([eventDates, participants]);
+  return (
+    <EventFormSection
+      event={event}
+      eventDates={dates}
+      participants={participantList}
+    />
+  );
+}
+
 async function EventDetailsSectionLoader({
   event,
   eventDates,
+  participants,
 }: {
   event: EventDetailsSectionEvent;
-  eventDates: EventDate[];
+  eventDates: Promise<EventDate[]>;
+  participants: Promise<{ id: string; name: string }[]>;
 }) {
-  const [participants, availabilities, finalizedDateIds] = await Promise.all([
-    getParticipants(event.id),
-    getAvailabilities(event.id),
-    event.is_finalized
-      ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
-      : Promise.resolve([]),
-  ]);
+  const [dates, participantList, availabilities, finalizedDateIds] =
+    await Promise.all([
+      eventDates,
+      participants,
+      getAvailabilities(event.id),
+      event.is_finalized
+        ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
+        : Promise.resolve([]),
+    ]);
   return (
     <EventDetailsSection
       event={event}
-      eventDates={eventDates}
-      participants={participants || []}
+      eventDates={dates}
+      participants={participantList || []}
       availabilities={availabilities || []}
       finalizedDateIds={finalizedDateIds}
     />

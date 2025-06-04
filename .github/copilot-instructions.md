@@ -2,22 +2,21 @@
 
 - 仕様書（[仕様書ファイル](../specifications/specification.md)）を参照しながら実装を進めてください。
 - PWA（Progressive Web App）対応の詳細仕様については、[pwa-specification](../specifications/pwa-specification.md)
-     <!-- - テスト仕様書は、[test-specification](../specifications/test-specification.md) を参照してください。 -->
-    <!-- - お気に入りイベント機能仕様書は、[favorite-feature](../specifications/favorite-feature.md) を参照してください。 -->
-    <!-- - 最近アクセス履歴機能仕様書は、[event-history-feature](../specifications/event-history-feature.md) を参照してください。 -->
-  <!-- - イベント URL/ID から開く機能仕様書は、[open-by-url-feature](../specifications/open-by-url-feature.md) を参照してください。 -->
+  - テスト仕様書は、[test-specification](../specifications/test-specification.md) を参照してください。
+  - お気に入りイベント機能仕様書は、[favorite-feature](../specifications/favorite-feature.md) を参照してください。
+  - 最近アクセス履歴機能仕様書は、[event-history-feature](../specifications/event-history-feature.md) を参照してください。
+  - イベント URL/ID から開く機能仕様書は、[open-by-url-feature](../specifications/open-by-url-feature.md) を参照してください。
 - サイト情報管理機能仕様書は、[site-config-feature](../specifications/site-config-feature.md) を参照してください。
 - コメントやコミットメッセージはすべて日本語で記述してください。
-- 適切な粒度でコミットを忘れずに行い、実装内容がわかるコミットメッセージを記述してください。
 - JSDoc を用いて、常に最新の API ドキュメントを生成可能な状態に保ってください。
 - 実装は「最低限の機能」から順に段階的に行い、ビルドが通ることを最優先としてください。
 - 機能実装後は、必ず仕様通りに動作するかテストを同時に作成・実行し、エラー発生時には修正点が明確になるようにしてください。
-- 適切に新しいブランチを切って作業し、マージや競合解消は適切に行ってください。
 - 仕様を満たせない場合や疑問点があれば、必ず質問してください。
 - 解決できないエラーが発生した場合はログやエラーメッセージとともに質問してください。
 - 不要なコードやコメントは削除してください。
 - 不要なコメントは最終成果物に残さないでください。
 - 仕様外の実装を行う場合は、関連資料やドキュメントにも追記してください。
+- なお、仕様書に記載されていない実装、機能は複数存在します。その前提で作業してください。
 - 全体としてベストプラクティスに近づくよう、コーディング規約や設計方針を常に意識してください。
 - リポジトリ内の既存コードベースは常に参照し、一貫性を保ってください。
 - コマンドを実行，情報を取得し考えるなどする場合は，意図や目的を明確にし，動作を確認するうえで必要な情報を提供してください．

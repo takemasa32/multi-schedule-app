@@ -1,7 +1,9 @@
 "use client";
+
 import FinalizeEventSection from "@/components/finalize-event-section";
 import EventHistory from "@/components/event-history";
 import EventDateAddSection from "@/components/event-client/event-date-add-section";
+import AvailabilitySummary from "@/components/availability-summary";
 import { useState } from "react";
 
 // 型定義
@@ -11,7 +13,7 @@ export type EventDate = {
   end_time: string;
   label?: string;
 };
-export type Participant = { id: string; name: string };
+export type Participant = { id: string; name: string; comment?: string | null };
 export type Availability = {
   participant_id: string;
   event_date_id: string;
@@ -49,37 +51,53 @@ export default function EventDetailsSection({
   };
   return (
     <>
-      {/* 参加者名リスト（表示/非表示トグル） */}
-      {participants.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center">
-          <span className="text-sm text-gray-500 mr-2">表示選択:</span>
-          {participants.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`badge px-3 py-2 cursor-pointer transition-all border-2 ${
-                excludedParticipantIds.includes(p.id)
-                  ? "badge-outline border-error text-error bg-error/10"
-                  : "badge-primary border-primary"
-              }`}
-              aria-pressed={excludedParticipantIds.includes(p.id)}
-              onClick={() => handleToggleParticipant(p.id)}
-              title={
-                excludedParticipantIds.includes(p.id)
-                  ? "表示に戻す"
-                  : "非表示にする"
-              }
-            >
-              {excludedParticipantIds.includes(p.id) ? (
-                <span className="mr-1">🚫</span>
-              ) : (
-                <span className="mr-1">👤</span>
-              )}
-              {p.name}
-            </button>
-          ))}
+      {/* 回答状況（集計）セクション */}
+      <div className="card bg-base-100 shadow-md border border-base-200 mb-8">
+        <div className="card-body p-0">
+          <h2 className="p-4 border-b border-base-200 font-bold text-xl">
+            回答状況
+          </h2>
+          {/* 回答集計コンポーネント */}
+          <AvailabilitySummary
+            eventDates={eventDates}
+            participants={participants}
+            availabilities={availabilities}
+            finalizedDateIds={finalizedDateIds}
+            excludedParticipantIds={excludedParticipantIds}
+          />
+          {/* 参加者名リスト（表示/非表示トグル） */}
+          {participants.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center border-b border-base-200">
+              <span className="text-sm text-gray-500 mr-2">表示選択:</span>
+              {participants.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`badge px-3 py-2 cursor-pointer transition-all border-2 ${
+                    excludedParticipantIds.includes(p.id)
+                      ? "badge-outline border-error text-error bg-error/10"
+                      : "badge-primary border-primary"
+                  }`}
+                  aria-pressed={excludedParticipantIds.includes(p.id)}
+                  onClick={() => handleToggleParticipant(p.id)}
+                  title={
+                    excludedParticipantIds.includes(p.id)
+                      ? "表示に戻す"
+                      : "非表示にする"
+                  }
+                >
+                  {excludedParticipantIds.includes(p.id) ? (
+                    <span className="mr-1">🚫</span>
+                  ) : (
+                    <span className="mr-1">👤</span>
+                  )}
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
       {/* --- イベント管理・修正セクション --- */}
       <div className="card bg-base-100 shadow-md border border-base-200 my-8">
         <div className="card-body">

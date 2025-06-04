@@ -91,6 +91,9 @@ describe("AvailabilityForm", () => {
     fireEvent.change(screen.getByLabelText(/お名前/), {
       target: { value: "テスト太郎" },
     });
+    fireEvent.change(screen.getByLabelText(/コメント・メモ/), {
+      target: { value: "テストコメント" },
+    });
     fireEvent.click(screen.getByLabelText(/利用規約/));
     // 1つ目の日程を○にする
     const firstCell = screen.getAllByText("×")[0];
@@ -100,6 +103,8 @@ describe("AvailabilityForm", () => {
     await waitFor(() => {
       expect(submitAvailability).toHaveBeenCalled();
     });
+    const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
+    expect(formDataArg.get("comment")).toBe("テストコメント");
   });
 
   it("サーバーエラー時はエラーメッセージを表示する", async () => {

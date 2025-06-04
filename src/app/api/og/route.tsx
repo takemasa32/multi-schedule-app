@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from "@vercel/og";
 import { NextRequest } from "next/server";
-import siteConfig from "@/lib/site-config";
+import siteConfig from "../../../lib/site-config";
 
 export const runtime = "edge";
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type");
   // 本番はsiteConfig.url、ローカル開発時のみreqからhostを取得
   let baseUrl = siteConfig.url.replace(/\/$/, "");
-  let logoUrl = siteConfig.logo.svg;
+  let logoUrl = siteConfig.ogImage;
   if (process.env.NODE_ENV !== "production" && req.headers.get("host")) {
     const host = req.headers.get("host")!;
     const isLocal =
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
               borderRadius: 32,
               marginBottom: 40,
               background: "#fff",
-              padding: 16,
+              padding: 2,
             }}
           />
           <h1
@@ -172,7 +172,7 @@ export async function GET(req: NextRequest) {
               borderRadius: 24,
               marginBottom: 18,
               background: "#fff",
-              padding: 12,
+              padding: 2,
             }}
           />
           {/* サブタイトル */}

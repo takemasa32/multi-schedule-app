@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import type { ParticipantSummary } from "@/types/participant";
 
 // ツールチップの状態を表す型
 export interface TooltipState {
@@ -7,8 +8,8 @@ export interface TooltipState {
   x: number;
   y: number;
   dateId: string | null;
-  availableParticipants: string[];
-  unavailableParticipants: string[];
+  availableParticipants: ParticipantSummary[];
+  unavailableParticipants: ParticipantSummary[];
   dateLabel?: string;
   timeLabel?: string;
   /** デバッグ用: 最後にトリガーとなったイベント名 */
@@ -180,9 +181,14 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                     </span>
                   </div>
                   <ul className="pl-5 list-disc text-primary">
-                    {tooltip.availableParticipants.map((name, idx) => (
+                    {tooltip.availableParticipants.map((p, idx) => (
                       <li key={`avail-${idx}`} className="mb-0.5">
-                        {name}
+                        {p.name}
+                        {p.comment && (
+                          <div className="text-xs text-gray-500 break-words">
+                            {p.comment}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -197,9 +203,14 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                     </span>
                   </div>
                   <ul className="pl-5 list-disc text-primary">
-                    {tooltip.unavailableParticipants.map((name, idx) => (
+                    {tooltip.unavailableParticipants.map((p, idx) => (
                       <li key={`unavail-${idx}`} className="mb-0.5">
-                        {name}
+                        {p.name}
+                        {p.comment && (
+                          <div className="text-xs text-gray-500 break-words">
+                            {p.comment}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>

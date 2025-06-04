@@ -13,9 +13,9 @@ values
   ('00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000001', '2025-05-21 15:00:00+09', '2025-05-21 17:00:00+09', null, now());
 
 -- participants テーブルのサンプル参加者
-insert into participants (id, event_id, name, response_token, created_at)
+insert into participants (id, event_id, name, response_token, comment, created_at)
 values
-  ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000001', 'テスト太郎', null, now());
+  ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000001', 'テスト太郎', null, '初期コメント', now());
 
 -- availabilities テーブルのサンプル出欠
 insert into availabilities (id, event_id, participant_id, event_date_id, availability, created_at)

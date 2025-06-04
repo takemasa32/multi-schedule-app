@@ -18,6 +18,7 @@ interface AvailabilityFormProps {
   initialParticipant?: {
     id: string;
     name: string;
+    comment?: string | null;
   } | null;
   initialAvailabilities?: Record<string, boolean>;
   mode?: "new" | "edit";
@@ -40,6 +41,7 @@ export default function AvailabilityForm({
   mode = "new",
 }: AvailabilityFormProps) {
   const [name, setName] = useState(initialParticipant?.name || "");
+  const [comment, setComment] = useState(initialParticipant?.comment || "");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false); // 更新モード用の状態
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
@@ -397,7 +399,7 @@ export default function AvailabilityForm({
 
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
-    // 既存回答データの名前があればそれを優先
+    // 既存回答データの名前とコメントがあればそれを優先
     if (initialParticipant?.name) {
       setName(initialParticipant.name);
     } else {
@@ -405,6 +407,9 @@ export default function AvailabilityForm({
       if (savedName) {
         setName(savedName);
       }
+    }
+    if (initialParticipant?.comment) {
+      setComment(initialParticipant.comment);
     }
   }, [initialParticipant]);
 
@@ -1804,6 +1809,24 @@ export default function AvailabilityForm({
                   )}
                 </>
               )}
+            </div>
+
+            <div className="mt-4">
+              <label
+                htmlFor="comment"
+                className="block text-sm font-medium mb-1"
+              >
+                コメント・メモ
+              </label>
+              <textarea
+                id="comment"
+                name="comment"
+                className="textarea textarea-bordered w-full"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                disabled={isWeekdayModeActive}
+              />
             </div>
 
             {/* 名前重複時の確認ダイアログ */}

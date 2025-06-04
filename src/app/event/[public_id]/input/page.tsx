@@ -1,5 +1,9 @@
 // src/app/event/[public_id]/page.tsx
-import { getEvent, getEventDates, getParticipantById } from "@/lib/actions";
+import {
+  getEvent,
+  getEventDates,
+  getParticipantById,
+} from "@/lib/actions";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AvailabilityForm from "@/components/availability-form";
@@ -35,6 +39,62 @@ export async function generateMetadata({
   };
 }
 
+async function AvailabilityFormSectionLoader({
+  eventId,
+  publicToken,
+  eventDates,
+  participantPromise,
+}: {
+  eventId: string;
+  publicToken: string;
+  eventDates: Promise<{ id: string; start_time: string; end_time: string }[]>;
+  participantPromise: Promise<
+    | {
+        participant: { id: string; name: string };
+        availabilityMap: Record<string, boolean>;
+      }
+    | null
+  >;
+}) {
+  const [dates, participantResult] = await Promise.all([
+    eventDates,
+    participantPromise,
+  ]);
+
+  const existingParticipant = participantResult?.participant || null;
+  const existingAvailabilities = participantResult?.availabilityMap || null;
+  const isEditMode = !!existingParticipant;
+  const pageTitle = isEditMode ? "回答を編集する" : "新しく回答する";
+
+  return (
+    <>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">{pageTitle}</h2>
+        {isEditMode ? (
+          <p className="text-gray-600 mb-4">
+            「{existingParticipant?.name}」さんの回答を編集しています。
+          </p>
+        ) : (
+          <p className="text-gray-600 mb-4">
+            あなたの名前と参加可能な日程を入力してください。
+          </p>
+        )}
+      </div>
+
+      <div className="bg-base rounded-lg shadow-md md:p-6">
+        <AvailabilityForm
+          eventId={eventId}
+          publicToken={publicToken}
+          eventDates={dates}
+          initialParticipant={existingParticipant}
+          initialAvailabilities={existingAvailabilities || undefined}
+          mode={isEditMode ? "edit" : "new"}
+        />
+      </div>
+    </>
+  );
+}
+
 type EventPageProps = {
   params: Promise<{ public_id: string }>;
   searchParams: Promise<{ participant_id?: string }>;
@@ -47,32 +107,15 @@ export default async function EventPage({
   const { public_id } = await params;
   const { participant_id: participantId } = await searchParams;
 
-  // イベント情報を取得
   const event = await getEvent(public_id);
   if (!event) {
     notFound();
   }
 
-  // 候補日程・既存参加者情報を並列取得
-  let eventDates,
-    existingParticipant = null,
-    existingAvailabilities = null;
-  if (participantId) {
-    const [dates, result] = await Promise.all([
-      getEventDates(event.id),
-      getParticipantById(participantId, event.id),
-    ]);
-    eventDates = dates;
-    if (result) {
-      existingParticipant = result.participant;
-      existingAvailabilities = result.availabilityMap;
-    }
-  } else {
-    eventDates = await getEventDates(event.id);
-  }
-
-  const isEditMode = !!participantId && !!existingParticipant;
-  const pageTitle = isEditMode ? "回答を編集する" : "新しく回答する";
+  const eventDatesPromise = getEventDates(event.id);
+  const participantPromise = participantId
+    ? getParticipantById(participantId, event.id)
+    : Promise.resolve(null);
 
   return (
     <FavoriteEventsProvider>
@@ -85,31 +128,24 @@ export default async function EventPage({
           isAdmin={false}
         />
 
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">{pageTitle}</h2>
-          {isEditMode ? (
-            <p className="text-gray-600 mb-4">
-              「{existingParticipant.name}」さんの回答を編集しています。
-            </p>
-          ) : (
-            <p className="text-gray-600 mb-4">
-              あなたの名前と参加可能な日程を入力してください。
-            </p>
-          )}
-        </div>
-
-        <div className="bg-base rounded-lg shadow-md md:p-6">
-          <Suspense fallback={<div>読み込み中...</div>}>
-            <AvailabilityForm
-              eventId={event.id}
-              eventDates={eventDates}
-              initialParticipant={existingParticipant}
-              initialAvailabilities={existingAvailabilities || undefined}
-              mode={isEditMode ? "edit" : "new"}
-              publicToken={public_id}
-            />
-          </Suspense>
-        </div>
+        <Suspense
+          fallback={
+            <div className="my-8">
+              <div className="flex flex-col gap-4">
+                <div className="skeleton h-8 w-1/2" />
+                <div className="skeleton h-6 w-full" />
+                <div className="skeleton h-6 w-5/6" />
+              </div>
+            </div>
+          }
+        >
+          <AvailabilityFormSectionLoader
+            eventId={event.id}
+            publicToken={public_id}
+            eventDates={eventDatesPromise}
+            participantPromise={participantPromise}
+          />
+        </Suspense>
 
         <div className="mt-6">
           <a
