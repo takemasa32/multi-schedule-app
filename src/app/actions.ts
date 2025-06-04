@@ -182,6 +182,12 @@ export async function submitAvailability(formData: FormData) {
       }
     }
 
+    // 既存の参加者の回答を削除
+    await supabase
+      .from("availabilities")
+      .delete()
+      .eq("participant_id", existingParticipantId)
+      .eq("event_id", eventId);
 
     // フォームデータから利用可能時間を収集
     const availabilityEntries = [];
