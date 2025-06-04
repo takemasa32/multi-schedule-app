@@ -13,7 +13,7 @@ export type EventDate = {
   end_time: string;
   label?: string;
 };
-export type Participant = { id: string; name: string };
+export type Participant = { id: string; name: string; comment?: string | null };
 export type Availability = {
   participant_id: string;
   event_date_id: string;

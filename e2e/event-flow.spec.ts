@@ -74,6 +74,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await participantPage.waitForURL(/\/input/);
     participantName = `E2E参加者${Date.now()}`;
     await participantPage.getByLabel('お名前').fill(participantName);
+    await participantPage.getByLabel('コメント・メモ').fill('E2Eコメント');
     const participantTerms = participantPage.getByLabel('利用規約');
     if (await participantTerms.isVisible()) {
       await participantTerms.check();

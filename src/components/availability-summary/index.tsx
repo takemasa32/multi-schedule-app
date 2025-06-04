@@ -22,7 +22,7 @@ type EventDate = {
   label?: string;
 };
 
-type Participant = { id: string; name: string };
+type Participant = { id: string; name: string; comment?: string | null };
 
 type Availability = {
   participant_id: string;

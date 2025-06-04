@@ -15,7 +15,7 @@ interface EventFormSectionProps {
     final_date_id?: string | null;
   };
   eventDates: EventDate[];
-  participants: { id: string; name: string }[];
+  participants: { id: string; name: string; comment?: string | null }[];
 }
 
 export default function EventFormSection({

@@ -19,6 +19,7 @@ interface FinalizeEventSectionProps {
   participants: {
     id: string;
     name: string;
+    comment?: string | null;
   }[];
   finalizedDateIds?: string[]; // 確定済みの日程IDの配列
 }

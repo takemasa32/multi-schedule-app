@@ -11,6 +11,7 @@ interface DetailedViewProps {
   participants: Array<{
     id: string;
     name: string;
+    comment?: string | null;
   }>;
   isParticipantAvailable: (
     participantId: string,
@@ -88,8 +89,16 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                 key={participant.id}
                 className="hover:bg-base-200 transition-colors"
               >
-                <td className="whitespace-nowrap font-medium sticky left-0 bg-base-100 z-10 flex items-center justify-between gap-2">
-                  <span>{participant.name}</span>
+              <td className="whitespace-nowrap font-medium sticky left-0 bg-base-100 z-10">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span>{participant.name}</span>
+                    {participant.comment && (
+                      <div className="text-xs text-gray-500 break-words">
+                        {participant.comment}
+                      </div>
+                    )}
+                  </div>
                   {onEditClick ? (
                     <button
                       onClick={() =>
@@ -135,7 +144,8 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                       </svg>
                     </a>
                   )}
-                </td>
+                </div>
+              </td>
                 {eventDates.map((date) => {
                   const isAvailable = isParticipantAvailable(
                     participant.id,

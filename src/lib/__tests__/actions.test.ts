@@ -249,6 +249,42 @@ describe('submitAvailability', () => {
     expect(result.success).toBe(true);
     expect(result.message).toMatch(/回答/);
   });
+
+  it('コメント付きで新規参加者が保存される', async () => {
+    const selectChain = createSupabaseChainMock({ data: null, error: null });
+    const insertChain = createSupabaseChainMock({ data: { id: 'partid' }, error: null });
+    const participantsFrom = jest
+      .fn()
+      .mockReturnValueOnce(selectChain)
+      .mockReturnValueOnce(insertChain);
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (table: string) => {
+        if (table === 'events') {
+          return createSupabaseChainMock({
+            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            error: null,
+          });
+        }
+        if (table === 'participants') {
+          return participantsFrom();
+        }
+        if (table === 'availabilities') {
+          return createSupabaseChainMock({ data: [], error: null });
+        }
+        return createSupabaseChainMock();
+      },
+    }));
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('publicToken', 'pubtok');
+    formData.set('participant_name', 'テスト太郎');
+    formData.set('comment', 'コメントテスト');
+    formData.append('availability_date1', 'on');
+    await submitAvailability(formData);
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ comment: 'コメントテスト' })
+    );
+  });
 });
 
 describe('finalizeEvent', () => {

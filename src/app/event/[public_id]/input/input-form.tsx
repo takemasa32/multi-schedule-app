@@ -20,6 +20,7 @@ interface InputFormProps {
     id: string;
     name: string;
     availabilities: Record<string, boolean>;
+    comment?: string | null;
   } | null;
   mode: "new" | "edit";
 }
@@ -32,6 +33,7 @@ export default function InputForm({
 }: InputFormProps) {
   const router = useRouter();
   const [participantName, setParticipantName] = useState("");
+  const [comment, setComment] = useState("");
   const [availabilities, setAvailabilities] = useState<Record<string, boolean>>(
     {}
   );
@@ -43,6 +45,9 @@ export default function InputForm({
     if (existingParticipant) {
       setParticipantName(existingParticipant.name);
       setAvailabilities(existingParticipant.availabilities);
+      if (existingParticipant.comment) {
+        setComment(existingParticipant.comment);
+      }
     } else {
       // 新規の場合、全てのイベント日程をfalseで初期化
       const initialAvailabilities = eventDates.reduce((acc, date) => {
@@ -75,6 +80,7 @@ export default function InputForm({
       const formData = new FormData();
       formData.append("participant_name", participantName);
       formData.append("event_token", publicToken);
+      formData.append("comment", comment);
 
       if (mode === "edit" && existingParticipant) {
         formData.append("participant_id", existingParticipant.id);
@@ -153,6 +159,19 @@ export default function InputForm({
           onChange={(e) => setParticipantName(e.target.value)}
           disabled={isSubmitting}
           required
+        />
+      </div>
+
+      <div className="form-control w-full">
+        <label className="label">
+          <span className="label-text">コメント・メモ</span>
+        </label>
+        <textarea
+          className="textarea textarea-bordered w-full"
+          placeholder="コメントを入力してください"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          disabled={isSubmitting}
         />
       </div>
 
