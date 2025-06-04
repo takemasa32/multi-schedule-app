@@ -4,8 +4,8 @@ interface MobileInfoPanelProps {
   show: boolean;
   dateLabel?: string;
   timeLabel?: string;
-  availableParticipants: string[];
-  unavailableParticipants: string[];
+  availableParticipants: { name: string; comment?: string | null }[];
+  unavailableParticipants: { name: string; comment?: string | null }[];
   onClose: () => void;
 }
 
@@ -88,9 +88,14 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                     </span>
                   </div>
                   <ul className="pl-5 list-disc text-primary text-sm">
-                    {availableParticipants.map((name, idx) => (
+                    {availableParticipants.map((p, idx) => (
                       <li key={`avail-${idx}`} className="mb-0.5 truncate">
-                        {name}
+                        {p.name}
+                        {p.comment && (
+                          <div className="text-xs text-gray-500 break-words">
+                            {p.comment}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -105,9 +110,14 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                     </span>
                   </div>
                   <ul className="pl-5 list-disc text-primary text-sm">
-                    {unavailableParticipants.map((name, idx) => (
+                    {unavailableParticipants.map((p, idx) => (
                       <li key={`unavail-${idx}`} className="mb-0.5 truncate">
-                        {name}
+                        {p.name}
+                        {p.comment && (
+                          <div className="text-xs text-gray-500 break-words">
+                            {p.comment}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>

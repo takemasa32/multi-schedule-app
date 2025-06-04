@@ -56,18 +56,24 @@ export function buildDateTimeLabel(eventDates: EventDate[], dateId: string) {
  * 参加可否リストを取得
  */
 export function fetchParticipantsByDate(
-  participants: { id: string; name: string }[],
-  availabilities: { participant_id: string; event_date_id: string; availability: boolean }[],
+  participants: { id: string; name: string; comment?: string | null }[],
+  availabilities: {
+    participant_id: string;
+    event_date_id: string;
+    availability: boolean;
+  }[],
   dateId: string
 ) {
-  const availableParticipants: string[] = [];
-  const unavailableParticipants: string[] = [];
+  const availableParticipants: { name: string; comment?: string | null }[] = [];
+  const unavailableParticipants: { name: string; comment?: string | null }[] = [];
   participants.forEach((participant) => {
     const a = availabilities.find(
       (av) => av.participant_id === participant.id && av.event_date_id === dateId
     );
-    if (a?.availability === true) availableParticipants.push(participant.name);
-    else if (a?.availability === false) unavailableParticipants.push(participant.name);
+    if (a?.availability === true)
+      availableParticipants.push({ name: participant.name, comment: participant.comment });
+    else if (a?.availability === false)
+      unavailableParticipants.push({ name: participant.name, comment: participant.comment });
   });
   return { availableParticipants, unavailableParticipants };
 }
