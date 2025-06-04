@@ -9,6 +9,7 @@ import { formatDate, formatTime, getDateString } from "./date-utils";
 import useDragScrollBlocker from "../../hooks/useDragScrollBlocker";
 import { useDeviceDetect } from "../../hooks/useDeviceDetect";
 import MobileInfoPanel from "./mobile-info-panel";
+import type { Participant } from "@/types/participant";
 import {
   calcTooltipPosition,
   buildDateTimeLabel,
@@ -22,7 +23,6 @@ type EventDate = {
   label?: string;
 };
 
-type Participant = { id: string; name: string; comment?: string | null };
 
 type Availability = {
   participant_id: string;
