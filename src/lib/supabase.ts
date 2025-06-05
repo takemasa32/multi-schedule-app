@@ -1,15 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Environment variable validation
+// Environment variables
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Validate required environment variables
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing Supabase environment variables. Please check your .env.local file.');
-
-  throw new Error('Supabase credentials not available. Check environment variables.');
-}
 // Create the Supabase admin client with service role key (for server operations only)
 export const createSupabaseAdmin = () => {
   if (!supabaseUrl || !supabaseServiceKey) {
