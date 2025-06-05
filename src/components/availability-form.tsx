@@ -260,7 +260,8 @@ export default function AvailabilityForm({
   /** セル選択のポインターイベント統一処理 */
   const commonPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      // ポインターキャプチャを使用しない（削除）
+      // ドラッグ中のイベントを確実に取得するためポインターキャプチャを有効化
+      e.currentTarget.setPointerCapture(e.pointerId);
       e.preventDefault();
       e.stopPropagation();
       document.body.classList.add("no-scroll");
@@ -321,14 +322,27 @@ export default function AvailabilityForm({
     [applyDragToElement]
   );
 
-  const commonPointerUp = useCallback(() => {
-    // ドラッグ状態をリセット
-    setIsDragging(false);
-    setDragState(null);
-    setIsDraggingMatrix(false);
-    setMatrixDragState(null);
-    document.body.classList.remove("no-scroll");
-  }, []);
+  const commonPointerUp = useCallback(
+    (e?: React.PointerEvent<HTMLElement> | PointerEvent) => {
+      if (e && "currentTarget" in e) {
+        const target = e.currentTarget as HTMLElement;
+        try {
+          if (target.hasPointerCapture(e.pointerId)) {
+            target.releasePointerCapture(e.pointerId);
+          }
+        } catch {
+          // ignore if release fails
+        }
+      }
+      // ドラッグ状態をリセット
+      setIsDragging(false);
+      setDragState(null);
+      setIsDraggingMatrix(false);
+      setMatrixDragState(null);
+      document.body.classList.remove("no-scroll");
+    },
+    []
+  );
 
   // ネイティブイベント用のラッパー関数
   const handleNativePointerMove = useCallback(
@@ -341,9 +355,12 @@ export default function AvailabilityForm({
     [applyDragToElement]
   );
 
-  const handleNativePointerUp = useCallback(() => {
-    commonPointerUp();
-  }, [commonPointerUp]);
+  const handleNativePointerUp = useCallback(
+    (e: PointerEvent) => {
+      commonPointerUp(e);
+    },
+    [commonPointerUp]
+  );
   // --- ここまで共通処理 ---
 
   /* 監視用 useEffect */
