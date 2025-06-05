@@ -324,6 +324,9 @@ export default function AvailabilityForm({
 
   const commonPointerUp = useCallback(
     (e?: React.PointerEvent<HTMLElement> | PointerEvent) => {
+      // The pointer event is optional because this function may be called without an event
+      // in certain scenarios. When an event is provided, we ensure safe handling by checking
+      // if it has a `currentTarget` property before proceeding.
       if (e && "currentTarget" in e) {
         const target = e.currentTarget as HTMLElement;
         try {
