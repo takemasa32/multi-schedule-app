@@ -7,10 +7,8 @@ import {
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import AvailabilityForm from "@/components/availability-form";
-import { EventHeader } from "@/components/event-header";
 import siteConfig from "@/lib/site-config";
 import { Metadata } from "next";
-import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 
 export async function generateMetadata({
   params,
@@ -118,15 +116,7 @@ export default async function EventPage({
     : Promise.resolve(null);
 
   return (
-    <FavoriteEventsProvider>
-      <div className="container mx-auto md:px-4 py-8">
-        <EventHeader
-          eventId={event.id}
-          title={event.title}
-          description={event.description}
-          isFinalized={event.is_finalized}
-          isAdmin={false}
-        />
+    <div className="container mx-auto md:px-4 py-8">
 
         <Suspense
           fallback={
@@ -170,6 +160,5 @@ export default async function EventPage({
           </a>
         </div>
       </div>
-    </FavoriteEventsProvider>
   );
 }
