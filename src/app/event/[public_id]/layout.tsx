@@ -18,7 +18,7 @@ export default async function EventLayout({
     <FavoriteEventsProvider>
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <EventHeader
-          eventId={event.id}
+          eventId={event.public_token}
           title={event.title}
           description={event.description}
           isFinalized={event.is_finalized}
