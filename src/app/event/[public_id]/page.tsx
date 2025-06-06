@@ -4,12 +4,10 @@ import { getParticipants } from "@/lib/actions";
 import { getAvailabilities } from "@/lib/actions";
 import { getFinalizedDateIds } from "@/lib/actions";
 import { notFound } from "next/navigation";
-import { EventHeader } from "@/components/event-header";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import SectionDivider from "@/components/layout/SectionDivider";
 import siteConfig from "@/lib/site-config";
 import { Metadata, Viewport } from "next";
-import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 import { Suspense } from "react";
 import EventFormSection from "@/components/event-client/event-form-section";
 import EventDetailsSection from "@/components/event-client/event-details-section";
@@ -95,34 +93,44 @@ export default async function EventPage({
   const participantsPromise = getParticipants(event.id);
 
   return (
-    <FavoriteEventsProvider>
+    <>
       <div className="bg-base-200 mb-6 py-4">
         <div className="container mx-auto max-w-5xl px-4">
           <Breadcrumbs items={[{ label: "イベント詳細" }]} />
         </div>
       </div>
-      <div className="container mx-auto max-w-5xl px-4 pb-12">
-        <div className="fade-in">
-          <EventHeader
-            eventId={public_id}
-            title={event.title}
-            description={event.description}
-            isFinalized={event.is_finalized}
-            isAdmin={isAdmin}
-          />
+      <div className="fade-in pb-12">
+        {isAdmin && !event.is_finalized && (
+          <div className="alert bg-info/10 text-info border-l-4 border-info text-sm mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="stroke-current shrink-0 h-6 w-6 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>現在管理者として閲覧中です。</span>
+          </div>
+        )}
           <SectionDivider title="イベント情報" />
           {/* フォーム・日程追加など主要UIもストリーミング表示 */}
-          <Suspense
-            fallback={
-              <div className="my-8">
-                <div className="flex flex-col gap-4">
-                  <div className="skeleton h-8 w-1/2" />
-                  <div className="skeleton h-6 w-full" />
-                  <div className="skeleton h-12 w-3/4" />
-                </div>
+        <Suspense
+          fallback={
+            <div className="my-8">
+              <div className="flex flex-col gap-4">
+                <div className="skeleton h-8 w-1/2" />
+                <div className="skeleton h-6 w-full" />
+                <div className="skeleton h-12 w-3/4" />
               </div>
-            }
-          >
+            </div>
+          }
+        >
             <EventFormSectionLoader
               event={event}
               eventDates={eventDatesPromise}
@@ -143,21 +151,20 @@ export default async function EventPage({
               </div>
             }
           >
-            <EventDetailsSectionLoader
-              event={{
-                id: event.id,
-                title: event.title,
-                public_token: event.public_token,
-                is_finalized: event.is_finalized,
-                final_date_id: event.final_date_id,
-              }}
-              eventDates={eventDatesPromise}
-              participants={participantsPromise}
-            />
-          </Suspense>
-        </div>
+          <EventDetailsSectionLoader
+            event={{
+              id: event.id,
+              title: event.title,
+              public_token: event.public_token,
+              is_finalized: event.is_finalized,
+              final_date_id: event.final_date_id,
+            }}
+            eventDates={eventDatesPromise}
+            participants={participantsPromise}
+          />
+        </Suspense>
       </div>
-    </FavoriteEventsProvider>
+    </>
   );
 }
 
