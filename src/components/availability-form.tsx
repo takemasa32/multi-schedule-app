@@ -1330,11 +1330,11 @@ export default function AvailabilityForm({
                     <div className="divider text-xs">曜日×時間帯表</div>
 
                     <div
-                      className="mb-4 overflow-x-auto overflow-y-hidden matrix-container touch-none"
+                      className="mb-4 -mx-4 overflow-x-hidden matrix-container touch-none"
                       style={{ touchAction: "none" }}
                     >
                       <table
-                        className="table table-xs border-collapse"
+                        className="table table-xs table-fixed w-full border-collapse"
                         onMouseDown={(e) => e.preventDefault()} // ドラッグ動作中のテキスト選択を防止
                         onTouchStart={(e) => e.preventDefault()} // タッチ操作中のスクロールを完全に防止
                       >
