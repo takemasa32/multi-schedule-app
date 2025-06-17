@@ -92,8 +92,8 @@ npx supabase [コマンド] -h
 `.env.local.example` ファイルを `.env.local` としてコピーし、Supabase 起動時に表示される値で更新してください：
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[表示されたanonキー]
+SUPABASE_URL=http://localhost:54321
+SUPABASE_ANON_KEY=[表示されたanonキー]
 SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 ```
 
