@@ -1,7 +1,7 @@
 'use server';
 
 import { createSupabaseAdmin } from './supabase';
-import { v4 as uuidv4 } from 'uuid'; // You may need to install this package: npm install uuid @types/uuid
+import { v4 as uuidv4 } from 'uuid';
 
 export async function createEvent(formData: FormData) {
   const title = formData.get('title') as string;
