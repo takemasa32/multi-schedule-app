@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import DateRangePicker from "../date-range-picker";
-import { addEventDates } from "@/app/actions";
+import { addEventDates } from "@/lib/actions";
 import { TimeSlot } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { EventDate } from "./event-details-section";

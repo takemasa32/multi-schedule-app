@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   copyAvailabilityBetweenEvents,
   getEventInfoFromUrl,
-} from "@/app/actions";
+} from "@/lib/actions";
 
 interface EventInfo {
   success: boolean;
