@@ -1,4 +1,4 @@
-import Head from "next/head";
+import Script from "next/script";
 
 /**
  * LINEアプリ内ブラウザでアクセスされた場合、
@@ -16,8 +16,10 @@ export default function LineExternalBrowserRedirector() {
     }
   )();`;
   return (
-    <Head>
-      <script dangerouslySetInnerHTML={{ __html: script }} />
-    </Head>
+    <Script
+      id="line-external-browser-redirector"
+      strategy="afterInteractive"
+      dangerouslySetInnerHTML={{ __html: script }}
+    />
   );
 }
