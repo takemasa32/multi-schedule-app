@@ -1,12 +1,14 @@
 "use server";
 
-import { createSupabaseClient } from "@/lib/supabase";
-import {createSupabaseAdmin} from "@/lib/supabase";
+import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 
 /**
- * イベント作成処理
+ * 新しいイベントを作成するサーバーアクション
+ *
+ * @param formData フォームから送信されたイベント情報
+ * @returns 作成結果とリダイレクト先URL
  */
 export async function createEvent(formData: FormData) {
   try {
@@ -85,7 +87,10 @@ export async function createEvent(formData: FormData) {
 }
 
 /**
- * 参加者の回答を保存するAction
+ * 参加者の回答を保存するサーバーアクション
+ *
+ * @param formData 参加者名やコメントなどを含むフォームデータ
+ * @returns 処理結果と新規作成された参加者ID
  */
 export async function submitAvailability(formData: FormData) {
   try {
@@ -266,9 +271,11 @@ export async function submitAvailability(formData: FormData) {
 }
 
 /**
- * イベント日程確定用のAction
- * 複数の日程を確定できるように修正
- * 管理者でなくても使えるように変更
+ * イベントの日程を確定または解除するサーバーアクション
+ *
+ * @param eventId 対象イベントID
+ * @param dateIds 確定する日程IDの配列。空配列の場合は確定を解除
+ * @returns 処理結果とメッセージ
  */
 export async function finalizeEvent(eventId: string, dateIds: string[]) {
   try {
@@ -340,8 +347,10 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
 }
 
 /**
- * イベントURLから参加情報を取得
- * @param eventUrl イベントのURL（例: https://domain.com/event/abc123） または publicToken
+ * URL もしくは公開トークンからイベント情報を取得する
+ *
+ * @param eventUrl イベントURLまたは publicToken
+ * @returns 取得結果とイベント詳細
  */
 export async function getEventInfoFromUrl(eventUrl: string) {
   try {
@@ -405,11 +414,13 @@ export async function getEventInfoFromUrl(eventUrl: string) {
 }
 
 /**
- * イベント間で回答をコピー
- * @param sourceEventUrl コピー元イベントURL
+ * あるイベントの回答を別イベントへコピーする
+ *
+ * @param sourceEventUrl コピー元イベントのURL
  * @param targetEventId コピー先イベントID
  * @param participantName 参加者名
- * @param matchType マッチング方法（"exact"=完全一致、"time"=時間帯のみ一致、"day"=曜日のみ一致、"both"=時間帯と曜日の両方一致）
+ * @param matchType マッチング方法（"exact"|"time"|"day"|"both"）
+ * @returns コピー結果とマッチ数
  */
 export async function copyAvailabilityBetweenEvents(
   sourceEventUrl: string,
@@ -659,9 +670,10 @@ export async function copyAvailabilityBetweenEvents(
 }
 
 /**
- * イベント日程追加アクション（バッチ対応）
- * @param formData FormData（eventId, start, end など複数）
- * @returns { success: boolean, message?: string }
+ * 複数の日程をイベントに追加するサーバーアクション
+ *
+ * @param formData eventId と start/end を含むフォームデータ
+ * @returns 追加処理の成否
  */
 export async function addEventDates(formData: FormData) {
   try {
