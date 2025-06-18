@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip/knip.schema.json",
+  "entry": ["src/**/*.{ts,tsx}", "next.config.ts"],
+  "ignore": ["**/*.test.{ts,tsx}", "e2e/**"],
+  "ignoreExportsUsedInFile": true
+}

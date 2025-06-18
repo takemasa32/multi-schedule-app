@@ -104,6 +104,10 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 3. 必要に応じてマイグレーションを作成・適用
 4. 開発終了時に Supabase 環境を停止: `npx supabase stop`
 
+### Lint / 未使用コード検出
+
+`npm run lint` を実行すると、ESLint に加えて Knip による未使用コード検出が行われます。Knip のみを実行する場合は `npm run lint:knip` を利用してください。
+
 ## テストの実行方法
 
 本プロジェクトは Jest（TypeScript 対応）によるユニットテスト・結合テストと、Playwright による E2E テストを実装しています。

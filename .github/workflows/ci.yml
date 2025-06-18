@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: "18"
       - run: npm ci
-      - run: npx eslint .
+      - run: npm run lint
 
   test:
     name: Test
@@ -33,4 +33,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-18-
       - run: npm ci
-      - run: npx jest --coverage
+      - run: npm run test:ci
+      - run: npm run e2e:ci
