@@ -48,6 +48,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps
       - run: supabase start
-      - run: supabase status -o env --override-name api.url=NEXT_PUBLIC_SUPABASE_URL --override-name anon.key=NEXT_PUBLIC_SUPABASE_ANON_KEY --override-name service_role.key=SUPABASE_SERVICE_ROLE_KEY >> $GITHUB_ENV
-      - run: npm run test:e2e:chrome
+      - run: supabase status -o env --override-name api.url=SUPABASE_URL --override-name anon.key=SUPABASE_ANON_KEY --override-name service_role.key=SUPABASE_SERVICE_ROLE_KEY >> $GITHUB_ENV
+      - run: npm run build
+      - run: npm run start &
+      - run: npx wait-on http://localhost:3000
+      - run: npm run e2e:ci
       - run: supabase stop

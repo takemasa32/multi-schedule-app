@@ -187,7 +187,7 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
   - CI/CD での利用を想定した簡易レポート出力です。
 
 - **GitHub Actions での自動E2E テスト**
-  `.github/workflows/ci.yml` に Supabase を起動して `npm run test:e2e:chrome` を実行するジョブを用意しています。
+  `.github/workflows/ci.yml` に Supabase と Next.js アプリを起動して `npm run e2e:ci` を実行するジョブを用意しています。
 
 - **テストレポートの確認**
   テスト実行後、以下のコマンドで HTML レポートをブラウザで確認できます。
