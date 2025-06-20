@@ -50,7 +50,7 @@ export async function createEvent(formData: FormData) {
       'create_event_with_dates',
       {
         p_title: title.trim(),
-        p_description: description?.trim() || null,
+        p_description: description ? description.trim() : '',
         p_public_token: publicToken,
         p_admin_token: adminToken,
         p_event_dates: dateEntries
