@@ -37,9 +37,10 @@ export function shouldExcludePath(pathname: string): boolean {
  */
 export function isLineInAppBrowser(userAgent: string): boolean {
   // LINEアプリのUser-Agentパターン：
-  // - Line/[version] (例: Line/11.1.0)
-  // - Line App (デスクトップ版)
-  return userAgent.includes('Line/') || userAgent.includes('Line App');
+  // - line/[version] (例: line/11.1.0)
+  // - line app (デスクトップ版)
+  const lowerCaseUserAgent = userAgent.toLowerCase();
+  return lowerCaseUserAgent.includes('line/') || lowerCaseUserAgent.includes('line app');
 }
 
 /**
