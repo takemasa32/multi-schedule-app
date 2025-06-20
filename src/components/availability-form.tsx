@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { submitAvailability } from "@/lib/actions";
+    label?: string | null;
 import { formatDateTimeWithDay } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 

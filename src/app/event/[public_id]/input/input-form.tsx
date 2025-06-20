@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { submitAvailability } from "@/lib/actions";
+  label?: string | null;
 import Link from "next/link";
 
 interface EventDate {

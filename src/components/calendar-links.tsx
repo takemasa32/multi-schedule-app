@@ -9,7 +9,7 @@ interface CalendarLinksProps {
     id: string;
     start_time: string;
     end_time: string;
-    label?: string;
+    label?: string | null;
   }[];
   eventId: string;
   description?: string | null;

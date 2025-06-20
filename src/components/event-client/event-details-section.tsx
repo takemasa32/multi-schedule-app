@@ -11,7 +11,7 @@ export type EventDate = {
   id: string;
   start_time: string;
   end_time: string;
-  label?: string;
+  label?: string | null;
 };
 export type Participant = { id: string; name: string; comment?: string | null };
 export type Availability = {

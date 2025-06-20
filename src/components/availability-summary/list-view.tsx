@@ -9,7 +9,7 @@ interface ListViewProps {
     dateId: string;
     startTime: string;
     endTime: string;
-    label?: string;
+    label?: string | null;
     availableCount: number;
     unavailableCount: number;
     isSelected: boolean;

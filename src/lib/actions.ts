@@ -1,5 +1,5 @@
 'use server';
-import { createSupabaseAdmin, createSupabaseClient } from './supabase';
+import { createSupabaseAdmin, type Database } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 
@@ -243,14 +243,7 @@ export async function getAvailabilities(eventId: string) {
     .eq('event_id', eventId);
 
   if (error) {
-    console.error('回答データ取得エラー:', error);
-    return [];
-  }
-
-  return data || [];
-}
-
-/**
+type EventDate = Database['public']['Tables']['event_dates']['Row'];
  * 確定した日程IDのリストを取得する
  */
 export async function getFinalizedDateIds(eventId: string, finalDateId: string | null) {

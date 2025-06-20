@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { finalizeEvent } from "@/lib/actions";
+    label?: string | null;
 
 interface FinalizeEventSectionProps {
   eventId: string;

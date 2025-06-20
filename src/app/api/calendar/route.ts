@@ -48,8 +48,10 @@ export async function GET(request: NextRequest) {
 
     // ICSファイルの生成
     const eventDate = new Date(finalDate.start_time);
-    const eventEndDate = new Date(finalDate.end_time);
-
+    // 終了時間は指定されている値を使用、なければ開始時間の1時間後をデフォルトとする
+    const eventEndDate = finalDate.end_time
+      ? new Date(finalDate.end_time)
+      : new Date(eventDate.getTime() + 60 * 60 * 1000);
     const now = new Date();
     const icsContent = [
       "BEGIN:VCALENDAR",
