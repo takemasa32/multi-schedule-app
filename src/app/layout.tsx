@@ -8,7 +8,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import ExternalBrowserBanner from "@/components/browser-banner";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
 // import AddToHomeScreenBanner from "@/components/add-to-home-screen";
-import LineExternalBrowserRedirector from "@/components/browser-banner/LineExternalBrowserRedirector";
 
 export const viewport = {
   width: "device-width",
@@ -51,7 +50,6 @@ export default function RootLayout({
         >
           <Header />
           <GoogleAnalytics />
-          <LineExternalBrowserRedirector />
           <ExternalBrowserBanner />
           {/* <AddToHomeScreenBanner /> */}
           <main className="flex-grow container mx-auto px-4 py-6 pt-16">
