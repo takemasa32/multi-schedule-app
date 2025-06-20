@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // 確定した日程の取得
     const { data: finalDate, error: dateError } = await supabase
       .from("event_dates")
-      .select("date_time")
+      .select("start_time, end_time")
       .eq("id", event.final_date_id)
       .single();
 
@@ -47,9 +47,8 @@ export async function GET(request: NextRequest) {
     }
 
     // ICSファイルの生成
-    const eventDate = new Date(finalDate.date_time);
-    // 終了時間は開始時間の1時間後をデフォルトとする
-    const eventEndDate = new Date(eventDate.getTime() + 60 * 60 * 1000);
+    const eventDate = new Date(finalDate.start_time);
+    const eventEndDate = new Date(finalDate.end_time);
 
     const now = new Date();
     const icsContent = [

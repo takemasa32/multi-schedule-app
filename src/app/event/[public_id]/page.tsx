@@ -118,8 +118,8 @@ export default async function EventPage({
             <span>現在管理者として閲覧中です。</span>
           </div>
         )}
-          <SectionDivider title="イベント情報" />
-          {/* フォーム・日程追加など主要UIもストリーミング表示 */}
+        <SectionDivider title="イベント情報" />
+        {/* フォーム・日程追加など主要UIもストリーミング表示 */}
         <Suspense
           fallback={
             <div className="my-8">
@@ -131,26 +131,26 @@ export default async function EventPage({
             </div>
           }
         >
-            <EventFormSectionLoader
-              event={event}
-              eventDates={eventDatesPromise}
-              participants={participantsPromise}
-            />
-          </Suspense>
+          <EventFormSectionLoader
+            event={event}
+            eventDates={eventDatesPromise}
+            participants={participantsPromise}
+          />
+        </Suspense>
 
-          {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
-          <Suspense
-            fallback={
-              <div className="my-8">
-                <div className="flex flex-col gap-4">
-                  <div className="skeleton h-8 w-1/2" />
-                  <div className="skeleton h-6 w-full" />
-                  <div className="skeleton h-6 w-5/6" />
-                  <div className="skeleton h-6 w-2/3" />
-                </div>
+        {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
+        <Suspense
+          fallback={
+            <div className="my-8">
+              <div className="flex flex-col gap-4">
+                <div className="skeleton h-8 w-1/2" />
+                <div className="skeleton h-6 w-full" />
+                <div className="skeleton h-6 w-5/6" />
+                <div className="skeleton h-6 w-2/3" />
               </div>
-            }
-          >
+            </div>
+          }
+        >
           <EventDetailsSectionLoader
             event={{
               id: event.id,
@@ -193,7 +193,10 @@ async function EventFormSectionLoader({
   eventDates: Promise<EventDate[]>;
   participants: Promise<{ id: string; name: string }[]>;
 }) {
-  const [dates, participantList] = await Promise.all([eventDates, participants]);
+  const [dates, participantList] = await Promise.all([
+    eventDates,
+    participants,
+  ]);
   return (
     <EventFormSection
       event={event}
