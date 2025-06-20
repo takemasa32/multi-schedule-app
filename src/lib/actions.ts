@@ -1,8 +1,12 @@
 'use server';
+import { createSupabaseAdmin, createSupabaseClient } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
+import { revalidatePath } from 'next/cache';
 
-import { createSupabaseAdmin } from './supabase';
-import { v4 as uuidv4 } from 'uuid'; // You may need to install this package: npm install uuid @types/uuid
-
+/**
+ * 新しいイベントを作成して候補日程を登録する
+ * create_event_with_dates RPC を利用してトランザクション処理を行う
+ */
 export async function createEvent(formData: FormData) {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string | null;
@@ -13,89 +17,100 @@ export async function createEvent(formData: FormData) {
   const endDates = formData.getAll('endDates') as string[];
   const endTimes = formData.getAll('endTimes') as string[];
 
+  const useFullDateTime =
+    startDates.length === 0 &&
+    endDates.length === 0 &&
+    startTimes.length === endTimes.length &&
+    startTimes.every((t) => t.includes('T')) &&
+    endTimes.every((t) => t.includes('T'));
+
   // Validation
   if (!title) {
-    throw new Error('イベントタイトルは必須です');
+    return { success: false, message: 'タイトルを入力してください' };
   }
 
-  if (!startDates.length || !startTimes.length || !endDates.length || !endTimes.length ||
-      startDates.length !== startTimes.length || startTimes.length !== endTimes.length) {
-    throw new Error('候補日程の情報が正しくありません');
+  if (useFullDateTime) {
+    if (!startTimes.length) {
+      return { success: false, message: '候補日程の情報が正しくありません' };
+    }
+  } else {
+    if (
+      !startDates.length ||
+      !startTimes.length ||
+      !endDates.length ||
+      !endTimes.length ||
+      startDates.length !== startTimes.length ||
+      startTimes.length !== endTimes.length
+    ) {
+      return { success: false, message: '候補日程の情報が正しくありません' };
+    }
   }
 
   try {
-    // Create Supabase client
+    // Supabase 管理クライアント
     const supabaseAdmin = createSupabaseAdmin();
 
-    // Generate UUIDs for tokens
+    // トークン生成
     const publicToken = uuidv4();
     const adminToken = uuidv4();
 
-    // Create event
-    const { data: eventData, error: eventError } = await supabaseAdmin
-      .from('events')
-      .insert({
-        title,
-        description,
-        public_token: publicToken,
-        admin_token: adminToken,
-      })
-      .select('id, public_token, admin_token');
+    // RPC に渡す日程データ配列
+    const timeslots = [] as Array<{ start_time: string; end_time: string }>;
 
-    if (eventError || !eventData?.length) {
-      console.error('イベント作成エラー:', eventError);
-      throw new Error('イベントの作成に失敗しました: ' + (eventError?.message || 'データベースエラー'));
-    }
-
-    const event = eventData[0];
-
-    // クライアントから送信された日付と時間を結合して保存
-    const timeslots = [];
-    for (let i = 0; i < startDates.length; i++) {
-      // 日付と時間を結合してSQLのタイムスタンプ形式（YYYY-MM-DD HH:MI:SS）に変換
-      // タイムゾーンを指定しないことで、クライアントの表示と一致させる
-      const startDateTimeStr = `${startDates[i]} ${startTimes[i]}:00`;
-
-      // 24:00の特殊ケース対応（翌日の00:00に変換）
-      let endTimeFormatted = endTimes[i];
-      let endDateFormatted = endDates[i];
-
-      if (endTimes[i] === '24:00') {
-        // 24:00は翌日の00:00として扱う
-        endTimeFormatted = '00:00:00';
-
-        // 日付を1日進める
-        const endDateObj = new Date(endDates[i]);
-        endDateObj.setDate(endDateObj.getDate() + 1);
-        endDateFormatted = endDateObj.toISOString().split('T')[0];
-      } else {
-        // 通常のケースでは秒を追加
-        endTimeFormatted = `${endTimes[i]}:00`;
+    if (useFullDateTime) {
+      for (let i = 0; i < startTimes.length; i++) {
+        timeslots.push({
+          start_time: startTimes[i],
+          end_time: endTimes[i],
+        });
       }
+    } else {
+      for (let i = 0; i < startDates.length; i++) {
+        const startDateTimeStr = `${startDates[i]} ${startTimes[i]}:00`;
 
-      const endDateTimeStr = `${endDateFormatted} ${endTimeFormatted}`;
+        let endTimeFormatted = endTimes[i];
+        let endDateFormatted = endDates[i];
 
-      timeslots.push({
-        event_id: event.id,
-        start_time: startDateTimeStr,
-        end_time: endDateTimeStr,
-      });
+        if (endTimes[i] === '24:00') {
+          endTimeFormatted = '00:00:00';
+          const endDateObj = new Date(endDates[i]);
+          endDateObj.setDate(endDateObj.getDate() + 1);
+          endDateFormatted = endDateObj.toISOString().split('T')[0];
+        } else {
+          endTimeFormatted = `${endTimes[i]}:00`;
+        }
+
+        const endDateTimeStr = `${endDateFormatted} ${endTimeFormatted}`;
+
+        timeslots.push({
+          start_time: startDateTimeStr,
+          end_time: endDateTimeStr,
+        });
+      }
     }
 
-    // Skip date insertion if no timeslots
     if (timeslots.length === 0) {
-      throw new Error('候補日程が生成できません');
+      return { success: false, message: '候補日程が生成できません' };
     }
 
-    // Insert timeslots
-    const { error: dateError } = await supabaseAdmin
-      .from('event_dates')
-      .insert(timeslots);
+    // RPCを用いてイベントと候補日程を登録
+    const { data: created, error: createError } = await supabaseAdmin.rpc(
+      'create_event_with_dates',
+      {
+        p_title: title,
+        p_description: description,
+        p_public_token: publicToken,
+        p_admin_token: adminToken,
+        p_event_dates: timeslots,
+      }
+    );
 
-    if (dateError) {
-      console.error('日程登録エラー:', dateError);
-      throw new Error('候補日程の登録に失敗しました');
+    if (createError || !created?.length) {
+      console.error('イベント作成エラー:', createError);
+      return { success: false, message: 'DBエラー: イベント作成に失敗しました。もう一度お試しください。' };
     }
+
+    const event = created[0];
 
     // イベント作成が成功した場合、イベントページにリダイレクト
     // 履歴への追加のために必要なトークン情報も返す
@@ -108,7 +123,10 @@ export async function createEvent(formData: FormData) {
 
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
-    throw error; // Re-throw to be caught by error boundary
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '予期せぬエラーが発生しました',
+    };
   }
 }
 
@@ -315,4 +333,599 @@ export async function getEventDates(eventId: string): Promise<EventDate[]> {
   }
 
   return allDates;
+}
+
+/**
+ * 参加者の回答を保存するアクション
+ */
+export async function submitAvailability(formData: FormData) {
+  try {
+    const eventId = formData.get("eventId") as string;
+    const publicToken = formData.get("publicToken") as string;
+    const participantName = formData.get("participant_name") as string;
+    const comment = (formData.get("comment") as string) || null;
+
+    // 編集モードの場合、既存の参加者IDが提供される
+    const participantId = formData.get("participantId") as string | null;
+
+    if (!eventId || !publicToken || !participantName) {
+      return { success: false, message: "必須項目が未入力です" };
+    }
+
+    const supabase = createSupabaseAdmin();
+
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id")
+      .eq("public_token", publicToken)
+      .eq("id", eventId)
+      .single();
+
+    if (eventError || !event) {
+      return { success: false, message: "イベントが見つかりません" };
+    }
+
+    let existingParticipantId = participantId;
+    let isNewParticipant = false;
+
+    if (existingParticipantId) {
+      const { data: currentParticipant } = await supabase
+        .from("participants")
+        .select("name")
+        .eq("id", existingParticipantId)
+        .maybeSingle();
+      if (currentParticipant) {
+        const updateData: { name?: string; comment: string | null } = {
+          comment,
+        };
+        if (currentParticipant.name !== participantName) {
+          updateData.name = participantName;
+        }
+        const { error: updateError } = await supabase
+          .from("participants")
+          .update(updateData)
+          .eq("id", existingParticipantId);
+        if (updateError) {
+          console.error("Participant update error:", updateError);
+          return { success: false, message: "参加者情報の更新に失敗しました" };
+        }
+      }
+    }
+
+    if (!existingParticipantId) {
+      const { data: existingParticipant } = await supabase
+        .from("participants")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("name", participantName)
+        .maybeSingle();
+
+      if (existingParticipant) {
+        existingParticipantId = existingParticipant.id;
+        await supabase
+          .from("participants")
+          .update({ comment })
+          .eq("id", existingParticipantId);
+      } else {
+        const responseToken = uuidv4();
+        const { data: newParticipant, error: participantError } = await supabase
+          .from("participants")
+          .insert({
+            event_id: eventId,
+            name: participantName,
+            response_token: responseToken,
+            comment,
+          })
+          .select("id")
+          .single();
+
+        if (participantError || !newParticipant) {
+          console.error("Participant creation error:", participantError);
+          return { success: false, message: "参加者登録に失敗しました" };
+        }
+
+        existingParticipantId = newParticipant.id;
+        isNewParticipant = true;
+      }
+    }
+
+    const availabilityEntries = [] as Array<{
+      event_id: string;
+      participant_id: string;
+      event_date_id: string;
+      availability: boolean;
+    }>;
+
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith("availability_")) {
+        const dateId = key.replace("availability_", "");
+        availabilityEntries.push({
+          event_id: eventId,
+          participant_id: existingParticipantId!,
+          event_date_id: dateId,
+          availability: value === "on",
+        });
+      }
+    }
+
+    if (availabilityEntries.length === 0) {
+      return { success: false, message: "少なくとも1つの回答を入力してください" };
+    }
+
+    if (!isNewParticipant) {
+      const { error: transactionError } = await supabase.rpc(
+        "update_participant_availability",
+        {
+          p_participant_id: existingParticipantId,
+          p_event_id: eventId,
+          p_availabilities: availabilityEntries.map((entry) => ({
+            event_date_id: entry.event_date_id,
+            availability: entry.availability,
+          })),
+        }
+      );
+
+      if (transactionError) {
+        console.error("Availability transaction error:", transactionError);
+        return {
+          success: false,
+          message: "回答の更新に失敗しました。既存データは保持されています。",
+        };
+      }
+    } else {
+      const { error: availabilityError } = await supabase
+        .from("availabilities")
+        .insert(availabilityEntries);
+      if (availabilityError) {
+        console.error("Availability submission error:", availabilityError);
+        return { success: false, message: "回答の保存に失敗しました" };
+      }
+    }
+
+    await supabase
+      .from("events")
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq("id", eventId);
+
+    try {
+      revalidatePath(`/event/${publicToken}`);
+    } catch (e) {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("revalidatePath error:", e);
+      }
+    }
+
+    return {
+      success: true,
+      message: "回答を送信しました。ありがとうございます！",
+    };
+  } catch (err) {
+    console.error("Error in submitAvailability:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+    };
+  }
+}
+
+/**
+ * イベント日程確定アクション
+ */
+export async function finalizeEvent(eventId: string, dateIds: string[]) {
+  try {
+    if (!eventId || !dateIds) {
+      return { success: false, message: "必須パラメータが不足しています" };
+    }
+
+    const supabase = createSupabaseAdmin();
+
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, public_token")
+      .eq("id", eventId)
+      .single();
+
+    if (eventError || !event) {
+      console.error("Event retrieval error:", eventError);
+      return { success: false, message: "イベントが見つかりません" };
+    }
+
+    if (dateIds.length > 0) {
+      const { data: dateCheck, error: dateCheckError } = await supabase
+        .from("event_dates")
+        .select("id")
+        .eq("event_id", eventId)
+        .in("id", dateIds);
+
+      if (dateCheckError || !dateCheck || dateCheck.length !== dateIds.length) {
+        console.error("Invalid date selection:", dateCheckError);
+        return { success: false, message: "選択された日程が見つかりません" };
+      }
+    }
+
+    const { error: finalizeError } = await supabase.rpc(
+      "finalize_event_safe",
+      {
+        p_event_id: eventId,
+        p_date_ids: dateIds,
+      }
+    );
+
+    if (finalizeError) {
+      console.error("Event finalization error:", finalizeError);
+      return { success: false, message: "イベント確定処理に失敗しました" };
+    }
+
+    try {
+      revalidatePath(`/event/${event.public_token}`);
+    } catch (e) {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("revalidatePath error:", e);
+      }
+    }
+
+    const message = dateIds.length === 0 ? "イベント確定を解除しました" : undefined;
+    return { success: true, message };
+  } catch (err) {
+    console.error("Error in finalizeEvent:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+    };
+  }
+}
+
+/**
+ * イベントURLから参加情報を取得
+ */
+export async function getEventInfoFromUrl(eventUrl: string) {
+  try {
+    let publicToken = eventUrl.trim();
+
+    if (publicToken.includes("/")) {
+      const urlParts = publicToken.split("/");
+      publicToken = urlParts[urlParts.length - 1];
+
+      if (publicToken.includes("?")) {
+        publicToken = publicToken.split("?")[0];
+      }
+    }
+
+    if (!publicToken || publicToken.length < 5) {
+      return { success: false, message: "無効なイベントURLまたはトークンです" };
+    }
+
+    const supabase = createSupabaseClient();
+
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, title, public_token, created_at")
+      .eq("public_token", publicToken)
+      .single();
+
+    if (eventError || !event) {
+      console.error("Event retrieval error:", eventError);
+      return { success: false, message: "イベントが見つかりません" };
+    }
+
+    const { data: eventDates, error: datesError } = await supabase
+      .from("event_dates")
+      .select("id, start_time, end_time")
+      .eq("event_id", event.id)
+      .order("start_time", { ascending: true });
+
+    if (datesError) {
+      console.error("Event dates retrieval error:", datesError);
+      return { success: false, message: "イベント日程の取得に失敗しました" };
+    }
+
+    return {
+      success: true,
+      event,
+      eventDates,
+    };
+  } catch (err) {
+    console.error("Error in getEventInfoFromUrl:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+    };
+  }
+}
+
+/**
+ * イベント間で回答をコピー
+ */
+export async function copyAvailabilityBetweenEvents(
+  sourceEventUrl: string,
+  targetEventId: string,
+  participantName: string,
+  matchType: "exact" | "time" | "day" | "both" = "both"
+) {
+  try {
+    if (!sourceEventUrl || !targetEventId || !participantName) {
+      return { success: false, message: "必須パラメータが不足しています" };
+    }
+
+    const sourceResult = await getEventInfoFromUrl(sourceEventUrl);
+    if (!sourceResult.success || !sourceResult.event) {
+      return sourceResult;
+    }
+
+    const supabase = createSupabaseClient();
+
+    const { data: targetEvent, error: targetEventError } = await supabase
+      .from("events")
+      .select("id, public_token")
+      .eq("id", targetEventId)
+      .single();
+
+    if (targetEventError || !targetEvent) {
+      console.error("Target event retrieval error:", targetEventError);
+      return { success: false, message: "コピー先のイベントが見つかりません" };
+    }
+
+    const { data: targetDates, error: targetDatesError } = await supabase
+      .from("event_dates")
+      .select("id, start_time, end_time")
+      .eq("event_id", targetEventId);
+
+    if (targetDatesError || !targetDates || targetDates.length === 0) {
+      console.error("Target dates retrieval error:", targetDatesError);
+      return { success: false, message: "コピー先の日程情報が取得できません" };
+    }
+
+    const { data: sourceParticipant, error: participantError } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("event_id", sourceResult.event.id)
+      .eq("name", participantName)
+      .maybeSingle();
+
+    if (participantError) {
+      console.error("Source participant retrieval error:", participantError);
+      return { success: false, message: "参加者情報の取得に失敗しました" };
+    }
+
+    if (!sourceParticipant) {
+      return {
+        success: false,
+        message: `コピー元のイベントに「${participantName}」という名前の参加者が見つかりません`,
+      };
+    }
+
+    const { data: sourceAvailabilities, error: availError } = await supabase
+      .from("availabilities")
+      .select(
+        "event_date_id, availability, event_date:event_dates(start_time, end_time)"
+      )
+      .eq("participant_id", sourceParticipant.id);
+
+    if (availError || !sourceAvailabilities || sourceAvailabilities.length === 0) {
+      console.error("Source availabilities retrieval error:", availError);
+      return { success: false, message: "コピー元の回答データが見つかりません" };
+    }
+
+    interface AvailabilityMatch {
+      event_id: string;
+      event_date_id: string;
+      availability: boolean;
+      _sourceTimeKey?: string;
+      _targetTimeKey?: string;
+      _sourceDay?: number;
+      _targetDay?: number;
+    }
+
+    const availabilityMatches: AvailabilityMatch[] = [];
+
+    targetDates.forEach((targetDate) => {
+      const targetStart = new Date(targetDate.start_time);
+      const targetEnd = new Date(targetDate.end_time);
+      const targetTimeKey = `${targetStart
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${targetStart
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}-${targetEnd
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${targetEnd
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
+      const targetDay = targetStart.getDay();
+
+      let matchFound = false;
+
+      for (const sourceAvail of sourceAvailabilities) {
+        if (!sourceAvail.event_date) continue;
+
+        const eventDate = Array.isArray(sourceAvail.event_date)
+          ? sourceAvail.event_date[0]
+          : sourceAvail.event_date;
+
+        if (!eventDate || !eventDate.start_time || !eventDate.end_time) continue;
+
+        const sourceStart = new Date(eventDate.start_time);
+        const sourceEnd = new Date(eventDate.end_time);
+        const sourceTimeKey = `${sourceStart
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${sourceStart
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}-${sourceEnd
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${sourceEnd
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+        const sourceDay = sourceStart.getDay();
+
+        let isMatch = false;
+
+        switch (matchType) {
+          case "exact":
+            isMatch =
+              sourceStart.toISOString() === targetStart.toISOString() &&
+              sourceEnd.toISOString() === targetEnd.toISOString();
+            break;
+          case "time":
+            isMatch = sourceTimeKey === targetTimeKey;
+            break;
+          case "day":
+            isMatch = sourceDay === targetDay;
+            break;
+          case "both":
+          default:
+            isMatch = sourceTimeKey === targetTimeKey && sourceDay === targetDay;
+            break;
+        }
+
+        if (isMatch) {
+          availabilityMatches.push({
+            event_id: targetEventId,
+            event_date_id: targetDate.id,
+            availability: sourceAvail.availability,
+            _sourceTimeKey: sourceTimeKey,
+            _targetTimeKey: targetTimeKey,
+            _sourceDay: sourceDay,
+            _targetDay: targetDay,
+          });
+          matchFound = true;
+          break;
+        }
+      }
+
+      if (!matchFound) {
+        availabilityMatches.push({
+          event_id: targetEventId,
+          event_date_id: targetDate.id,
+          availability: false,
+        });
+      }
+    });
+
+    let targetParticipantId: string;
+
+    const { data: existingParticipant } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("event_id", targetEventId)
+      .eq("name", participantName)
+      .maybeSingle();
+
+    if (existingParticipant) {
+      targetParticipantId = existingParticipant.id;
+
+      await supabase
+        .from("availabilities")
+        .delete()
+        .eq("participant_id", targetParticipantId);
+    } else {
+      const responseToken = uuidv4();
+      const { data: newParticipant, error: newPartError } = await supabase
+        .from("participants")
+        .insert({
+          event_id: targetEventId,
+          name: participantName,
+          response_token: responseToken,
+        })
+        .select("id")
+        .single();
+
+      if (newPartError || !newParticipant) {
+        console.error("Participant creation error:", newPartError);
+        return { success: false, message: "参加者の作成に失敗しました" };
+      }
+
+      targetParticipantId = newParticipant.id;
+    }
+
+    const finalAvailabilities = availabilityMatches.map((item) => ({
+      ...item,
+      participant_id: targetParticipantId,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("availabilities")
+      .insert(
+        finalAvailabilities.map(({ _sourceTimeKey, _targetTimeKey, _sourceDay, _targetDay, ...rest }) => rest)
+      );
+
+    if (insertError) {
+      console.error("Availability insertion error:", insertError);
+      return { success: false, message: "回答のコピーに失敗しました" };
+    }
+
+    try {
+      revalidatePath(`/event/${targetEvent.public_token}`);
+    } catch (e) {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("revalidatePath error:", e);
+      }
+    }
+
+    return {
+      success: true,
+      message: `${participantName}さんの回答をコピーしました`,
+      matches: availabilityMatches.filter((m) => m.availability).length,
+      total: availabilityMatches.length,
+      participantId: targetParticipantId,
+    };
+  } catch (err) {
+    console.error("Error in copyAvailabilityBetweenEvents:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+    };
+  }
+}
+
+/**
+ * イベント日程追加アクション
+ */
+export async function addEventDates(formData: FormData) {
+  try {
+    const eventId = formData.get("eventId") as string;
+    const starts = formData.getAll("start") as string[];
+    const ends = formData.getAll("end") as string[];
+
+    if (!eventId || !starts.length || !ends.length || starts.length !== ends.length) {
+      return { success: false, message: "日程追加に必要な情報が不足しています" };
+    }
+
+    const supabase = createSupabaseAdmin();
+
+    const dateEntries = starts.map((start, i) => ({
+      start_time: start,
+      end_time: ends[i],
+    }));
+
+    const { error: addError } = await supabase.rpc("add_event_dates_safe", {
+      p_event_id: eventId,
+      p_event_dates: dateEntries,
+    });
+
+    if (addError) {
+      console.error("Event dates addition error:", addError);
+      if (
+        addError.message &&
+        addError.message.includes("既存の日程と重複しています")
+      ) {
+        return { success: false, message: "既存の日程と重複しています" };
+      }
+      return { success: false, message: "日程の追加に失敗しました" };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("addEventDates error:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+    };
+  }
 }

@@ -9,10 +9,10 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import AvailabilityForm from "../availability-form";
 
-jest.mock("@/app/actions", () => ({
+jest.mock("@/lib/actions", () => ({
   submitAvailability: jest.fn(),
 }));
-import { submitAvailability } from "@/app/actions";
+import { submitAvailability } from "@/lib/actions";
 
 // fetchのグローバルモック
 beforeAll(() => {

@@ -8,9 +8,10 @@ export default async function EventLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { public_id: string };
+  params: Promise<{ public_id: string }>;
 }) {
-  const event = await getEvent(params.public_id);
+  const { public_id } = await params;
+  const event = await getEvent(public_id);
   if (!event) {
     notFound();
   }
