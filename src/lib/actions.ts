@@ -273,7 +273,7 @@ type EventDate = {
   event_id: string;
   start_time: string; // ISO 8601形式のタイムスタンプ
   end_time: string;   // ISO 8601形式のタイムスタンプ
-  label?: string | undefined; // 任意のラベル
+  label: string | null; // 任意のラベル
   created_at: string; // ISO 8601形式のタイムスタンプ
 };
 
