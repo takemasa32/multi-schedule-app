@@ -8,8 +8,6 @@ const EXCLUDED_PATHS = {
   // API routes
   api: '/api',
   // Next.js internal routes
-  nextStatic: '/_next/static',
-  nextImage: '/_next/image',
   nextInternal: '/_next',
   // Static files
   favicon: '/favicon.ico',
