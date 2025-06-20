@@ -1,46 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * LINEアプリ内ブラウザでのアクセスを検知し、
  * `openExternalBrowser=1` を付与してリダイレクトするミドルウェア。
+ * Next.js 15では、middlewareファイルはsrcディレクトリ内に配置する必要があります。
  */
-export function middleware(request: NextRequest) {
+export function middleware(request) {
   const { pathname, searchParams } = request.nextUrl;
-
-  // ミドルウェア実行確認用のログ
-  console.log(`[Middleware] Called for pathname: ${pathname}`);
-
-  // API や Next.js 内部リクエストは除外
+  
+  // API や Next.js 内部リクエスト、静的ファイルは除外
   if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.includes('.')) {
-    console.log(`[Middleware] Skipping ${pathname} - internal request`);
     return NextResponse.next();
   }
 
   const ua = request.headers.get('user-agent') || '';
-
-  // 常にログを出力
-  console.log(`[Middleware] Full UA: ${ua}`);
-
-  // LINEアプリ内ブラウザの判定を簡素化して確実に動作させる
+  
+  // LINEアプリ内ブラウザの判定
   const isLineApp = ua.includes('Line/');
-
-  console.log(`[Middleware] isLineApp: ${isLineApp}`);
-
+  
   if (!isLineApp) {
-    console.log(`[Middleware] Not LINE app, continuing normally`);
     return NextResponse.next();
   }
 
+  // 既にopenExternalBrowserパラメータが設定されている場合はスキップ
   const openExternal = searchParams.get('openExternalBrowser');
   if (openExternal === '1') {
-    console.log(`[Middleware] Already has openExternalBrowser=1, skipping redirect`);
     return NextResponse.next();
   }
 
+  // openExternalBrowser=1を付与してリダイレクト
   const url = request.nextUrl.clone();
   url.searchParams.set('openExternalBrowser', '1');
-
-  console.log(`[Middleware] Redirecting from ${request.url} to ${url.toString()}`);
+  
   return NextResponse.redirect(url, 302);
 }
 
@@ -55,4 +46,4 @@ export const config = {
      */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
-}
+};
