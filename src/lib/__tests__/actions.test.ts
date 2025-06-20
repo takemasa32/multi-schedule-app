@@ -1,4 +1,4 @@
-import { createEvent, submitAvailability, finalizeEvent, addEventDates } from '../../app/actions';
+import { createEvent, submitAvailability, finalizeEvent, addEventDates } from '@/lib/actions';
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase');
