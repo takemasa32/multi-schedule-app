@@ -3,6 +3,10 @@ import { createSupabaseAdmin, createSupabaseClient } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 
+/**
+ * 新しいイベントを作成して候補日程を登録する
+ * create_event_with_dates RPC を利用してトランザクション処理を行う
+ */
 export async function createEvent(formData: FormData) {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string | null;
@@ -43,37 +47,19 @@ export async function createEvent(formData: FormData) {
   }
 
   try {
-    // Create Supabase client
+    // Supabase 管理クライアント
     const supabaseAdmin = createSupabaseAdmin();
 
-    // Generate UUIDs for tokens
+    // トークン生成
     const publicToken = uuidv4();
     const adminToken = uuidv4();
 
-    // Create event
-    const { data: eventData, error: eventError } = await supabaseAdmin
-      .from('events')
-      .insert({
-        title,
-        description,
-        public_token: publicToken,
-        admin_token: adminToken,
-      })
-      .select('id, public_token, admin_token');
-
-    if (eventError || !eventData?.length) {
-      console.error('イベント作成エラー:', eventError);
-      return { success: false, message: 'DBエラー: イベント作成に失敗しました。もう一度お試しください。' };
-    }
-
-    const event = eventData[0];
-
-    const timeslots = [] as Array<{ event_id: string; start_time: string; end_time: string }>;
+    // RPC に渡す日程データ配列
+    const timeslots = [] as Array<{ start_time: string; end_time: string }>;
 
     if (useFullDateTime) {
       for (let i = 0; i < startTimes.length; i++) {
         timeslots.push({
-          event_id: event.id,
           start_time: startTimes[i],
           end_time: endTimes[i],
         });
@@ -97,7 +83,6 @@ export async function createEvent(formData: FormData) {
         const endDateTimeStr = `${endDateFormatted} ${endTimeFormatted}`;
 
         timeslots.push({
-          event_id: event.id,
           start_time: startDateTimeStr,
           end_time: endDateTimeStr,
         });
@@ -108,15 +93,24 @@ export async function createEvent(formData: FormData) {
       return { success: false, message: '候補日程が生成できません' };
     }
 
-    // Insert timeslots
-    const { error: dateError } = await supabaseAdmin
-      .from('event_dates')
-      .insert(timeslots);
+    // RPCを用いてイベントと候補日程を登録
+    const { data: created, error: createError } = await supabaseAdmin.rpc(
+      'create_event_with_dates',
+      {
+        p_title: title,
+        p_description: description,
+        p_public_token: publicToken,
+        p_admin_token: adminToken,
+        p_event_dates: timeslots,
+      }
+    );
 
-    if (dateError) {
-      console.error('日程登録エラー:', dateError);
-      return { success: false, message: '候補日程の登録に失敗しました' };
+    if (createError || !created?.length) {
+      console.error('イベント作成エラー:', createError);
+      return { success: false, message: 'DBエラー: イベント作成に失敗しました。もう一度お試しください。' };
     }
+
+    const event = created[0];
 
     // イベント作成が成功した場合、イベントページにリダイレクト
     // 履歴への追加のために必要なトークン情報も返す
