@@ -1,5 +1,6 @@
 'use server';
 import { createSupabaseAdmin, createSupabaseClient } from './supabase';
+import { EventFetchError, EventNotFoundError } from './errors';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 
@@ -178,12 +179,16 @@ export async function getParticipantById(participantId: string, eventId: string)
 }
 
 /**
- * 公開トークンを使用してイベントを取得する
+ * 公開トークンからイベント情報を取得する
+ *
+ * @param publicToken - イベントの公開トークン
+ * @throws {EventNotFoundError} イベントが存在しない場合
+ * @throws {EventFetchError} Supabase からの取得に失敗した場合
  */
 export async function getEvent(publicToken: string) {
   const supabase = createSupabaseAdmin();
 
-  // 先にイベントを取得
+  // イベントを取得
   const { data, error } = await supabase
     .from('events')
     .select('*')
@@ -192,16 +197,23 @@ export async function getEvent(publicToken: string) {
 
   if (error) {
     console.error('イベント取得エラー:', error);
-    return null;
+    // 行が見つからない場合は NotFoundError を投げる
+    if (error.code === 'PGRST116' || error.message.includes('no rows')) {
+      throw new EventNotFoundError();
+    }
+    throw new EventFetchError(error.message);
   }
 
-  if (data) {
-    // 最終閲覧時刻を更新
-    await supabase
-      .from('events')
-      .update({ last_accessed_at: new Date().toISOString() })
-      .eq('id', data.id);
+  if (!data) {
+    // data が null の場合も NotFound とみなす
+    throw new EventNotFoundError();
   }
+
+  // 最終閲覧時刻を更新
+  await supabase
+    .from('events')
+    .update({ last_accessed_at: new Date().toISOString() })
+    .eq('id', data.id);
 
   return data;
 }
