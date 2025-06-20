@@ -1,6 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
+ * ミドルウェアで除外するパスの設定
+ * config.matcherと重複を避けるため、ここで一元管理
+ */
+const EXCLUDED_PATHS = {
+  // API routes
+  api: '/api',
+  // Next.js internal routes
+  nextStatic: '/_next/static',
+  nextImage: '/_next/image',
+  nextInternal: '/_next',
+  // Static files
+  favicon: '/favicon.ico',
+  logo: '/logo',
+} as const;
+
+/**
+ * パスが除外対象かどうかを判定
+ * @param pathname - リクエストのパス名
+ * @returns 除外対象の場合true
+ */
+export function shouldExcludePath(pathname: string): boolean {
+  return (
+    pathname.startsWith(EXCLUDED_PATHS.api) ||
+    pathname.startsWith(EXCLUDED_PATHS.nextInternal) ||
+    pathname.startsWith(EXCLUDED_PATHS.logo) ||
+    pathname === EXCLUDED_PATHS.favicon ||
+    // ファイル拡張子を含むパス（静的ファイル）
+    pathname.includes('.')
+  );
+}
+
+/**
  * LINEアプリ内ブラウザの判定ロジック
  * @param userAgent - User-Agentヘッダーの値
  * @returns LINEアプリ内ブラウザかどうか
@@ -22,13 +54,8 @@ export function isLineInAppBrowser(userAgent: string): boolean {
 export function middleware(request: NextRequest): NextResponse {
   const { pathname, searchParams } = request.nextUrl;
 
-  // API や Next.js 内部リクエスト、静的ファイルは除外
-  if (
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname.includes('.') ||
-    pathname === '/favicon.ico'
-  ) {
+  // 除外対象のパスかチェック
+  if (shouldExcludePath(pathname)) {
     return NextResponse.next();
   }
 

@@ -44,10 +44,15 @@ test.describe('LINE アプリ内ブラウザ リダイレクト処理', () => {
     const page = await context.newPage();
 
     // 既にパラメータが付いたURLにアクセス
-    await page.goto('/?openExternalBrowser=1');
+    const targetUrl = '/?openExternalBrowser=1';
+    await page.goto(targetUrl);
 
-    // URLが変更されないことを確認
-    expect(page.url()).toBe(`${page.url()}`);
+    // リダイレクト後のURLを取得
+    const finalUrl = page.url();
+
+    // URLが元のURLと一致し、重複リダイレクトが発生していないことを確認
+    expect(finalUrl).toContain('/?openExternalBrowser=1');
+    expect(finalUrl).not.toContain('openExternalBrowser=1&openExternalBrowser=1');
     expect(page.url()).toContain('openExternalBrowser=1');
 
     await context.close();

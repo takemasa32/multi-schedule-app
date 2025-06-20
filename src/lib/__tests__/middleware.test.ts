@@ -17,7 +17,7 @@ jest.mock('next/server', () => ({
   },
 }));
 
-import { middleware, isLineInAppBrowser } from '../../middleware';
+import { middleware, isLineInAppBrowser, shouldExcludePath } from '../../middleware';
 
 // Next.jsモジュールのモックへの参照を取得
 const { NextResponse } = jest.requireMock('next/server');
@@ -171,6 +171,34 @@ describe('middleware', () => {
         expect.any(URL),
         302
       );
+    });
+  });
+
+  describe('shouldExcludePath', () => {
+    it('APIルートを正しく除外する', () => {
+      expect(shouldExcludePath('/api/test')).toBe(true);
+      expect(shouldExcludePath('/api/og')).toBe(true);
+      expect(shouldExcludePath('/api')).toBe(true);
+    });
+
+    it('Next.js内部ルートを正しく除外する', () => {
+      expect(shouldExcludePath('/_next/static/test.js')).toBe(true);
+      expect(shouldExcludePath('/_next/image/test.png')).toBe(true);
+      expect(shouldExcludePath('/_next')).toBe(true);
+    });
+
+    it('静的ファイルを正しく除外する', () => {
+      expect(shouldExcludePath('/favicon.ico')).toBe(true);
+      expect(shouldExcludePath('/logo/icon.png')).toBe(true);
+      expect(shouldExcludePath('/test.js')).toBe(true);
+      expect(shouldExcludePath('/styles.css')).toBe(true);
+    });
+
+    it('通常のページルートは除外しない', () => {
+      expect(shouldExcludePath('/')).toBe(false);
+      expect(shouldExcludePath('/home')).toBe(false);
+      expect(shouldExcludePath('/event/test-id')).toBe(false);
+      expect(shouldExcludePath('/about')).toBe(false);
     });
   });
 });
