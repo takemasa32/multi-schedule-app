@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import AvailabilityForm from "@/components/availability-form";
 import siteConfig from "@/lib/site-config";
 import { Metadata } from "next";
+import { EventNotFoundError } from "@/lib/errors";
 
 export async function generateMetadata({
   params,
@@ -16,11 +17,22 @@ export async function generateMetadata({
   params: Promise<{ public_id: string }>;
 }): Promise<Metadata> {
   const { public_id } = await params;
-  const event = await getEvent(public_id);
-  if (!event) {
+  let event;
+  try {
+    event = await getEvent(public_id);
+  } catch (err) {
+    if (err instanceof EventNotFoundError) {
+      return {
+        title: `イベントが見つかりません | ${siteConfig.name.full}`,
+        description:
+          `お探しのイベントは存在しないか、削除された可能性があります。`,
+      };
+    }
+    console.error('メタデータ取得エラー:', err);
     return {
-      title: `イベントが見つかりません | ${siteConfig.name.full}`,
-      description: `お探しのイベントは存在しないか、削除された可能性があります。`,
+      title: `イベント取得エラー | ${siteConfig.name.full}`,
+      description:
+        `イベント情報の取得中に問題が発生しました。時間をおいて再度お試しください。`,
     };
   }
   const eventTitle = event.title;
@@ -105,9 +117,15 @@ export default async function EventPage({
   const { public_id } = await params;
   const { participant_id: participantId } = await searchParams;
 
-  const event = await getEvent(public_id);
-  if (!event) {
-    notFound();
+  let event;
+  try {
+    event = await getEvent(public_id);
+  } catch (err) {
+    if (err instanceof EventNotFoundError) {
+      notFound();
+    }
+    console.error('イベント取得エラー:', err);
+    throw err;
   }
 
   const eventDatesPromise = getEventDates(event.id);
