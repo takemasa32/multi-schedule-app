@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { finalizeEvent } from "@/lib/actions";
+import useScrollToError from "@/hooks/useScrollToError";
 
 interface FinalizeEventSectionProps {
   eventId: string;
@@ -37,6 +38,10 @@ export default function FinalizeEventSection({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false); // 折りたたみ状態
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // エラー発生時に自動スクロール
+  useScrollToError(error, errorRef);
 
   const handleDateToggle = (dateId: string) => {
     setSelectedDateIds((prev) =>
@@ -658,7 +663,7 @@ export default function FinalizeEventSection({
       {isOpen && (
         <div className="animate-fade-in">
           {error && (
-            <div className="alert alert-error mb-4">
+            <div className="alert alert-error mb-4" ref={errorRef}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="stroke-current shrink-0 h-6 w-6"

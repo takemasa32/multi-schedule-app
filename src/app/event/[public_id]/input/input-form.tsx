@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { submitAvailability } from "@/lib/actions";
 import Link from "next/link";
+import useScrollToError from "@/hooks/useScrollToError";
 
 interface EventDate {
   id: string;
@@ -39,6 +40,10 @@ export default function InputForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // エラー発生時に自動スクロール
+  useScrollToError(errorMessage, errorRef);
 
   // 既存データがある場合は初期値を設定
   useEffect(() => {
@@ -129,7 +134,7 @@ export default function InputForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {errorMessage && (
-        <div className="alert alert-error">
+        <div className="alert alert-error" ref={errorRef}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="stroke-current shrink-0 h-6 w-6"
