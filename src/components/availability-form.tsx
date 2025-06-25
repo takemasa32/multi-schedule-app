@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { submitAvailability } from "@/lib/actions";
+import { submitAvailability, checkParticipantExists } from "@/lib/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 import useScrollToError from "@/hooks/useScrollToError";
@@ -512,15 +512,9 @@ export default function AvailabilityForm({
     setIsCheckingName(true);
 
     try {
-      const response = await fetch(
-        `/api/check-participant?eventId=${encodeURIComponent(
-          eventId
-        )}&name=${encodeURIComponent(name)}`
-      );
-      const data = await response.json();
-
+      const result = await checkParticipantExists(eventId, name);
       setIsCheckingName(false);
-      return data.exists;
+      return result.exists;
     } catch (error) {
       console.error("参加者チェックエラー:", error);
       setIsCheckingName(false);

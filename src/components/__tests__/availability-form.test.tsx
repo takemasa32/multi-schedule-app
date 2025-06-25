@@ -11,14 +11,12 @@ import AvailabilityForm from "../availability-form";
 
 jest.mock("@/lib/actions", () => ({
   submitAvailability: jest.fn(),
+  checkParticipantExists: jest.fn(),
 }));
-import { submitAvailability } from "@/lib/actions";
+import { submitAvailability, checkParticipantExists } from "@/lib/actions";
 
-// fetchのグローバルモック
 beforeAll(() => {
-  global.fetch = jest
-    .fn()
-    .mockResolvedValue({ json: async () => ({ exists: false }) });
+  (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
   // window.location.hrefのモック
   Object.defineProperty(window, "location", {
     writable: true,
@@ -27,9 +25,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  // fetch, locationのモックをリセット
-  // @ts-expect-error テスト用リセット
-  global.fetch = undefined;
+  // locationのモックをリセット
   // @ts-expect-error テスト用リセット
   delete window.location;
 });

@@ -948,3 +948,29 @@ export async function addEventDates(formData: FormData) {
     };
   }
 }
+
+/**
+ * 参加者名の重複チェック
+ */
+export async function checkParticipantExists(eventId: string, name: string) {
+  try {
+    if (!eventId || !name.trim()) {
+      return { exists: false };
+    }
+    const supabase = createSupabaseClient();
+    const { data, error } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("name", name.trim())
+      .maybeSingle();
+    if (error) {
+      console.error("参加者検索エラー:", error);
+      return { exists: false };
+    }
+    return { exists: !!data };
+  } catch (err) {
+    console.error("checkParticipantExists error:", err);
+    return { exists: false };
+  }
+}
