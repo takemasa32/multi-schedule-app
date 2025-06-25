@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   copyAvailabilityBetweenEvents,
   getEventInfoFromUrl,
 } from "@/lib/actions";
+import useScrollToError from "@/hooks/useScrollToError";
 
 interface EventInfo {
   success: boolean;
@@ -33,6 +34,10 @@ export default function CopyAvailabilityForm({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // エラー発生時に自動スクロール
+  useScrollToError(error, errorRef);
 
   const [sourceEventInfo, setSourceEventInfo] = useState<EventInfo | null>(
     null
@@ -115,7 +120,7 @@ export default function CopyAvailabilityForm({
       <h3 className="text-lg font-bold mb-4">過去の予定をコピー</h3>
 
       {error && (
-        <div className="alert alert-error mb-4 text-sm">
+        <div className="alert alert-error mb-4 text-sm" ref={errorRef}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="stroke-current shrink-0 h-5 w-5"

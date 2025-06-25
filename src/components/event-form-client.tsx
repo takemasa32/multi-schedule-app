@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useRef, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { createEvent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import DateRangePicker from "./date-range-picker";
 import { TimeSlot, addEventToHistory } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
+import useScrollToError from "@/hooks/useScrollToError";
 
 export default function EventFormClient() {
   const [title, setTitle] = useState<string>("");
@@ -16,6 +17,10 @@ export default function EventFormClient() {
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // エラー発生時に自動スクロール
+  useScrollToError(error, errorRef);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -90,7 +95,7 @@ export default function EventFormClient() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="alert alert-error" role="alert">
+        <div className="alert alert-error" role="alert" ref={errorRef}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="stroke-current shrink-0 h-6 w-6"

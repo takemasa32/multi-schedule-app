@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DateRangePicker from "../date-range-picker";
 import { addEventDates } from "@/lib/actions";
 import { TimeSlot } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { EventDate } from "./event-details-section";
+import useScrollToError from "@/hooks/useScrollToError";
 
 interface EventDateAddSectionProps {
   event: {
@@ -32,6 +33,9 @@ export default function EventDateAddSection({
     "confirm" | "loading" | "success" | "error" | null
   >(null);
   const [addModalError, setAddModalError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+  // エラー発生時に自動スクロール
+  useScrollToError(addModalError, errorRef);
   const [showToast, setShowToast] = useState<{
     message: string;
     key: number;
@@ -371,7 +375,7 @@ export default function EventDateAddSection({
                     )}
                   </div>
                   {addModalError && (
-                    <div className="alert alert-error mt-3 text-sm">
+                    <div className="alert alert-error mt-3 text-sm" ref={errorRef}>
                       {addModalError}
                     </div>
                   )}

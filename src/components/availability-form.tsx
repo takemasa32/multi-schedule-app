@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { submitAvailability } from "@/lib/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
+import useScrollToError from "@/hooks/useScrollToError";
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -68,6 +69,10 @@ export default function AvailabilityForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // エラー発生時に自動スクロール
+  useScrollToError(error, errorRef);
   // ドラッグ選択関連の状態
   const [isDragging, setIsDragging] = useState(false);
   // この変数は将来の機能拡張のために保持しています
@@ -1113,6 +1118,7 @@ export default function AvailabilityForm({
               className="alert alert-error mb-4"
               role="alert"
               aria-live="assertive"
+              ref={errorRef}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
