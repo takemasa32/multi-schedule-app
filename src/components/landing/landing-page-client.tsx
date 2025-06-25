@@ -224,7 +224,7 @@ export default function LandingPageClient() {
               >
                 <Card className="hover:scale-[1.03] transition-transform h-full">
                   <div className="flex flex-col items-center gap-4">
-                    <f.icon className="w-12 h-12 text-primary" />
+                    <f.icon size={48} className="text-primary" />
                     <h3 className="font-bold text-xl">{f.title}</h3>
                     <p className="text-base-content/80 text-center">{f.desc}</p>
                   </div>
@@ -270,7 +270,7 @@ export default function LandingPageClient() {
               >
                 <Card className="hover:scale-[1.03] transition-transform h-full">
                   <div className="flex flex-col items-center gap-4">
-                    <u.icon className="w-12 h-12 text-primary" />
+                    <u.icon size={48} className="text-primary" />
                     <h3 className="font-bold text-xl">{u.title}</h3>
                     <p className="text-base-content/80 text-center">{u.desc}</p>
                   </div>
