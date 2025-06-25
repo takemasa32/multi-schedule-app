@@ -99,7 +99,8 @@ export async function createEvent(formData: FormData) {
       'create_event_with_dates',
       {
         p_title: title,
-        p_description: description,
+        // descriptionがnullの場合は空文字を渡す
+        p_description: description ?? '',
         p_public_token: publicToken,
         p_admin_token: adminToken,
         p_event_dates: timeslots,
@@ -335,7 +336,13 @@ export async function getEventDates(eventId: string): Promise<EventDate[]> {
       break;  // 取得データが空なら最後のページに到達
     }
 
-    allDates = allDates.concat(data);
+    // Supabaseの型ではlabelがstring | nullのためnullを除外して結合
+    allDates = allDates.concat(
+      data.map((d) => ({
+        ...d,
+        label: d.label ?? undefined,
+      }))
+    );
 
     if (data.length < pageSize) {
       // 取得件数が pageSize 未満ならもう次ページは無い
