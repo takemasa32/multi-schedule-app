@@ -5,7 +5,7 @@ import siteConfig from "../../../lib/site-config";
 
 export const runtime = "edge";
 // タイトル等が変更できないため長期間キャッシュ
-export const revalidate = 60 * 60 * 24 * 30; // 30日
+export const revalidate = 2592000; // 30日
 
 /**
  * OG画像生成API（モダン・ブランド一貫デザイン）
