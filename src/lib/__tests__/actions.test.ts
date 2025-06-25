@@ -1,4 +1,4 @@
-import { createEvent, submitAvailability, finalizeEvent, addEventDates } from '@/lib/actions';
+import { createEvent, submitAvailability, finalizeEvent, addEventDates, updateEventAccess } from '@/lib/actions';
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase');
@@ -467,5 +467,24 @@ describe('addEventDates', () => {
     const result = await addEventDates(formData);
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/必要な情報が不足/);
+  });
+});
+
+// --- 最終アクセス更新アクションのテスト ---
+describe('updateEventAccess', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => createSupabaseChainMock() }));
+  });
+
+  it('正常に更新クエリが実行される', async () => {
+    const updateChain = createSupabaseChainMock({ data: null, error: null });
+    const fromMock = jest.fn(() => updateChain);
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
+
+    await updateEventAccess('token');
+
+    expect(fromMock).toHaveBeenCalledWith('events');
+    expect(updateChain.update).toHaveBeenCalledTimes(1);
   });
 });

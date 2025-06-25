@@ -25,6 +25,7 @@
 - 静的アセット・主要ページ（/home, /event/[public_id]等）をキャッシュ
 - オフライン時は`/public/offline.html`をフォールバックページとして表示
 - キャッシュ戦略は CacheFirst/NetworkFirst/StaleWhileRevalidate を用途に応じて設定
+- ページ表示時にサーバーアクションで `last_accessed_at` を更新（UpdateAccess コンポーネント）
 
 ### 3.3 PWA ホーム画面（/home）
 

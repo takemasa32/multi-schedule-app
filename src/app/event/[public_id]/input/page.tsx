@@ -19,7 +19,7 @@ export async function generateMetadata({
   const { public_id } = await params;
   let event;
   try {
-    event = await getEvent(public_id);
+    event = await getEvent(public_id, { updateLastAccessed: false });
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       return {
@@ -119,7 +119,7 @@ export default async function EventPage({
 
   let event;
   try {
-    event = await getEvent(public_id);
+    event = await getEvent(public_id, { updateLastAccessed: false });
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();

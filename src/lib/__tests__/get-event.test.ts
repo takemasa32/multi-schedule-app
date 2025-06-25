@@ -64,4 +64,14 @@ describe('getEvent', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
     await expect(getEvent('tok')).rejects.toBeInstanceOf(EventNotFoundError);
   });
+
+  it('updateLastAccessed false なら更新クエリを行わない', async () => {
+    const selectChain = createSupabaseChainMock({ data: { id: 'e1', public_token: 'tok' }, error: null });
+    const fromMock = jest.fn().mockReturnValue(selectChain);
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
+
+    await getEvent('tok', { updateLastAccessed: false });
+    // selectのみ1回呼ばれる
+    expect(fromMock).toHaveBeenCalledTimes(1);
+  });
 });

@@ -186,7 +186,10 @@ export async function getParticipantById(participantId: string, eventId: string)
  * @throws {EventNotFoundError} イベントが存在しない場合
  * @throws {EventFetchError} Supabase からの取得に失敗した場合
  */
-export async function getEvent(publicToken: string) {
+export async function getEvent(
+  publicToken: string,
+  options: { updateLastAccessed?: boolean } = {}
+) {
   const supabase = createSupabaseAdmin();
 
   // イベントを取得
@@ -210,13 +213,32 @@ export async function getEvent(publicToken: string) {
     throw new EventNotFoundError();
   }
 
-  // 最終閲覧時刻を更新
-  await supabase
-    .from('events')
-    .update({ last_accessed_at: new Date().toISOString() })
-    .eq('id', data.id);
+  // 最終閲覧時刻を更新 (任意)
+  if (options.updateLastAccessed !== false) {
+    await supabase
+      .from('events')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('id', data.id);
+  }
 
   return data;
+}
+
+/**
+ * イベントの最終閲覧日時を更新する
+ */
+export async function updateEventAccess(publicToken: string) {
+  try {
+    const supabase = createSupabaseAdmin();
+    await supabase
+      .from("events")
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq("public_token", publicToken);
+  } catch (err) {
+    if (process.env.NODE_ENV !== "test") {
+      console.error("updateEventAccess error:", err);
+    }
+  }
 }
 
 /**
@@ -937,6 +959,20 @@ export async function addEventDates(formData: FormData) {
         return { success: false, message: "既存の日程と重複しています" };
       }
       return { success: false, message: "日程の追加に失敗しました" };
+    }
+    try {
+      const { data: event } = await supabase
+        .from("events")
+        .select("public_token")
+        .eq("id", eventId)
+        .single();
+      if (event) {
+        revalidatePath(`/event/${event.public_token}`);
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("revalidatePath error:", e);
+      }
     }
 
     return { success: true };
