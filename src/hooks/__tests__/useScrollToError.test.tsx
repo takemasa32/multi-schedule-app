@@ -24,4 +24,14 @@ describe('useScrollToError', () => {
     renderHook(() => useScrollToError(null, ref));
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it('ref.currentがnullの場合はscrollIntoViewを呼ばない', () => {
+    const original = Element.prototype.scrollIntoView;
+    const spy = jest.fn();
+    Element.prototype.scrollIntoView = spy;
+    const ref = { current: null } as React.RefObject<HTMLDivElement>;
+    renderHook(() => useScrollToError('エラー', ref));
+    expect(spy).not.toHaveBeenCalled();
+    Element.prototype.scrollIntoView = original;
+  });
 });
