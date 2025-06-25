@@ -25,6 +25,12 @@
 - 静的アセット・主要ページ（/home, /event/[public_id]等）をキャッシュ
 - オフライン時は`/public/offline.html`をフォールバックページとして表示
 - キャッシュ戦略は CacheFirst/NetworkFirst/StaleWhileRevalidate を用途に応じて設定
+- 具体的には `next.config.ts` の `runtimeCaching` で以下を定義
+  - `/` は CacheFirst (1日)
+  - `/home` は StaleWhileRevalidate
+  - `/event/*` は NetworkFirst (5分)
+  - `/history` は CacheFirst (1日)
+  - `/terms` や `/unauthorized` は CacheFirst (1週間)
 - ページ表示時にサーバーアクションで `last_accessed_at` を更新（UpdateAccess コンポーネント）
 
 ### 3.3 PWA ホーム画面（/home）

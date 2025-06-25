@@ -14,6 +14,8 @@ import EventFormSection from "@/components/event-client/event-form-section";
 import EventDetailsSection from "@/components/event-client/event-details-section";
 import type { EventDate } from "@/components/event-client/event-details-section";
 
+export const revalidate = 0;
+
 interface EventPageProps {
   params: Promise<{
     public_id: string;

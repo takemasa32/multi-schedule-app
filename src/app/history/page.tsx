@@ -12,6 +12,8 @@ import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import FavoriteEvents from "@/components/favorite-events";
 import { FavoriteEventsProvider } from "@/components/favorite-events-context";
 
+export const revalidate = 60 * 60 * 24;
+
 export default function HistoryPage() {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
 

@@ -1,6 +1,8 @@
 import siteConfig from "@/lib/site-config";
 import { Metadata } from "next";
 
+export const revalidate = 60 * 60 * 24 * 7;
+
 export const metadata: Metadata = {
   title: `利用規約 | ${siteConfig.name.full}`,
   description: `${siteConfig.name.full}の利用規約です。本サービスを利用する前に必ずお読みください。`,

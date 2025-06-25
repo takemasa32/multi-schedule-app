@@ -2,6 +2,9 @@ import HeroSection from "@/components/landing/hero-section";
 import LandingPageClient from "@/components/landing/landing-page-client";
 import siteConfig from "@/lib/site-config";
 
+export const dynamic = "force-static";
+export const revalidate = 60 * 60 * 24;
+
 export const metadata = {
   title: "日程調整 DaySynth｜最適日がすぐに見つかる・ログイン不要・無料",
   description:

@@ -11,6 +11,8 @@ import siteConfig from "@/lib/site-config";
 import { Metadata } from "next";
 import { EventNotFoundError } from "@/lib/errors";
 
+export const revalidate = 0;
+
 export async function generateMetadata({
   params,
 }: {
