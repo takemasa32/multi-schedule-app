@@ -41,6 +41,7 @@
 - 確定結果の表示: 確定日程、出席可能者のリスト表示
 - カレンダー連携（エクスポート）: .ics ファイルダウンロード、Google カレンダー予定追加リンク
 - レスポンシブ対応
+- PWA ホーム画面機能: お気に入り・履歴一覧、URL/ID入力、インストール促進バナー
 
 **○ 任意機能（中優先度 / 将来検討）**
 
@@ -80,6 +81,7 @@ flowchart LR
   - 回答フォームに確定日を表示（参加者は引き続き回答可能）。
   - 確定日程、出席予定者一覧を表示。
   - カレンダー追加オプション (.ics ダウンロード、Google カレンダーリンク)。
+- **PWA ホーム画面 (/home):** お気に入り一覧、履歴一覧、URL/ID入力フォーム、インストール促進バナー
 
 # **5. ディレクトリ構成とコーディング規約**
 
@@ -88,6 +90,8 @@ project-root/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx
+│   │   ├── home/          # PWAホーム画面
+│   │   │   └── page.tsx
 │   │   ├── page.tsx          # ホーム（LP）
 │   │   ├── actions.ts        # Server Actions関数
 │   │   ├── event/
@@ -104,6 +108,7 @@ project-root/
 │   │   └── ...
 │   └── lib/
 │       ├── supabase.ts
+│       ├── site-config.ts  # サイト情報一元管理
 │       └── actions.ts        # Server Actions実装 (app/actions.ts に統合も検討)
 ├── public/
 ├── supabase/
