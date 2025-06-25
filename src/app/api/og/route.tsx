@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 import siteConfig from "../../../lib/site-config";
 
 export const runtime = "edge";
+// タイトル等が変更できないため長期間キャッシュ
+export const revalidate = 2592000; // 30日
 
 /**
  * OG画像生成API（モダン・ブランド一貫デザイン）
@@ -125,7 +127,13 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
       ),
-      { width: 1200, height: 630 }
+      {
+        width: 1200,
+        height: 630,
+        headers: {
+          "Cache-Control": "public, immutable, max-age=31536000",
+        },
+      }
     );
   }
 
@@ -271,7 +279,13 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
       ),
-      { width: 1200, height: 630 }
+      {
+        width: 1200,
+        height: 630,
+        headers: {
+          "Cache-Control": "public, immutable, max-age=31536000",
+        },
+      }
     );
   }
 
@@ -305,6 +319,12 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: 1200, height: 630 }
+    {
+      width: 1200,
+      height: 630,
+      headers: {
+        "Cache-Control": "public, immutable, max-age=31536000",
+      },
+    }
   );
 }
