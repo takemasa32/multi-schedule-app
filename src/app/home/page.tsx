@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 
-export const revalidate = 0;
 import EventHistory from "@/components/event-history";
 import AddToHomeScreen from "@/components/add-to-home-screen";
 import FavoriteEvents from "@/components/favorite-events";

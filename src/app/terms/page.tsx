@@ -1,7 +1,7 @@
 import siteConfig from "@/lib/site-config";
 import { Metadata } from "next";
 
-export const revalidate = 60 * 60 * 24 * 7;
+export const revalidate = 604800;
 
 export const metadata: Metadata = {
   title: `利用規約 | ${siteConfig.name.full}`,
