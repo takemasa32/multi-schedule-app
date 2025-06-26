@@ -12,8 +12,7 @@ dayjs.extend(timezone);
 // Next.js 15.3.1のAPIルートハンドラの形式に合わせる
 export async function GET(
   request: NextRequest,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  { params }: any
+  { params }: { params: { event_id: string } }
 ) {
   try {
     const eventId = params.event_id;
@@ -76,8 +75,16 @@ export async function GET(
 
       // Google Calendar URLの生成
       if (isGoogleCalendar) {
-        const { targetIndex, targetDate } = getTargetDate(finalDates, requestedDateId);
         const totalCount = finalDates.length;
+        let targetIndex = 0;
+        let targetDate = finalDates[0];
+        if (requestedDateId) {
+          const idx = finalDates.findIndex(d => d.id === requestedDateId);
+          if (idx !== -1) {
+            targetIndex = idx;
+            targetDate = finalDates[idx];
+          }
+        }
 
         const startDate = new Date(targetDate.start_time);
         const endDate = new Date(targetDate.end_time);
