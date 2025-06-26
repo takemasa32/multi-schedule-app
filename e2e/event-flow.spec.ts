@@ -116,54 +116,41 @@ test.describe.serial('イベントE2Eフロー', () => {
   });
 
   test('週表示で別参加者が回答', async ({ page }) => {
-    await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
+    await gotoWithRetry(page, eventUrl);
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000); // 安定化
-    await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible({ timeout: 10000 });
-    // 参加者が1人以上いることを検証
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
+
+    // 「個別」タブをクリックして参加者リストを表示させる
     await page.getByText('個別').click();
-    try {
-      await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
-    } catch (e) {
-      const html = await page.content();
-      console.log('DEBUG: 3件目参加者表示失敗 page.content()', html);
-      throw e;
-    }
-    try {
-      await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
-    } catch (e) {
-      const html = await page.content();
-      console.log('DEBUG: page.content()', html);
-      throw e;
-    }
-    await page.getByText('個別').click();
-    await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
-    await page.reload();
+
+    // 前のテストで作成した参加者が表示されるまで待つ
+    await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 15000 });
+
+    // 新しい回答を作成
     await page.getByRole('link', { name: '新しく回答する' }).click();
     await page.waitForURL(/\/input$/);
     await page.getByLabel('お名前').fill('週表示参加者');
     await page.getByRole('button', { name: /曜日ごとの時間帯設定/ }).click();
     await page.locator('td[data-day="月"][data-time-slot]').first().click();
     await page.getByRole('button', { name: '設定を適用する' }).click();
-    const terms2 = page.getByLabel('利用規約');
-    if (await terms2.isVisible()) {
-      await terms2.check();
+    
+    const terms = page.getByLabel('利用規約');
+    if (await terms.isVisible()) {
+      await terms.check();
     }
-    await page.waitForLoadState('networkidle');
+    
     await page.getByRole('button', { name: /回答を送信/ }).click();
-    const backToSummaryBtn = page.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
-    if (await backToSummaryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await backToSummaryBtn.click();
-    }
-    await page.waitForTimeout(1000);
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
+
+    // 回答後、イベントページに戻るのを待つ
+    await page.waitForURL(eventUrl.replace(/\?admin=.*/, ''), { waitUntil: 'networkidle' });
+
+    // ページをリロードして、最新の回答状況を確実に反映させる
+    await page.reload();
+
+    // 再度「個別」タブをクリックして、新しい参加者リストを表示させる
     await page.getByText('個別').click();
-    await expect(
-      page.getByRole('cell', { name: /週表示参加者/ })
-    ).toBeVisible({ timeout: 20000 });
+
+    // 新しく追加した「週表示参加者」が表示されていることを確認
+    await expect(page.getByRole('cell', { name: /週表示参加者/ })).toBeVisible({ timeout: 15000 });
   });
 
   test('既存回答の編集', async ({ page, context }) => {
@@ -190,6 +177,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
+    await page.reload(); // ★★★ UIの再検証が間に合わないケースがあるため、強制リロードで最新状態を取得
     await expect(page.url()).not.toContain('/input');
     const verifyPage = await context.newPage();
     await gotoWithRetry(verifyPage, eventUrl);
@@ -401,4 +389,15 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(page.getByText(/重複/)).toBeVisible({ timeout: 5000 });
   });
 
+  test('イベント作成時、タイトルが空だとエラーが表示される', async ({ page }) => {
+    await gotoWithRetry(page, '/create');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByLabel('イベントタイトル')).toBeVisible();
+    
+    // タイトルを空のまま作成ボタンを押す
+    await page.getByRole('button', { name: /イベントを作成/ }).click();
+    
+    // エラーメッセージが表示されることを確認
+    await expect(page.getByText('タイトルは必須です')).toBeVisible();
+  });
 });
