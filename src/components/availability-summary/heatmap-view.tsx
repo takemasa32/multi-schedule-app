@@ -144,7 +144,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
             <tr>
               <td className="h-3 sm:h-4 sticky left-0 bg-base-100 z-10"></td>
             </tr>
-            {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
+            {uniqueTimeSlots.map((timeSlot) => {
               // 時間表示の最適化 - 1:00のような形式に変換
               const formattedStartTime = timeSlot.startTime.replace(/^0/, "");
 
@@ -266,6 +266,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         {formattedEndTime}
                       </span>
                     </td>
+                    {/* Empty cells to match column count */}
+                    {uniqueDates.map((dateInfo) => (
+                      <td key={`${dateInfo.date}-endtime`}></td>
+                    ))}
                   </tr>
                 );
               })()}
