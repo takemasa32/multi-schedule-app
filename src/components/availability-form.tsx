@@ -1757,16 +1757,12 @@ export default function AvailabilityForm({
                           </tr>
                         </thead>
                         <tbody>
-                          {heatmapData.timeSlots.map(
-                            (timeSlot, index, timeSlots) => {
-                              // 時間が変わるときだけ表示するためのチェック
+                          {/* Spacer for top time label */}
+                          <tr>
+                            <td className="h-3 sm:h-4 sticky left-0 bg-base-100 z-10"></td>
+                          </tr>
+                          {heatmapData.timeSlots.map((timeSlot) => {
                               const [startTime] = timeSlot.split("-");
-                              const showTime =
-                                index === 0 ||
-                                timeSlot.split("-")[0] !==
-                                  timeSlots[index - 1].split("-")[0];
-
-                              // 時間表示を省スペース化
                               const formattedStartTime = startTime.replace(
                                 /^0/,
                                 ""
@@ -1774,16 +1770,21 @@ export default function AvailabilityForm({
 
                               return (
                                 <tr key={timeSlot} className="hover">
-                                  <td className="px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
-                                    {showTime ? (
-                                      <span className="text-xs sm:text-sm">
-                                        {formattedStartTime}
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs sm:text-sm text-gray-400">
-                                        -
-                                      </span>
-                                    )}
+                                  <td className="relative px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                    <span
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: "0.5rem",
+                                        transform: "translateY(-50%)",
+                                        backgroundColor:
+                                          "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
+                                        padding: "0 0.25rem",
+                                      }}
+                                      className="text-xs sm:text-sm"
+                                    >
+                                      {formattedStartTime}
+                                    </span>
                                   </td>
                                   {heatmapData.dates.map((date) => {
                                     const dateId =
@@ -1823,6 +1824,44 @@ export default function AvailabilityForm({
                               );
                             }
                           )}
+                          {/* Row for the last end time */}
+                          {heatmapData.timeSlots.length > 0 &&
+                            (() => {
+                              const lastTimeSlot =
+                                heatmapData.timeSlots[
+                                  heatmapData.timeSlots.length - 1
+                                ];
+                              const [, endTime] = lastTimeSlot.split("-");
+                              let formattedEndTime = endTime.replace(/^0/, "");
+                              if (endTime === "00:00") {
+                                formattedEndTime = "24:00";
+                              }
+                              return (
+                                <tr className="h-0">
+                                  <td className="relative px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                    <span
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: "0.5rem",
+                                        transform: "translateY(-50%)",
+                                        backgroundColor:
+                                          "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
+                                        padding: "0 0.25rem",
+                                      }}
+                                      className="text-xs sm:text-sm"
+                                    >
+                                      {formattedEndTime}
+                                    </span>
+                                  </td>
+                                  {heatmapData.dates.map((date) => (
+                                    <td
+                                      key={`${date.dateKey}-endtime-filler`}
+                                    ></td>
+                                  ))}
+                                </tr>
+                              );
+                            })()} 
                         </tbody>
                       </table>
                     </div>
