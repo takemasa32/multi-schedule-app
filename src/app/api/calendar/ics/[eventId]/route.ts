@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function GET(request: NextRequest, { params }: any) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   try {
-    const eventId = params.eventId;
+    const { eventId } = await params;
+    const url = new URL(request.url);
+    const requestedDateId = url.searchParams.get('dateId');
 
     // サーバーサイド用のSupabaseクライアントを初期化
     const supabase = createSupabaseClient();
@@ -61,11 +62,22 @@ export async function GET(request: NextRequest, { params }: any) {
       }
 
       // ICSファイルの生成（単一日程）
+      const totalCount = finalDates.length;
+      let targetIndex = 0;
+      let targetDate = finalDates[0];
+      if (requestedDateId) {
+        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        if (idx !== -1) {
+          targetIndex = idx;
+          targetDate = finalDates[idx];
+        }
+      }
+
       const icsContent = generateIcsContent({
-        events: finalDates.map(date => ({
+        events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
           startDate: new Date(date.start_time),
           endDate: new Date(date.end_time),
-          title: event.title,
+          title: totalCount > 1 ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})` : event.title,
           description: event.description || '',
           eventId: `${event.id}-${date.id}`,
           // タイムゾーン情報を追加（日本時間として扱う）
@@ -100,11 +112,25 @@ export async function GET(request: NextRequest, { params }: any) {
       }
 
       // 複数イベント用のICSファイルを生成
+      const totalCount = finalDates.length;
+      let targetIndex = 0;
+      let targetDate = finalDates[0];
+      if (requestedDateId) {
+        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        if (idx !== -1) {
+          targetIndex = idx;
+          targetDate = finalDates[idx];
+        }
+      }
+
       const icsContent = generateIcsContent({
-        events: finalDates.map(date => ({
+        events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
           startDate: new Date(date.start_time),
           endDate: new Date(date.end_time),
-          title: event.title,
+          title:
+            totalCount > 1
+              ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
+              : event.title,
           description: event.description || '',
           eventId: `${event.id}-${date.id}`
         }))
