@@ -292,7 +292,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.waitForLoadState('networkidle');
 
     // 共有ボタンをクリック
-    const shareBtn = page.getByRole('button', { name: /共有|イベントURLを共有/ });
+    const shareBtn = page.getByRole('button', { name: /イベントを共有|イベントURLを共有/ });
     await expect(shareBtn).toBeVisible();
     await shareBtn.click();
 

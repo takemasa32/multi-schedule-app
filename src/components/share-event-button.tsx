@@ -7,6 +7,8 @@ interface ShareEventButtonProps {
   title?: string;
   text?: string;
   className?: string;
+  label?: string;
+  ariaLabel?: string;
 }
 
 export default function ShareEventButton({
@@ -14,6 +16,8 @@ export default function ShareEventButton({
   title,
   text,
   className = "",
+  label = "イベントを共有",
+  ariaLabel = "イベントURLを共有",
 }: ShareEventButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
 
@@ -54,7 +58,7 @@ export default function ShareEventButton({
       className={`btn btn-outline btn-sm flex items-center gap-2 ${className}`}
       onClick={handleShare}
       disabled={isSharing}
-      aria-label="イベントURLを共有"
+      aria-label={ariaLabel}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -70,7 +74,7 @@ export default function ShareEventButton({
           d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a6 6 0 00-12 0v1a2 2 0 002 2h8a2 2 0 002-2v-1z"
         />
       </svg>
-      イベントを共有
+      {label}
     </button>
   );
 }
