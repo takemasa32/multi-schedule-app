@@ -101,10 +101,13 @@ export async function GET(request: NextRequest, { params }: any) {
 
       // 複数イベント用のICSファイルを生成
       const icsContent = generateIcsContent({
-        events: finalDates.map(date => ({
+        events: finalDates.map((date, index) => ({
           startDate: new Date(date.start_time),
           endDate: new Date(date.end_time),
-          title: event.title,
+          title:
+            finalDates.length > 1
+              ? `${event.title} (${index + 1}/${finalDates.length})`
+              : event.title,
           description: event.description || '',
           eventId: `${event.id}-${date.id}`
         }))
