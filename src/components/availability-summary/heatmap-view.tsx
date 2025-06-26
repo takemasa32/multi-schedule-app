@@ -140,24 +140,29 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
             </tr>
           </thead>
           <tbody>
-            {uniqueTimeSlots.map((timeSlot, index, timeSlots) => {
+            {/* スペーサー：最初の時間ラベルがヘッダーに隠れるのを防ぐ */}
+            <tr>
+              <td className="h-3 sm:h-4 sticky left-0 bg-base-100 z-10"></td>
+            </tr>
+            {uniqueTimeSlots.map((timeSlot) => {
               // 時間表示の最適化 - 1:00のような形式に変換
               const formattedStartTime = timeSlot.startTime.replace(/^0/, "");
 
-              // 時間が変わるときのみ表示する条件を追加
-              const showTime =
-                index === 0 ||
-                timeSlot.startTime.split(":")[0] !==
-                  timeSlots[index - 1].startTime.split(":")[0];
-
               return (
                 <tr key={timeSlot.startTime}>
-                  <td className="text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
-                    {showTime ? (
-                      <>{formattedStartTime}</>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
+                  <td className="relative text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 0, // 上辺を基準にする
+                        left: "0.5rem",
+                        transform: "translateY(-50%)", // 高さの半分だけ上に移動
+                        backgroundColor: "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
+                        padding: "0 0.25rem",
+                      }}
+                    >
+                      {formattedStartTime}
+                    </span>
                   </td>
                   {uniqueDates.map((dateInfo) => {
                     const key = `${dateInfo.date}_${timeSlot.startTime}`;
@@ -236,6 +241,38 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 </tr>
               );
             })}
+            {/* 最下部の終了時間を表示するための行 */}
+            {uniqueTimeSlots.length > 0 &&
+              (() => {
+                const lastTimeSlot = uniqueTimeSlots[uniqueTimeSlots.length - 1];
+                let formattedEndTime = lastTimeSlot.endTime.replace(/^0/, "");
+                if (lastTimeSlot.endTime === "00:00") {
+                  formattedEndTime = "24:00";
+                }
+                return (
+                  <tr className="h-0">
+                    <td className="relative text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: "0.5rem",
+                          transform: "translateY(-50%)",
+                          backgroundColor:
+                            "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
+                          padding: "0 0.25rem",
+                        }}
+                      >
+                        {formattedEndTime}
+                      </span>
+                    </td>
+                    {/* Empty cells to match column count */}
+                    {uniqueDates.map((dateInfo) => (
+                      <td key={`${dateInfo.date}-endtime`}></td>
+                    ))}
+                  </tr>
+                );
+              })()}
           </tbody>
         </table>
       </div>
