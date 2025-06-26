@@ -31,4 +31,18 @@ describe("EventFormSection", () => {
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);
   });
+
+  test("確定日程共有ボタンが表示される", () => {
+    render(
+      <EventFormSection
+        event={mockEvent}
+        eventDates={mockDates}
+        participants={[]}
+        finalizedDateIds={["date1"]}
+      />
+    );
+    expect(
+      screen.getByRole("button", { name: /確定日程を共有/ })
+    ).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,8 @@
 "use client";
+import React from "react";
 import Link from "next/link";
 import { CalendarLinks } from "@/components/calendar-links";
+import ShareEventButton from "@/components/share-event-button";
 import { addEventToHistory } from "@/lib/utils";
 
 import { EventDate } from "./event-details-section";
@@ -58,6 +60,12 @@ export default function EventFormSection({
   // 確定済み日程の取得
   const finalizedDates = getFinalizedDates(event, eventDates, finalizedDateIds);
 
+  // 共有用URLを生成
+  const getShareUrl = React.useCallback(() => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/event/${event.public_token}`;
+  }, [event.public_token]);
+
   // 履歴追加（初回のみ）
   addEventToHistory(
     {
@@ -78,7 +86,17 @@ export default function EventFormSection({
             <span>日程が確定しました！</span>
           </div>
           <div className="mb-8">
-            <h3 className="text-lg font-bold mb-2">確定した日程:</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold">確定した日程:</h3>
+              <ShareEventButton
+                url={getShareUrl()}
+                className="btn-sm"
+                title={`${event.title}|daySynth-確定日程`}
+                text={`${event.title} の日程が確定しました。`}
+                label="確定日程を共有"
+                ariaLabel="確定日程を共有"
+              />
+            </div>
             <ul className="list-disc pl-5 space-y-1">
               {finalizedDates.map((date) => (
                 <li key={date.id}>
