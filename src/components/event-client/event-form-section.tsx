@@ -16,18 +16,47 @@ interface EventFormSectionProps {
   };
   eventDates: EventDate[];
   participants: { id: string; name: string; comment?: string | null }[];
+  finalizedDateIds?: string[];
 }
 
 export default function EventFormSection({
   event,
   eventDates,
   participants,
+  finalizedDateIds = [],
 }: EventFormSectionProps) {
-  // 確定済み日程のローカル変換
-  let finalizedDates: EventDate[] = [];
-  if (event.is_finalized && event.final_date_id) {
-    finalizedDates = eventDates.filter((d) => d.id === event.final_date_id);
-  }
+  // 確定済み日程のローカル変換（複数対応）
+  /**
+   * 確定済み日程を取得するローカル関数
+   * @param event - イベント情報
+   * @param eventDates - 全ての候補日程
+   * @param finalizedDateIds - 確定された日程IDの配列
+   * @returns 確定済み日程の配列
+   */
+  const getFinalizedDates = (
+    event: EventFormSectionProps["event"],
+    eventDates: EventDate[],
+    finalizedDateIds: string[]
+  ): EventDate[] => {
+    if (!event.is_finalized) {
+      return [];
+    }
+
+    // 複数確定日程がある場合を優先
+    if (finalizedDateIds.length > 0) {
+      return eventDates.filter((date) => finalizedDateIds.includes(date.id));
+    }
+
+    // 単一確定日程の場合（後方互換性のため）
+    if (event.final_date_id) {
+      return eventDates.filter((date) => date.id === event.final_date_id);
+    }
+
+    return [];
+  };
+
+  // 確定済み日程の取得
+  const finalizedDates = getFinalizedDates(event, eventDates, finalizedDateIds);
 
   // 履歴追加（初回のみ）
   addEventToHistory(
@@ -45,7 +74,7 @@ export default function EventFormSection({
       {/* 確定済み日程表示・カレンダー連携 */}
       {event.is_finalized && finalizedDates.length > 0 && (
         <div>
-          <div className="alert alert-success mb-8">
+          <div className="alert alert-success mt-4 mb-8">
             <span>日程が確定しました！</span>
           </div>
           <div className="mb-8">
