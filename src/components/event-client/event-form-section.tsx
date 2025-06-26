@@ -92,7 +92,7 @@ export default function EventFormSection({
                 url={getShareUrl()}
                 className="btn-sm"
                 title={`${event.title}|daySynth-確定日程`}
-                text={`${event.title} の確定日程を共有します。`}
+                text={`${event.title} の日程が確定しました。`}
                 label="確定日程を共有"
                 ariaLabel="確定日程を共有"
               />
