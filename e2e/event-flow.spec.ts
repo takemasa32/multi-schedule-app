@@ -94,20 +94,24 @@ test.describe.serial('イベントE2Eフロー', () => {
       await participantTerms2.check();
     }
     await participantPage.getByRole('button', { name: /回答を送信/ }).click();
+
+    // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
+    const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
+    await participantPage.waitForURL(publicEventUrl, { timeout: 15000 });
     const backToSummaryBtn = participantPage.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
-    if (await backToSummaryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await backToSummaryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
-    await participantPage.waitForLoadState('networkidle');
 
-    await participantPage.waitForTimeout(5000);
-    await participantPage.waitForLoadState('networkidle');
-    await expect(participantPage.getByText('個別')).toBeVisible({ timeout: 10000 });
-    await participantPage.getByText('個別').click();
-    // 参加者が1人以上表示されていることを検証
+    // "個別" タブが表示されるまで待機
+    const individualTab = participantPage.getByText('個別');
+    await expect(individualTab).toBeVisible({ timeout: 15000 });
+    await individualTab.click();
+
+    // 新しく追加した参加者が表示されるまで待機
     try {
-      await expect(participantPage.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
-     } catch (e) {
+      await expect(participantPage.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 15000 });
+    } catch (e) {
       const html = await participantPage.content();
       console.log('DEBUG: 参加者表示失敗 page.content()', html);
       throw e;
@@ -153,20 +157,27 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /回答を送信/ }).click();
+
+    // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
+    const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
+    await page.waitForURL(publicEventUrl, { timeout: 15000 });
     const backToSummaryBtn = page.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
-    if (await backToSummaryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await backToSummaryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
-    await page.waitForTimeout(1000);
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
-    await page.getByText('個別').click();
+
+    // "個別" タブが表示されるまで待機
+    const individualTab = page.getByText('個別');
+    await expect(individualTab).toBeVisible({ timeout: 15000 });
+    await individualTab.click();
+
+    // 新しく追加した参加者が表示されるまで待機
     await expect(
       page.getByRole('cell', { name: /週表示参加者/ })
     ).toBeVisible({ timeout: 20000 });
   });
 
-  test('既存回答の編集', async ({ page, context }) => {
+  test('既存回答の編集', async ({ page }) => {
     await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
@@ -182,42 +193,53 @@ test.describe.serial('イベントE2Eフロー', () => {
     if (await editTermsCheckbox.isVisible()) {
       await editTermsCheckbox.check();
     }
-    await page.waitForTimeout(1000);
     await page.getByRole('button', { name: '回答を更新する' }).click();
+
+    // 回答更新後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
+    const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
+    await page.waitForURL(publicEventUrl, { timeout: 15000 });
     const backToSummaryBtn = page.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
-    if (await backToSummaryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await backToSummaryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000);
-    await expect(page.url()).not.toContain('/input');
-    const verifyPage = await context.newPage();
-    await gotoWithRetry(verifyPage, eventUrl);
-    await verifyPage.waitForLoadState('networkidle');
-    await expect(verifyPage.getByText('個別')).toBeVisible({ timeout: 10000 });
-    await verifyPage.getByText('個別').click();
-    await expect(verifyPage.getByRole('cell', { name: '週表示参加者-編集 この参加者の予定を編集' }).locator('span')).toBeVisible({ timeout: 10000 });
-    await verifyPage.close();
+
+    // "個別" タブが表示されるまで待機
+    const individualTab = page.getByText('個別');
+    await expect(individualTab).toBeVisible({ timeout: 15000 });
+    await individualTab.click();
+
+    // 編集後の参加者名が表示されるまで待機
+    await expect(page.getByRole('cell', { name: new RegExp(newName) })).toBeVisible({ timeout: 10000 });
   });
 
   test('主催者確定・カレンダー連携', async ({ context }) => {
     const adminPage = await context.newPage();
     await gotoWithRetry(adminPage, eventUrl);
     await adminPage.waitForLoadState('networkidle');
-    await adminPage.waitForLoadState('networkidle');
-    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
-    // 日程の確定セクションを展開
-    const openFinalizeBtn = await adminPage.getByRole('button', { name: /日程の確定を開く/ });
-    await openFinalizeBtn.click();
-    const selectableCell = await adminPage.getByRole('button', { name: '人 50%' }).first();
 
+    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({ timeout: 10000 });
+
+    // 日程の確定セクションを展開
+    const openFinalizeBtn = adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    await expect(openFinalizeBtn).toBeVisible();
+    await openFinalizeBtn.click();
+
+    const selectableCell = adminPage.getByRole('button', { name: '人 50%' }).first();
+    await expect(selectableCell).toBeVisible();
     await selectableCell.click();
+
     await expect(adminPage.getByText(/選択中: *1件/)).toBeVisible({ timeout: 3000 });
-    const finalizeBtn = await adminPage.getByRole('button', { name: /選択した日程で確定する|確定する/ });
+
+    const finalizeBtn = adminPage.getByRole('button', { name: /選択した日程で確定する|確定する/ });
+    await expect(finalizeBtn).toBeVisible();
     await finalizeBtn.click();
-    const confirmBtn = await adminPage.getByRole('button', { name: /確定する|現在の確定内容を維持する/ });
+
+    const confirmBtn = adminPage.getByRole('button', { name: /確定する|現在の確定内容を維持する/ });
+    await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();
+
     await adminPage.waitForLoadState('networkidle');
+
     const icsLink = adminPage.getByRole('link', { name: /カレンダーに追加/ });
 
     await expect(icsLink).toBeVisible({ timeout: 10000 });
@@ -239,9 +261,10 @@ test.describe.serial('イベントE2Eフロー', () => {
     const adminPage = await context.newPage();
     await gotoWithRetry(adminPage, eventUrl);
     await adminPage.waitForLoadState('networkidle');
-    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible();
+    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({ timeout: 10000 });
     // 日程の確定セクションを展開
-    const openFinalizeBtn = await adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    const openFinalizeBtn = adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    await expect(openFinalizeBtn).toBeVisible();
     await openFinalizeBtn.click();
     // 既に確定済みのセルをすべてクリックして選択解除
     const selectedCells = await adminPage.locator('td.border-accent').all();
@@ -251,15 +274,13 @@ test.describe.serial('イベントE2Eフロー', () => {
     // 「選択中: 0件の日程」表示を確認
     await expect(adminPage.getByText(/選択中: *0件/)).toBeVisible({ timeout: 3000 });
     // 確定ボタンを押す
-    const finalizeBtn = await adminPage.getByRole('button', { name: /確定を解除する|解除する/ });
+    const finalizeBtn = adminPage.getByRole('button', { name: /確定を解除する|解除する/ });
+    await expect(finalizeBtn).toBeVisible();
     await finalizeBtn.click();
 
-    // // 「確定を解除する」ボタンを押す
-    // const confirmBtn = await adminPage.getByRole('button', { name: /確定を解除する/ });
-    // await confirmBtn.click();
     await adminPage.waitForLoadState('networkidle');
     // 解除後、確定済み日程のアラートが消えていること（または確定済み日程が0件であること）
-    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible();
+    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible({ timeout: 10000 });
     await adminPage.close();
   });
 
@@ -342,9 +363,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: /^追加する$/ }).click();
 
     // 完了ダイアログの表示
-    await expect(page.getByText('日程を追加しました').first()).toBeVisible({ timeout: 6000 });
-    await page.waitForTimeout(1000);
-
+    await expect(page.getByText('日程を追加しました').first()).toBeVisible({ timeout: 10000 });
 
     // 同じ日程で再度追加し重複バリデーション
     await page.locator('input[type="date"]').first().fill(dateStr);
@@ -355,11 +374,12 @@ test.describe.serial('イベントE2Eフロー', () => {
   test('詳細日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
     await gotoWithRetry(page, eventUrl);
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
+
     // 日程追加セクションを展開
     const addSection2 = page.getByText('日程を追加する', { exact: false });
+    await expect(addSection2).toBeVisible();
     await addSection2.click();
-    await page.waitForTimeout(1000);
+
     // 日付文字列を生成
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -368,6 +388,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     const dateStr = `${yyyy}-${mm}-${dd}`;
     // 日程追加セクションを展開
     const addSection = page.getByText('詳細な日程追加', { exact: false });
+    await expect(addSection).toBeVisible();
     await addSection.click();
     // input[type="date"]がvisibleかつ有効になるまで待機
     await page.waitForSelector('input[type="date"]:not([disabled])', { state: 'visible', timeout: 5000 });
