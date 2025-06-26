@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import Link from "next/link";
 import { CalendarLinks } from "@/components/calendar-links";
 import ShareEventButton from "@/components/share-event-button";
@@ -60,11 +61,10 @@ export default function EventFormSection({
   const finalizedDates = getFinalizedDates(event, eventDates, finalizedDateIds);
 
   // 共有用URLを生成
-  const getShareUrl = () => {
+  const getShareUrl = React.useCallback(() => {
     if (typeof window === "undefined") return "";
-    const { protocol, host } = window.location;
-    return `${protocol}//${host}/event/${event.public_token}`;
-  };
+    return `${window.location.origin}/event/${event.public_token}`;
+  }, [event.public_token]);
 
   // 履歴追加（初回のみ）
   addEventToHistory(
