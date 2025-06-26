@@ -24,14 +24,21 @@ if (typeof global.Response === 'undefined') {
     statusText = '';
     type = 'basic';
     url = '';
-    constructor(text: string, { status = 200, headers = {} as Record<string, string> } = {}) {
+    constructor(text: string, { status = 200, headers = {} as Record<string, string> | Headers } = {}) {
       this.status = status;
       this._text = text;
       // keyを小文字化して格納
       this._headers = {};
-      for (const k in headers) {
-        if (Object.prototype.hasOwnProperty.call(headers, k)) {
-          this._headers[k.toLowerCase()] = headers[k];
+      if (typeof (headers as Headers).forEach === 'function') {
+        (headers as Headers).forEach((v: string, k: string) => {
+          this._headers[k.toLowerCase()] = v;
+        });
+      } else {
+        const obj = headers as Record<string, string>;
+        for (const k in obj) {
+          if (Object.prototype.hasOwnProperty.call(obj, k)) {
+            this._headers[k.toLowerCase()] = obj[k];
+          }
         }
       }
     }
@@ -169,5 +176,86 @@ describe("generateGoogleCalendarUrl", () => {
     });
     expect(url).toContain("text=%E3%82%BF%E3%82%A4%E3%83%88%E3%83%AB%E3%81%AE%E3%81%BF");
     expect(url).toContain("dates=20250101T000000Z%2F20250101T010000Z");
+  });
+});
+
+describe("/api/calendar/[event_id]/route.ts", () => {
+  const createRequest = (url: string) => ({ url } as NextRequest);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("複数確定日程のタイトルが連番で生成される", async () => {
+    const fromMock = jest.fn()
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { id: "eid", title: "複数テスト", description: "desc", is_finalized: true, public_token: "token" },
+          error: null
+        })
+      })
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn(() => Promise.resolve({ data: [{ event_date_id: "d1" }, { event_date_id: "d2" }], error: null }))
+      })
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn(() => Promise.resolve({
+          data: [
+            { id: "d1", start_time: "2025-05-10T10:00:00Z", end_time: "2025-05-10T11:00:00Z", label: "" },
+            { id: "d2", start_time: "2025-05-11T10:00:00Z", end_time: "2025-05-11T11:00:00Z", label: "" }
+          ],
+          error: null
+        }))
+      });
+    mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
+
+    const { GET: calendarGET } = await import("@/app/api/calendar/[event_id]/route");
+    const res = await calendarGET(createRequest("http://localhost/api/calendar/eid"), { params: Promise.resolve({ event_id: "eid" }) });
+
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toMatch(/SUMMARY:複数テスト \(1\/2\)/);
+    expect(text).toMatch(/SUMMARY:複数テスト \(2\/2\)/);
+  });
+
+  it("Googleカレンダーリンクに連番が付与される", async () => {
+    const fromMock = jest.fn()
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { id: "eid", title: "複数テスト", description: "desc", is_finalized: true, public_token: "token" },
+          error: null
+        })
+      })
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn(() => Promise.resolve({ data: [{ event_date_id: "d1" }, { event_date_id: "d2" }], error: null }))
+      })
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn(() => Promise.resolve({
+          data: [
+            { id: "d1", start_time: "2025-05-10T10:00:00Z", end_time: "2025-05-10T11:00:00Z", label: "" },
+            { id: "d2", start_time: "2025-05-11T10:00:00Z", end_time: "2025-05-11T11:00:00Z", label: "" }
+          ],
+          error: null
+        }))
+      });
+    mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
+
+    const { GET: calendarGET } = await import("@/app/api/calendar/[event_id]/route");
+    const res = await calendarGET(
+      createRequest("http://localhost/api/calendar/eid?googleCalendar=true&dateId=d2"),
+      { params: Promise.resolve({ event_id: "eid" }) }
+    );
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location") || "";
+    const url = new URL(location);
+    expect(url.searchParams.get("text")).toBe("複数テスト (2/2)");
   });
 });

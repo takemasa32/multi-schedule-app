@@ -31,11 +31,11 @@ function createRangeFirstQuery(pages: Array<{ data: number[]; error: null }>): M
     _call: 0,
     range: jest.fn(function (this: MockQuery) {
       return this;
-    }),
+    }) as unknown as (from: number, to: number) => SupabaseQueryInterface,
     order: jest.fn(function (this: MockQuery) {
       const res = this._pages[this._call++] || { data: [], error: null };
       return Promise.resolve(res);
-    }),
+    }) as unknown as (column: string, options?: { ascending: boolean }) => SupabaseQueryInterface,
   };
   return query as MockQuery;
 }
@@ -46,11 +46,11 @@ function createOrderFirstQuery(pages: Array<{ data: number[]; error: null }>): M
     _call: 0,
     order: jest.fn(function (this: MockQuery) {
       return this;
-    }),
+    }) as unknown as (column: string, options?: { ascending: boolean }) => SupabaseQueryInterface,
     range: jest.fn(function (this: MockQuery) {
       const res = this._pages[this._call++] || { data: [], error: null };
       return Promise.resolve(res);
-    }),
+    }) as unknown as (from: number, to: number) => SupabaseQueryInterface,
   };
   return query as MockQuery;
 }
