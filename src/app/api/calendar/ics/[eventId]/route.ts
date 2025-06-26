@@ -63,16 +63,8 @@ export async function GET(request: NextRequest, { params }: any) {
       }
 
       // ICSファイルの生成（単一日程）
+      const { targetIndex, targetDate } = getTargetDate(finalDates, requestedDateId);
       const totalCount = finalDates.length;
-      let targetIndex = 0;
-      let targetDate = finalDates[0];
-      if (requestedDateId) {
-        const idx = finalDates.findIndex(d => d.id === requestedDateId);
-        if (idx !== -1) {
-          targetIndex = idx;
-          targetDate = finalDates[idx];
-        }
-      }
 
       const icsContent = generateIcsContent({
         events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
