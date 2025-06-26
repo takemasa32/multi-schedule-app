@@ -19,6 +19,7 @@ export async function GET(
     const eventId = params.event_id;
     const url = new URL(request.url);
     const isGoogleCalendar = url.searchParams.get('googleCalendar') === 'true';
+    const requestedDateId = url.searchParams.get('dateId');
 
     // サーバーサイド用のSupabaseクライアントを初期化
     const supabase = createSupabaseClient();
@@ -75,14 +76,23 @@ export async function GET(
 
       // Google Calendar URLの生成
       if (isGoogleCalendar) {
-        // 単一の日程の場合
-        const date = finalDates[0];
-        const startDate = new Date(date.start_time);
-        const endDate = new Date(date.end_time);
+        const totalCount = finalDates.length;
+        let targetIndex = 0;
+        let targetDate = finalDates[0];
+        if (requestedDateId) {
+          const idx = finalDates.findIndex(d => d.id === requestedDateId);
+          if (idx !== -1) {
+            targetIndex = idx;
+            targetDate = finalDates[idx];
+          }
+        }
+
+        const startDate = new Date(targetDate.start_time);
+        const endDate = new Date(targetDate.end_time);
 
         const googleParams = new URLSearchParams({
           action: 'TEMPLATE',
-          text: event.title,
+          text: totalCount > 1 ? `${event.title} (${targetIndex + 1}/${totalCount})` : event.title,
           details: event.description || '',
           dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
           ctz: 'Asia/Tokyo', // タイムゾーンを明示
@@ -93,13 +103,24 @@ export async function GET(
       }
 
       // ICSファイルの生成（単一日程）
+      const totalCount = finalDates.length;
+      let targetIndex = 0;
+      let targetDate = finalDates[0];
+      if (requestedDateId) {
+        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        if (idx !== -1) {
+          targetIndex = idx;
+          targetDate = finalDates[idx];
+        }
+      }
+
       const icsContent = generateIcsContent({
-        events: finalDates.map((date, index) => ({
+        events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
           startDate: new Date(date.start_time),
           endDate: new Date(date.end_time),
           title:
-            finalDates.length > 1
-              ? `${event.title} (${index + 1}/${finalDates.length})`
+            totalCount > 1
+              ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
               : event.title,
           description: event.description || '',
           eventId: `${event.id}-${date.id}`
@@ -134,14 +155,23 @@ export async function GET(
 
       // Google Calendar URLの生成
       if (isGoogleCalendar) {
-        // 最初の日程でGoogleカレンダーURLを生成（Googleカレンダーは複数イベントを一度に作成できないため）
-        const date = finalDates[0];
-        const startDate = new Date(date.start_time);
-        const endDate = new Date(date.end_time);
+        const totalCount = finalDates.length;
+        let targetIndex = 0;
+        let targetDate = finalDates[0];
+        if (requestedDateId) {
+          const idx = finalDates.findIndex(d => d.id === requestedDateId);
+          if (idx !== -1) {
+            targetIndex = idx;
+            targetDate = finalDates[idx];
+          }
+        }
+
+        const startDate = new Date(targetDate.start_time);
+        const endDate = new Date(targetDate.end_time);
 
         const googleParams = new URLSearchParams({
           action: 'TEMPLATE',
-          text: `${event.title} ${finalDates.length > 1 ? `(1/${finalDates.length})` : ''}`,
+          text: totalCount > 1 ? `${event.title} (${targetIndex + 1}/${totalCount})` : event.title,
           details: event.description || '',
           dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
           ctz: 'Asia/Tokyo', // タイムゾーンを明示
@@ -152,13 +182,24 @@ export async function GET(
       }
 
       // 複数イベント用のICSファイルを生成
+      const totalCount = finalDates.length;
+      let targetIndex = 0;
+      let targetDate = finalDates[0];
+      if (requestedDateId) {
+        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        if (idx !== -1) {
+          targetIndex = idx;
+          targetDate = finalDates[idx];
+        }
+      }
+
       const icsContent = generateIcsContent({
-        events: finalDates.map((date, index) => ({
+        events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
           startDate: new Date(date.start_time),
           endDate: new Date(date.end_time),
           title:
-            finalDates.length > 1
-              ? `${event.title} (${index + 1}/${finalDates.length})`
+            totalCount > 1
+              ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
               : event.title,
           description: event.description || '',
           eventId: `${event.id}-${date.id}`
