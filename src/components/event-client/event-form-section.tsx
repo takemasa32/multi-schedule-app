@@ -16,17 +16,25 @@ interface EventFormSectionProps {
   };
   eventDates: EventDate[];
   participants: { id: string; name: string; comment?: string | null }[];
+  finalizedDateIds?: string[];
 }
 
 export default function EventFormSection({
   event,
   eventDates,
   participants,
+  finalizedDateIds = [],
 }: EventFormSectionProps) {
-  // 確定済み日程のローカル変換
+  // 確定済み日程のローカル変換（複数対応）
   let finalizedDates: EventDate[] = [];
-  if (event.is_finalized && event.final_date_id) {
-    finalizedDates = eventDates.filter((d) => d.id === event.final_date_id);
+  if (event.is_finalized) {
+    if (finalizedDateIds.length > 0) {
+      finalizedDates = eventDates.filter((d) =>
+        finalizedDateIds.includes(d.id)
+      );
+    } else if (event.final_date_id) {
+      finalizedDates = eventDates.filter((d) => d.id === event.final_date_id);
+    }
   }
 
   // 履歴追加（初回のみ）

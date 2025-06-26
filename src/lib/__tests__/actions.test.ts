@@ -1,4 +1,10 @@
-import { createEvent, submitAvailability, finalizeEvent, addEventDates } from '@/lib/actions';
+import {
+  createEvent,
+  submitAvailability,
+  finalizeEvent,
+  addEventDates,
+  getFinalizedDateIds,
+} from '@/lib/actions';
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase');
@@ -467,5 +473,56 @@ describe('addEventDates', () => {
     const result = await addEventDates(formData);
     expect(result.success).toBe(false);
     expect(result.message).toMatch(/必要な情報が不足/);
+  });
+});
+
+// --- getFinalizedDateIds のテスト ---
+describe('getFinalizedDateIds', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('複数の確定日程IDを取得できる', async () => {
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (table: string) => {
+        if (table === 'finalized_dates') {
+          return {
+            select: jest.fn(() => ({
+              eq: jest.fn(() =>
+                Promise.resolve({
+                  data: [
+                    { event_date_id: 'd1' },
+                    { event_date_id: 'd2' },
+                  ],
+                  error: null,
+                })
+              ),
+            })),
+          };
+        }
+        return createSupabaseChainMock();
+      },
+    }));
+
+    const ids = await getFinalizedDateIds('eventid', null);
+    expect(ids).toEqual(['d1', 'd2']);
+  });
+
+  it('エラー時はfinalDateIdを返す', async () => {
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (table: string) => {
+        if (table === 'finalized_dates') {
+          return {
+            select: jest.fn(() => ({
+              eq: jest.fn(() => Promise.resolve({ data: null, error: { message: 'error' } })),
+            })),
+          };
+        }
+        return createSupabaseChainMock();
+      },
+    }));
+
+    const ids = await getFinalizedDateIds('eventid', 'legacy');
+    expect(ids).toEqual(['legacy']);
   });
 });

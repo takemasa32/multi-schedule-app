@@ -209,12 +209,19 @@ async function EventFormSectionLoader({
   eventDates: Promise<EventDate[]>;
   participants: Promise<{ id: string; name: string }[]>;
 }) {
-  const [dates, participantList] = await Promise.all([eventDates, participants]);
+  const [dates, participantList, finalizedDateIds] = await Promise.all([
+    eventDates,
+    participants,
+    event.is_finalized
+      ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
+      : Promise.resolve([]),
+  ]);
   return (
     <EventFormSection
       event={event}
       eventDates={dates}
       participants={participantList}
+      finalizedDateIds={finalizedDateIds}
     />
   );
 }
