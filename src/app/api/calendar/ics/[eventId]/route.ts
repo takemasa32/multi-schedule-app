@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function GET(request: NextRequest, { params }: any) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   try {
-    const eventId = params.eventId;
+    const { eventId } = await params;
     const url = new URL(request.url);
     const requestedDateId = url.searchParams.get('dateId');
 
@@ -63,8 +62,16 @@ export async function GET(request: NextRequest, { params }: any) {
       }
 
       // ICSファイルの生成（単一日程）
-      const { targetIndex, targetDate } = getTargetDate(finalDates, requestedDateId);
       const totalCount = finalDates.length;
+      let targetIndex = 0;
+      let targetDate = finalDates[0];
+      if (requestedDateId) {
+        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        if (idx !== -1) {
+          targetIndex = idx;
+          targetDate = finalDates[idx];
+        }
+      }
 
       const icsContent = generateIcsContent({
         events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({

@@ -12,10 +12,10 @@ dayjs.extend(timezone);
 // Next.js 15.3.1のAPIルートハンドラの形式に合わせる
 export async function GET(
   request: NextRequest,
-  { params }: { params: { event_id: string } }
+  { params }: { params: Promise<{ event_id: string }> }
 ) {
   try {
-    const eventId = params.event_id;
+    const { event_id: eventId } = await params;
     const url = new URL(request.url);
     const isGoogleCalendar = url.searchParams.get('googleCalendar') === 'true';
     const requestedDateId = url.searchParams.get('dateId');

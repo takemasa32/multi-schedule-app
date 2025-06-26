@@ -213,7 +213,7 @@ describe("/api/calendar/[event_id]/route.ts", () => {
     mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
 
     const { GET: calendarGET } = await import("@/app/api/calendar/[event_id]/route");
-    const res = await calendarGET(createRequest("http://localhost/api/calendar/eid"), { params: { event_id: "eid" } });
+    const res = await calendarGET(createRequest("http://localhost/api/calendar/eid"), { params: Promise.resolve({ event_id: "eid" }) });
 
     expect(res.status).toBe(200);
     const text = await res.text();
@@ -250,7 +250,7 @@ describe("/api/calendar/[event_id]/route.ts", () => {
     const { GET: calendarGET } = await import("@/app/api/calendar/[event_id]/route");
     const res = await calendarGET(
       createRequest("http://localhost/api/calendar/eid?googleCalendar=true&dateId=d2"),
-      { params: { event_id: "eid" } }
+      { params: Promise.resolve({ event_id: "eid" }) }
     );
 
     expect(res.status).toBe(307);

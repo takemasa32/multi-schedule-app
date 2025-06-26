@@ -1,23 +1,26 @@
-import { renderHook, act } from '@testing-library/react';
-import useScrollToError from '../useScrollToError';
+import { renderHook, act } from "@testing-library/react";
+import useScrollToError from "../useScrollToError";
 
-describe('useScrollToError', () => {
-  it('errorが設定されたときにscrollIntoViewが呼ばれる', () => {
-    const element = document.createElement('div');
+describe("useScrollToError", () => {
+  it("errorが設定されたときにscrollIntoViewが呼ばれる", () => {
+    const element = document.createElement("div");
     const spy = jest.fn();
     element.scrollIntoView = spy;
     const ref = { current: element } as React.RefObject<HTMLDivElement>;
-    const { rerender } = renderHook(({ error }) => useScrollToError(error, ref), {
-      initialProps: { error: null },
-    });
+    const { rerender } = renderHook(
+      ({ error }: { error: string | null }) => useScrollToError(error, ref),
+      {
+        initialProps: { error: null as string | null },
+      }
+    );
     act(() => {
-      rerender({ error: 'エラー' });
+      rerender({ error: "エラー" as string | null });
     });
-    expect(spy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    expect(spy).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
   });
 
-  it('errorがnullの場合はscrollIntoViewを呼ばない', () => {
-    const element = document.createElement('div');
+  it("errorがnullの場合はscrollIntoViewを呼ばない", () => {
+    const element = document.createElement("div");
     const spy = jest.fn();
     element.scrollIntoView = spy;
     const ref = { current: element } as React.RefObject<HTMLDivElement>;
@@ -25,12 +28,12 @@ describe('useScrollToError', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('ref.currentがnullの場合はscrollIntoViewを呼ばない', () => {
+  it("ref.currentがnullの場合はscrollIntoViewを呼ばない", () => {
     const original = Element.prototype.scrollIntoView;
     const spy = jest.fn();
     Element.prototype.scrollIntoView = spy;
-    const ref = { current: null } as React.RefObject<HTMLDivElement>;
-    renderHook(() => useScrollToError('エラー', ref));
+    const ref = { current: null } as React.RefObject<HTMLDivElement | null>;
+    renderHook(() => useScrollToError("エラー", ref));
     expect(spy).not.toHaveBeenCalled();
     Element.prototype.scrollIntoView = original;
   });
