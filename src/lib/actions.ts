@@ -1,6 +1,7 @@
 'use server';
 import { createSupabaseAdmin, createSupabaseClient } from './supabase';
 import { EventFetchError, EventNotFoundError } from './errors';
+import { fetchAllPaginatedWithOrder } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 
@@ -225,17 +226,19 @@ export async function getEvent(publicToken: string) {
 export async function getParticipants(eventId: string) {
   const supabase = createSupabaseAdmin();
 
-  const { data, error } = await supabase
-    .from('participants')
-    .select('*')
-    .eq('event_id', eventId);
+  try {
+    const query = supabase
+      .from('participants')
+      .select('*')
+      .eq('event_id', eventId);
 
-  if (error) {
+    return await fetchAllPaginatedWithOrder(query, 'created_at', {
+      ascending: true,
+    });
+  } catch (error) {
     console.error('参加者一覧取得エラー:', error);
     return [];
   }
-
-  return data || [];
 }
 
 /**
@@ -244,17 +247,19 @@ export async function getParticipants(eventId: string) {
 export async function getAvailabilities(eventId: string) {
   const supabase = createSupabaseAdmin();
 
-  const { data, error } = await supabase
-    .from('availabilities')
-    .select('*')
-    .eq('event_id', eventId);
+  try {
+    const query = supabase
+      .from('availabilities')
+      .select('*')
+      .eq('event_id', eventId);
 
-  if (error) {
+    return await fetchAllPaginatedWithOrder(query, 'created_at', {
+      ascending: true,
+    });
+  } catch (error) {
     console.error('回答データ取得エラー:', error);
     return [];
   }
-
-  return data || [];
 }
 
 /**
