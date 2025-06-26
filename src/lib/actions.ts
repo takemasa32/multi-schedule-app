@@ -1,7 +1,8 @@
 'use server';
 import { createSupabaseAdmin, createSupabaseClient } from './supabase';
 import { EventFetchError, EventNotFoundError } from './errors';
-import { fetchAllPaginatedWithOrder } from './utils';
+import { fetchAllPaginatedWithOrder, SupabaseQueryInterface } from './utils';
+import type { Database } from './database.types';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 
@@ -223,7 +224,9 @@ export async function getEvent(publicToken: string) {
 /**
  * イベントIDに基づいて参加者一覧を取得する
  */
-export async function getParticipants(eventId: string) {
+export async function getParticipants(
+  eventId: string
+): Promise<Database['public']['Tables']['participants']['Row'][]> {
   const supabase = createSupabaseAdmin();
 
   try {
@@ -232,7 +235,9 @@ export async function getParticipants(eventId: string) {
       .select('*')
       .eq('event_id', eventId);
 
-    return await fetchAllPaginatedWithOrder(query, 'created_at', {
+    return await fetchAllPaginatedWithOrder<
+      Database['public']['Tables']['participants']['Row']
+    >(query as unknown as SupabaseQueryInterface, 'created_at', {
       ascending: true,
     });
   } catch (error) {
@@ -244,7 +249,9 @@ export async function getParticipants(eventId: string) {
 /**
  * イベントの全回答データを取得する
  */
-export async function getAvailabilities(eventId: string) {
+export async function getAvailabilities(
+  eventId: string
+): Promise<Database['public']['Tables']['availabilities']['Row'][]> {
   const supabase = createSupabaseAdmin();
 
   try {
@@ -253,7 +260,9 @@ export async function getAvailabilities(eventId: string) {
       .select('*')
       .eq('event_id', eventId);
 
-    return await fetchAllPaginatedWithOrder(query, 'created_at', {
+    return await fetchAllPaginatedWithOrder<
+      Database['public']['Tables']['availabilities']['Row']
+    >(query as unknown as SupabaseQueryInterface, 'created_at', {
       ascending: true,
     });
   } catch (error) {
