@@ -192,7 +192,12 @@ export default function EventFormClient() {
         {inputMode === "auto" ? (
           <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
         ) : (
-          <ManualTimeSlotPicker onTimeSlotsChange={handleTimeSlotsChange} />
+          <>
+            <p className="text-sm text-gray-500 mb-2">
+              表のマスをクリックして候補枠を選択します。ドラッグ操作も可能です
+            </p>
+            <ManualTimeSlotPicker onTimeSlotsChange={handleTimeSlotsChange} />
+          </>
         )}
         <p className="text-xs text-gray-500 mt-2">
           日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import DateRangePicker from "./date-range-picker";
 import { TimeSlot } from "@/lib/utils";
@@ -21,6 +21,8 @@ export default function ManualTimeSlotPicker({
 }: ManualTimeSlotPickerProps) {
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   const [selectedMap, setSelectedMap] = useState<Record<string, boolean>>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragState, setDragState] = useState<boolean | null>(null);
 
   /**
    * TimeSlot から一意なキー文字列を生成する
@@ -45,9 +47,37 @@ export default function ManualTimeSlotPicker({
   /**
    * マスの ON/OFF をトグルする
    */
-  const toggleSlot = (key: string) => {
-    setSelectedMap((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleSlot = (key: string, value?: boolean) => {
+    setSelectedMap((prev) => ({
+      ...prev,
+      [key]: value !== undefined ? value : !prev[key],
+    }));
   };
+
+  const handlePointerDown = (key: string) => {
+    const newState = !selectedMap[key];
+    toggleSlot(key, newState);
+    setIsDragging(true);
+    setDragState(newState);
+  };
+
+  const handlePointerEnter = (key: string) => {
+    if (isDragging && dragState !== null) {
+      toggleSlot(key, dragState);
+    }
+  };
+
+  const endDrag = useCallback(() => {
+    setIsDragging(false);
+    setDragState(null);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("pointerup", endDrag);
+      return () => window.removeEventListener("pointerup", endDrag);
+    }
+  }, [isDragging, endDrag]);
 
   useEffect(() => {
     const selected = allSlots.filter((slot) => selectedMap[slotKey(slot)]);
@@ -64,6 +94,11 @@ export default function ManualTimeSlotPicker({
   return (
     <div className="space-y-4">
       <DateRangePicker onTimeSlotsChange={handleSlotsGenerate} />
+      {allSlots.length > 0 && (
+        <p className="text-sm text-gray-500">
+          表のマスをクリックまたはドラッグして候補枠を選択してください
+        </p>
+      )}
       {allSlots.length > 0 && (
         <div className="overflow-x-auto">
           <table className="table table-sm border border-base-300">
@@ -86,14 +121,17 @@ export default function ManualTimeSlotPicker({
                     if (!(key in selectedMap)) return <td key={key}></td>;
                     const active = selectedMap[key];
                     return (
-                      <td key={key} className="text-center">
-                        <button
-                          type="button"
-                          className={`btn btn-xs ${active ? "btn-primary" : "btn-ghost"}`}
-                          onClick={() => toggleSlot(key)}
+                      <td key={key} className="p-0 text-center border border-base-300">
+                        <div
+                          data-testid="slot-cell"
+                          className={`w-full h-6 md:h-8 flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${active ? "bg-primary text-primary-content" : "bg-base-200 hover:bg-base-300"}`}
+                          onPointerDown={() => handlePointerDown(key)}
+                          onPointerEnter={() => handlePointerEnter(key)}
+                          role="button"
+                          aria-label={active ? "選択済み" : "未選択"}
                         >
                           {active ? "✓" : ""}
-                        </button>
+                        </div>
                       </td>
                     );
                   })}
