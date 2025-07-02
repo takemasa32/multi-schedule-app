@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useRef, useState, useTransition } from "react";
+import React, { useRef, useState, useTransition, useEffect } from "react";
 import { format } from "date-fns";
 import { createEvent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import DateRangePicker from "./date-range-picker";
+import ManualTimeSlotPicker from "./manual-time-slot-picker";
 import { TimeSlot, addEventToHistory } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 import useScrollToError from "@/hooks/useScrollToError";
@@ -13,11 +14,22 @@ export default function EventFormClient() {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  /**
+   * 候補日程の入力方式
+   * - "auto": 範囲から自動生成
+   * - "manual": マスを直接選択
+   */
+  const [inputMode, setInputMode] = useState<"auto" | "manual">("auto");
   const [error, setError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // 入力方式を切り替えたら選択済みのマスをリセット
+  useEffect(() => {
+    setTimeSlots([]);
+  }, [inputMode]);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -155,7 +167,33 @@ export default function EventFormClient() {
 
       <div className="card bg-base-100 shadow-sm border border-base-300 p-4">
         <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
-        <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
+        <div className="tabs tabs-boxed mb-4 bg-base-300 p-1 rounded-lg">
+          <a
+            className={`tab transition-all ${
+              inputMode === "auto"
+                ? "tab-active bg-primary text-primary-content font-medium"
+                : "text-base-content"
+            }`}
+            onClick={() => setInputMode("auto")}
+          >
+            範囲から自動生成
+          </a>
+          <a
+            className={`tab transition-all ${
+              inputMode === "manual"
+                ? "tab-active bg-primary text-primary-content font-medium"
+                : "text-base-content"
+            }`}
+            onClick={() => setInputMode("manual")}
+          >
+            マスを直接選択
+          </a>
+        </div>
+        {inputMode === "auto" ? (
+          <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
+        ) : (
+          <ManualTimeSlotPicker onTimeSlotsChange={handleTimeSlotsChange} />
+        )}
         <p className="text-xs text-gray-500 mt-2">
           日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
         </p>
