@@ -14,6 +14,8 @@ export default function EventFormClient() {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [autoSlots, setAutoSlots] = useState<TimeSlot[]>([]);
+  const [manualSlots, setManualSlots] = useState<TimeSlot[]>([]);
   /**
    * 候補日程の入力方式
    * - "auto": 範囲から自動生成
@@ -26,10 +28,10 @@ export default function EventFormClient() {
   const [isPending, startTransition] = useTransition();
   const errorRef = useRef<HTMLDivElement | null>(null);
 
-  // 入力方式を切り替えたら選択済みのマスをリセット
+  // 入力方式変更時に表示するスロットを更新
   useEffect(() => {
-    setTimeSlots([]);
-  }, [inputMode]);
+    setTimeSlots(inputMode === "auto" ? autoSlots : manualSlots);
+  }, [inputMode, autoSlots, manualSlots]);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -101,6 +103,11 @@ export default function EventFormClient() {
   };
 
   const handleTimeSlotsChange = (newSlots: TimeSlot[]) => {
+    if (inputMode === "auto") {
+      setAutoSlots(newSlots);
+    } else {
+      setManualSlots(newSlots);
+    }
     setTimeSlots(newSlots);
   };
 
@@ -194,9 +201,13 @@ export default function EventFormClient() {
         ) : (
           <>
             <p className="text-sm text-gray-500 mb-2">
-              表のマスをクリックして候補枠を選択します。ドラッグ操作も可能です
+              開始日を基準に表を生成し、必要なマスだけをクリックまたはドラッグして選択します。
+              自動生成モードと異なり、任意の枠だけを候補日程として登録できます。
             </p>
-            <ManualTimeSlotPicker onTimeSlotsChange={handleTimeSlotsChange} />
+            <ManualTimeSlotPicker
+              onTimeSlotsChange={handleTimeSlotsChange}
+              initialSlots={manualSlots}
+            />
           </>
         )}
         <p className="text-xs text-gray-500 mt-2">

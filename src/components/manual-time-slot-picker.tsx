@@ -11,6 +11,8 @@ import { TimeSlot } from "@/lib/utils";
 interface ManualTimeSlotPickerProps {
   /** 選択中のマス一覧を親コンポーネントへ通知する */
   onTimeSlotsChange: (slots: TimeSlot[]) => void;
+  /** 初期選択済みマス */
+  initialSlots?: TimeSlot[];
 }
 
 /**
@@ -18,6 +20,7 @@ interface ManualTimeSlotPickerProps {
  */
 export default function ManualTimeSlotPicker({
   onTimeSlotsChange,
+  initialSlots = [],
 }: ManualTimeSlotPickerProps) {
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   const [selectedMap, setSelectedMap] = useState<Record<string, boolean>>({});
@@ -37,12 +40,16 @@ export default function ManualTimeSlotPicker({
    */
   const handleSlotsGenerate = (slots: TimeSlot[]) => {
     setAllSlots(slots);
+  };
+
+  useEffect(() => {
+    const selectedKeys = new Set(initialSlots.map(slotKey));
     const map: Record<string, boolean> = {};
-    slots.forEach((s) => {
-      map[slotKey(s)] = false;
+    allSlots.forEach((s) => {
+      map[slotKey(s)] = selectedKeys.has(slotKey(s));
     });
     setSelectedMap(map);
-  };
+  }, [allSlots, initialSlots]);
 
   /**
    * マスの ON/OFF をトグルする
@@ -124,13 +131,17 @@ export default function ManualTimeSlotPicker({
                       <td key={key} className="p-0 text-center border border-base-300">
                         <div
                           data-testid="slot-cell"
-                          className={`w-full h-6 md:h-8 flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${active ? "bg-primary text-primary-content" : "bg-base-200 hover:bg-base-300"}`}
+                          className={`w-full h-7 flex items-center justify-center cursor-pointer ${active ? "bg-success text-success-content" : "bg-base-200"}`}
                           onPointerDown={() => handlePointerDown(key)}
                           onPointerEnter={() => handlePointerEnter(key)}
                           role="button"
                           aria-label={active ? "選択済み" : "未選択"}
                         >
-                          {active ? "✓" : ""}
+                          {active ? (
+                            <span className="text-lg font-bold select-none">○</span>
+                          ) : (
+                            <span className="text-lg font-bold opacity-70 select-none">×</span>
+                          )}
                         </div>
                       </td>
                     );
