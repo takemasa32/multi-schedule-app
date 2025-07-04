@@ -9,6 +9,8 @@ interface ShareEventButtonProps {
   className?: string;
   label?: string;
   ariaLabel?: string;
+  /** クリップボード使用時にテキストも含めるかどうか（デフォルト: false、URLのみ） */
+  includeTextInClipboard?: boolean;
 }
 
 export default function ShareEventButton({
@@ -18,6 +20,7 @@ export default function ShareEventButton({
   className = "",
   label = "イベントを共有",
   ariaLabel = "イベントURLを共有",
+  includeTextInClipboard = false,
 }: ShareEventButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
 
@@ -33,12 +36,17 @@ export default function ShareEventButton({
         });
         toast.success("リンクを共有しました");
       } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
+        // クリップボードAPI使用時、設定に応じてテキストを含める
+        const clipboardText =
+          includeTextInClipboard && text ? `${text}\n${url}` : url;
+        await navigator.clipboard.writeText(clipboardText);
         toast.success("URLをコピーしました");
       } else {
         // fallback: input要素で選択コピー
+        const clipboardText =
+          includeTextInClipboard && text ? `${text}\n${url}` : url;
         const input = document.createElement("input");
-        input.value = url;
+        input.value = clipboardText;
         document.body.appendChild(input);
         input.select();
         document.execCommand("copy");
