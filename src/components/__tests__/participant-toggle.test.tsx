@@ -505,8 +505,17 @@ describe("参加者トグル機能", () => {
       />
     );
 
+    const getParticipantButtons = () =>
+      screen
+        .getAllByRole("button")
+        .filter((btn) =>
+          ["田中太郎", "佐藤花子", "鈴木次郎", "新規参加者"].some((name) =>
+            btn.textContent?.includes(name)
+          )
+        );
+
     // 初期状態では3人の参加者
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+    expect(getParticipantButtons()).toHaveLength(3);
 
     // 新しい参加者を追加
     const newParticipants = [
@@ -525,7 +534,7 @@ describe("参加者トグル機能", () => {
     );
 
     // 4人の参加者がいることを確認
-    expect(screen.getAllByRole("button")).toHaveLength(4);
+    expect(getParticipantButtons()).toHaveLength(4);
     expect(screen.getByText("新規参加者")).toBeInTheDocument();
 
     // 新しい参加者のバッジも正常に動作する
