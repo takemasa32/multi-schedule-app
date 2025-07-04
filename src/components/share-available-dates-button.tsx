@@ -34,7 +34,7 @@ export default function ShareAvailableDatesButton({
       : "";
 
   return (
-    <div className=" ">
+    <div className="md:flex md:items-end md:justify-center md:gap-4">
       <div className="flex gap-2 items-end ">
         <input
           type="number"
@@ -68,7 +68,7 @@ export default function ShareAvailableDatesButton({
         text={`${eventTitle}\n${shareText}`}
         label="共通日程を共有"
         ariaLabel="共通日程を共有"
-        className="btn-sm mt-2"
+        className="btn-sm mt-2 mx-auto md:ml-0"
       />
     </div>
   );
