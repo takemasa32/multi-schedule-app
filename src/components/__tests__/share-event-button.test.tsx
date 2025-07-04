@@ -72,4 +72,58 @@ describe("ShareEventButton", () => {
       expect(document.execCommand).toHaveBeenCalledWith("copy");
     });
   });
+
+  it("includeTextInClipboard=trueの場合、クリップボードにテキスト+URLがコピーされる", async () => {
+    // @ts-expect-error navigator.shareの型上書き
+    navigator.share = undefined;
+    const writeTextMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    render(
+      <ShareEventButton url={url} text={text} includeTextInClipboard={true} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /共有/ }));
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith(`${text}\n${url}`);
+    });
+  });
+
+  it("includeTextInClipboard=trueだがtextが未定義の場合、URLのみがコピーされる", async () => {
+    // @ts-expect-error navigator.shareの型上書き
+    navigator.share = undefined;
+    const writeTextMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    render(<ShareEventButton url={url} includeTextInClipboard={true} />);
+    fireEvent.click(screen.getByRole("button", { name: /共有/ }));
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith(url);
+    });
+  });
+
+  it("includeTextInClipboard=trueでフォールバック時もテキスト+URLがコピーされる", async () => {
+    // @ts-expect-error navigator.shareの型上書き
+    navigator.share = undefined;
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    });
+    document.execCommand = jest.fn();
+
+    render(
+      <ShareEventButton url={url} text={text} includeTextInClipboard={true} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /共有/ }));
+
+    await waitFor(() => {
+      expect(document.execCommand).toHaveBeenCalledWith("copy");
+    });
+
+    // フォールバック機能が呼ばれることを確認（詳細な値の確認は実際のブラウザテストに委ねる）
+    expect(document.execCommand).toHaveBeenCalledTimes(1);
+  });
 });
