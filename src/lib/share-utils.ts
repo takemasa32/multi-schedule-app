@@ -17,7 +17,7 @@ export type ShareAvailability = {
  * @param dates 候補日程
  * @param availabilities 回答データ
  * @param minCount 最低参加人数
- * @returns メッセージ文字列。該当日程が無い場合は空文字。
+ * @returns メッセージ文字列。該当日程が無い場合は「該当する日程がありません」のメッセージ。
  */
 export function buildAvailableDatesMessage(
   dates: ShareEventDate[],
@@ -48,8 +48,9 @@ export function buildAvailableDatesMessage(
     }
   });
 
-  if (lines.length === 0) return "";
+  if (lines.length === 0) {
+    return `[${minCount}人以上が参加可能な日程]\n該当する日程がありません`;
+  }
 
   return `[${minCount}人以上が参加可能な日程]` + "\n" + lines.join("\n");
 }
-

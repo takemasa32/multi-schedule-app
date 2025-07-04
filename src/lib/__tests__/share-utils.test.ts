@@ -24,7 +24,14 @@ describe('buildAvailableDatesMessage', () => {
     );
   });
 
-  it('該当なしの場合は空文字', () => {
-    expect(buildAvailableDatesMessage(dates, availabilities, 3)).toBe('');
+  it('該当なしの場合は該当なしメッセージを返す', () => {
+    expect(buildAvailableDatesMessage(dates, availabilities, 3)).toBe(
+      '[3人以上が参加可能な日程]\n該当する日程がありません'
+    );
+  });
+
+  it('minCountが0以下の場合は空文字を返す', () => {
+    expect(buildAvailableDatesMessage(dates, availabilities, 0)).toBe('');
+    expect(buildAvailableDatesMessage(dates, availabilities, -1)).toBe('');
   });
 });
