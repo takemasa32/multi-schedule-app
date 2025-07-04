@@ -2,7 +2,11 @@
 import { useMemo, useState } from "react";
 import ShareEventButton from "./share-event-button";
 import { buildAvailableDatesMessage } from "@/lib/share-utils";
-import type { EventDate, Participant, Availability } from "@/components/event-client/event-details-section";
+import type {
+  EventDate,
+  Participant,
+  Availability,
+} from "@/components/event-client/event-details-section";
 
 interface Props {
   eventTitle: string;
@@ -30,26 +34,32 @@ export default function ShareAvailableDatesButton({
       : "";
 
   return (
-    <div className="flex items-end gap-2">
-      <div>
-        <label className="label">
-          <span className="label-text text-sm">最低人数</span>
-        </label>
+    <div className=" ">
+      <div className="flex gap-2 items-end ">
         <input
           type="number"
-          className="input input-sm input-bordered w-20"
+          className="input input-sm input-bordered w-10"
           min={1}
           max={participants.length}
           value={minCount}
-          onChange={(e) => setMinCount(Number(e.target.value))}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            const validValue = isNaN(value)
+              ? 1
+              : Math.max(1, Math.min(value, participants.length));
+            setMinCount(validValue);
+          }}
         />
+        <label className="label">
+          <span className="label-text text-sm">人以上の予定を共有</span>
+        </label>
       </div>
       <ShareEventButton
         url={shareUrl}
         text={`${eventTitle}\n${shareText}`}
-        label="空き日程を共有"
-        ariaLabel="空き日程を共有"
-        className="btn-sm"
+        label="共通日程を共有"
+        ariaLabel="共通日程を共有"
+        className="btn-sm mt-2"
       />
     </div>
   );
