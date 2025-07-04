@@ -55,6 +55,8 @@ export default function ShareAvailableDatesButton({
                 ? participants.length
                 : value;
             setMinCount(validValue);
+            // 入力フィールドの値も更新して先頭の0を除去
+            e.target.value = validValue.toString();
           }}
         />
         <label className="label">
