@@ -44,9 +44,16 @@ export default function ShareAvailableDatesButton({
           value={minCount}
           onChange={(e) => {
             const value = Number(e.target.value);
-            const validValue = isNaN(value)
-              ? 1
-              : Math.max(1, Math.min(value, participants.length));
+            setMinCount(value);
+          }}
+          onBlur={(e) => {
+            const value = Number(e.target.value);
+            const validValue =
+              isNaN(value) || value < 1
+                ? 1
+                : value > participants.length
+                ? participants.length
+                : value;
             setMinCount(validValue);
           }}
         />
