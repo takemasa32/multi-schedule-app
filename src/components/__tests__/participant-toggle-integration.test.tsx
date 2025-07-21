@@ -135,7 +135,7 @@ describe("参加者トグル機能の統合テスト", () => {
     );
 
     // リスト表示に切り替え
-    fireEvent.click(screen.getByText("リスト表示"));
+    fireEvent.click(screen.getByText("リスト"));
 
     // 初期状態の確認（全4人の回答が反映されている）
     // date1: 3人参加可能、1人参加不可
@@ -166,7 +166,7 @@ describe("参加者トグル機能の統合テスト", () => {
     );
 
     // 個別表示に切り替え
-    fireEvent.click(screen.getByText("個別表示"));
+    fireEvent.click(screen.getByText("個別"));
 
     // 初期状態では全員表示されている（テーブル内で確認）
     const table = screen.getByRole("table");
@@ -256,8 +256,10 @@ describe("参加者トグル機能の統合テスト", () => {
       expect(button).toHaveClass("badge-outline", "border-error");
     });
 
-    // 「表示中の参加者はいません」メッセージが表示される
-    expect(screen.getByText("表示中の参加者はいません")).toBeInTheDocument();
+    // 特殊なメッセージは表示されないことを確認
+    expect(
+      screen.queryByText("表示中の参加者はいません")
+    ).not.toBeInTheDocument();
   });
 
   test("参加者名バッジのアクセシビリティ属性が正しく動作する", () => {
@@ -303,18 +305,18 @@ describe("参加者トグル機能の統合テスト", () => {
     const taroButton = screen.getByText("田中太郎").closest("button");
     fireEvent.click(taroButton!);
 
-    // ヒートマップ表示
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    // ヒートマップ
+    fireEvent.click(screen.getByText("ヒートマップ"));
     expect(
       screen.getByText("色が濃いほど参加可能な人が多い時間帯です")
     ).toBeInTheDocument();
 
     // リスト表示
-    fireEvent.click(screen.getByText("リスト表示"));
+    fireEvent.click(screen.getByText("リスト"));
     expect(screen.getByText("参加可能 / 不可")).toBeInTheDocument();
 
     // 個別表示
-    fireEvent.click(screen.getByText("個別表示"));
+    fireEvent.click(screen.getByText("個別"));
     expect(screen.getByText("参加者")).toBeInTheDocument();
 
     // どの表示モードでも田中太郎は除外されたまま
@@ -333,7 +335,7 @@ describe("参加者トグル機能の統合テスト", () => {
     );
 
     // リスト表示に切り替え
-    fireEvent.click(screen.getByText("リスト表示"));
+    fireEvent.click(screen.getByText("リスト"));
 
     // 初期状態の集計を確認（data-testidを使用）
     // date1: 田中○、佐藤○、鈴木×、高橋○ => ○3名/×1名
@@ -379,7 +381,7 @@ describe("参加者トグル機能の統合テスト", () => {
     );
 
     // 個別表示に切り替え
-    fireEvent.click(screen.getByText("個別表示"));
+    fireEvent.click(screen.getByText("個別"));
 
     // 初期状態では全参加者がテーブル内に表示される
     const table = screen.getByRole("table");
@@ -406,7 +408,7 @@ describe("参加者トグル機能の統合テスト", () => {
     expect(tableAfterExclusion).toHaveTextContent("高橋美咲");
   });
 
-  test("ヒートマップ表示での参加者除外効果をテスト", () => {
+  test("ヒートマップでの参加者除外効果をテスト", () => {
     render(
       <EventDetailsSection
         event={mockEvent}
@@ -417,8 +419,8 @@ describe("参加者トグル機能の統合テスト", () => {
       />
     );
 
-    // ヒートマップ表示に切り替え
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    // ヒートマップに切り替え
+    fireEvent.click(screen.getByText("ヒートマップ"));
 
     // 鈴木次郎を除外
     const jiroButton = screen.getByText("鈴木次郎").closest("button");
@@ -458,10 +460,10 @@ describe("参加者トグル機能の統合テスト", () => {
     expect(misakiButton).toHaveClass("badge-outline", "border-error");
 
     // 表示モードを切り替え（リスト → ヒートマップ → 個別 → リスト）
-    fireEvent.click(screen.getByText("リスト表示"));
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
-    fireEvent.click(screen.getByText("個別表示"));
-    fireEvent.click(screen.getByText("リスト表示"));
+    fireEvent.click(screen.getByText("リスト"));
+    fireEvent.click(screen.getByText("ヒートマップ"));
+    fireEvent.click(screen.getByText("個別"));
+    fireEvent.click(screen.getByText("リスト"));
 
     // 除外状態が維持されている
     expect(taroButton).toHaveClass("badge-outline", "border-error");
@@ -474,7 +476,7 @@ describe("参加者トグル機能の統合テスト", () => {
     expect(jiroButton).toHaveClass("badge-primary");
   });
 
-  test("全員除外時の特別なメッセージ表示をテスト", () => {
+  test("全員除外時は全てのマスが0で表示される", () => {
     render(
       <EventDetailsSection
         event={mockEvent}
@@ -493,16 +495,5 @@ describe("参加者トグル機能の統合テスト", () => {
       });
       fireEvent.click(button);
     });
-
-    // 「表示中の参加者はいません」メッセージが表示される
-    expect(screen.getByText("表示中の参加者はいません")).toBeInTheDocument();
-
-    // ヒートマップ表示でも同様
-    // fireEvent.click(screen.getByText("ヒートマップ表示"));
-    // expect(screen.getByText("表示中の参加者はいません")).toBeInTheDocument();
-
-    // 個別表示でも同様
-    // fireEvent.click(screen.getByText("個別表示"));
-    // expect(screen.getByText("表示中の参加者はいません")).toBeInTheDocument();
   });
 });

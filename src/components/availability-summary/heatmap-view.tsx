@@ -157,7 +157,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         top: 0, // 上辺を基準にする
                         left: "0.5rem",
                         transform: "translateY(-50%)", // 高さの半分だけ上に移動
-                        backgroundColor: "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
+                        backgroundColor:
+                          "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
                         padding: "0 0.25rem",
                       }}
                     >
@@ -244,7 +245,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
             {/* 最下部の終了時間を表示するための行 */}
             {uniqueTimeSlots.length > 0 &&
               (() => {
-                const lastTimeSlot = uniqueTimeSlots[uniqueTimeSlots.length - 1];
+                const lastTimeSlot =
+                  uniqueTimeSlots[uniqueTimeSlots.length - 1];
                 let formattedEndTime = lastTimeSlot.endTime.replace(/^0/, "");
                 if (lastTimeSlot.endTime === "00:00") {
                   formattedEndTime = "24:00";

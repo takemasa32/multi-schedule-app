@@ -41,6 +41,7 @@ type AvailabilitySummaryProps = {
   ) => void;
   publicToken?: string;
   excludedParticipantIds?: string[];
+  minColoredCount?: number; // ヒートマップの色付けに必要な最小人数
 };
 
 // type ViewMode = "list" | "heatmap" | "detailed";

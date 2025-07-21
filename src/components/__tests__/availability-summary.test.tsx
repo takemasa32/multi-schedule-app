@@ -45,10 +45,10 @@ describe("AvailabilitySummary", () => {
     availabilities,
   };
 
-  it("日程ごとの○人数/×人数が正しく表示される（リスト表示）", () => {
+  it("日程ごとの○人数/×人数が正しく表示される（リスト）", () => {
     render(<AvailabilitySummary {...defaultProps} />);
-    // リスト表示タブをクリック
-    fireEvent.click(screen.getByText("リスト表示"));
+    // リストタブをクリック
+    fireEvent.click(screen.getByText("リスト"));
     // 日付の表示
     expect(
       screen.queryAllByText((content) =>
@@ -84,10 +84,10 @@ describe("AvailabilitySummary", () => {
     );
   });
 
-  it("参加者ごとの回答マトリクスが正しく描画される（個別表示）", () => {
+  it("参加者ごとの回答マトリクスが正しく描画される（個別）", () => {
     render(<AvailabilitySummary {...defaultProps} />);
-    // 個別表示タブをクリック
-    fireEvent.click(screen.getByText("個別表示"));
+    // 個別タブをクリック
+    fireEvent.click(screen.getByText("個別"));
     // 参加者名
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -97,10 +97,10 @@ describe("AvailabilitySummary", () => {
     expect(screen.getAllByText("×").length).toBeGreaterThan(0);
   });
 
-  it("ヒートマップ表示でセルが正しく描画される", () => {
+  it("ヒートマップでセルが正しく描画される", () => {
     render(<AvailabilitySummary {...defaultProps} />);
-    // ヒートマップ表示タブをクリック
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    // ヒートマップタブをクリック
+    fireEvent.click(screen.getByText("ヒートマップ"));
     // セルの○人数がどこかに表示されていること
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
     // 不可人数は括弧付き(1)で表示されるのでそれで検証
@@ -115,7 +115,10 @@ describe("AvailabilitySummary", () => {
         availabilities={[]}
       />
     );
-    expect(screen.getByText(/表示中の参加者はいません/)).toBeInTheDocument();
+    // 全員が除外された場合は何も表示されない（メッセージも表示されない）
+    expect(
+      screen.queryByText(/表示中の参加者はいません/)
+    ).not.toBeInTheDocument();
   });
 
   it("タブ切り替えで各ビューが切り替わる", () => {
@@ -124,14 +127,14 @@ describe("AvailabilitySummary", () => {
     expect(
       screen.getByText("色が濃いほど参加可能な人が多い時間帯です")
     ).toBeInTheDocument();
-    // 個別表示
-    fireEvent.click(screen.getByText("個別表示"));
+    // 個別
+    fireEvent.click(screen.getByText("個別"));
     expect(screen.getByText("参加者")).toBeInTheDocument();
-    // リスト表示
-    fireEvent.click(screen.getByText("リスト表示"));
+    // リスト
+    fireEvent.click(screen.getByText("リスト"));
     expect(screen.getByText("参加可能 / 不可")).toBeInTheDocument();
-    // ヒートマップ表示
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    // ヒートマップ
+    fireEvent.click(screen.getByText("ヒートマップ"));
     expect(
       screen.getByText("色が濃いほど参加可能な人が多い時間帯です")
     ).toBeInTheDocument();
@@ -141,11 +144,14 @@ describe("AvailabilitySummary", () => {
     it("指定された参加者が除外される", () => {
       // Alice（p1）を除外する
       render(
-        <AvailabilitySummary {...defaultProps} excludedParticipantIds={["p1"]} />
+        <AvailabilitySummary
+          {...defaultProps}
+          excludedParticipantIds={["p1"]}
+        />
       );
 
-      // 個別表示に切り替えて参加者リストを確認
-      fireEvent.click(screen.getByText("個別表示"));
+      // 個別に切り替えて参加者リストを確認
+      fireEvent.click(screen.getByText("個別"));
 
       // Aliceが表示されていない
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
@@ -163,8 +169,8 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      // 個別表示に切り替えて参加者リストを確認
-      fireEvent.click(screen.getByText("個別表示"));
+      // 個別に切り替えて参加者リストを確認
+      fireEvent.click(screen.getByText("個別"));
 
       // Alice、Bobが表示されていない
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
@@ -183,8 +189,13 @@ describe("AvailabilitySummary", () => {
       />
     );
 
-    // 「表示中の参加者はいません」メッセージが表示される
-    expect(screen.getByText("表示中の参加者はいません")).toBeInTheDocument();
+    // 全員が除外された場合は何も表示されない（メッセージも表示されない）
+    expect(
+      screen.queryByText("表示中の参加者はいません")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+    expect(screen.queryByText("Charlie")).not.toBeInTheDocument();
   });
 
   it("除外された参加者の回答が集計に反映されない", () => {
@@ -198,8 +209,8 @@ describe("AvailabilitySummary", () => {
       />
     );
 
-    // リスト表示に切り替れて集計を確認
-    fireEvent.click(screen.getByText("リスト表示"));
+    // リストに切り替れて集計を確認
+    fireEvent.click(screen.getByText("リスト"));
 
     // date1（午前枠）の集計結果を確認
     // Alice除外後は1人参加可能、1人参加不可になる
@@ -215,8 +226,8 @@ describe("AvailabilitySummary", () => {
       <AvailabilitySummary {...defaultProps} excludedParticipantIds={[]} />
     );
 
-    // 個別表示に切り替えて全員が表示されることを確認
-    fireEvent.click(screen.getByText("個別表示"));
+    // 個別に切り替えて全員が表示されることを確認
+    fireEvent.click(screen.getByText("個別"));
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -231,8 +242,8 @@ describe("AvailabilitySummary", () => {
       />
     );
 
-    // 個別表示に切り替えて全員が表示されることを確認
-    fireEvent.click(screen.getByText("個別表示"));
+    // 個別に切り替えて全員が表示されることを確認
+    fireEvent.click(screen.getByText("個別"));
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -249,7 +260,7 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("リスト表示"));
+      fireEvent.click(screen.getByText("リスト"));
 
       // date1: Alice(○)除外 → Bob(×), Charlie(○) = ○1名/×1名
       expect(screen.getByTestId("available-count-date1")).toHaveTextContent(
@@ -276,7 +287,7 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("リスト表示"));
+      fireEvent.click(screen.getByText("リスト"));
 
       // date1: Charlieのみ(○) = ○1名/×0名
       expect(screen.getByTestId("available-count-date1")).toHaveTextContent(
@@ -295,7 +306,7 @@ describe("AvailabilitySummary", () => {
       );
     });
 
-    it("全参加者を除外した場合、「表示中の参加者はいません」が表示される", () => {
+    it("全参加者を除外した場合、何も表示されない", () => {
       render(
         <AvailabilitySummary
           {...defaultProps}
@@ -303,7 +314,14 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      expect(screen.getByText("表示中の参加者はいません")).toBeInTheDocument();
+      // 「表示中の参加者はいません」などのメッセージが表示されないことを確認
+      expect(
+        screen.queryByText("表示中の参加者はいません")
+      ).not.toBeInTheDocument();
+      // 参加者名も表示されない
+      expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+      expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+      expect(screen.queryByText("Charlie")).not.toBeInTheDocument();
     });
 
     it("excludedParticipantIdsが空配列の場合、全参加者が表示される", () => {
@@ -314,7 +332,7 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("リスト表示"));
+      fireEvent.click(screen.getByText("リスト"));
 
       // date1: Alice(○), Bob(×), Charlie(○) = ○2名/×1名
       expect(screen.getByTestId("available-count-date1")).toHaveTextContent(
@@ -341,7 +359,7 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("リスト表示"));
+      fireEvent.click(screen.getByText("リスト"));
 
       // Aliceのみ除外され、存在しないIDは無視される
       // date1: Bob(×), Charlie(○) = ○1名/×1名
@@ -361,7 +379,7 @@ describe("AvailabilitySummary", () => {
       );
     });
 
-    it("個別表示タブでも除外された参加者は表示されない", () => {
+    it("個別タブでも除外された参加者は表示されない", () => {
       render(
         <AvailabilitySummary
           {...defaultProps}
@@ -369,7 +387,7 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("個別表示"));
+      fireEvent.click(screen.getByText("個別"));
 
       // Aliceは表示されない
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
@@ -379,7 +397,7 @@ describe("AvailabilitySummary", () => {
       expect(screen.getByText("Charlie")).toBeInTheDocument();
     });
 
-    it("ヒートマップ表示でも除外された参加者の集計が反映されない", () => {
+    it("ヒートマップでも除外された参加者の集計が反映されない", () => {
       render(
         <AvailabilitySummary
           {...defaultProps}
@@ -387,9 +405,9 @@ describe("AvailabilitySummary", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("ヒートマップ表示"));
+      fireEvent.click(screen.getByText("ヒートマップ"));
 
-      // ヒートマップ表示では参加者名は表示されず、集計数値が変化する
+      // ヒートマップでは参加者名は表示されず、集計数値が変化する
       // Bobを除外した場合の集計結果を確認
       // date1: Alice(○), Charlie(○) = 2名 (Bobの×を除外)
       // date2: Alice(×), Charlie(○) = 1名 (Bobの○を除外)
