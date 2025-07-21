@@ -34,6 +34,10 @@ interface HeatmapViewProps {
     dateId: string
   ) => void;
   isDragging?: boolean;
+  /** カラー表示する最小参加人数 */
+  minColoredCount: number;
+  /** スライダー変更時のハンドラ */
+  onMinColoredCountChange?: (count: number) => void;
 }
 
 /**
@@ -48,6 +52,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   onPointerTooltipEnd,
   onPointerTooltipClick,
   isDragging,
+  minColoredCount,
+  onMinColoredCountChange,
 }) => {
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
@@ -103,6 +109,21 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           色が濃いほど参加可能な人が多い時間帯です
         </span>
       </div>
+      {onMinColoredCountChange && (
+        <div className="flex items-center gap-2 mb-2 text-xs sm:text-sm px-1 sm:px-2">
+          <label htmlFor="min-colored" className="whitespace-nowrap">
+            色付け最小人数
+          </label>
+          <input
+            id="min-colored"
+            type="number"
+            min={1}
+            value={minColoredCount}
+            onChange={(e) => onMinColoredCountChange(Number(e.target.value))}
+            className="input input-sm w-16"
+          />
+        </div>
+      )}
       <div
         className="overflow-x-auto"
         ref={tableRef}
@@ -187,6 +208,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       backgroundColor: hasData
                         ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
                         : "transparent",
+                      filter:
+                        availableCount < minColoredCount ? "grayscale(1)" : "none",
                     } as React.CSSProperties;
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
