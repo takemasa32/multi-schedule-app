@@ -565,12 +565,9 @@ export default function AvailabilitySummary({
   // ドラッグ・スクロール判定
   const isDragging = useDragScrollBlocker(10);
 
-  // 参加者がまだいない場合は表示しない
-  if (filteredParticipants.length === 0) {
-    return (
-      <div className="text-sm text-gray-500 p-4">表示中の参加者はいません</div>
-    );
-  }
+
+  // 参加者が1人も表示対象に選ばれていないか
+  const noParticipantsSelected = filteredParticipants.length === 0;
 
   return (
     <div
@@ -616,6 +613,11 @@ export default function AvailabilitySummary({
             リスト表示
           </a>
         </div>
+
+        {/* 表示対象の参加者がいない場合のメッセージ */}
+        {noParticipantsSelected && (
+          <div className="text-sm text-gray-500 mb-4">表示中の参加者はいません</div>
+        )}
 
         {/* リスト表示モード */}
         {viewMode === "list" && (
