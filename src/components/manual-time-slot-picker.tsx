@@ -61,16 +61,34 @@ export default function ManualTimeSlotPicker({
     }));
   };
 
-  const handlePointerDown = (key: string) => {
+  const handleMouseDown = (key: string) => {
     const newState = !selectedMap[key];
     toggleSlot(key, newState);
     setIsDragging(true);
     setDragState(newState);
   };
 
-  const handlePointerEnter = (key: string) => {
+  const handleMouseEnter = (key: string) => {
     if (isDragging && dragState !== null) {
       toggleSlot(key, dragState);
+    }
+  };
+
+  const handleTouchStart = (key: string) => {
+    const newState = !selectedMap[key];
+    toggleSlot(key, newState);
+    setIsDragging(true);
+    setDragState(newState);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging && dragState !== null) {
+      const touch = e.touches[0];
+      const element = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cell = element?.closest<HTMLDivElement>("[data-key]");
+      if (cell) {
+        toggleSlot(cell.dataset.key as string, dragState);
+      }
     }
   };
 
@@ -81,8 +99,12 @@ export default function ManualTimeSlotPicker({
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener("pointerup", endDrag);
-      return () => window.removeEventListener("pointerup", endDrag);
+      window.addEventListener("mouseup", endDrag);
+      window.addEventListener("touchend", endDrag);
+      return () => {
+        window.removeEventListener("mouseup", endDrag);
+        window.removeEventListener("touchend", endDrag);
+      };
     }
   }, [isDragging, endDrag]);
 
@@ -131,9 +153,18 @@ export default function ManualTimeSlotPicker({
                       <td key={key} className="p-0 text-center border border-base-300">
                         <div
                           data-testid="slot-cell"
+                          data-key={key}
                           className={`w-full h-7 flex items-center justify-center cursor-pointer ${active ? "bg-success text-success-content" : "bg-base-200"}`}
-                          onPointerDown={() => handlePointerDown(key)}
-                          onPointerEnter={() => handlePointerEnter(key)}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleMouseDown(key);
+                          }}
+                          onMouseEnter={() => handleMouseEnter(key)}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            handleTouchStart(key);
+                          }}
+                          onTouchMove={handleTouchMove}
                           role="button"
                           aria-label={active ? "選択済み" : "未選択"}
                         >

@@ -26,8 +26,8 @@ describe("ManualTimeSlotPicker", () => {
     });
 
     const cell = await screen.findByTestId("slot-cell");
-    fireEvent.pointerDown(cell);
-    fireEvent.pointerUp(cell);
+    fireEvent.mouseDown(cell);
+    fireEvent.mouseUp(cell);
 
     await waitFor(() => {
       expect(onChange).toHaveBeenLastCalledWith(
