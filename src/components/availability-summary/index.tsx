@@ -23,7 +23,6 @@ type EventDate = {
   label?: string;
 };
 
-
 type Availability = {
   participant_id: string;
   event_date_id: string;
@@ -573,13 +572,6 @@ export default function AvailabilitySummary({
   // ドラッグ・スクロール判定
   const isDragging = useDragScrollBlocker(10);
 
-  // 参加者がまだいない場合は表示しない
-  if (filteredParticipants.length === 0) {
-    return (
-      <div className="text-sm text-gray-500 p-4">表示中の参加者はいません</div>
-    );
-  }
-
   return (
     <div
       className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary"
@@ -592,36 +584,36 @@ export default function AvailabilitySummary({
         <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>
 
         {/* 表示切り替えタブ */}
-        <div className="tabs tabs-boxed mb-2 sm:mb-4 bg-base-300 p-1 rounded-lg">
+        <div className="tabs space-x-4 tabs-boxed mb-2 sm:mb-4 bg-base-300 p-1 rounded-lg">
           <a
-            className={`tab transition-all ${
+            className={`tab  transition-all ${
               viewMode === "heatmap"
-                ? "tab-active bg-primary text-primary-content font-medium"
+                ? "tab-active bg-primary text-primary-content font-medium px-2"
                 : "text-base-content"
             }`}
             onClick={() => setViewMode("heatmap")}
           >
-            ヒートマップ表示
+            ヒートマップ
           </a>
           <a
             className={`tab transition-all ${
               viewMode === "detailed"
-                ? "tab-active bg-primary text-primary-content font-medium"
+                ? "tab-active bg-primary text-primary-content font-medium px-2"
                 : "text-base-content"
             }`}
             onClick={() => setViewMode("detailed")}
           >
-            個別表示
+            個別
           </a>
           <a
             className={`tab transition-all ${
               viewMode === "list"
-                ? "tab-active bg-primary text-primary-content font-medium"
+                ? "tab-active bg-primary text-primary-content font-medium px-2"
                 : "text-base-content"
             }`}
             onClick={() => setViewMode("list")}
           >
-            リスト表示
+            リスト
           </a>
         </div>
 
