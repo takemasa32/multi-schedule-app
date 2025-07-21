@@ -123,7 +123,7 @@ describe("AvailabilitySummary", () => {
         minColoredCount={2}
       />
     );
-    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    fireEvent.click(screen.getByText("ヒートマップ"));
     const grayCells = container.querySelectorAll('td[style*="grayscale(1)"]');
     expect(grayCells.length).toBeGreaterThan(0);
   });
