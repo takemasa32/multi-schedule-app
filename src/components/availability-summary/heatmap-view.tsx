@@ -109,21 +109,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           色が濃いほど参加可能な人が多い時間帯です
         </span>
       </div>
-      {onMinColoredCountChange && (
-        <div className="flex items-center gap-2 mb-2 text-xs sm:text-sm px-1 sm:px-2">
-          <label htmlFor="min-colored" className="whitespace-nowrap">
-            色付け最小人数
-          </label>
-          <input
-            id="min-colored"
-            type="number"
-            min={1}
-            value={minColoredCount}
-            onChange={(e) => onMinColoredCountChange(Number(e.target.value))}
-            className="input input-sm w-16"
-          />
-        </div>
-      )}
       <div
         className="overflow-x-auto"
         ref={tableRef}
@@ -171,14 +156,15 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
               return (
                 <tr key={timeSlot.startTime}>
-                  <td className="relative text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
+                  <td className=" text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
                     <span
                       style={{
                         position: "absolute",
                         top: 0, // 上辺を基準にする
                         left: "0.5rem",
                         transform: "translateY(-50%)", // 高さの半分だけ上に移動
-                        backgroundColor: "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
+                        backgroundColor:
+                          "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
                         padding: "0 0.25rem",
                       }}
                     >
@@ -209,7 +195,9 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
                         : "transparent",
                       filter:
-                        availableCount < minColoredCount ? "grayscale(1)" : "none",
+                        availableCount < minColoredCount
+                          ? "grayscale(1)"
+                          : "none",
                     } as React.CSSProperties;
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
@@ -267,7 +255,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
             {/* 最下部の終了時間を表示するための行 */}
             {uniqueTimeSlots.length > 0 &&
               (() => {
-                const lastTimeSlot = uniqueTimeSlots[uniqueTimeSlots.length - 1];
+                const lastTimeSlot =
+                  uniqueTimeSlots[uniqueTimeSlots.length - 1];
                 let formattedEndTime = lastTimeSlot.endTime.replace(/^0/, "");
                 if (lastTimeSlot.endTime === "00:00") {
                   formattedEndTime = "24:00";
@@ -299,8 +288,11 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           </tbody>
         </table>
       </div>
-      <div className="flex justify-center items-center mt-2 sm:mt-3 gap-1 sm:gap-2 text-xs sm:text-sm">
-        <span>少ない</span>
+
+      {/* 色の凡例とフィルター設定を統合したUI */}
+      {/* 色の凡例 */}
+      <div className="flex justify-center items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+        <span className="text-gray-600">少ない</span>
         <div className="flex">
           {Array.from({ length: 11 }).map((_, i) => {
             const opacity = (20 + i * 8) / 100; // 0.2～1.0の値
@@ -316,7 +308,118 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
             );
           })}
         </div>
-        <span>多い</span>
+        <span className="text-gray-600">多い</span>
+      </div>
+      <div className="bg-base-100 p-2 sm:p-3 mt-2 sm:mt-3 rounded-lg border">
+        <div className="flex flex-col gap-3">
+          {/* スライダーによるフィルター設定 */}
+          {onMinColoredCountChange && (
+            <details className="collapse bg-gradient-to-r from-base-200/50 to-base-300/30 rounded-lg border border-base-300/50 group">
+              <summary className="collapse-title flex items-center justify-between cursor-pointer px-3 py-1 min-h-0 relative">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary"></div>
+                  <span className="font-semibold text-sm text-base-content">
+                    フィルター設定
+                  </span>
+                  <div className="badge badge-primary badge-sm">
+                    {minColoredCount}人以上
+                  </div>
+                </div>
+                {/* 開閉マークを右上に絶対配置 */}
+                <span
+                  className="absolute right-2 top-1.5 sm:top-2 w-4 h-4 flex items-center justify-center pointer-events-none"
+                  aria-hidden="true"
+                >
+                  {/* ▼: 閉じているとき, ▲: 開いているとき */}
+                  <svg
+                    className="transition-transform duration-200 group-open:rotate-180"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                  >
+                    <polyline
+                      points="4,6 8,10 12,6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </summary>
+              <div className="collapse-content px-3 pb-3 pt-0">
+                <div className="space-y-3">
+                  <div className="text-center">
+                    <p className="text-xs text-base-content/70">
+                      {minColoredCount}人未満の時間帯をグレー表示
+                    </p>
+                  </div>
+
+                  <div className="relative px-2">
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(maxAvailable + 1, 1)}
+                      step={1}
+                      value={minColoredCount}
+                      onChange={(e) =>
+                        onMinColoredCountChange(
+                          parseInt(e.target.value, 10) ?? 1
+                        )
+                      }
+                      className="range range-primary range-sm w-full"
+                      style={{
+                        height: "0.5rem",
+                        minHeight: "0.5rem",
+                        maxHeight: "0.5rem",
+                      }}
+                    />
+
+                    {/* 目盛り */}
+                    <div className="flex justify-between items-center mt-2 px-1">
+                      <div className="flex flex-col items-center">
+                        <div className="w-1 h-1 bg-primary/60 rounded-full mb-1"></div>
+                        <span className="text-xs font-medium text-base-content/60">
+                          0
+                        </span>
+                      </div>
+                      {maxAvailable > 2 && (
+                        <div className="hidden sm:flex flex-col items-center">
+                          <div className="w-1 h-1 bg-primary/40 rounded-full mb-1"></div>
+                          <span className="text-xs text-base-content/50">
+                            {Math.ceil((maxAvailable + 1) / 2)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col items-center">
+                        <div className="w-1 h-1 bg-primary/60 rounded-full mb-1"></div>
+                        <span className="text-xs font-medium text-base-content/60">
+                          {maxAvailable + 1}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* インジケーター */}
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        <span className="text-base-content/60">表示</span>
+                      </div>
+                      <div className="w-px h-3 bg-base-300"></div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-base-300"></div>
+                        <span className="text-base-content/40">非表示</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          )}
+        </div>
       </div>
     </div>
   );
