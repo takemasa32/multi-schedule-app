@@ -107,6 +107,27 @@ describe("AvailabilitySummary", () => {
     expect(screen.getAllByText("(1)").length).toBeGreaterThan(0);
   });
 
+  it("minColoredCountを指定すると閾値未満のセルがグレースケールになる", () => {
+    const customAvailabilities = [
+      { participant_id: "p1", event_date_id: "date1", availability: true },
+      { participant_id: "p2", event_date_id: "date1", availability: false },
+      { participant_id: "p3", event_date_id: "date1", availability: true },
+      { participant_id: "p1", event_date_id: "date2", availability: true },
+      { participant_id: "p2", event_date_id: "date2", availability: false },
+      { participant_id: "p3", event_date_id: "date2", availability: false },
+    ];
+    const { container } = render(
+      <AvailabilitySummary
+        {...defaultProps}
+        availabilities={customAvailabilities}
+        minColoredCount={2}
+      />
+    );
+    fireEvent.click(screen.getByText("ヒートマップ表示"));
+    const grayCells = container.querySelectorAll('td[style*="grayscale(1)"]');
+    expect(grayCells.length).toBeGreaterThan(0);
+  });
+
   it("参加者がいない場合はメッセージを表示する", () => {
     render(
       <AvailabilitySummary

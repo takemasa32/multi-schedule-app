@@ -41,7 +41,11 @@ type AvailabilitySummaryProps = {
   ) => void;
   publicToken?: string;
   excludedParticipantIds?: string[];
-  minColoredCount?: number; // ヒートマップの色付けに必要な最小人数
+  /**
+   * セルをカラー表示するための最小参加人数
+   * 1を指定すると従来通り全てのセルがカラー表示されます
+   */
+  minColoredCount?: number;
 };
 
 // type ViewMode = "list" | "heatmap" | "detailed";
@@ -57,11 +61,14 @@ export default function AvailabilitySummary({
   onShowParticipantForm,
   publicToken,
   excludedParticipantIds = [],
+  minColoredCount = 1,
 }: AvailabilitySummaryProps) {
   // viewModeは内部でuseState管理
   const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
     "heatmap"
   );
+  // 色付けの最小人数を保持
+  const [minColored, setMinColored] = useState<number>(minColoredCount);
   // useDeviceDetectは必ずトップレベルで呼び出す
   const { isMobile } = useDeviceDetect();
   // ツールチップの状態
@@ -626,6 +633,8 @@ export default function AvailabilitySummary({
             onPointerTooltipEnd={isMobile ? () => {} : handlePointerEnd}
             onPointerTooltipClick={handlePointerClick}
             isDragging={isDragging}
+            minColoredCount={minColored}
+            onMinColoredCountChange={setMinColored}
           />
         )}
 
