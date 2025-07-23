@@ -263,7 +263,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 }
                 return (
                   <tr className="h-0">
-                    <td className="relative text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
+                    <td className="text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
                       <span
                         style={{
                           position: "absolute",
