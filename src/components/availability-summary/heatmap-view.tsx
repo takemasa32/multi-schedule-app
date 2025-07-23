@@ -360,7 +360,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     <input
                       type="range"
                       min={0}
-                      max={Math.max(maxAvailable + 1, 1)}
+                      max={Math.max(maxAvailable, 1)}
                       step={1}
                       value={minColoredCount}
                       onChange={(e) =>
@@ -388,14 +388,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         <div className="hidden sm:flex flex-col items-center">
                           <div className="w-1 h-1 bg-primary/40 rounded-full mb-1"></div>
                           <span className="text-xs text-base-content/50">
-                            {Math.ceil((maxAvailable + 1) / 2)}
+                            {Math.ceil(maxAvailable / 2)}
                           </span>
                         </div>
                       )}
                       <div className="flex flex-col items-center">
                         <div className="w-1 h-1 bg-primary/60 rounded-full mb-1"></div>
                         <span className="text-xs font-medium text-base-content/60">
-                          {maxAvailable + 1}
+                          {maxAvailable}
                         </span>
                       </div>
                     </div>
