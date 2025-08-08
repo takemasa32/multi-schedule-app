@@ -34,3 +34,25 @@ jobs:
             ${{ runner.os }}-node-18-
       - run: npm ci
       - run: npx jest --coverage
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    env:
+      PORT: 3001
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - uses: supabase/setup-cli@v1
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: supabase start
+      - run: supabase status -o env --override-name api.url=SUPABASE_URL --override-name anon.key=SUPABASE_ANON_KEY --override-name service_role.key=SUPABASE_SERVICE_ROLE_KEY >> $GITHUB_ENV
+      - run: npm run build
+      - run: npm run start &
+      - run: npx wait-on http://localhost:${{ env.PORT }}
+      - run: npm run test:e2e:chrome
+      - run: supabase stop
