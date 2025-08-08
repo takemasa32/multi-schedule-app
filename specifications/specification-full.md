@@ -8,7 +8,7 @@
 
 AI 駆動の開発方針: 本プロジェクトは要件定義から実装・テストに至るまで、ChatGPT や GitHub Copilot などの生成 AI を積極的に活用して進めます。具体的には、要件の整理や仕様書のドラフト作成に ChatGPT を利用し、コーディング時には Copilot の提案を取り入れて開発スピードを向上させます。ソロ開発でも AI をペアプログラマのように用いることで、一気通貫の迅速な開発を目指します。AI の生成するコードや回答は必ず人間がレビューし、整合性やセキュリティを確認しながら進めます。例えば、本仕様書自体も ChatGPT の協力を得て作成しており、人間による推敲と加筆で精度と一貫性を確保しています。また、JsDoc や TypeScript の型定義を活用し、AI が生成したコードの品質を向上させる工夫も行います。
 
-技術スタック: 開発には Next.js 13 の App Router 機能を用い（React 18 の Server Components 対応）、サーバーサイドでのデータ処理に Server Actions（"use server"ディレクティブ）を活用します。フロントエンドのスタイリングには Tailwind CSS をベースに、そのコンポーネントライブラリである DaisyUI を使用します。DaisyUI を使うことで「Faster, cleaner, easier Tailwind CSS development」とあるように、セマンティックなクラス名で迅速な UI 構築が可能です 。バックエンドには Supabase を利用し、PostgreSQL データベースと認証・ストレージ基盤を提供します。Supabase は Firebase ライクな使い勝手で、オープンソースの BaaS として開発効率を高めます。加えて、Supabase の**Row Level Security (RLS)**機能により、クライアントから直接データベースを操作する場合でもセキュリティを確保できます 。本プロジェクトでは原則としてデータベース操作は Next.js サーバー経由で行いますが、RLS を有効にしておくことで万一フロントエンドから Supabase にアクセスする場合も安全性を担保します。
+技術スタック: 開発には Next.js 15 の App Router 機能を用い（React 19 の Server Components 対応）、サーバーサイドでのデータ処理に Server Actions（"use server"ディレクティブ）を活用します。フロントエンドのスタイリングには Tailwind CSS をベースに、そのコンポーネントライブラリである DaisyUI を使用します。バックエンドには Supabase を利用し、PostgreSQL と認証・ストレージ基盤を提供します。加えて、Supabase の**Row Level Security (RLS)**を有効化し、クライアントからの直接アクセスにも備えます。PWA については next-pwa を利用し、Service Worker/オフライン対応・ホーム画面追加に対応します。本プロジェクトでは原則としてデータベース操作は Next.js サーバー経由で行い、クライアントは公開データのみ参照します。
 
 AI による補助: 開発中は ChatGPT を用いたコードスニペットの生成、エラーメッセージの分析、テストケースの案出なども行います。これにより一人でも複数人分の生産性を発揮し、短期間でのプロトタイプ完成を目指します。以上の体制で、本アプリケーションの設計・実装を効率よく進めていきます。
 
@@ -140,6 +140,8 @@ flowchart LR
 
 画面遷移としては非常にシンプルで、作成 → 詳細(回答/確定)の 2 画面（状態）構成です。ユーザーはリンクのやり取りのみで完結でき、ナビゲーションメニューなども最小限にします（トップページ＝作成ページ程度）。初期実装ではトップページにいきなり作成フォームを置きますが、必要ならトップに簡単な紹介文を入れ、メニューに「新規イベント作成」「イベントを見る」（＝リンクから遷移してくる）程度を配置する想定です。
 
+補足（ミドルウェア）: LINE アプリ内ブラウザでの挙動最適化のため、`src/middleware.ts` で UA を検知し、`openExternalBrowser=1` を付与してリダイレクトします。`/_next/*`, `/api/*`, `/logo/*`, `/favicon.ico` 等は対象外とし、本番のみ簡易ログを出力します。
+
 # **5. ディレクトリ構成とコーディング規約**
 
 Next.js（App Router）プロジェクトの標準に従い、コードの配置と命名規則を定めます。また、チーム開発ではありませんがコード品質を保つため Lint や Formatter も導入します。
@@ -151,17 +153,17 @@ project-root/  # 実際のプロジェクトルート
 ├── src/                      # ソースコードのルートディレクトリ
 │   ├── app/                  # Next.jsのApp Routerディレクトリ
 │   │   ├── layout.tsx        # 全体レイアウト
-│   │   ├── page.tsx          # ホーム（LP）
-│   │   ├── actions.ts        # Server Actions関数
+│   │   ├── page.tsx       # ホーム（LP）
+│   │   ├── create/
+│   │   │   └── page.tsx   # イベント作成ページ
 │   │   ├── event/
-│   │   │   ├── new/
-│   │   │   │   ├── page.tsx  #イベント作成ページ
-│   │   │   ├── [public_id]/
-│   │   │   │   ├── page.tsx  # イベント詳細ページ, 公開＆管理UIともにここで制御
+│   │   │   └── [public_id]/
+│   │   │       └── page.tsx  # イベント詳細ページ, 公開＆管理UIともにここで制御
 │   │
 │   │   └── api/
-│   │       └── generate-ics/
-│   │           └── route.ts
+│   │       └── calendar/
+│   │           ├── [event_id]/route.ts       # Google カレンダー/ICSリンク生成（複数確定対応）
+│   │           └── ics/[eventId]/route.ts    # ICS ダウンロード（個別/複数対応）
 │   │
 │   ├── components/           # 再利用可能なコンポーネント
 │   │   ├── event-form.tsx    # イベント作成フォームコンポーネント
@@ -185,7 +187,7 @@ project-root/  # 実際のプロジェクトルート
 
 ````
 
-- Next.js App Router では app/以下にページを配置します。今回はシンプルなので page.tsx（ホーム）と event/[public_id]/page.tsx 程度です。管理用のページはクエリパラメータで処理しても良いですが、セキュリティ上わかりやすく分けるため admin/[admin_token]サブルートとして用意しています。この admin_token ページは管理者権限のチェックと専用 UI の表示を行います。
+- Next.js App Router では app/以下にページを配置します。今回は page.tsx（ホーム）/ create/page.tsx（作成）/ event/[public_id]/page.tsx（詳細）で構成します。管理 UI の表示はクエリパラメータ `?admin=<admin_token>` により切り替えます（専用サブルートは作らない運用）。
 - 静的ファイルは public/ディレクトリ以下（今回は大きな静的アセットは想定なし、ロゴ画像程度）。
 - コンポーネントは UI 部品ごとに components/ディレクトリに配置し、ファイル名は kebab-case（ハイフンつなぎ小文字）で統一します。たとえば EventForm コンポーネントは event-form.tsx ファイルに定義します。React コンポーネントの関数名（型名）は PascalCase で書きますが、ファイルシステム上は大文字小文字の違いによる不具合を避けるため全て小文字ファイル名とします。
 - ビジネスロジックや設定値をまとめる場所として lib/ディレクトリを用意します。ここに Supabase との接続クライアント初期化やユーティリティ関数、型定義などを置き、ページやコンポーネントからインポートして使います。
@@ -229,7 +231,7 @@ project-root/  # 実際のプロジェクトルート
      - `chore`：ビルドプロセスや補助ツールの変更
    - **scope**（任意、影響範囲を表す）
 
-     例：`event-form`、`api/generate-ics`
+     例：`event-form`、`api/calendar`
 
    - **要約（subject）**：50 文字以内を目安に、命令形で端的に記述
    - **本文（body）**：必要に応じて「なぜこの変更が必要か」「どのように確認するか」等を記載
@@ -708,65 +710,51 @@ TypeScript により、フォーム入力とサーバー関数引数/戻り値�
 
 Server Action を用いる利点: API ルートを自前で設計・実装する必要がなく、データ操作ロジックが UI コンポーネント定義と近い場所にまとまります。これにより開発速度とコードの見通しが向上します。例えば CRUD 処理を Server Actions で実装したチュートリアルでも、Server Components 内から直接 DB を操作し、クライアントコンポーネントに変換することなく一連の操作を実現できたと報告されています。本プロジェクトでもこのアプローチを採用することで、フロントエンド・バックエンドの境界を意識せず自然な形で機能を実装します。
 
-# **8. カレンダー連携の実装方針（.ics, Google Calendar）**
+# **8. カレンダー連携の実装方針（Google / ICS）**
 
 イベントの最終日程が決定した後、ユーザーが自分のカレンダーにワンクリックで予定を登録できるよう、iCalendar (.ics)ファイルの生成と Google カレンダー追加リンクの 2 通りで機能提供します。
 
 .ics ファイル連携:
 
-iCalendar 形式（.ics）はカレンダー標準 RFC 5545 に基づくテキストフォーマットです。これを生成することで、Google カレンダー、Outlook、Apple カレンダーなど主要アプリへインポート可能な予定情報を提供できます。実装としては、Next.js の Route Handler（App Router の API エンドポイント）を利用し、例えば app/api/generate-ics/route.ts を作成します。このエンドポイントにイベント ID をクエリで渡すと、サーバーで ICS 文字列を生成し、text/calendar 形式でレスポンスを返す仕組みです。生成には NPM パッケージの活用も検討します。例えば ics や ical-generator といったライブラリを使うと簡潔に予定を定義し文字列を得られます。あるいは自前で文字列を組み立てても構いません。簡単な予定であれば以下のようなテンプレートを埋め込む形です:
+iCalendar 形式（.ics）は RFC 5545 に基づくテキストフォーマットです。本実装では Next.js の Route Handler を用い、`app/api/calendar/ics/[eventId]/route.ts` で ICS を生成します。クエリ `dateId` を付与すると特定の確定日程のみ、未指定の場合は複数確定日程をまとめて 1 ファイルに出力します。日時は DB 保存のローカル時間をそのまま出力し、`Z` は付与しません（UTC 変換しない）。
 
 BEGIN:VCALENDAR
-
 VERSION:2.0
-
 PRODID:-//OurApp//EN
-
 BEGIN:VEVENT
-
 UID:{イベント ID}@ourapp
-
 DTSTAMP:{作成日時の UTC}
-
-DTSTART:{開始日時の UTC}
-
-DTEND:{終了日時の UTC}
-
+DTSTART;TZID=Asia/Tokyo:{開始日時（ローカル）}
+DTEND;TZID=Asia/Tokyo:{終了日時（ローカル）}
 SUMMARY:{イベントタイトル}
-
 DESCRIPTION:{イベント説明}
-
 END:VEVENT
-
 END:VCALENDAR
 
-- DTSTART と DTEND は日時を UTC のタイムスタンプ（「YYYYMMDDTHHMMSSZ」形式）で記述 します。終了時刻が無い場合は適宜開始日時+デフォルト長（例えば 1 時間後）を自動セットします。
-- 生成した文字列を.ics 拡張子でダウンロードさせるには、Route Handler 内で return new Response(icsText, { headers: { 'Content-Type': 'text/calendar', 'Content-Disposition': 'attachment; filename="event.ics"' } })のように返送します。
+- DTSTART/DTEND はローカル時間をそのまま使用し、`Z` は付けません。終了時刻が無い場合は適宜デフォルト長（例: 1 時間）を補完します。
+- 生成文字列は `text/calendar` として返却し、`Content-Disposition: attachment` でダウンロードを提示します。
 
-イベント詳細ページでは「カレンダーに追加」ボタンのリンク先をこの API エンドポイント（例: /api/generate-ics?event={public_token}）にします。ユーザーがクリックすると即座に ics ファイルがブラウザ経由でダウンロードされ、そのファイルを開くことでローカルのカレンダーアプリに登録できます。
+イベント詳細ページでは「カレンダーに追加」ボタンのリンク先を新 API（例: `/api/calendar/ics/<event_id>?dateId=<event_date_id>`）にします。クリックで ICS をダウンロードし、各カレンダーアプリに取り込めます。
 
 Google カレンダー直接リンク:
 
 Google カレンダーは URL パラメータを通じて予定の情報を受け取り、ユーザーのカレンダーに追加するための画面を表示する非公式機能があります。このリンクを用いることで、Google アカウントを持つユーザーはワンクリックでもっと簡単に予定を追加できます。リンクの形式は以下の通りです（2021 年時点の情報 ）:
 
-https://calendar.google.com/calendar/r/eventedit?
-
+https://calendar.google.com/calendar/render?
+action=TEMPLATE&
 text={タイトル}&
-
 dates={開始日時}/{終了日時}&
-
 details={説明}&
-
-location={場所}
+ctz=Asia/Tokyo
 
 - text: イベントのタイトル（一行概要）。
-- dates: 開始日時/終了日時を RFC5545 形式で。例: 20250401T090000Z/20250401T100000Z（2025 年 4 月 1 日 9 時～ 10 時 UTC）。
+- dates: 開始日時/終了日時を RFC 5545 形式で。DB 保存のローカル時間をそのまま使用し、`ctz` でタイムゾーンを明示します。
 - details: 詳細説明。URL エンコードされたテキスト（改行や簡単な HTML タグも一部使えます）。
 - location: 開催場所。今回はオンラインや任意場所なので空欄も可。
 
 上記パラメータを組み立てた URL を生成し、「Google カレンダーで開く」リンクに設定します。ユーザーがそれをクリックすると Google カレンダーの Web サイトが開き、指定内容が入力済みの予定作成フォームが表示されます。あとはユーザーが自分のカレンダーに保存を押すだけで追加完了です。
 
-実装まとめ: 以上 2 つの方法を用意することで、ほぼ全てのユーザーが自分の環境にあった方法で予定追加できます。ICS は汎用性が高くオフラインでも使え、Google リンクは手軽です。それぞれのリンク生成を行う処理も AI アシストで実装し、RFC 準拠のフォーマット出力を確認します。文献によると Google カレンダーのこの機能は公式ドキュメントには載っていないものの、適切なクエリをつければ予定追加リンクを生成できることが確認されています。
+実装まとめ: ICS は汎用性が高くオフラインでも利用でき、Google リンクは即時追加に便利です。本実装では `/api/calendar/[event_id]`（Google）と `/api/calendar/ics/[eventId]`（ICS）に統一し、複数確定日程・ローカル時間をサポートします。
 
 カレンダー連携機能自体はイベント確定後の静的データに基づくため、他の部分と疎結合です。実装タイミングとしては他の必須機能を終えた後に追加しても影響が少ないです。
 
@@ -774,7 +762,7 @@ location={場所}
 
 ワイヤーフレームとして、各ページの想定 UI をテキストで大まかに示します。DaisyUI のコンポーネントや Tailwind のクラスを用いて実装する際の参考とします。
 
-- [ページ] 新規イベント作成 (/ または /event/new):
+- [ページ] 新規イベント作成 (/create):
 
 ---
 

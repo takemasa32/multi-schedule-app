@@ -153,7 +153,16 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 
 ## PWA/Workbox 生成ファイルについて
 
-`public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています。
+`public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています（不要になった生成物はリポジトリから削除済み）。
+
+## カレンダー連携（Google / ICS）
+
+本プロジェクトでは、複数確定日程に対応したカレンダー連携APIを提供します。いずれもローカル時間をそのまま扱い、Google には `ctz` を明示、ICSはZ無しで書き出します。
+
+- Google カレンダー: `/api/calendar/<event_id>?googleCalendar=true&dateId=<event_date_id>`
+- ICS ダウンロード: `/api/calendar/ics/<event_id>?dateId=<event_date_id>`
+
+旧API（`/api/generate-ics`）は廃止しました。UI からは `CalendarLinks` コンポーネント経由でこれらのエンドポイントを利用します。
 
 ## e2e テストについて
 

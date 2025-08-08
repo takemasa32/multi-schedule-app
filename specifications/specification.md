@@ -68,7 +68,7 @@ flowchart LR
   B -- 主催者が日程確定 --> C["確定後の結果表示 (同ページ)"]
 ```
 
-- **イベント作成ページ (/event/new):**
+- **イベント作成ページ (/create):**
   - 主要要素: イベントタイトル入力、説明入力、候補日程設定（開始日・終了日選択、時間帯指定、除外日設定）、イベント作成ボタン。
   - 入力検証: タイトル、1 つ以上の候補日程。
   - 成功時: イベント詳細ページへリダイレクト。
@@ -92,16 +92,16 @@ project-root/
 │   │   ├── layout.tsx
 │   │   ├── home/          # PWAホーム画面
 │   │   │   └── page.tsx
-│   │   ├── page.tsx          # ホーム（LP）
-│   │   ├── actions.ts        # Server Actions関数
+│   │   ├── page.tsx       # ホーム（LP）
+│   │   ├── create/
+│   │   │   └── page.tsx   # イベント作成ページ
 │   │   ├── event/
-│   │   │   ├── new/
-│   │   │   │   ├── page.tsx  #イベント作成ページ
-│   │   │   ├── [public_id]/
-│   │   │   │   ├── page.tsx  # イベント詳細ページ
+│   │   │   └── [public_id]/
+│   │   │       └── page.tsx  # イベント詳細ページ
 │   │   └── api/
-│   │       └── generate-ics/
-│   │           └── route.ts
+│   │       └── calendar/
+│   │           ├── [event_id]/route.ts  # Google/ICSリンク生成（複数確定対応）
+│   │           └── ics/[eventId]/route.ts  # ICSダウンロード（個別/複数対応）
 │   ├── components/
 │   │   ├── event-form.tsx
 │   │   ├── availability-form.tsx
@@ -118,6 +118,14 @@ project-root/
 ```
 
 (管理用サブルート `/admin/[token]` は廃止し、クエリパラメータ方式に統一)
+
+---
+
+### 5.x ミドルウェア（LINEアプリ内ブラウザ対策）
+
+- `src/middleware.ts` で LINE アプリ内ブラウザを検知し、`openExternalBrowser=1` を付与して再遷移。
+- 除外パス: `/_next/*`, `/api/*`, `/logo/*`, `/favicon.ico` 等。
+- 本番のみ簡易ログ出力。
 
 **コーディング規約:**
 
@@ -216,21 +224,26 @@ Route API を使用せず、Server Actions ("use server") を用いる。
 
 **型付き I/O:** TypeScript で型定義。Supabase クライアントに DB スキーマ型を指定。
 
-# **8. カレンダー連携の実装方針（.ics, Google Calendar）**
+# **8. カレンダー連携の実装方針（Google / ICS）**
 
-**.ics ファイル連携:**
+実装は複数確定日程に対応し、ローカル時間をそのまま扱います。
 
-- Next.js Route Handler (`app/api/generate-ics/route.ts`)で実装。
-- イベント ID をクエリパラメータで受け取り、ICS 文字列を生成 (`text/calendar`形式でレスポンス)。
-- `ics`や`ical-generator`等のライブラリ利用検討。
-- DTSTART/DTEND は DB 保存値をそのまま UTC 形式「YYYYMMDDTHHMMSSZ」で記述。(仕様書 12 章の追記に基づき、ローカルタイムをそのまま利用。UTC 変換なし)
-- リンク例: `/api/generate-ics?event=[public_token]`
+- ルート構成:
+  - `app/api/calendar/[event_id]/route.ts`
+    - Google カレンダーリンク生成（`?googleCalendar=true`）。`dateId` 指定で個別日程、未指定で最初の確定日程。
+    - ローカル時間を使用し、`ctz=Asia/Tokyo` 等のタイムゾーンを明示。
+  - `app/api/calendar/ics/[eventId]/route.ts`
+    - ICS 生成・ダウンロード。複数 VEVENT を1ファイルに出力（`dateId` 指定で個別）。
+    - ICS はローカル時間（Z なし）。
 
-**Google カレンダー直接リンク:**
+- 例:
+  - Google: `/api/calendar/<event_id>?googleCalendar=true&dateId=<event_date_id>`
+  - ICS: `/api/calendar/ics/<event_id>?dateId=<event_date_id>`
 
-- URL パラメータで予定情報（タイトル、日時、詳細）を指定して Google カレンダーのイベント作成画面を開く。
-  - `dates`: 開始日時/終了日時を RFC5545 形式 (YYYYMMDDTHHMMSSZ/YYYYMMDDTHHMMSSZ)。(仕様書 12 章の追記に基づき、ローカルタイムをそのまま利用。UTC 変換なし)
-- リンク例: `https://calendar.google.com/calendar/r/eventedit?text=...&dates=...&details=...`
+- 補足（タイムゾーン/日時処理）:
+  - DB 保存の `start_time`/`end_time` はローカルタイムを前提とし、そのまま出力。
+  - Google には `ctz` を付与。ICS では UTC 変換せず `YYYYMMDDTHHMMSS`（Z なし）で記述。
+
 
 # **9. ワイヤーフレーム構成（テキストベース）**
 
