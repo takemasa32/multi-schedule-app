@@ -143,12 +143,8 @@ export default function LandingPageClient() {
     <>
       {/* Heroセクションはpage.tsxで表示するためここでは省略 */}
       {/* サービス名の由来・Layeringコンセプト説明 */}
-      <section
-        id="concept"
-        className="relative overflow-hidden bg-base-100 py-20 sm:py-24"
-      >
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/20 via-primary/10 to-transparent" />
-        <div className="container relative mx-auto max-w-6xl px-4">
+      <section id="concept" className="bg-base-100 py-20 sm:py-24">
+        <div className="container mx-auto max-w-6xl px-4">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
             <motion.div
               initial="hidden"
@@ -157,7 +153,7 @@ export default function LandingPageClient() {
               variants={fadeUp}
               custom={0}
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+              <span className="inline-flex items-center gap-2 rounded-full bg-base-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
                 Concept
               </span>
               <h2 className="mt-6 text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
@@ -180,22 +176,18 @@ export default function LandingPageClient() {
               variants={fadeUp}
               custom={1}
             >
-              <div className="absolute -inset-6 rounded-[32px] bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/20 blur-2xl" />
-              <div className="relative grid gap-6">
+              <div className="grid gap-6">
                 {/* キーワードをカード状に並べ、ブランドストーリーを視覚化 */}
-                <Card className="relative overflow-hidden rounded-3xl border border-base-200/60 bg-base-100/80 p-6 backdrop-blur">
-                  <div className="absolute -right-16 top-1/2 h-32 w-32 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl" />
-                  <div className="text-sm font-semibold uppercase tracking-wide text-primary/80">Day</div>
+                <Card className="rounded-2xl border border-base-200 bg-base-100 p-6 shadow-sm">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-primary">Day</div>
                   <p className="mt-3 text-base-content/80">一日単位のスケジュールを扱い、日常の予定調整をなめらかに。</p>
                 </Card>
-                <Card className="relative overflow-hidden rounded-3xl border border-base-200/60 bg-base-100/80 p-6 backdrop-blur">
-                  <div className="absolute -left-10 top-0 h-24 w-24 rounded-full bg-secondary/20 blur-3xl" />
-                  <div className="text-sm font-semibold uppercase tracking-wide text-secondary/80">Synth = Synthesis</div>
+                <Card className="rounded-2xl border border-base-200 bg-base-100 p-6 shadow-sm">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-secondary">Synth = Synthesis</div>
                   <p className="mt-3 text-base-content/80">複数の候補情報を統合し、グループ全体にとって最適な選択肢を導き出す。</p>
                 </Card>
-                <Card className="relative overflow-hidden rounded-3xl border border-base-200/60 bg-base-100/80 p-6 backdrop-blur">
-                  <div className="absolute -right-8 bottom-0 h-24 w-24 rounded-full bg-accent/20 blur-3xl" />
-                  <div className="text-sm font-semibold uppercase tracking-wide text-accent/80">Synth = Layering</div>
+                <Card className="rounded-2xl border border-base-200 bg-base-100 p-6 shadow-sm">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-accent">Synth = Layering</div>
                   <p className="mt-3 text-base-content/80">参加者一人ひとりの予定をレイヤーのように重ね、全体像を視覚的に把握。</p>
                 </Card>
               </div>
@@ -215,7 +207,7 @@ export default function LandingPageClient() {
             variants={fadeUp}
             custom={0}
           >
-            <span className="inline-flex items-center justify-center rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+            <span className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
               Product
             </span>
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
@@ -235,10 +227,9 @@ export default function LandingPageClient() {
                 variants={fadeUp}
                 custom={i + 1}
               >
-                <Card className="group relative h-full overflow-hidden rounded-3xl border border-base-200/60 bg-base-100/80 p-6 text-left shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-                  <div className="absolute inset-x-6 top-6 h-24 rounded-3xl bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  <div className="relative flex flex-col gap-4">
-                    <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Card className="h-full rounded-2xl border border-base-200 bg-base-100 p-6 text-left shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-md">
+                  <div className="flex flex-col gap-4">
+                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <f.icon className="h-7 w-7" />
                     </div>
                     <h3 className="text-xl font-semibold text-base-content">{f.title}</h3>
@@ -249,7 +240,7 @@ export default function LandingPageClient() {
             ))}
           </div>
           <motion.div
-            className="mt-14 rounded-3xl border border-primary/20 bg-gradient-to-r from-primary/15 via-base-100 to-secondary/10 p-8 text-center shadow-lg"
+            className="mt-14 rounded-2xl border border-base-200 bg-base-100 p-6 text-center shadow-sm"
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.4 }}
@@ -264,10 +255,8 @@ export default function LandingPageClient() {
       </section>
 
       {/* USE CASES */}
-      <section className="relative overflow-hidden bg-base-200/80 py-24 sm:py-28">
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-base-100 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-base-100 to-transparent" />
-        <div className="container relative mx-auto max-w-6xl px-4">
+      <section className="bg-base-200 py-24 sm:py-28">
+        <div className="container mx-auto max-w-6xl px-4">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
             <motion.div
               initial="hidden"
@@ -276,7 +265,7 @@ export default function LandingPageClient() {
               variants={fadeUp}
               custom={0}
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-100/70 px-4 py-2 text-sm font-semibold text-base-content/80 backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full bg-base-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
                 Use Cases
               </span>
               <h2 className="mt-6 text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
@@ -310,10 +299,9 @@ export default function LandingPageClient() {
                   variants={fadeUp}
                   custom={i + 1}
                 >
-                  <Card className="relative h-full overflow-hidden rounded-3xl border border-base-200/60 bg-base-100/80 p-6 text-left shadow-md backdrop-blur transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl">
-                    <div className="absolute -right-10 top-6 h-24 w-24 rounded-full bg-primary/10 blur-3xl" />
-                    <div className="relative flex flex-col gap-4">
-                      <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Card className="h-full rounded-2xl border border-base-200 bg-base-100 p-6 text-left shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-md">
+                    <div className="flex flex-col gap-4">
+                      <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <u.icon className="h-6 w-6" />
                       </div>
                       <h3 className="text-xl font-semibold text-base-content">{u.title}</h3>
@@ -338,7 +326,7 @@ export default function LandingPageClient() {
             variants={fadeUp}
             custom={0}
           >
-            <span className="inline-flex items-center justify-center rounded-full border border-base-200/80 bg-base-100/80 px-4 py-2 text-sm font-semibold text-base-content/70">
+            <span className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
               Flow
             </span>
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
@@ -358,9 +346,8 @@ export default function LandingPageClient() {
                 variants={fadeUp}
                 custom={index + 1}
               >
-                <Card className="relative h-full overflow-hidden rounded-3xl border border-base-200/60 bg-base-100/80 p-6 text-left shadow-sm backdrop-blur">
-                  <div className="absolute -left-6 top-6 h-24 w-24 rounded-full bg-primary/10 blur-3xl" />
-                  <div className="relative flex h-full flex-col gap-4">
+                <Card className="h-full rounded-2xl border border-base-200 bg-base-100 p-6 text-left shadow-sm">
+                  <div className="flex h-full flex-col gap-4">
                     <span className="text-sm font-semibold uppercase tracking-wide text-primary/80">
                       Step {index + 1 < 10 ? `0${index + 1}` : index + 1}
                     </span>
@@ -387,12 +374,8 @@ export default function LandingPageClient() {
       </section>
 
       {/* COMPARISON */}
-      <section
-        id="comparison"
-        className="relative overflow-hidden bg-gradient-to-b from-base-100 via-primary/10 to-base-200 py-24 sm:py-28"
-      >
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/20 to-transparent" />
-        <div className="container relative mx-auto max-w-6xl px-4">
+      <section id="comparison" className="bg-base-100 py-24 sm:py-28">
+        <div className="container mx-auto max-w-6xl px-4">
           <motion.div
             className="text-center"
             initial="hidden"
@@ -401,7 +384,7 @@ export default function LandingPageClient() {
             variants={fadeUp}
             custom={0}
           >
-            <span className="inline-flex items-center justify-center rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+            <span className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
               Advantage
             </span>
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
@@ -411,10 +394,10 @@ export default function LandingPageClient() {
               他の日程調整サービスと比較しても、DaySynth ならではの体験と機能性が際立ちます。
             </p>
           </motion.div>
-          <div className="mt-14 overflow-hidden rounded-3xl border border-primary/20 bg-base-100/80 shadow-xl backdrop-blur">
+          <div className="mt-14 overflow-hidden rounded-2xl border border-base-200 bg-base-100 shadow-sm">
             <div className="overflow-x-auto">
               <table className="table w-full">
-                <thead className="bg-primary text-primary-content">
+                <thead className="bg-base-200 text-base-content">
                   <tr>
                     <th className="text-base">機能</th>
                     <th className="text-base font-semibold">DaySynth</th>
@@ -436,7 +419,7 @@ export default function LandingPageClient() {
             </div>
           </div>
           <motion.div
-            className="mt-12 rounded-3xl border border-primary/20 bg-primary/15 p-8 text-center shadow-lg"
+            className="mt-12 rounded-2xl border border-base-200 bg-base-100 p-6 text-center shadow-sm"
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.4 }}
@@ -461,7 +444,7 @@ export default function LandingPageClient() {
             variants={fadeUp}
             custom={0}
           >
-            <span className="inline-flex items-center justify-center rounded-full border border-base-200/80 bg-base-100/80 px-4 py-2 text-sm font-semibold text-base-content/70">
+            <span className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
               FAQ
             </span>
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
@@ -478,7 +461,7 @@ export default function LandingPageClient() {
                 variants={fadeUp}
                 custom={i + 1}
               >
-                <details className="group rounded-3xl border border-base-200/60 bg-base-100/80 p-6 shadow-sm backdrop-blur transition-shadow hover:shadow-lg">
+                <details className="group rounded-2xl border border-base-200 bg-base-100 p-6 shadow-sm transition-shadow hover:shadow-md">
                   <summary className="flex cursor-pointer items-center justify-between gap-4 text-left text-lg font-medium text-base-content">
                     {f.q}
                     <span className="text-sm text-base-content/50 transition-transform group-open:rotate-45">＋</span>
@@ -504,7 +487,7 @@ export default function LandingPageClient() {
             variants={fadeUp}
             custom={0}
           >
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+            <span className="inline-flex items-center gap-2 rounded-full bg-base-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
               <History className="h-4 w-4" />
               History
             </span>
@@ -514,7 +497,7 @@ export default function LandingPageClient() {
             </p>
           </motion.div>
           <motion.div
-            className="mt-10 rounded-3xl border border-base-200/60 bg-base-100/80 p-6 shadow-sm backdrop-blur"
+            className="mt-10 rounded-2xl border border-base-200 bg-base-100 p-6 shadow-sm"
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.4 }}
@@ -536,35 +519,29 @@ export default function LandingPageClient() {
       </section>
 
       {/* CTA */}
-      <section className="relative overflow-hidden py-24 sm:py-28">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/10 opacity-80" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_55%)]" />
+      <section className="bg-base-100 py-24 sm:py-28">
         <motion.div
-          className="container relative mx-auto max-w-4xl px-4"
+          className="container mx-auto max-w-4xl px-4"
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.4 }}
           variants={fadeUp}
           custom={0}
         >
-          <div className="relative overflow-hidden rounded-[40px] border border-white/40 bg-white/80 p-10 text-center shadow-2xl backdrop-blur">
-            <div className="absolute -top-24 right-10 h-48 w-48 rounded-full bg-primary/30 blur-3xl" />
-            <div className="absolute -bottom-24 left-6 h-48 w-48 rounded-full bg-secondary/30 blur-3xl" />
-            <div className="relative">
-              <h2 className="text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
-                今すぐ日程調整をスマートに
-              </h2>
-              <p className="mt-4 text-base text-base-content/70 sm:text-lg">
-                面倒なやり取りはもう不要。ログイン不要・無料で使える DaySynth で、参加者全員が納得する日程を素早く導き出しましょう。
-              </p>
-              <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Link href="/create" className="btn btn-primary btn-lg shadow-lg">
-                  無料でイベントを作成
-                </Link>
-                <Link href="#features" className="btn btn-outline btn-lg border-primary/40 text-primary">
-                  機能を詳しく見る
-                </Link>
-              </div>
+          <div className="rounded-2xl border border-primary/40 bg-primary/10 p-10 text-center shadow-sm">
+            <h2 className="text-3xl font-bold tracking-tight text-base-content sm:text-4xl">
+              今すぐ日程調整をスマートに
+            </h2>
+            <p className="mt-4 text-base text-base-content/80 sm:text-lg">
+              面倒なやり取りはもう不要。ログイン不要・無料で使える DaySynth で、参加者全員が納得する日程を素早く導き出しましょう。
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link href="/create" className="btn btn-primary btn-lg">
+                無料でイベントを作成
+              </Link>
+              <Link href="#features" className="btn btn-outline btn-lg border-base-300 text-base-content">
+                機能を詳しく見る
+              </Link>
             </div>
           </div>
         </motion.div>
