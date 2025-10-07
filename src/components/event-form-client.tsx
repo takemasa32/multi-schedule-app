@@ -9,6 +9,7 @@ import ManualTimeSlotPicker from "./manual-time-slot-picker";
 import { TimeSlot, addEventToHistory } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 import useScrollToError from "@/hooks/useScrollToError";
+import PortalTooltip from "./common/portal-tooltip";
 
 export default function EventFormClient() {
   const [title, setTitle] = useState<string>("");
@@ -18,8 +19,8 @@ export default function EventFormClient() {
   const [manualSlots, setManualSlots] = useState<TimeSlot[]>([]);
   /**
    * 候補日程の入力方式
-   * - "auto": 範囲から自動生成
-   * - "manual": マスを直接選択
+   * - "auto": 期間から自動で作成（初期設定）
+   * - "manual": カレンダーで手動選択
    */
   const [inputMode, setInputMode] = useState<"auto" | "manual">("auto");
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,16 @@ export default function EventFormClient() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const [tipOpen, setTipOpen] = useState(false);
+  const [tipAnchor, setTipAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [tipText, setTipText] = useState<string>("");
+  const openTip = (e: React.MouseEvent, text: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTipAnchor({ x: rect.left, y: rect.bottom });
+    setTipText(text);
+    setTipOpen(true);
+    e.stopPropagation();
+  };
 
   // 入力方式変更時に表示するスロットを更新
   useEffect(() => {
@@ -173,47 +184,52 @@ export default function EventFormClient() {
       </div>
 
       <div className="card bg-base-100 shadow-sm border border-base-300 p-4">
-        <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
-        <div className="tabs tabs-boxed mb-4 bg-base-300 p-1 rounded-lg">
-          <a
-            className={`tab transition-all ${
-              inputMode === "auto"
-                ? "tab-active bg-primary text-primary-content font-medium"
-                : "text-base-content"
-            }`}
-            onClick={() => setInputMode("auto")}
-          >
-            範囲から自動生成
-          </a>
-          <a
-            className={`tab transition-all ${
-              inputMode === "manual"
-                ? "tab-active bg-primary text-primary-content font-medium"
-                : "text-base-content"
-            }`}
-            onClick={() => setInputMode("manual")}
-          >
-            マスを直接選択
-          </a>
+        <h3 className="card-title text-lg mb-2">候補日程の設定</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+          <div className="flex items-center">
+            <span className="font-medium whitespace-nowrap">入力方式</span>
+          </div>
+          <label className="flex items-center justify-between gap-2 w-full sm:w-auto cursor-pointer">
+            <span className="flex items-center gap-1 text-sm whitespace-nowrap">
+              カレンダーで手動選択
+              <button
+                type="button"
+                tabIndex={-1}
+                className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                aria-label="カレンダーで手動選択の説明"
+                onClick={(e) =>
+                  openTip(
+                    e,
+                    "オンにすると、日付×時間の表が表示され、セルをドラッグ/タップでON/OFFできます。表は現在の設定（期間・時間帯・間隔）に連動します。"
+                  )
+                }
+              >
+                ?
+              </button>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-label="カレンダーで手動選択"
+              className="toggle toggle-primary"
+              checked={inputMode === "manual"}
+              onChange={(e) => setInputMode(e.target.checked ? "manual" : "auto")}
+            />
+          </label>
         </div>
         {inputMode === "auto" ? (
           <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
         ) : (
-          <>
-            <p className="text-sm text-gray-500 mb-2">
-              開始日を基準に表を生成し、必要なマスだけをクリックまたはドラッグして選択します。
-              自動生成モードと異なり、任意の枠だけを候補日程として登録できます。
-            </p>
-            <ManualTimeSlotPicker
-              onTimeSlotsChange={handleTimeSlotsChange}
-              initialSlots={manualSlots}
-            />
-          </>
+          <ManualTimeSlotPicker
+            onTimeSlotsChange={handleTimeSlotsChange}
+            initialSlots={manualSlots}
+          />
         )}
         <p className="text-xs text-gray-500 mt-2">
           日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
         </p>
       </div>
+      <PortalTooltip open={tipOpen} anchor={tipAnchor} text={tipText} onClose={() => setTipOpen(false)} />
       <TermsCheckbox
         isChecked={termsAccepted}
         onChange={setTermsAccepted}

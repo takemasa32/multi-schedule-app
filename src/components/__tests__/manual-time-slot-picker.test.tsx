@@ -9,7 +9,7 @@ function setup() {
 }
 
 describe("ManualTimeSlotPicker", () => {
-  test("マスを選択するとコールバックが呼ばれる", async () => {
+  test("セルを選択するとコールバックが呼ばれる", async () => {
     const onChange = setup();
     const startInput = screen.getAllByLabelText(/開始日/)[0];
     const endInput = screen.getAllByLabelText(/終了日/)[0];
@@ -35,7 +35,7 @@ describe("ManualTimeSlotPicker", () => {
           expect.objectContaining({ startTime: "09:00", endTime: "10:00" }),
         ])
       );
-      expect(cell).toHaveTextContent("○");
+      expect(cell).toHaveAttribute("aria-label", "選択済み");
     });
   });
 });
