@@ -5,6 +5,7 @@ import EventHistory from "@/components/event-history";
 import EventDateAddSection from "@/components/event-client/event-date-add-section";
 import AvailabilitySummary from "@/components/availability-summary";
 import { useState } from "react";
+import ShareAvailableDatesButton from "@/components/share-available-dates-button";
 
 // 型定義
 export type EventDate = {
@@ -72,15 +73,15 @@ export default function EventDetailsSection({
           {participants.length > 0 && (
             <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center border-b border-base-200">
               <span className="text-sm text-gray-500 mr-2">表示選択:</span>
-              {participants.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`badge px-3 py-2 cursor-pointer transition-all border-2 ${
-                    excludedParticipantIds.includes(p.id)
-                      ? "badge-outline border-error text-error bg-error/10"
-                      : "badge-primary border-primary"
-                  }`}
+          {participants.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`badge px-3 py-2 cursor-pointer transition-all border-2 ${
+                excludedParticipantIds.includes(p.id)
+                  ? "badge-outline border-error text-error bg-error/10"
+                  : "badge-primary border-primary"
+              }`}
                   aria-pressed={excludedParticipantIds.includes(p.id)}
                   onClick={() => handleToggleParticipant(p.id)}
                   title={
@@ -94,13 +95,24 @@ export default function EventDetailsSection({
                   ) : (
                     <span className="mr-1">👤</span>
                   )}
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          )}
+              {p.name}
+            </button>
+          ))}
         </div>
+      )}
+        {participants.length > 0 && (
+          <div className="px-4 py-4 border-t border-base-200">
+            <ShareAvailableDatesButton
+              eventTitle={event.title}
+              publicToken={event.public_token}
+              eventDates={eventDates}
+              participants={participants}
+              availabilities={availabilities}
+            />
+          </div>
+        )}
       </div>
+    </div>
       {/* --- イベント管理・修正セクション --- */}
       <div className="card bg-base-100 shadow-md border border-base-200 my-8">
         <div className="card-body">

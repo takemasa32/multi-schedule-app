@@ -5,7 +5,6 @@ if (!HTMLFormElement.prototype.requestSubmit) {
   };
 }
 
-import { GET } from "@/app/api/generate-ics/route";
 import { NextRequest } from "next/server";
 import { generateGoogleCalendarUrl } from "../utils";
 import { createSupabaseClient } from "@/lib/supabase";
@@ -61,81 +60,7 @@ if (typeof global.Response === 'undefined') {
   global.Response = TestResponse;
 }
 
-describe("/api/generate-ics/route.ts", () => {
-  const createRequest = (url: string) => ({ url } as NextRequest);
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("eventパラメータがない場合は400", async () => {
-    const res = await GET(createRequest("http://localhost/api/generate-ics"));
-    expect(res.status).toBe(400);
-  });
-
-  it("イベントが存在しない場合は404", async () => {
-    mockedCreateSupabaseClient.mockReturnValue({
-      from: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
-      })),
-    });
-    const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
-    expect(res.status).toBe(404);
-  });
-
-  it("確定日程がない場合は400", async () => {
-    mockedCreateSupabaseClient.mockReturnValue({
-      from: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: { id: "eid", title: "テスト", description: "desc", final_date_id: null }, error: null }),
-      })),
-    });
-    const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
-    expect(res.status).toBe(400);
-  });
-
-  it("日程情報が取得できない場合は404", async () => {
-    const fromMock = jest.fn()
-      .mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: { id: "eid", title: "テスト", description: "desc", final_date_id: "dateid" }, error: null }),
-      })
-      .mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
-      });
-    mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
-    const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
-    expect(res.status).toBe(404);
-  });
-
-  it("正常に.icsファイルが生成される", async () => {
-    const fromMock = jest.fn()
-      .mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: { id: "eid", title: "テストイベント", description: "説明", final_date_id: "dateid" }, error: null }),
-      })
-      .mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: { start_time: "2025-05-10T10:00:00Z", end_time: "2025-05-10T11:00:00Z" }, error: null }),
-      });
-    mockedCreateSupabaseClient.mockReturnValue({ from: fromMock });
-    const res = await GET(createRequest("http://localhost/api/generate-ics?event=abc"));
-    expect(res.status).toBe(200);
-    const text = await res.text();
-    expect(text).toMatch(/BEGIN:VCALENDAR/);
-    expect(text).toMatch(/SUMMARY:テストイベント/);
-    expect(text).toMatch(/DTSTART:20250510T100000Z/);
-    expect(res.headers.get("content-type")).toMatch(/text\/calendar/);
-  });
-});
+// 旧 `/api/generate-ics` は廃止。ICSは `/api/calendar/ics/[eventId]` を使用します。
 
 describe("generateGoogleCalendarUrl", () => {
   it("正しいGoogleカレンダーURLが生成される", () => {

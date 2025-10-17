@@ -19,5 +19,6 @@
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
-  "cSpell.words": ["chouseisan", "daysynth", "networkidle", "tappy"]
+  "cSpell.words": ["chouseisan", "daysynth", "networkidle", "tappy"],
+  "chatgpt.openOnStartup": false
 }
