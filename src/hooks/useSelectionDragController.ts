@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type HTMLAttributes,
@@ -283,9 +282,12 @@ export default function useSelectionDragController(
       }
       if (event && "currentTarget" in event) {
         try {
-          event.currentTarget.releasePointerCapture?.(
-            (event as ReactPointerEvent<HTMLElement>).pointerId
-          );
+          const currentTarget = (event as ReactPointerEvent<HTMLElement>).currentTarget;
+          if (currentTarget) {
+            currentTarget.releasePointerCapture?.(
+              (event as ReactPointerEvent<HTMLElement>).pointerId
+            );
+          }
         } catch {
           // release に失敗した場合も後続処理を継続
         }
@@ -359,21 +361,21 @@ export default function useSelectionDragController(
       { disabled = false, focusable = false, role = "button" }: SelectionCellPropsOptions = {}
     ): HTMLAttributes<HTMLElement> => {
       if (disabled) {
-        return {
-          "data-selection-key": key,
+        const props: Record<string, unknown> = {
           "aria-disabled": true,
           role,
+          "data-selection-key": key,
         };
+        return props as HTMLAttributes<HTMLElement>;
       }
 
-      const props: HTMLAttributes<HTMLElement> = {
-        "data-selection-key": key,
+      const props: Record<string, unknown> = {
         role,
-        onPointerDown: (event) => handlePointerDown(event, key),
-        onPointerEnter: (event) => handlePointerEnter(event, key),
-        onPointerUp: (event) => finishDrag(event),
-        onPointerCancel: (event) => finishDrag(event),
-        onPointerLeave: (event) => {
+        onPointerDown: (event: ReactPointerEvent<HTMLElement>) => handlePointerDown(event, key),
+        onPointerEnter: (event: ReactPointerEvent<HTMLElement>) => handlePointerEnter(event, key),
+        onPointerUp: (event: ReactPointerEvent<HTMLElement>) => finishDrag(event),
+        onPointerCancel: (event: ReactPointerEvent<HTMLElement>) => finishDrag(event),
+        onPointerLeave: (event: ReactPointerEvent<HTMLElement>) => {
           if (
             shouldIgnorePointerEnter?.(event, key) ||
             !dragInfoRef.current.isDragging
@@ -383,6 +385,7 @@ export default function useSelectionDragController(
           event.preventDefault();
         },
         "aria-pressed": isSelected(key),
+        "data-selection-key": key,
       };
 
       if (focusable) {
@@ -390,7 +393,7 @@ export default function useSelectionDragController(
       }
 
       if (enableKeyboard) {
-        props.onKeyDown = (event) => {
+        props.onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
           if (event.key === " " || event.key === "Enter") {
             event.preventDefault();
             toggleKey(key);
@@ -398,7 +401,7 @@ export default function useSelectionDragController(
         };
       }
 
-      return props;
+      return props as HTMLAttributes<HTMLElement>;
     },
     [
       enableKeyboard,
@@ -416,13 +419,10 @@ export default function useSelectionDragController(
     resetDragState();
   }, [resetDragState]);
 
-  return useMemo(
-    () => ({
-      getCellProps,
-      isDragging: isDraggingState,
-      toggleKey,
-      cancelDrag,
-    }),
-    [cancelDrag, getCellProps, isDraggingState, toggleKey]
-  );
+  return {
+    getCellProps,
+    isDragging: isDraggingState,
+    toggleKey,
+    cancelDrag,
+  };
 }
