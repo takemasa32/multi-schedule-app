@@ -196,7 +196,7 @@ export default function EventFormClient() {
                 type="button"
                 tabIndex={-1}
                 className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
-                aria-label="カレンダーで手動選択の説明"
+                aria-label="カレンダーで手動選択のヒント"
                 onClick={(e) =>
                   openTip(
                     e,

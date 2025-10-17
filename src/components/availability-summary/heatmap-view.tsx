@@ -4,14 +4,14 @@ import { getOptimizedDateDisplay } from "./date-utils";
 interface HeatmapViewProps {
   uniqueDates: Array<{
     date: string;
-    dayOfWeek: string;
     dateObj: Date;
   }>;
   uniqueTimeSlots: Array<{
+    slotKey: string;
     startTime: string;
     endTime: string;
-    label: string;
     timeObj: Date;
+    labels: string[];
   }>;
   heatmapData: Map<
     string,
@@ -21,6 +21,7 @@ interface HeatmapViewProps {
       unavailableCount: number;
       heatmapLevel: number;
       isSelected: boolean;
+      totalResponses: number;
     }
   >;
   maxAvailable: number;
@@ -145,32 +146,32 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
               <td className="h-3 sm:h-4 sticky left-0 bg-base-100 z-10"></td>
             </tr>
             {uniqueTimeSlots.map((timeSlot) => {
-              // 時間表示の最適化 - 1:00のような形式に変換
+              // 時間表示をコンパクトに整形（先頭ゼロを削除）
               const formattedStartTime = timeSlot.startTime.replace(/^0/, "");
+              const formattedEndTime =
+                timeSlot.endTime === "24:00"
+                  ? "24:00"
+                  : timeSlot.endTime.replace(/^0/, "");
 
               return (
-                <tr key={timeSlot.startTime}>
+                <tr key={timeSlot.slotKey}>
                   <td className="relative text-left font-medium whitespace-nowrap sticky left-0 bg-base-100 z-10 p-1 sm:px-2 text-xs sm:text-sm">
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 0, // 上辺を基準にする
-                        left: "0.5rem",
-                        transform: "translateY(-50%)", // 高さの半分だけ上に移動
-                        backgroundColor: "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
-                        padding: "0 0.25rem",
-                      }}
-                    >
-                      {formattedStartTime}
-                    </span>
+                    <div className="flex flex-col leading-tight">
+                      <span>{formattedStartTime}</span>
+                      <span className="text-[10px] text-base-content/60">
+                        〜{formattedEndTime}
+                      </span>
+                    </div>
                   </td>
                   {uniqueDates.map((dateInfo) => {
-                    const key = `${dateInfo.date}_${timeSlot.startTime}`;
+                    const key = `${dateInfo.date}_${timeSlot.slotKey}`;
                     const cellData = heatmapData.get(key);
                     const isSelected = cellData?.isSelected || false;
                     const availableCount = cellData?.availableCount || 0;
                     const unavailableCount = cellData?.unavailableCount || 0;
+                    const totalResponses = cellData?.totalResponses ?? 0;
                     const hasData = cellData !== undefined;
+                    const hasResponses = totalResponses > 0;
 
                     // テーマカラー単色スケール：最大参加者数に応じた不透明度
                     const ratio =
@@ -184,9 +185,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
                     // セルの背景色と境界線のスタイル（動的な部分のみインラインスタイル）
                     const cellStyle = {
-                      backgroundColor: hasData
-                        ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
-                        : "transparent",
+                      backgroundColor:
+                        hasData && hasResponses
+                          ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
+                          : "transparent",
                     } as React.CSSProperties;
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
@@ -215,17 +217,25 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       >
                         {hasData ? (
                           <div className="flex flex-col items-center justify-center h-full">
-                            <span
-                              className={
-                                `font-bold text-xs sm:text-base` +
-                                (opacityValue >= 0.6 ? " text-white" : "")
-                              }
-                            >
-                              {availableCount}
-                            </span>
-                            {unavailableCount > 0 && (
-                              <span className="text-[10px] sm:text-xs text-gray-500">
-                                ({unavailableCount})
+                            {hasResponses ? (
+                              <>
+                                <span
+                                  className={
+                                    `font-bold text-xs sm:text-base` +
+                                    (opacityValue >= 0.6 ? " text-white" : "")
+                                  }
+                                >
+                                  {availableCount}
+                                </span>
+                                {unavailableCount > 0 && (
+                                  <span className="text-[10px] sm:text-xs text-gray-500">
+                                    ({unavailableCount})
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-gray-400 text-xs sm:text-sm">
+                                -
                               </span>
                             )}
                             {isSelected && (

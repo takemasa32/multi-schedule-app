@@ -223,11 +223,16 @@ export default function DateRangePicker({
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = parseDateSafely(e.target.value);
     setStartDate(newDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (newDate && newDate < today) {
-      setErrorMessage("開始日は本日以降の日付を選択してください");
-    } else if (newDate && endDate && newDate > endDate) {
+    if (!allowPastDates) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (newDate && newDate < today) {
+        setErrorMessage("開始日は本日以降の日付を選択してください");
+        return;
+      }
+    }
+
+    if (newDate && endDate && newDate > endDate) {
       setErrorMessage("開始日は終了日より前である必要があります");
     } else {
       setErrorMessage(null);
@@ -238,11 +243,16 @@ export default function DateRangePicker({
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = parseDateSafely(e.target.value);
     setEndDate(newDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (newDate && newDate < today) {
-      setErrorMessage("終了日は本日以降の日付を選択してください");
-    } else if (startDate && newDate && startDate > newDate) {
+    if (!allowPastDates) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (newDate && newDate < today) {
+        setErrorMessage("終了日は本日以降の日付を選択してください");
+        return;
+      }
+    }
+
+    if (startDate && newDate && startDate > newDate) {
       setErrorMessage("終了日は開始日より後である必要があります");
     } else {
       setErrorMessage(null);
@@ -262,11 +272,13 @@ export default function DateRangePicker({
       return;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (newExcludeDate < today) {
-      setErrorMessage("除外日は本日以降の日付のみ指定できます");
-      return;
+    if (!allowPastDates) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (newExcludeDate < today) {
+        setErrorMessage("除外日は本日以降の日付のみ指定できます");
+        return;
+      }
     }
 
     // 既に追加済みの日付は追加しない

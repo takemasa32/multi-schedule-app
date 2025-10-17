@@ -30,6 +30,16 @@ type Availability = {
   availability: boolean;
 };
 
+type HeatmapCell = {
+  dateId: string;
+  availableCount: number;
+  unavailableCount: number;
+  heatmapLevel: number;
+  isSelected: boolean;
+  totalResponses: number;
+  slotKey: string;
+};
+
 type AvailabilitySummaryProps = {
   eventDates: EventDate[];
   participants: Participant[];
@@ -138,14 +148,13 @@ export default function AvailabilitySummary({
 
   // 日付をまとめる (重複を排除)
   const uniqueDates = useMemo(() => {
-    const dateMap = new Map();
+    const dateMap = new Map<string, { date: string; dateObj: Date }>();
 
     eventDates.forEach((date) => {
       const dateKey = getDateString(date.start_time);
       if (!dateMap.has(dateKey)) {
         dateMap.set(dateKey, {
           date: dateKey,
-          dayOfWeek: date.start_time,
           dateObj: new Date(date.start_time),
         });
       }
@@ -158,12 +167,22 @@ export default function AvailabilitySummary({
 
   // 時間帯をまとめる (重複を排除)
   const uniqueTimeSlots = useMemo(() => {
-    const timeMap = new Map();
+    const timeMap = new Map<
+      string,
+      {
+        slotKey: string;
+        startTime: string;
+        endTime: string;
+        timeObj: Date;
+        labels: Set<string>;
+      }
+    >();
 
     eventDates.forEach((date) => {
       const startTimeObj = new Date(date.start_time);
-      // 開始時刻をキーとして使用
-      const timeKey = `${startTimeObj
+      const endTimeObj = new Date(date.end_time);
+
+      const startTimeKey = `${startTimeObj
         .getHours()
         .toString()
         .padStart(2, "0")}:${startTimeObj
@@ -171,32 +190,16 @@ export default function AvailabilitySummary({
         .toString()
         .padStart(2, "0")}`;
 
-      if (!timeMap.has(timeKey)) {
-        const endTimeObj = new Date(date.end_time);
-        // 終了時刻のフォーマット
-        let endTimeKey;
+      let endTimeKey: string;
+      if (endTimeObj.getHours() === 0 && endTimeObj.getMinutes() === 0) {
+        const startDate = new Date(startTimeObj);
+        startDate.setHours(0, 0, 0, 0);
 
-        // 00:00の場合は24:00として表示するかどうかを判断
-        if (endTimeObj.getHours() === 0 && endTimeObj.getMinutes() === 0) {
-          // 開始日と終了日を比較
-          const startDate = new Date(startTimeObj);
-          startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(endTimeObj);
+        endDate.setHours(0, 0, 0, 0);
 
-          const endDate = new Date(endTimeObj);
-          endDate.setHours(0, 0, 0, 0);
-
-          // 終了日が開始日の翌日である場合は24:00と表示
-          if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
-            endTimeKey = "24:00";
-          } else {
-            endTimeKey = `${endTimeObj
-              .getHours()
-              .toString()
-              .padStart(2, "0")}:${endTimeObj
-              .getMinutes()
-              .toString()
-              .padStart(2, "0")}`;
-          }
+        if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
+          endTimeKey = "24:00";
         } else {
           endTimeKey = `${endTimeObj
             .getHours()
@@ -206,22 +209,51 @@ export default function AvailabilitySummary({
             .toString()
             .padStart(2, "0")}`;
         }
+      } else {
+        endTimeKey = `${endTimeObj
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${endTimeObj
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+      }
 
-        timeMap.set(timeKey, {
-          startTime: timeKey,
+      const slotKey = `${startTimeKey}-${endTimeKey}`;
+      if (!timeMap.has(slotKey)) {
+        timeMap.set(slotKey, {
+          slotKey,
+          startTime: startTimeKey,
           endTime: endTimeKey,
-          label: date.label || "",
           timeObj: startTimeObj,
+          labels: new Set<string>(),
         });
+      }
+
+      if (date.label) {
+        timeMap.get(slotKey)?.labels.add(date.label);
       }
     });
 
-    return Array.from(timeMap.values()).sort(
-      (a, b) =>
-        a.timeObj.getHours() * 60 +
-        a.timeObj.getMinutes() -
-        (b.timeObj.getHours() * 60 + b.timeObj.getMinutes())
-    );
+    return Array.from(timeMap.values())
+      .map((item) => ({
+        slotKey: item.slotKey,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        timeObj: item.timeObj,
+        labels: Array.from(item.labels),
+      }))
+      .sort((a, b) => {
+        const aMinutes = a.timeObj.getHours() * 60 + a.timeObj.getMinutes();
+        const bMinutes = b.timeObj.getHours() * 60 + b.timeObj.getMinutes();
+        if (aMinutes !== bMinutes) {
+          return aMinutes - bMinutes;
+        }
+        // 同じ開始時刻の場合は終了時刻の早い順
+        const aEnd = parseInt(a.endTime.replace(":", ""), 10);
+        const bEnd = parseInt(b.endTime.replace(":", ""), 10);
+        return aEnd - bEnd;
+      });
   }, [eventDates]);
 
   // 集計計算: 日程ごとの参加可能者数
@@ -425,21 +457,50 @@ export default function AvailabilitySummary({
   // ヒートマップデータの取得 - 日付×時間のマトリックス
   const heatmapData = useMemo(() => {
     // 各日付×時間帯のセルデータを格納するマップ
-    const cellMap = new Map();
+    const cellMap = new Map<string, HeatmapCell>();
 
     // イベント日程をマップに変換
     eventDates.forEach((date) => {
       const startDate = new Date(date.start_time);
       const dateStr = getDateString(date.start_time);
       // 時間部分をキーに使用
-      const timeStr = `${startDate
+      const startTimeStr = `${startDate
         .getHours()
         .toString()
         .padStart(2, "0")}:${startDate
         .getMinutes()
         .toString()
         .padStart(2, "0")}`;
-      const key = `${dateStr}_${timeStr}`;
+      let endTimeStr: string;
+      const endDateObj = new Date(date.end_time);
+      if (endDateObj.getHours() === 0 && endDateObj.getMinutes() === 0) {
+        const startDay = new Date(startDate);
+        startDay.setHours(0, 0, 0, 0);
+        const endDay = new Date(endDateObj);
+        endDay.setHours(0, 0, 0, 0);
+        if (endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000) {
+          endTimeStr = "24:00";
+        } else {
+          endTimeStr = `${endDateObj
+            .getHours()
+            .toString()
+            .padStart(2, "0")}:${endDateObj
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")}`;
+        }
+      } else {
+        endTimeStr = `${endDateObj
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${endDateObj
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+      }
+
+      const slotKey = `${startTimeStr}-${endTimeStr}`;
+      const key = `${dateStr}_${slotKey}`;
 
       const availableCount = filteredAvailabilities.filter(
         (a) => a.event_date_id === date.id && a.availability
@@ -459,6 +520,8 @@ export default function AvailabilitySummary({
         unavailableCount,
         heatmapLevel,
         isSelected: finalizedDateIds?.includes(date.id) || false,
+        totalResponses,
+        slotKey,
       });
     });
 

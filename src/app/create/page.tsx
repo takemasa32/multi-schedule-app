@@ -4,6 +4,8 @@ import Card from "@/components/layout/Card";
 import siteConfig from "@/lib/site-config";
 import { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: `イベント作成 | ${siteConfig.name.full}`,
   description: `複数の候補日程を設定して、参加者の都合を簡単に調整できるイベントを作成します。${siteConfig.name.full}で最適な日程を見つけましょう。`,

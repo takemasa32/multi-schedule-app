@@ -83,10 +83,19 @@ export default function ManualTimeSlotPicker({
    */
   const toggleSlot = useCallback((key: string, value?: boolean) => {
     setSelectedKeys((prev) => {
+      const current = prev.has(key);
+      const nextVal = value ?? !current;
+      // 値が変わらない場合は Set を作成しない
+      if (current === nextVal) {
+        return prev;
+      }
+
       const next = new Set(prev);
-      const nextVal = value ?? !prev.has(key);
-      if (nextVal) next.add(key);
-      else next.delete(key);
+      if (nextVal) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
       return next;
     });
   }, []);

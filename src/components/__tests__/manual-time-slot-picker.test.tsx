@@ -21,7 +21,7 @@ describe("ManualTimeSlotPicker", () => {
     fireEvent.change(screen.getByLabelText(/デフォルト終了時間/), {
       target: { value: "10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/時間間隔/), {
+    fireEvent.change(screen.getByLabelText("時間間隔"), {
       target: { value: "60" },
     });
 
