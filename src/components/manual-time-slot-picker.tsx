@@ -339,7 +339,7 @@ export default function ManualTimeSlotPicker({
                               isMobile ? 'h-8' : 'h-9'
                             } bg-base-200/30 text-base-content/30 flex select-none items-center justify-center rounded-sm`}
                           >
-                            –
+                            -
                           </div>
                         )}
                       </td>

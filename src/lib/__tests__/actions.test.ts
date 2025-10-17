@@ -119,9 +119,11 @@ describe('createEvent', () => {
     const adminTokenRegex = /^[0-9a-fA-F-]{36}$/;
     const result = await createEvent(formData);
     expect(result.success).toBe(true);
-    expect(result.publicToken).toMatch(publicTokenRegex);
-    expect(result.adminToken).toMatch(adminTokenRegex);
-    expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
+    if (result.success) {
+      expect(result.publicToken).toMatch(publicTokenRegex);
+      expect(result.adminToken).toMatch(adminTokenRegex);
+      expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
+    }
   });
 
   it('タイトル未入力時はバリデーションエラー', async () => {

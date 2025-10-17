@@ -18,7 +18,24 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
   throw lastErr;
 }
 
-let eventUrl: string;
+async function waitForEventDetail(page: Page) {
+  const expectedUrl = eventPublicUrl || eventAdminUrl;
+  if (!expectedUrl) {
+    throw new Error('イベントURLが初期化されていません');
+  }
+  const expectedPrefix = eventPublicUrl || expectedUrl;
+  await page.waitForURL(
+    (url) => {
+      const current = url.toString();
+      if (current === expectedUrl) return true;
+      return current.startsWith(expectedPrefix);
+    },
+    { timeout: 15000 },
+  );
+}
+
+let eventAdminUrl: string;
+let eventPublicUrl: string;
 let participantName: string;
 
 // Playwrightのテストでwindow.navigator.clipboardをモックするための型定義
@@ -61,13 +78,17 @@ test.describe.serial('イベントE2Eフロー', () => {
       console.log('DEBUG: イベント作成後の画面HTML', html);
       throw e;
     }
-    eventUrl = page.url();
-    expect(eventUrl).toMatch(/\/event\//);
+    eventAdminUrl = page.url();
+    expect(eventAdminUrl).toMatch(/\/event\//);
+    const adminUrl = new URL(eventAdminUrl);
+    adminUrl.searchParams.delete('admin');
+    eventPublicUrl = adminUrl.toString();
+    expect(eventPublicUrl).toMatch(/\/event\//);
   });
 
   test('参加者がheatmapで回答', async ({ context }) => {
     const participantPage = await context.newPage();
-    await gotoWithRetry(participantPage, eventUrl);
+    await gotoWithRetry(participantPage, eventPublicUrl || eventAdminUrl);
     await participantPage.waitForLoadState('networkidle');
     await expect(participantPage.getByRole('link', { name: /新しく回答する/ })).toBeVisible();
     await participantPage.getByRole('link', { name: /新しく回答する/ }).click();
@@ -96,7 +117,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await participantPage.getByRole('button', { name: /回答を送信/ }).click();
 
     // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
-    await participantPage.waitForURL(eventUrl, { timeout: 15000 });
+    await waitForEventDetail(participantPage);
     const backToSummaryBtn = participantPage.getByRole('button', {
       name: /回答状況の確認・集計に戻る/,
     });
@@ -127,7 +148,7 @@ test.describe.serial('イベントE2Eフロー', () => {
   });
 
   test('週表示で別参加者が回答', async ({ page }) => {
-    await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
+    await gotoWithRetry(page, eventAdminUrl);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
     await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible({
@@ -175,7 +196,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: /回答を送信/ }).click();
 
     // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
-    await page.waitForURL(eventUrl, { timeout: 15000 });
+    await waitForEventDetail(page);
     const backToSummaryBtn = page.getByRole('button', {
       name: /回答状況の確認・集計に戻る/,
     });
@@ -195,7 +216,7 @@ test.describe.serial('イベントE2Eフロー', () => {
   });
 
   test('既存回答の編集', async ({ page }) => {
-    await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
+    await gotoWithRetry(page, eventAdminUrl);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
     await page.getByRole('button', { name: /既存の回答を編集/ }).click();
@@ -215,7 +236,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: '回答を更新する' }).click();
 
     // 回答更新後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
-    await page.waitForURL(eventUrl, { timeout: 15000 });
+    await waitForEventDetail(page);
     const backToSummaryBtn = page.getByRole('button', {
       name: /回答状況の確認・集計に戻る/,
     });
@@ -236,7 +257,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('主催者確定・カレンダー連携', async ({ context }) => {
     const adminPage = await context.newPage();
-    await gotoWithRetry(adminPage, eventUrl);
+    await gotoWithRetry(adminPage, eventAdminUrl);
     await adminPage.waitForLoadState('networkidle');
 
     await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({
@@ -295,7 +316,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('主催者が確定解除（全日程の確定をキャンセル）できる', async ({ context }) => {
     const adminPage = await context.newPage();
-    await gotoWithRetry(adminPage, eventUrl);
+    await gotoWithRetry(adminPage, eventAdminUrl);
     await adminPage.waitForLoadState('networkidle');
     await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({
       timeout: 10000,
@@ -355,7 +376,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     });
 
     // イベント詳細ページへ遷移
-    await gotoWithRetry(page, eventUrl);
+    await gotoWithRetry(page, eventAdminUrl);
     await page.waitForLoadState('networkidle');
 
     // 共有ボタンをクリック
@@ -367,13 +388,13 @@ test.describe.serial('イベントE2Eフロー', () => {
 
     // クリップボードにコピーされた内容を取得
     const copied = await page.evaluate(() => window._copiedText);
-    expect(copied).toBe(eventUrl);
+    expect(copied).toBe(eventPublicUrl);
   });
 
   // クイック自動延長UIのE2Eテスト
   // 仕様: 日程追加セクションで延長日を選択し、クイック自動延長ボタン→モーダルで追加→完了→重複エラーも検証
   test('クイック自動延長で日程追加・重複バリデーション', async ({ page }) => {
-    await gotoWithRetry(page, eventUrl);
+    await gotoWithRetry(page, eventAdminUrl);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
@@ -429,7 +450,7 @@ test.describe.serial('イベントE2Eフロー', () => {
   });
 
   test('詳細日程追加フォーム-正常系・重複バリデーション', async ({ page }) => {
-    await gotoWithRetry(page, eventUrl);
+    await gotoWithRetry(page, eventAdminUrl);
     await page.waitForLoadState('networkidle');
 
     // 日程追加セクションを展開
