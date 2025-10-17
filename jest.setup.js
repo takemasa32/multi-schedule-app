@@ -22,6 +22,18 @@ if (typeof global.WritableStream === "undefined") {
 if (typeof global.TransformStream === "undefined") {
   global.TransformStream = TransformStream;
 }
+// PointerEvent ポリフィル
+if (typeof global.PointerEvent === "undefined") {
+  class PointerEventPolyfill extends MouseEvent {
+    constructor(type, params = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId ?? 0;
+      this.pointerType = params.pointerType ?? "mouse";
+      this.isPrimary = params.isPrimary ?? true;
+    }
+  }
+  global.PointerEvent = PointerEventPolyfill;
+}
 // Requestの簡易モック（API Route/Next.js用）
 if (typeof global.Request === "undefined") {
   global.Request = class {

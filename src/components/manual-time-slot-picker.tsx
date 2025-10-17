@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
 import DateRangePicker from "./date-range-picker";
 import { TimeSlot } from "@/lib/utils";
-import useDragScrollBlocker from "@/hooks/useDragScrollBlocker";
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
+import useSelectionDragController from "@/hooks/useSelectionDragController";
 
 /**
  * カレンダーで手動選択するコンポーネントのプロパティ
@@ -29,12 +29,6 @@ export default function ManualTimeSlotPicker({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(initialSlots.map(slotKey))
   );
-  const lastSyncedHashRef = useRef<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragState, setDragState] = useState<boolean | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number; key: string } | null>(null);
-  // スクロール操作を検出して、スクロール中はセル操作を無効化
-  const isScrollDragging = useDragScrollBlocker(10);
   const { isMobile } = useDeviceDetect();
 
   /**
@@ -57,29 +51,25 @@ export default function ManualTimeSlotPicker({
    * initialSlots の変更を selectedKeys に一度だけ（内容が変わったときだけ）反映
    * JSON でハッシュ化して依存を安定化
    */
-  const propKeysHash = useMemo(
-    () => JSON.stringify(initialSlots.map(slotKey).sort()),
-    [initialSlots]
-  );
-  const selectedKeysHash = useMemo(
-    () => JSON.stringify(Array.from(selectedKeys).sort()),
-    [selectedKeys]
-  );
-
-  // initialSlots の内容が変化した場合のみローカル state を同期
+  const syncFromPropRef = useRef(false);
+  const lastInitialHashRef = useRef<string | null>(null);
   useEffect(() => {
-    if (lastSyncedHashRef.current === propKeysHash) {
+    const incomingSet = new Set(initialSlots.map(slotKey));
+    const incomingHash = JSON.stringify(Array.from(incomingSet).sort());
+    if (lastInitialHashRef.current === incomingHash) {
       return;
     }
+    lastInitialHashRef.current = incomingHash;
 
-    lastSyncedHashRef.current = propKeysHash;
-
-    if (propKeysHash === selectedKeysHash) {
-      return;
-    }
-
-    setSelectedKeys(new Set(initialSlots.map(slotKey)));
-  }, [initialSlots, propKeysHash, selectedKeysHash]);
+    setSelectedKeys((prev) => {
+      const prevHash = JSON.stringify(Array.from(prev).sort());
+      if (prevHash === incomingHash) {
+        return prev;
+      }
+      syncFromPropRef.current = true;
+      return incomingSet;
+    });
+  }, [initialSlots]);
 
   /**
    * ★ 派生状態：selectedMap は state にせず useMemo で導出
@@ -92,95 +82,24 @@ export default function ManualTimeSlotPicker({
     return map;
   }, [allSlots, selectedKeys]);
 
-  /**
-   * ON/OFF トグルは selectedKeys を更新
-   */
-  const toggleSlot = useCallback((key: string, value?: boolean) => {
+  const applySelection = useCallback((keys: string[], value: boolean) => {
     setSelectedKeys((prev) => {
-      const current = prev.has(key);
-      const nextVal = value ?? !current;
-      // 値が変わらない場合は Set を作成しない
-      if (current === nextVal) {
-        return prev;
-      }
-
+      let changed = false;
       const next = new Set(prev);
-      if (nextVal) {
-        next.add(key);
-      } else {
-        next.delete(key);
+      for (const key of keys) {
+        if (value) {
+          if (!next.has(key)) {
+            next.add(key);
+            changed = true;
+          }
+        } else if (next.has(key)) {
+          next.delete(key);
+          changed = true;
+        }
       }
-      return next;
+      return changed ? next : prev;
     });
   }, []);
-
-  const handleMouseDown = (key: string) => {
-    if (isScrollDragging) return;
-    const newState = !selectedMap[key];
-    toggleSlot(key, newState);
-    setIsDragging(true);
-    setDragState(newState);
-  };
-
-  const handleMouseEnter = (key: string) => {
-    if (isDragging && dragState !== null) {
-      toggleSlot(key, dragState);
-    }
-  };
-
-  const handleTouchStart = (key: string, e?: React.TouchEvent) => {
-    // グリッド上ではスクロールを許可しないため、即座に選択モードへ
-    if (e?.touches && e.touches[0]) {
-      const t = e.touches[0];
-      touchStartRef.current = { x: t.clientX, y: t.clientY, key };
-    }
-    const newState = !selectedMap[key];
-    toggleSlot(key, newState);
-    setIsDragging(true);
-    setDragState(newState);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    if (isDragging && dragState !== null) {
-      const element = document.elementFromPoint(touch.clientX, touch.clientY);
-      const cell = element?.closest<HTMLDivElement>("[data-key]");
-      if (cell) {
-        toggleSlot(cell.getAttribute("data-key") as string, dragState);
-      }
-    }
-  };
-
-  const endDrag = useCallback(() => {
-    setIsDragging(false);
-    setDragState(null);
-    touchStartRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    window.addEventListener("mouseup", endDrag);
-    window.addEventListener("touchend", endDrag);
-    return () => {
-      window.removeEventListener("mouseup", endDrag);
-      window.removeEventListener("touchend", endDrag);
-    };
-  }, [isDragging, endDrag]);
-
-  // 選択モード中はページスクロールを抑止（モバイル）
-  useEffect(() => {
-    if (!isMobile) return;
-    if (isDragging) {
-      const prevOverflow = document.body.style.overflow;
-      const prevTouch: string = (document.body.style as unknown as { touchAction?: string }).touchAction || "";
-      document.body.style.overflow = "hidden";
-      (document.body.style as unknown as { touchAction?: string }).touchAction = "none";
-      return () => {
-        document.body.style.overflow = prevOverflow;
-        (document.body.style as unknown as { touchAction?: string }).touchAction = prevTouch;
-      };
-    }
-  }, [isDragging, isMobile]);
 
   /**
    * 親への通知は派生配列をメモ化してから effect で一回通知
@@ -190,16 +109,13 @@ export default function ManualTimeSlotPicker({
     [allSlots, selectedKeys]
   );
 
-  const notifyTimeSlotChange = useCallback(
-    (selected: TimeSlot[]) => {
-      onTimeSlotsChange(selected);
-    },
-    [onTimeSlotsChange]
-  );
-
   useEffect(() => {
-    notifyTimeSlotChange(selectedSlots);
-  }, [notifyTimeSlotChange, selectedSlots]);
+    if (syncFromPropRef.current) {
+      syncFromPropRef.current = false;
+      return;
+    }
+    onTimeSlotsChange(selectedSlots);
+  }, [onTimeSlotsChange, selectedSlots]);
 
   const dateKeys = useMemo(
     () =>
@@ -244,10 +160,24 @@ export default function ManualTimeSlotPicker({
 
   const weekLabel = useMemo(() => {
     if (visibleDates.length === 0) return "";
-    const first = visibleDates[0];
-    const last = visibleDates[6];
+    const first = new Date(`${visibleDates[0]}T00:00:00`).toLocaleDateString(
+      "ja-JP",
+      { year: "numeric", month: "numeric", day: "numeric" }
+    );
+    const last = new Date(`${visibleDates[visibleDates.length - 1]}T00:00:00`).toLocaleDateString(
+      "ja-JP",
+      { year: "numeric", month: "numeric", day: "numeric" }
+    );
     return `${first} 〜 ${last}`;
   }, [visibleDates]);
+
+  const selectionController = useSelectionDragController({
+    isSelected: (key) => selectedKeys.has(key),
+    applySelection,
+    rangeResolver: ({ targetKey }) => (targetKey ? [targetKey] : []),
+    disableBodyScroll: true,
+    enableKeyboard: false,
+  });
 
   // コンパクトなヘッダー日付表示（例: 7/1 + (火) を2行）
   const getCompactDateParts = useCallback((dateStr: string) => {
@@ -353,14 +283,27 @@ export default function ManualTimeSlotPicker({
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <th className={`h-3 sticky left-0 bg-base-100 z-10 ${
+                  isMobile ? "p-0" : "p-0"
+                }`}></th>
+                {visibleDates.map((date) => (
+                  <td key={`${date}-spacer`} className="h-3"></td>
+                ))}
+              </tr>
               {timeKeys.map((time) => (
                 <tr key={time}>
                   <th
-                    className={`whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
-                      isMobile ? "p-1 text-[10px]" : "p-1 text-[11px]"
+                    className={`relative whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
+                      isMobile ? "px-2 py-1 text-[10px]" : "px-2 py-1 text-[11px]"
                     }`}
                   >
-                    {time.split("-")[0].replace(/^0/, "")}
+                    <span
+                      className="absolute left-2 text-xs font-medium text-base-content/80"
+                      style={{ top: 0, transform: "translateY(-50%)" }}
+                    >
+                      {time.split("-")[0].replace(/^0/, "")}
+                    </span>
                   </th>
                   {visibleDates.map((date) => {
                     const key = `${date}_${time}`;
@@ -377,33 +320,25 @@ export default function ManualTimeSlotPicker({
                           <div
                             data-testid="slot-cell"
                             data-key={key}
+                            data-selection-key={key}
                             className={`w-full ${
-                              isMobile ? "h-7" : "h-8"
-                            } flex items-center justify-center cursor-pointer transition-colors select-none ${
+                              isMobile ? "h-8" : "h-9"
+                            } flex items-center justify-center cursor-pointer transition-colors select-none rounded-sm ${
                               active
-                                ? "bg-primary text-primary-content font-bold"
-                                : "bg-base-200"
+                                ? "bg-success text-success-content font-semibold"
+                                : "bg-base-200/70 text-base-content/70"
                             }`}
-                            onMouseDown={(e) => {
-                              if (isMobile) return; // タッチ端末の合成マウスイベントを無視
-                              e.preventDefault();
-                              handleMouseDown(key);
-                            }}
-                            onMouseEnter={() => {
-                              if (isMobile) return; // タッチ端末の合成マウスイベントを無視
-                              handleMouseEnter(key);
-                            }}
-                            onTouchStart={(e) => {
-                              handleTouchStart(key, e);
-                            }}
-                            onTouchMove={handleTouchMove}
-                            role="button"
+                            {...selectionController.getCellProps(key)}
                             aria-label={active ? "選択済み" : "未選択"}
                           >
-                            {active ? "○" : ""}
+                            {active ? "○" : "×"}
                           </div>
                         ) : (
-                          <div className={`w-full ${isMobile ? "h-7" : "h-8"} flex items-center justify-center bg-base-200/50 text-base-content/30 select-none`}>
+                          <div
+                            className={`w-full ${
+                              isMobile ? "h-8" : "h-9"
+                            } flex items-center justify-center bg-base-200/30 text-base-content/30 select-none rounded-sm`}
+                          >
                             –
                           </div>
                         )}
@@ -412,6 +347,29 @@ export default function ManualTimeSlotPicker({
                   })}
                 </tr>
               ))}
+              {timeKeys.length > 0 && visibleDates.length > 0 && (() => {
+                const lastTime = timeKeys[timeKeys.length - 1].split("-")[1];
+                const formatted = lastTime === "24:00" ? "24:00" : lastTime.replace(/^0/, "");
+                return (
+                  <tr>
+                    <th
+                      className={`relative whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
+                        isMobile ? "px-2 py-1 text-[10px]" : "px-2 py-1 text-[11px]"
+                      }`}
+                    >
+                      <span
+                        className="absolute left-2 text-xs font-medium text-base-content/80"
+                        style={{ top: 0, transform: "translateY(-50%)" }}
+                      >
+                        {formatted}
+                      </span>
+                    </th>
+                    {visibleDates.map((date) => (
+                      <td key={`${date}-endtime`} className="p-0 text-center border border-base-300" />
+                    ))}
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
