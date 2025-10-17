@@ -60,13 +60,7 @@ describe('createEvent', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (_table: string) =>
         createSupabaseChainMock({
-          data: [
-            {
-              id: 'eventid',
-              public_token: 'mock-public-token',
-              admin_token: 'mock-admin-token',
-            },
-          ],
+          data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token' }],
           error: null,
         }),
       rpc: jest.fn(() =>
@@ -74,7 +68,7 @@ describe('createEvent', () => {
           data: [
             {
               event_id: 'eventid',
-              public_token: 'mock-public-token',
+              public_token: 'AbCdEf123456',
               admin_token: 'mock-admin-token',
             },
           ],
@@ -95,14 +89,14 @@ describe('createEvent', () => {
     formData.append('startTimes', '10:00');
     formData.append('endDates', '2025-05-10');
     formData.append('endTimes', '11:00');
-    // データはUUID形式で返す
+    // データは12桁の英数字形式で返す
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (_table: string) =>
         createSupabaseChainMock({
           data: [
             {
               id: 'eventid',
-              public_token: '123e4567-e89b-12d3-a456-426614174000',
+              public_token: 'ZyxwvU987654',
               admin_token: '123e4567-e89b-12d3-a456-426614174001',
             },
           ],
@@ -113,7 +107,7 @@ describe('createEvent', () => {
           data: [
             {
               event_id: 'eventid',
-              public_token: '123e4567-e89b-12d3-a456-426614174000',
+              public_token: 'ZyxwvU987654',
               admin_token: '123e4567-e89b-12d3-a456-426614174001',
             },
           ],
@@ -121,14 +115,13 @@ describe('createEvent', () => {
         }),
       ),
     }));
-    const uuidRegex = /^[0-9a-fA-F-]{36}$/;
+    const publicTokenRegex = /^[0-9A-Za-z]{12}$/;
+    const adminTokenRegex = /^[0-9a-fA-F-]{36}$/;
     const result = await createEvent(formData);
     expect(result.success).toBe(true);
-    if (!result.success) {
-      throw new Error('イベント作成が成功しませんでした');
-    }
-    expect(result.publicToken).toMatch(uuidRegex);
-    expect(result.redirectUrl).toBe(`/event/${result.publicToken}`);
+    expect(result.publicToken).toMatch(publicTokenRegex);
+    expect(result.adminToken).toMatch(adminTokenRegex);
+    expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
   });
 
   it('タイトル未入力時はバリデーションエラー', async () => {
@@ -198,7 +191,7 @@ describe('submitAvailability', () => {
             data: [
               {
                 id: 'eventid',
-                public_token: 'mock-public-token',
+                public_token: 'AbCdEf123456',
                 admin_token: 'mock-admin-token',
                 is_finalized: false,
               },
@@ -224,24 +217,25 @@ describe('submitAvailability', () => {
 
   it('正常な入力で回答が保存される', async () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) =>
-        createSupabaseChainMock(
-          table === 'events'
-            ? {
-                data: [
-                  {
-                    id: 'eventid',
-                    public_token: 'mock-public-token',
-                    admin_token: 'mock-admin-token',
-                    is_finalized: false,
-                  },
-                ],
-                error: null,
-              }
-            : table === 'participants'
-              ? { data: [], error: null }
-              : { data: [], error: null },
-        ),
+      from: (table: string) => {
+        if (table === 'events') {
+          return createSupabaseChainMock({
+            data: [
+              {
+                id: 'eventid',
+                public_token: 'AbCdEf123456',
+                admin_token: 'mock-admin-token',
+                is_finalized: false,
+              },
+            ],
+            error: null,
+          });
+        }
+        if (table === 'participants') {
+          return createSupabaseChainMock({ data: [], error: null });
+        }
+        return createSupabaseChainMock({ data: [], error: null });
+      },
       rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
     }));
     const formData = new FormData();
@@ -301,7 +295,7 @@ describe('submitAvailability', () => {
             data: [
               {
                 id: 'eventid',
-                public_token: 'mock-public-token',
+                public_token: 'AbCdEf123456',
                 admin_token: 'mock-admin-token',
                 is_finalized: false,
               },
@@ -349,7 +343,7 @@ describe('submitAvailability', () => {
             data: [
               {
                 id: 'eventid',
-                public_token: 'mock-public-token',
+                public_token: 'AbCdEf123456',
                 admin_token: 'mock-admin-token',
                 is_finalized: false,
               },
@@ -389,7 +383,7 @@ describe('finalizeEvent', () => {
             data: [
               {
                 id: 'eventid',
-                public_token: 'mock-public-token',
+                public_token: 'AbCdEf123456',
                 admin_token: 'mock-admin-token',
                 is_finalized: false,
               },
@@ -445,7 +439,7 @@ describe('finalizeEvent', () => {
             data: [
               {
                 id: 'eventid',
-                public_token: 'mock-public-token',
+                public_token: 'AbCdEf123456',
                 admin_token: 'mock-admin-token',
                 is_finalized: false,
               },
@@ -473,7 +467,7 @@ describe('finalizeEvent', () => {
             data: [
               {
                 id: 'eventid',
-                public_token: 'mock-public-token',
+                public_token: 'AbCdEf123456',
                 admin_token: 'mock-admin-token',
                 is_finalized: false,
               },

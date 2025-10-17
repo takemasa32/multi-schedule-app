@@ -170,7 +170,7 @@ RLS を有効化。匿名キー(anon)は RLS と組み合わせ、サービス�
 **テーブル:**
 
 1.  **events:**
-    - `id` (UUID, PK), `public_token` (UUID, Unique), `admin_token` (UUID, Unique), `title` (text), `description` (text, NULL 可), `is_finalized` (boolean, default false), `final_date_id` (UUID, FK event_dates.id, NULL 可), `created_at` (timestamp), `created_by` (UUID, NULL 可)
+    - `id` (UUID, PK), `public_token` (text, Unique), `admin_token` (UUID, Unique), `title` (text), `description` (text, NULL 可), `is_finalized` (boolean, default false), `final_date_id` (UUID, FK event_dates.id, NULL 可), `created_at` (timestamp), `created_by` (UUID, NULL 可)
 2.  **event_dates:** (イベント候補日程)
     - `id` (UUID, PK), `event_id` (UUID, FK events.id, CASCADE), `start_time` (timestamp, NOT NULL), `end_time` (timestamp, NOT NULL), `label` (text, NULL 可), `created_at` (timestamp)
     - **補足:** `start_time`, `end_time` はローカルタイムとして保存・表示。タイムゾーン変換なし。
@@ -202,7 +202,7 @@ RLS を有効化。匿名キー(anon)は RLS と組み合わせ、サービス�
 
 **トークン:**
 
-- `public_token`: UUID。イベント情報取得・回答用。
+- `public_token`: 短い英数字テキスト。イベント情報取得・回答用で、URL に埋め込んでも扱いやすい形式とする。
 - `admin_token`: UUID。イベント管理操作用。非公開。
 
 **スキーマ例:** (仕様書記載の SQL DDL 参照)

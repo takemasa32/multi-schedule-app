@@ -4,11 +4,13 @@ import { EventFetchError, EventNotFoundError } from './errors';
 import { fetchAllPaginatedWithOrder, SupabaseQueryInterface } from './utils';
 import type { Database } from './database.types';
 import { v4 as uuidv4 } from 'uuid';
+import { generatePublicToken } from './token';
 import { revalidatePath } from 'next/cache';
 
 export type CreateEventSuccessResult = {
   success: true;
   publicToken: string;
+  adminToken: string;
   redirectUrl: string;
 };
 
@@ -67,7 +69,7 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     const supabaseAdmin = createSupabaseAdmin();
 
     // トークン生成
-    const publicToken = uuidv4();
+    const publicToken = generatePublicToken();
     const adminToken = uuidv4();
 
     // RPC に渡す日程データ配列
@@ -133,11 +135,12 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     const event = created[0];
 
     // イベント作成が成功した場合、イベントページにリダイレクト
-    // 管理用トークンは公開しないため、公開トークンのみ返す
+    // クライアントでの履歴保存や管理画面遷移に利用するため公開・管理トークンを返す
     return {
       success: true,
       publicToken: event.public_token,
-      redirectUrl: `/event/${event.public_token}`,
+      adminToken: event.admin_token,
+      redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}`,
     };
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
