@@ -31,6 +31,7 @@ interface EventDetailsSectionProps {
   participants: Participant[];
   availabilities: Availability[];
   finalizedDateIds: string[];
+  isAdmin?: boolean;
 }
 
 export default function EventDetailsSection({
@@ -39,6 +40,7 @@ export default function EventDetailsSection({
   participants,
   availabilities,
   finalizedDateIds,
+  isAdmin = false,
 }: EventDetailsSectionProps) {
   // 参加者名バッジのトグルUI
   const [excludedParticipantIds, setExcludedParticipantIds] = useState<
@@ -64,6 +66,7 @@ export default function EventDetailsSection({
             availabilities={availabilities}
             finalizedDateIds={finalizedDateIds}
             excludedParticipantIds={excludedParticipantIds}
+            testIdPrefix={isAdmin ? "admin" : "public"}
           />
           {/* 参加者名リスト（表示/非表示トグル） */}
           {participants.length > 0 && (

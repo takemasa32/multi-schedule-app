@@ -177,6 +177,7 @@ export default async function EventPage({
             }}
             eventDates={eventDatesPromise}
             participants={participantsPromise}
+            isAdmin={isAdmin}
           />
         </Suspense>
       </div>
@@ -230,10 +231,12 @@ async function EventDetailsSectionLoader({
   event,
   eventDates,
   participants,
+  isAdmin,
 }: {
   event: EventDetailsSectionEvent;
   eventDates: Promise<EventDate[]>;
   participants: Promise<{ id: string; name: string }[]>;
+  isAdmin: boolean;
 }) {
   const [dates, participantList, availabilities, finalizedDateIds] =
     await Promise.all([
@@ -251,6 +254,7 @@ async function EventDetailsSectionLoader({
       participants={participantList || []}
       availabilities={availabilities || []}
       finalizedDateIds={finalizedDateIds}
+      isAdmin={isAdmin}
     />
   );
 }

@@ -34,6 +34,7 @@ export default function EventDateAddSection({
   >(null);
   const [addModalError, setAddModalError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const latestManualTimeSlotsRef = useRef<TimeSlot[]>([]);
   // エラー発生時に自動スクロール
   useScrollToError(addModalError, errorRef);
   const [showToast, setShowToast] = useState<{
@@ -203,6 +204,7 @@ export default function EventDateAddSection({
                   <div className="mt-4">
                     <DateRangePicker
                       onTimeSlotsChange={(timeSlots) => {
+                        latestManualTimeSlotsRef.current = timeSlots;
                         if (addModalState !== "confirm") {
                           setPendingTimeSlots(timeSlots);
                         }
@@ -214,6 +216,15 @@ export default function EventDateAddSection({
                       }`}
                       type="button"
                       onClick={() => {
+                        setAddModalError(null);
+                        if (latestManualTimeSlotsRef.current.length === 0) {
+                          setAddModalState("error");
+                          setAddModalError("追加する日程が生成されていません");
+                          return;
+                        }
+                        setPendingTimeSlots([
+                          ...latestManualTimeSlotsRef.current,
+                        ]);
                         setAddModalState("confirm");
                       }}
                     >
@@ -247,7 +258,10 @@ export default function EventDateAddSection({
                 >
                   <h3 className="font-bold text-lg mb-2">日程追加の確認</h3>
                   {addModalState === "success" ? (
-                    <div className="alert alert-success mb-4">
+                    <div
+                      className="alert alert-success mb-4"
+                      data-testid="event-date-add-success"
+                    >
                       日程を追加しました。
                     </div>
                   ) : (
@@ -375,7 +389,11 @@ export default function EventDateAddSection({
                     )}
                   </div>
                   {addModalError && (
-                    <div className="alert alert-error mt-3 text-sm" ref={errorRef}>
+                    <div
+                      className="alert alert-error mt-3 text-sm"
+                      ref={errorRef}
+                      data-testid="event-date-add-error"
+                    >
                       {addModalError}
                     </div>
                   )}

@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import {
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+  useEffect,
+  useId,
+} from "react";
 import { Tooltip, TooltipState } from "./tooltip";
 import ListView from "./list-view";
 import HeatmapView from "./heatmap-view";
@@ -52,6 +59,7 @@ type AvailabilitySummaryProps = {
   ) => void;
   publicToken?: string;
   excludedParticipantIds?: string[];
+  testIdPrefix?: string;
 };
 
 // type ViewMode = "list" | "heatmap" | "detailed";
@@ -67,6 +75,7 @@ export default function AvailabilitySummary({
   onShowParticipantForm,
   publicToken,
   excludedParticipantIds = [],
+  testIdPrefix,
 }: AvailabilitySummaryProps) {
   // viewModeは内部でuseState管理
   const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
@@ -130,6 +139,17 @@ export default function AvailabilitySummary({
 
   // ツールチップ表示のためのポータル用参照
   const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
+  const internalId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const tabTestIdBase = useMemo(() => {
+    if (testIdPrefix) {
+      return `${testIdPrefix}-availability-tab`;
+    }
+    return `availability-tab-${internalId}`;
+  }, [testIdPrefix, internalId]);
+  const buildTabTestId = useCallback(
+    (key: "heatmap" | "detailed" | "list") => `${tabTestIdBase}-${key}`,
+    [tabTestIdBase]
+  );
 
   // コンポーネントマウント時にポータル要素を作成
   useMemo(() => {
@@ -654,6 +674,7 @@ export default function AvailabilitySummary({
                 ? "tab-active bg-primary text-primary-content font-medium"
                 : "text-base-content"
             }`}
+            data-testid={buildTabTestId("heatmap")}
             onClick={() => setViewMode("heatmap")}
           >
             ヒートマップ表示
@@ -664,6 +685,7 @@ export default function AvailabilitySummary({
                 ? "tab-active bg-primary text-primary-content font-medium"
                 : "text-base-content"
             }`}
+            data-testid={buildTabTestId("detailed")}
             onClick={() => setViewMode("detailed")}
           >
             個別表示
@@ -674,6 +696,7 @@ export default function AvailabilitySummary({
                 ? "tab-active bg-primary text-primary-content font-medium"
                 : "text-base-content"
             }`}
+            data-testid={buildTabTestId("list")}
             onClick={() => setViewMode("list")}
           >
             リスト表示
