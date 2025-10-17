@@ -92,8 +92,7 @@ describe('createEvent', () => {
     const result = await createEvent(formData);
     expect(result.success).toBe(true);
     expect(result.publicToken).toMatch(uuidRegex);
-    expect(result.adminToken).toMatch(uuidRegex);
-    expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
+    expect(result.redirectUrl).toBe(`/event/${result.publicToken}`);
   });
 
   it('タイトル未入力時はバリデーションエラー', async () => {

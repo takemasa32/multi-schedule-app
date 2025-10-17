@@ -111,11 +111,7 @@ function EventHistoryInner({
               >
                 <div className="flex-1 min-w-0">
                   <Link
-                    href={
-                      event.isCreatedByMe && event.adminToken
-                        ? `/event/${event.id}?admin=${event.adminToken}`
-                        : `/event/${event.id}`
-                    }
+                    href={`/event/${event.id}`}
                     className="block truncate text-primary hover:underline"
                   >
                     {event.title}

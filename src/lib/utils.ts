@@ -277,10 +277,11 @@ export async function fetchAllPaginatedWithOrder<T>(
 export interface EventHistoryItem {
   id: string;           // イベントの公開ID
   title: string;        // イベントのタイトル
-  adminToken?: string;  // 管理者トークン（作成したイベントの場合のみ）
   createdAt: string;    // 作成日時またはアクセス日時（ISO文字列）
   isCreatedByMe: boolean; // 自分が作成したかどうか
 }
+
+type StoredEventHistoryItem = EventHistoryItem & { adminToken?: string };
 
 // ローカルストレージのキー
 const EVENT_HISTORY_KEY = 'multi_schedule_event_history';
@@ -295,8 +296,13 @@ export function getEventHistory(): EventHistoryItem[] {
     const historyJson = localStorage.getItem(EVENT_HISTORY_KEY);
     if (!historyJson) return [];
 
-    const history = JSON.parse(historyJson) as EventHistoryItem[];
-    return history;
+    const history = JSON.parse(historyJson) as StoredEventHistoryItem[];
+    return history.map((item) => ({
+      id: item.id,
+      title: item.title,
+      createdAt: item.createdAt,
+      isCreatedByMe: Boolean(item.isCreatedByMe),
+    }));
   } catch (error) {
     console.error('イベント履歴の取得に失敗しました:', error);
     return [];

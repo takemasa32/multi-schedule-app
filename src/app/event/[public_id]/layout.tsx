@@ -30,7 +30,6 @@ export default async function EventLayout({
           title={event.title}
           description={event.description}
           isFinalized={event.is_finalized}
-          isAdmin={false}
         />
         {children}
       </div>

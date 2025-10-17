@@ -76,7 +76,7 @@ flowchart LR
   - 主要要素: イベントタイトル・説明表示。
   - 回答フォーム: 名前入力、候補日程一覧と回答入力 UI（チェックボックス等）、送信ボタン。
   - 回答状況集計表示: テーブル形式（日程別人数、参加者別回答）。
-  - 主催者用機能 UI (管理用 URL `/event/[公開トークン]?admin=[管理トークン]` でアクセス時のみ表示): 最終日程確定ボタン。確定操作は後で変更可能。
+  - 最終日程確定ボタンを同ページ内に常設し、確定操作は後から変更可能。
 - **確定結果表示 (同ページ、日程確定後):**
   - 回答フォームに確定日を表示（参加者は引き続き回答可能）。
   - 確定日程、出席予定者一覧を表示。
@@ -117,7 +117,6 @@ project-root/
 └── ...
 ```
 
-(管理用サブルート `/admin/[token]` は廃止し、クエリパラメータ方式に統一)
 
 ---
 
@@ -212,14 +211,14 @@ Route API を使用せず、Server Actions ("use server") を用いる。
 1.  **イベント作成 (createEvent):**
     - 入力: FormData (タイトル, 説明, 候補日程リスト)
     - 処理: バリデーション、DB 挿入 (events, event_dates)、トークンは DB 側で生成。
-    - 出力/遷移: 作成イベントの管理ページへリダイレクト (`/event/[public_token]?admin=[admin_token]`)。
+    - 出力/遷移: 作成イベントの詳細ページへリダイレクト (`/event/[public_token]`)。
 2.  **回答送信 (submitAvailability):**
     - 入力: FormData (参加者名, event_token, 各候補日程の可否)
     - 処理: イベント特定、参加者取得 or 作成、古い回答削除、新回答挿入 (participants, availabilities)。
     - 出力/遷移: `revalidatePath`で同イベントページを再検証・更新。
 3.  **日程確定 (finalizeEvent):**
-    - 入力: 確定する event_date_id, admin_token (または event_id)
-    - 処理: admin_token 検証、DB 更新 (events.is_finalized=true, events.final_date_id=確定 ID)。
+    - 入力: 確定する event_date_id と event_id。
+    - 処理: event_id を基に DB 更新 (events.is_finalized=true, events.final_date_id=確定 ID)。
     - 出力/遷移: `revalidatePath`で同イベントページを再検証・更新。
 
 **型付き I/O:** TypeScript で型定義。Supabase クライアントに DB スキーマ型を指定。

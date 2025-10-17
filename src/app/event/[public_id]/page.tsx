@@ -18,9 +18,6 @@ interface EventPageProps {
   params: Promise<{
     public_id: string;
   }>;
-  searchParams: Promise<{
-    admin?: string;
-  }>;
 }
 
 export const viewport: Viewport = {
@@ -88,10 +85,8 @@ export async function generateMetadata({
 
 export default async function EventPage({
   params,
-  searchParams,
 }: EventPageProps) {
   const { public_id } = await params;
-  const { admin: adminToken } = await searchParams;
 
   let event;
   try {
@@ -103,8 +98,6 @@ export default async function EventPage({
     console.error('イベント取得エラー:', err);
     throw err;
   }
-  const isAdmin = Boolean(adminToken && adminToken === event.admin_token);
-
   const eventDatesPromise = getEventDates(event.id);
   const participantsPromise = getParticipants(event.id);
 
@@ -116,24 +109,6 @@ export default async function EventPage({
         </div>
       </div>
       <div className="fade-in pb-12">
-        {isAdmin && !event.is_finalized && (
-          <div className="alert bg-info/10 text-info border-l-4 border-info text-sm mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6 mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>現在管理者として閲覧中です。</span>
-          </div>
-        )}
           <SectionDivider title="イベント情報" />
           {/* フォーム・日程追加など主要UIもストリーミング表示 */}
         <Suspense
@@ -177,7 +152,6 @@ export default async function EventPage({
             }}
             eventDates={eventDatesPromise}
             participants={participantsPromise}
-            isAdmin={isAdmin}
           />
         </Suspense>
       </div>
@@ -231,12 +205,10 @@ async function EventDetailsSectionLoader({
   event,
   eventDates,
   participants,
-  isAdmin,
 }: {
   event: EventDetailsSectionEvent;
   eventDates: Promise<EventDate[]>;
   participants: Promise<{ id: string; name: string }[]>;
-  isAdmin: boolean;
 }) {
   const [dates, participantList, availabilities, finalizedDateIds] =
     await Promise.all([
@@ -254,7 +226,6 @@ async function EventDetailsSectionLoader({
       participants={participantList || []}
       availabilities={availabilities || []}
       finalizedDateIds={finalizedDateIds}
-      isAdmin={isAdmin}
     />
   );
 }

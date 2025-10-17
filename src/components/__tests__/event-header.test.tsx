@@ -37,7 +37,6 @@ describe("EventHeader", () => {
           title="タイトル"
           description="説明"
           isFinalized={false}
-          isAdmin={false}
         />
       </FavoriteEventsProvider>
     );

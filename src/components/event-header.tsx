@@ -9,7 +9,6 @@ interface EventHeaderProps {
   title: string;
   description?: string | null;
   isFinalized: boolean;
-  isAdmin: boolean;
 }
 
 export function EventHeader({
@@ -17,7 +16,6 @@ export function EventHeader({
   title,
   description,
   isFinalized,
-  isAdmin,
 }: EventHeaderProps) {
   // イベント公開用URLを生成
   const getShareUrl = () => {
@@ -56,24 +54,6 @@ export function EventHeader({
         />
       </div>
 
-      {!isFinalized && isAdmin && (
-        <div className="alert bg-info/10 text-info border-l-4 border-info text-sm">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6 mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>現在管理者として閲覧中です。</span>
-        </div>
-      )}
     </Card>
   );
 }

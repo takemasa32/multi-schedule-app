@@ -81,27 +81,27 @@ export default function EventFormClient() {
 
     startTransition(async () => {
       try {
-        // サーバーアクションでイベント作成し、{ publicToken, adminToken } を返却する想定
+        // サーバーアクションでイベント作成し、公開トークンを受け取る
         const result = await createEvent(formData);
 
+        if (!result?.success || !result.publicToken) {
+          setError(
+            result?.message || "イベント作成中にエラーが発生しました"
+          );
+          return;
+        }
+
         // リダイレクト前に履歴に追加（ローカルストレージ）
-        if (
-          typeof window !== "undefined" &&
-          result &&
-          result.publicToken &&
-          result.adminToken
-        ) {
-          // イベントを履歴に追加
+        if (typeof window !== "undefined") {
           addEventToHistory({
             id: result.publicToken,
             title: title,
-            adminToken: result.adminToken,
             createdAt: new Date().toISOString(),
             isCreatedByMe: true,
           });
         }
 
-        router.push(`${result.redirectUrl}`);
+        router.push(result.redirectUrl ?? `/event/${result.publicToken}`);
       } catch (err) {
         console.error("Form submission error:", err);
         setError(
