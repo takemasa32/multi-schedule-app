@@ -1049,7 +1049,8 @@ export default function AvailabilityForm({
                         </thead>
                         <tbody>
                           {(() => {
-                            const baseSchedule = Object.values(weekdaySelections)[0];
+                            const baseSchedule =
+                              Object.values(weekdaySelections)[0];
                             const sortedTimeSlots = baseSchedule
                               ? Object.keys(baseSchedule.timeSlots).sort()
                               : [];
@@ -1057,7 +1058,9 @@ export default function AvailabilityForm({
                               return (
                                 <tr>
                                   <td
-                                    colSpan={1 + Object.keys(weekdaySelections).length}
+                                    colSpan={
+                                      1 + Object.keys(weekdaySelections).length
+                                    }
                                     className="text-center py-4"
                                   >
                                     利用可能な時間帯がありません
@@ -1071,7 +1074,7 @@ export default function AvailabilityForm({
                                   const [startTime] = timeSlot.split("-");
                                   return (
                                     <tr key={timeSlot}>
-                                      <td className="relative border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                      <td className=" border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
                                         <span
                                           className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
                                           style={{ top: 0 }}
@@ -1094,17 +1097,24 @@ export default function AvailabilityForm({
                                               data-selection-key={matrixKey}
                                               {...weekdaySelectionController.getCellProps(
                                                 matrixKey,
-                                                { disabled: !isWeekdayModeActive }
+                                                {
+                                                  disabled:
+                                                    !isWeekdayModeActive,
+                                                }
                                               )}
                                             >
                                               <div
                                                 className={`w-full h-7 flex items-center justify-center ${
-                                                  daySchedule.timeSlots[timeSlot]
+                                                  daySchedule.timeSlots[
+                                                    timeSlot
+                                                  ]
                                                     ? "bg-success text-success-content"
                                                     : "bg-base-200"
                                                 }`}
                                               >
-                                                {daySchedule.timeSlots[timeSlot] ? (
+                                                {daySchedule.timeSlots[
+                                                  timeSlot
+                                                ] ? (
                                                   <div className="text-lg font-bold select-none inline-block">
                                                     ○
                                                   </div>
@@ -1122,13 +1132,16 @@ export default function AvailabilityForm({
                                   );
                                 })}
                                 {(() => {
-                                  const lastSlot = sortedTimeSlots[sortedTimeSlots.length - 1];
+                                  const lastSlot =
+                                    sortedTimeSlots[sortedTimeSlots.length - 1];
                                   const [, rawEnd] = lastSlot.split("-");
                                   const displayEnd =
-                                    rawEnd === "24:00" ? rawEnd : rawEnd.replace(/^0/, "");
+                                    rawEnd === "24:00"
+                                      ? rawEnd
+                                      : rawEnd.replace(/^0/, "");
                                   return (
                                     <tr key="weekday-endtime">
-                                      <td className="relative border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                      <td className=" border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
                                         <span
                                           className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
                                           style={{ top: 0 }}
@@ -1136,12 +1149,14 @@ export default function AvailabilityForm({
                                           {displayEnd}
                                         </span>
                                       </td>
-                                      {Object.keys(weekdaySelections).map((day) => (
-                                        <td
-                                          key={`${day}-endtime`}
-                                          className="border border-base-300 p-0"
-                                        />
-                                      ))}
+                                      {Object.keys(weekdaySelections).map(
+                                        (day) => (
+                                          <td
+                                            key={`${day}-endtime`}
+                                            className="border border-base-300 p-0"
+                                          />
+                                        )
+                                      )}
                                     </tr>
                                   );
                                 })()}
@@ -1473,7 +1488,7 @@ export default function AvailabilityForm({
 
                             return (
                               <tr key={timeSlot} className="hover">
-                                <td className="relative px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                <td className=" px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
                                   <span
                                     className="absolute left-2 text-xs sm:text-sm font-medium text-base-content/80"
                                     style={{
@@ -1537,7 +1552,7 @@ export default function AvailabilityForm({
                               }
                               return (
                                 <tr className="h-0">
-                                  <td className="relative px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                  <td className=" px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
                                     <span
                                       className="absolute left-2 text-xs sm:text-sm font-medium text-base-content/80"
                                       style={{
