@@ -29,6 +29,7 @@ export default function ManualTimeSlotPicker({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(initialSlots.map(slotKey))
   );
+  const lastSyncedHashRef = useRef<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragState, setDragState] = useState<boolean | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; key: string } | null>(null);
@@ -56,16 +57,29 @@ export default function ManualTimeSlotPicker({
    * initialSlots の変更を selectedKeys に一度だけ（内容が変わったときだけ）反映
    * JSON でハッシュ化して依存を安定化
    */
-  const initialHash = useMemo(
+  const propKeysHash = useMemo(
     () => JSON.stringify(initialSlots.map(slotKey).sort()),
     [initialSlots]
   );
-  // initialSlots の実体比較は initialHash で行うため、依存は initialHash のみとする
+  const selectedKeysHash = useMemo(
+    () => JSON.stringify(Array.from(selectedKeys).sort()),
+    [selectedKeys]
+  );
+
+  // initialSlots の内容が変化した場合のみローカル state を同期
   useEffect(() => {
+    if (lastSyncedHashRef.current === propKeysHash) {
+      return;
+    }
+
+    lastSyncedHashRef.current = propKeysHash;
+
+    if (propKeysHash === selectedKeysHash) {
+      return;
+    }
+
     setSelectedKeys(new Set(initialSlots.map(slotKey)));
-  },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [initialHash]);
+  }, [initialSlots, propKeysHash, selectedKeysHash]);
 
   /**
    * ★ 派生状態：selectedMap は state にせず useMemo で導出
