@@ -1048,76 +1048,106 @@ export default function AvailabilityForm({
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.keys(
-                            Object.values(weekdaySelections)[0]?.timeSlots || {}
-                          ).length > 0 ? (
-                            Object.keys(
-                              Object.values(weekdaySelections)[0].timeSlots
-                            )
-                              .sort()
-                              .map((timeSlot) => {
-                                const [startTime] = timeSlot.split("-");
-                                return (
-                                  <tr key={timeSlot}>
-                                    <td className="font-medium border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10">
-                                      {startTime}
-                                    </td>
-                                    {Object.entries(weekdaySelections).map(
-                                      ([day, daySchedule]) => {
-                                        const matrixKey = getMatrixKey(
-                                          day as WeekDay,
-                                          timeSlot
-                                        );
-                                        return (
-                                          <td
-                                            key={`${day}-${timeSlot}`}
-                                            className="text-center border border-base-300 p-0 cursor-pointer"
-                                            data-day={day}
-                                            data-time-slot={timeSlot}
-                                            data-selection-key={matrixKey}
-                                            {...weekdaySelectionController.getCellProps(
-                                              matrixKey,
-                                              { disabled: !isWeekdayModeActive }
-                                            )}
-                                          >
-                                            <div
-                                              className={`w-full h-7 flex items-center justify-center ${
-                                                daySchedule.timeSlots[timeSlot]
-                                                  ? "bg-success text-success-content"
-                                                  : "bg-base-200"
-                                              }`}
-                                            >
-                                              {daySchedule.timeSlots[
-                                                timeSlot
-                                              ] ? (
-                                                <div className="text-lg font-bold select-none inline-block">
-                                                  ○
-                                                </div>
-                                              ) : (
-                                                <div className="text-lg font-bold opacity-70 select-none inline-block">
-                                                  ×
-                                                </div>
+                          {(() => {
+                            const baseSchedule = Object.values(weekdaySelections)[0];
+                            const sortedTimeSlots = baseSchedule
+                              ? Object.keys(baseSchedule.timeSlots).sort()
+                              : [];
+                            if (sortedTimeSlots.length === 0) {
+                              return (
+                                <tr>
+                                  <td
+                                    colSpan={1 + Object.keys(weekdaySelections).length}
+                                    className="text-center py-4"
+                                  >
+                                    利用可能な時間帯がありません
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return (
+                              <>
+                                {sortedTimeSlots.map((timeSlot) => {
+                                  const [startTime] = timeSlot.split("-");
+                                  return (
+                                    <tr key={timeSlot}>
+                                      <td className="relative border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                        <span
+                                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                                          style={{ top: 0 }}
+                                        >
+                                          {startTime.replace(/^0/, "")}
+                                        </span>
+                                      </td>
+                                      {Object.entries(weekdaySelections).map(
+                                        ([day, daySchedule]) => {
+                                          const matrixKey = getMatrixKey(
+                                            day as WeekDay,
+                                            timeSlot
+                                          );
+                                          return (
+                                            <td
+                                              key={`${day}-${timeSlot}`}
+                                              className="text-center border border-base-300 p-0 cursor-pointer"
+                                              data-day={day}
+                                              data-time-slot={timeSlot}
+                                              data-selection-key={matrixKey}
+                                              {...weekdaySelectionController.getCellProps(
+                                                matrixKey,
+                                                { disabled: !isWeekdayModeActive }
                                               )}
-                                            </div>
-                                          </td>
-                                        );
-                                      }
-                                    )}
-                                  </tr>
-                                );
-                              })
-                          ) : (
-                            <tr>
-                              <td
-                                colSpan={
-                                  1 + Object.keys(weekdaySelections).length
-                                }
-                                className="text-center py-4"
-                              >
-                                利用可能な時間帯がありません
-                              </td>
-                            </tr>
-                          )}
+                                            >
+                                              <div
+                                                className={`w-full h-7 flex items-center justify-center ${
+                                                  daySchedule.timeSlots[timeSlot]
+                                                    ? "bg-success text-success-content"
+                                                    : "bg-base-200"
+                                                }`}
+                                              >
+                                                {daySchedule.timeSlots[timeSlot] ? (
+                                                  <div className="text-lg font-bold select-none inline-block">
+                                                    ○
+                                                  </div>
+                                                ) : (
+                                                  <div className="text-lg font-bold opacity-70 select-none inline-block">
+                                                    ×
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </td>
+                                          );
+                                        }
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                                {(() => {
+                                  const lastSlot = sortedTimeSlots[sortedTimeSlots.length - 1];
+                                  const [, rawEnd] = lastSlot.split("-");
+                                  const displayEnd =
+                                    rawEnd === "24:00" ? rawEnd : rawEnd.replace(/^0/, "");
+                                  return (
+                                    <tr key="weekday-endtime">
+                                      <td className="relative border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                        <span
+                                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                                          style={{ top: 0 }}
+                                        >
+                                          {displayEnd}
+                                        </span>
+                                      </td>
+                                      {Object.keys(weekdaySelections).map((day) => (
+                                        <td
+                                          key={`${day}-endtime`}
+                                          className="border border-base-300 p-0"
+                                        />
+                                      ))}
+                                    </tr>
+                                  );
+                                })()}
+                              </>
+                            );
+                          })()}
                         </tbody>
                       </table>
                     </div>

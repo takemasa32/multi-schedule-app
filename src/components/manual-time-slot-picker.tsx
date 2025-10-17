@@ -295,12 +295,12 @@ export default function ManualTimeSlotPicker({
                 <tr key={time}>
                   <th
                     className={`relative whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
-                      isMobile ? "px-2 py-1 text-[10px]" : "px-2 py-1 text-[11px]"
+                      isMobile ? "px-2 py-0 text-[10px]" : "px-2 py-0 text-[11px]"
                     }`}
                   >
                     <span
-                      className="absolute left-2 text-xs font-medium text-base-content/80"
-                      style={{ top: 0, transform: "translateY(-50%)" }}
+                      className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                      style={{ top: 0 }}
                     >
                       {time.split("-")[0].replace(/^0/, "")}
                     </span>
@@ -354,12 +354,12 @@ export default function ManualTimeSlotPicker({
                   <tr>
                     <th
                       className={`relative whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
-                        isMobile ? "px-2 py-1 text-[10px]" : "px-2 py-1 text-[11px]"
+                        isMobile ? "px-2 py-0 text-[10px]" : "px-2 py-0 text-[11px]"
                       }`}
                     >
                       <span
-                        className="absolute left-2 text-xs font-medium text-base-content/80"
-                        style={{ top: 0, transform: "translateY(-50%)" }}
+                        className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                        style={{ top: 0 }}
                       >
                         {formatted}
                       </span>
