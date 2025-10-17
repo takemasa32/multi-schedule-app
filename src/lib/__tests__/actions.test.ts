@@ -48,13 +48,13 @@ describe('createEvent', () => {
     jest.clearAllMocks();
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (_table: string) => createSupabaseChainMock({
-        data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token' }],
+        data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token' }],
         error: null,
       }),
       rpc: jest.fn(() => Promise.resolve({
         data: [{
           event_id: 'eventid',
-          public_token: 'mock-public-token',
+          public_token: 'AbCdEf123456',
           admin_token: 'mock-admin-token'
         }],
         error: null,
@@ -76,23 +76,23 @@ describe('createEvent', () => {
     // データはUUID形式で返す
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (_table: string) => createSupabaseChainMock({
-        data: [{ id: 'eventid', public_token: '123e4567-e89b-12d3-a456-426614174000', admin_token: '123e4567-e89b-12d3-a456-426614174001' }],
+        data: [{ id: 'eventid', public_token: 'ZyxwvU987654', admin_token: '123e4567-e89b-12d3-a456-426614174001' }],
         error: null,
       }),
       rpc: jest.fn(() => Promise.resolve({
         data: [{
           event_id: 'eventid',
-          public_token: '123e4567-e89b-12d3-a456-426614174000',
+          public_token: 'ZyxwvU987654',
           admin_token: '123e4567-e89b-12d3-a456-426614174001'
         }],
         error: null,
       })),
     }));
-    const uuidRegex = /^[0-9a-fA-F-]{36}$/;
+    const publicTokenRegex = /^[0-9A-Za-z]{12}$/;
     const result = await createEvent(formData);
     expect(result.success).toBe(true);
-    expect(result.publicToken).toMatch(uuidRegex);
-    expect(result.adminToken).toMatch(uuidRegex);
+    expect(result.publicToken).toMatch(publicTokenRegex);
+    expect(result.adminToken).toMatch(/^[0-9a-fA-F-]{36}$/);
     expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
   });
 
@@ -147,7 +147,7 @@ describe('submitAvailability', () => {
       from: (table: string) => {
         if (table === 'events') {
           return createSupabaseChainMock({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }],
             error: null,
           });
         }
@@ -171,7 +171,7 @@ describe('submitAvailability', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => createSupabaseChainMock(
         table === 'events'
-          ? { data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }], error: null }
+          ? { data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }], error: null }
           : table === 'participants'
           ? { data: [], error: null }
           : { data: [], error: null }
@@ -232,7 +232,7 @@ describe('submitAvailability', () => {
       from: (table: string) => {
         if (table === 'events') {
           return createSupabaseChainMock({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }],
             error: null,
           });
         }
@@ -267,7 +267,7 @@ describe('submitAvailability', () => {
       from: (table: string) => {
         if (table === 'events') {
           return createSupabaseChainMock({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }],
             error: null,
           });
         }
@@ -300,7 +300,7 @@ describe('finalizeEvent', () => {
       from: (table: string) => {
         if (table === 'events') {
           return createSupabaseChainMock({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }],
             error: null,
           });
         }
@@ -346,7 +346,7 @@ describe('finalizeEvent', () => {
       from: (table: string) => {
         if (table === 'events') {
           return createSupabaseChainMock({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }],
             error: null,
           });
         }
@@ -367,7 +367,7 @@ describe('finalizeEvent', () => {
       from: (table: string) => {
         if (table === 'events') {
           return createSupabaseChainMock({
-            data: [{ id: 'eventid', public_token: 'mock-public-token', admin_token: 'mock-admin-token', is_finalized: false }],
+            data: [{ id: 'eventid', public_token: 'AbCdEf123456', admin_token: 'mock-admin-token', is_finalized: false }],
             error: null,
           });
         }

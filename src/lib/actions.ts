@@ -4,6 +4,7 @@ import { EventFetchError, EventNotFoundError } from './errors';
 import { fetchAllPaginatedWithOrder, SupabaseQueryInterface } from './utils';
 import type { Database } from './database.types';
 import { v4 as uuidv4 } from 'uuid';
+import { generatePublicToken } from './token';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -54,7 +55,7 @@ export async function createEvent(formData: FormData) {
     const supabaseAdmin = createSupabaseAdmin();
 
     // トークン生成
-    const publicToken = uuidv4();
+    const publicToken = generatePublicToken();
     const adminToken = uuidv4();
 
     // RPC に渡す日程データ配列
