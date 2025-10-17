@@ -62,6 +62,12 @@ npx supabase migration up
 
 # データベースリセット（全テーブル削除後にマイグレーション再適用）
 npx supabase db reset
+
+# プロジェクトを現在のディレクトリにリンク
+npx supabase link
+
+# 最新のマイグレーションをデータベースにプッシュ
+npx supabase db push
 ```
 
 ### 型定義の生成
