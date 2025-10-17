@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useTransition, useEffect } from 'react';
 import { format } from 'date-fns';
-import { createEvent } from '@/lib/actions';
+import { createEvent, type CreateEventActionResult } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import DateRangePicker from './date-range-picker';
 import ManualTimeSlotPicker from './manual-time-slot-picker';
@@ -10,6 +10,12 @@ import { TimeSlot, addEventToHistory } from '@/lib/utils';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import PortalTooltip from './common/portal-tooltip';
+
+type CreateEventSuccess = Extract<CreateEventActionResult, { success: true }>;
+
+const isCreateEventSuccess = (
+  payload: CreateEventActionResult | undefined,
+): payload is CreateEventSuccess => Boolean(payload && payload.success);
 
 export default function EventFormClient() {
   const [title, setTitle] = useState<string>('');
@@ -79,22 +85,31 @@ export default function EventFormClient() {
 
     startTransition(async () => {
       try {
-        // サーバーアクションでイベント作成し、{ publicToken, adminToken } を返却する想定
-        const result = await createEvent(formData);
+        // サーバーアクションでイベント作成し、公開トークンを受け取る
+        const result = (await createEvent(formData)) as CreateEventActionResult;
+
+        if (!isCreateEventSuccess(result)) {
+          setError(result?.message || 'イベント作成中にエラーが発生しました');
+          return;
+        }
+
+        if (!result.publicToken) {
+          setError('イベント作成中にエラーが発生しました');
+          return;
+        }
 
         // リダイレクト前に履歴に追加（ローカルストレージ）
-        if (typeof window !== 'undefined' && result && result.publicToken && result.adminToken) {
-          // イベントを履歴に追加
+        if (typeof window !== 'undefined') {
           addEventToHistory({
             id: result.publicToken,
-            title: title,
-            adminToken: result.adminToken,
+            title,
             createdAt: new Date().toISOString(),
             isCreatedByMe: true,
           });
         }
 
-        router.push(`${result.redirectUrl}`);
+        const redirectPath = result.redirectUrl ?? `/event/${result.publicToken}`;
+        router.push(redirectPath);
       } catch (err) {
         console.error('Form submission error:', err);
         setError(err instanceof Error ? err.message : 'イベント作成中にエラーが発生しました');

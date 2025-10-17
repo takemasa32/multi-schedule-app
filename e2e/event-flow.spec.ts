@@ -67,7 +67,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
   test('参加者がheatmapで回答', async ({ context }) => {
     const participantPage = await context.newPage();
-    await gotoWithRetry(participantPage, eventUrl.replace('?admin=', '?dummy='));
+    await gotoWithRetry(participantPage, eventUrl);
     await participantPage.waitForLoadState('networkidle');
     await expect(participantPage.getByRole('link', { name: /新しく回答する/ })).toBeVisible();
     await participantPage.getByRole('link', { name: /新しく回答する/ }).click();
@@ -96,8 +96,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await participantPage.getByRole('button', { name: /回答を送信/ }).click();
 
     // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
-    const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
-    await participantPage.waitForURL(publicEventUrl, { timeout: 15000 });
+    await participantPage.waitForURL(eventUrl, { timeout: 15000 });
     const backToSummaryBtn = participantPage.getByRole('button', {
       name: /回答状況の確認・集計に戻る/,
     });
@@ -176,8 +175,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: /回答を送信/ }).click();
 
     // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
-    const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
-    await page.waitForURL(publicEventUrl, { timeout: 15000 });
+    await page.waitForURL(eventUrl, { timeout: 15000 });
     const backToSummaryBtn = page.getByRole('button', {
       name: /回答状況の確認・集計に戻る/,
     });
@@ -217,8 +215,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: '回答を更新する' }).click();
 
     // 回答更新後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
-    const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
-    await page.waitForURL(publicEventUrl, { timeout: 15000 });
+    await page.waitForURL(eventUrl, { timeout: 15000 });
     const backToSummaryBtn = page.getByRole('button', {
       name: /回答状況の確認・集計に戻る/,
     });
@@ -370,9 +367,7 @@ test.describe.serial('イベントE2Eフロー', () => {
 
     // クリップボードにコピーされた内容を取得
     const copied = await page.evaluate(() => window._copiedText);
-    const expectedUrl = eventUrl.replace(/\?admin=.*/, '');
-
-    expect(copied).toBe(expectedUrl);
+    expect(copied).toBe(eventUrl);
   });
 
   // クイック自動延長UIのE2Eテスト

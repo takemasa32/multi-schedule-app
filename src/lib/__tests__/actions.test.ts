@@ -124,9 +124,11 @@ describe('createEvent', () => {
     const uuidRegex = /^[0-9a-fA-F-]{36}$/;
     const result = await createEvent(formData);
     expect(result.success).toBe(true);
+    if (!result.success) {
+      throw new Error('イベント作成が成功しませんでした');
+    }
     expect(result.publicToken).toMatch(uuidRegex);
-    expect(result.adminToken).toMatch(uuidRegex);
-    expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
+    expect(result.redirectUrl).toBe(`/event/${result.publicToken}`);
   });
 
   it('タイトル未入力時はバリデーションエラー', async () => {
@@ -137,6 +139,9 @@ describe('createEvent', () => {
     formData.append('endTimes', '11:00');
     const result = await createEvent(formData);
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error('バリデーションエラーが返りませんでした');
+    }
     expect(result.message).toMatch(/タイトル/);
   });
 
@@ -145,6 +150,9 @@ describe('createEvent', () => {
     formData.set('title', 'テストイベント');
     const result = await createEvent(formData);
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error('バリデーションエラーが返りませんでした');
+    }
     expect(result.message).toMatch(/候補日程/);
   });
 
@@ -155,6 +163,9 @@ describe('createEvent', () => {
     // 時刻が足りない
     const result = await createEvent(formData);
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error('バリデーションエラーが返りませんでした');
+    }
     expect(result.message).toMatch(/候補日程/);
   });
 
@@ -170,6 +181,9 @@ describe('createEvent', () => {
     }));
     const result = await createEvent(formData);
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error('エラーメッセージが返りませんでした');
+    }
     expect(result.message).toMatch(/DBエラー/);
   });
 });

@@ -95,12 +95,8 @@ function EventHistoryInner({
               <li key={event.id} className="flex items-center justify-between gap-2 py-2">
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={
-                      event.isCreatedByMe && event.adminToken
-                        ? `/event/${event.id}?admin=${event.adminToken}`
-                        : `/event/${event.id}`
-                    }
-                    className="text-primary block truncate hover:underline"
+                    href={`/event/${event.id}`}
+                    className="block truncate text-primary hover:underline"
                   >
                     {event.title}
                   </Link>

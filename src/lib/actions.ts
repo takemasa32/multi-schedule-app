@@ -6,11 +6,24 @@ import type { Database } from './database.types';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 
+export type CreateEventSuccessResult = {
+  success: true;
+  publicToken: string;
+  redirectUrl: string;
+};
+
+export type CreateEventErrorResult = {
+  success: false;
+  message: string;
+};
+
+export type CreateEventActionResult = CreateEventSuccessResult | CreateEventErrorResult;
+
 /**
  * 新しいイベントを作成して候補日程を登録する
  * create_event_with_dates RPC を利用してトランザクション処理を行う
  */
-export async function createEvent(formData: FormData) {
+export async function createEvent(formData: FormData): Promise<CreateEventActionResult> {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string | null;
 
@@ -120,12 +133,11 @@ export async function createEvent(formData: FormData) {
     const event = created[0];
 
     // イベント作成が成功した場合、イベントページにリダイレクト
-    // 履歴への追加のために必要なトークン情報も返す
+    // 管理用トークンは公開しないため、公開トークンのみ返す
     return {
       success: true,
       publicToken: event.public_token,
-      adminToken: event.admin_token,
-      redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}`,
+      redirectUrl: `/event/${event.public_token}`,
     };
   } catch (error) {
     console.error('イベント作成処理エラー:', error);

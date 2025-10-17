@@ -64,8 +64,7 @@ describe('EventFormClient', () => {
     (createEvent as jest.Mock).mockResolvedValue({
       success: true,
       publicToken: 'testtoken',
-      adminToken: 'admintoken',
-      redirectUrl: '/event/testtoken?admin=admintoken',
+      redirectUrl: '/event/testtoken',
     });
     render(<EventFormClient />);
     fireEvent.change(screen.getByLabelText(/イベントタイトル/), {

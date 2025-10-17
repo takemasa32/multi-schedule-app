@@ -92,12 +92,8 @@ export default function HistoryPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <Link
-                          href={
-                            event.isCreatedByMe && event.adminToken
-                              ? `/event/${event.id}?admin=${event.adminToken}`
-                              : `/event/${event.id}`
-                          }
-                          className="text-primary text-lg font-medium hover:underline"
+                          href={`/event/${event.id}`}
+                          className="text-lg font-medium text-primary hover:underline"
                         >
                           {event.title}
                         </Link>
