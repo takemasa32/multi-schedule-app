@@ -93,7 +93,8 @@ describe("AvailabilityForm", () => {
     fireEvent.click(screen.getByLabelText(/利用規約/));
     // 1つ目の日程を○にする
     const firstCell = screen.getAllByText("×")[0];
-    fireEvent.click(firstCell);
+    fireEvent.pointerDown(firstCell, { pointerId: 1, pointerType: "mouse" });
+    fireEvent.pointerUp(firstCell, { pointerId: 1, pointerType: "mouse" });
     // 送信
     fireEvent.click(screen.getByRole("button", { name: /回答を送信/ }));
     await waitFor(() => {
@@ -115,7 +116,8 @@ describe("AvailabilityForm", () => {
     fireEvent.click(screen.getByLabelText(/利用規約/));
     // 1つ目の日程を○にする
     const firstCell = screen.getAllByText("×")[0];
-    fireEvent.click(firstCell);
+    fireEvent.pointerDown(firstCell, { pointerId: 2, pointerType: "mouse" });
+    fireEvent.pointerUp(firstCell, { pointerId: 2, pointerType: "mouse" });
     // 送信
     fireEvent.click(screen.getByRole("button", { name: /回答を送信/ }));
     expect(await screen.findByText(/サーバーエラー/)).toBeInTheDocument();

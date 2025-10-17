@@ -1,10 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { submitAvailability, checkParticipantExists } from "@/lib/actions";
 import { formatDateTimeWithDay } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 import useScrollToError from "@/hooks/useScrollToError";
+import useSelectionDragController from "@/hooks/useSelectionDragController";
+import { addDays, endOfWeek, startOfWeek } from "date-fns";
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -73,17 +81,9 @@ export default function AvailabilityForm({
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
-  // ドラッグ選択関連の状態
-  const [isDragging, setIsDragging] = useState(false);
-  // この変数は将来の機能拡張のために保持しています
-  const [dragStartId, setDragStartId] = useState<string | null>(null);
-  const [dragState, setDragState] = useState<boolean | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
   // 週入力モード（アコーディオンを表示中か）：この状態が true の時は通常入力を無効化
   const [isWeekdayModeActive, setIsWeekdayModeActive] = useState(false);
-  // 曜日マトリックスのドラッグ選択関連の状態
-  const [isDraggingMatrix, setIsDraggingMatrix] = useState(false);
-  const [matrixDragState, setMatrixDragState] = useState<boolean | null>(null); // ドラッグ中の設定値
   // 曜日ごとの選択状態と時間帯設定
   const [weekdaySelections, setWeekdaySelections] = useState<
     Record<WeekDay, WeekDaySchedule>
@@ -96,26 +96,16 @@ export default function AvailabilityForm({
     土: { selected: false, timeSlots: {} },
     日: { selected: false, timeSlots: {} },
   });
-  // タッチ操作対応のための状態
-  const [isTouching, setIsTouching] = useState(false);
-  // 週入力マトリックスのタッチ操作対応
-  const [isMatrixTouching, setIsMatrixTouching] = useState(false);
 
   // ページネーション用の状態
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(7); // デフォルトは1週間
-  const pageSizeOptions = [
-    { value: 3, label: "3日" },
-    { value: 5, label: "5日" },
-    { value: 7, label: "1週間" },
-  ];
 
   // セルのスタイルと状態を返す関数
   const getCellStyle = useCallback(
     (dateId: string | undefined) => {
       if (!dateId) {
         return {
-          className: "bg-gray-100 text-gray-400",
+          className: "bg-base-200/40 text-base-content/40",
           status: "empty" as CellStatus,
         };
       }
@@ -123,12 +113,14 @@ export default function AvailabilityForm({
       const isSelected = selectedDates[dateId];
       if (isSelected) {
         return {
-          className: "bg-success text-success-content",
+          className:
+            "bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner",
           status: "available" as CellStatus,
         };
       } else {
         return {
-          className: "bg-base-200 hover:bg-base-300",
+          className:
+            "bg-base-200/70 text-base-content/70 hover:bg-base-200 border border-base-300/40",
           status: "unavailable" as CellStatus,
         };
       }
@@ -136,291 +128,106 @@ export default function AvailabilityForm({
     [selectedDates]
   );
 
-  // ドラッグ終了処理
-  const handleMatrixDragEnd = useCallback(() => {
-    setIsDraggingMatrix(false);
-    setMatrixDragState(null);
-    setIsMatrixTouching(false);
-    // ドラッグ終了時にスクロールを再度許可する
-    document.body.classList.remove("no-scroll");
+  const orderedDateIds = useMemo(
+    () => eventDates.map((date) => date.id),
+    [eventDates]
+  );
+
+  const applyDateSelection = useCallback((keys: string[], value: boolean) => {
+    setSelectedDates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const key of keys) {
+        if (!key) {
+          continue;
+        }
+        if (next[key] === value) {
+          continue;
+        }
+        next[key] = value;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
   }, []);
 
-  // 現在座標からセルを引き当てる共通関数
-  const applyDragToElement = useCallback(
-    (el: HTMLElement | null) => {
-      if (!el) return;
-
-      // 熱マップセル（date-id）の処理
-      const dateId = el.dataset.dateId;
-      if (isDragging && dragState !== null && dateId) {
-        // --- ここから範囲選択ロジック追加 ---
-        if (dragStartId && dragStartId !== dateId) {
-          // eventDatesの並び順でdragStartIdとdateIdの間の全セルを一括で更新
-          const ids = eventDates.map((d) => d.id);
-          const startIdx = ids.indexOf(dragStartId);
-          const endIdx = ids.indexOf(dateId);
-          if (startIdx !== -1 && endIdx !== -1) {
-            const [from, to] =
-              startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
-            setSelectedDates((prev) => {
-              const updated = { ...prev };
-              for (let i = from; i <= to; i++) {
-                updated[ids[i]] = dragState;
-              }
-              return updated;
-            });
-            return;
-          }
-        }
-        // --- ここまで範囲選択ロジック ---
-        // 1セルのみの場合は従来通り
-        setSelectedDates((prev) => {
-          if (prev[dateId] === dragState) return prev;
-          return { ...prev, [dateId]: dragState };
-        });
-        return;
+  const dateSelectionController = useSelectionDragController({
+    isSelected: (key) => Boolean(selectedDates[key]),
+    applySelection: applyDateSelection,
+    rangeResolver: ({ startKey, targetKey }) => {
+      if (!startKey || !targetKey) {
+        return targetKey ? [targetKey] : [];
       }
-
-      // 曜日マトリックスセル（day＋timeSlot）の処理
-      const day = el.dataset.day;
-      const slot = el.dataset.timeSlot;
-      if (
-        isDraggingMatrix &&
-        matrixDragState !== null &&
-        day &&
-        slot &&
-        Object.keys(weekdaySelections).includes(day as WeekDay)
-      ) {
-        const weekday = day as WeekDay;
-        setWeekdaySelections((prev) => {
-          // 同じ値であれば更新しない（パフォーマンス最適化）
-          if (prev[weekday].timeSlots[slot] === matrixDragState) {
-            return prev;
-          }
-          return {
-            ...prev,
-            [weekday]: {
-              selected: true,
-              timeSlots: {
-                ...prev[weekday].timeSlots,
-                [slot]: matrixDragState,
-              },
-            },
-          };
-        });
+      const startIndex = orderedDateIds.indexOf(startKey);
+      const targetIndex = orderedDateIds.indexOf(targetKey);
+      if (startIndex === -1 || targetIndex === -1) {
+        return [targetKey];
       }
+      const [from, to] =
+        startIndex <= targetIndex
+          ? [startIndex, targetIndex]
+          : [targetIndex, startIndex];
+      return orderedDateIds.slice(from, to + 1);
     },
-    [
-      isDragging,
-      dragState,
-      isDraggingMatrix,
-      matrixDragState,
-      weekdaySelections,
-      eventDates,
-      dragStartId,
-    ]
-  );
+    shouldIgnorePointerDown: (_event, _key) => isWeekdayModeActive,
+    shouldIgnorePointerEnter: (_event, _key) => isWeekdayModeActive,
+    disableBodyScroll: true,
+  });
 
-  // マトリックスでのタッチ移動処理
-  const handleMatrixTouchMove = useCallback(
-    (e: React.TouchEvent | globalThis.TouchEvent) => {
-      if (isMatrixTouching && matrixDragState !== null) {
-        // スクロールを防止
-        try {
-          e.preventDefault();
-        } catch {
-          // パッシブイベントの場合は何もしない
-        }
-
-        // タッチ位置の要素を取得
-        const touch = e.touches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-
-        if (element) {
-          // マトリックスのセルを探索し、共通関数に処理を委譲
-          const cellElement = element.closest("td[data-day][data-time-slot]");
-          applyDragToElement(cellElement as HTMLElement | null);
-        }
-      }
-    },
-    [isMatrixTouching, matrixDragState, applyDragToElement]
-  );
-
-  // 全体にイベントリスナーを設定（ドラッグ終了用）
-  useEffect(() => {
-    if (isDraggingMatrix) {
-      // ドラッグ中はbodyにno-scrollクラスを追加してスクロールを防止
-      document.body.classList.add("no-scroll");
-      window.addEventListener("mouseup", handleMatrixDragEnd);
-      window.addEventListener("touchend", handleMatrixDragEnd);
-      return () => {
-        document.body.classList.remove("no-scroll");
-        window.removeEventListener("mouseup", handleMatrixDragEnd);
-        window.removeEventListener("touchend", handleMatrixDragEnd);
-      };
-    }
-  }, [isDraggingMatrix, handleMatrixDragEnd]);
-
-  // --- 共通ポインターイベント処理 ---
-  /** セル選択のポインターイベント統一処理 */
-  const commonPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLElement>) => {
-      // ドラッグ中のイベントを確実に取得するためポインターキャプチャを有効化
-      e.currentTarget.setPointerCapture(e.pointerId);
-      e.preventDefault();
-      e.stopPropagation();
-      document.body.classList.add("no-scroll");
-      const el = e.currentTarget;
-
-      // ───── 表マップセルの場合 ─────
-      const dateId = el.dataset.dateId;
-      if (dateId) {
-        const newState = !selectedDates[dateId];
-        setSelectedDates((prev) => ({ ...prev, [dateId]: newState }));
-        setIsDragging(true);
-        setDragState(newState);
-        return;
-      }
-
-      // ──── 曜日マトリックスセルの場合 ────
-      const day = el.dataset.day;
-      const slot = el.dataset.timeSlot;
-      if (
-        day &&
-        slot &&
-        Object.keys(weekdaySelections).includes(day as WeekDay)
-      ) {
-        const weekday = day as WeekDay;
-        const newVal = !weekdaySelections[weekday].timeSlots[slot];
-        setWeekdaySelections((prev) => ({
-          ...prev,
-          [weekday]: {
-            selected: true,
-            timeSlots: { ...prev[weekday].timeSlots, [slot]: newVal },
-          },
-        }));
-        setIsDraggingMatrix(true);
-        setIsMatrixTouching(true);
-        setMatrixDragState(newVal);
-      }
-    },
-    [selectedDates, weekdaySelections]
-  );
-
-  const commonPointerEnter = useCallback(
-    (e: React.PointerEvent<HTMLElement> | PointerEvent) => {
-      // イベントがネイティブか React かを判定
-      const isNative = e instanceof PointerEvent;
-
-      // スクロールを防止
-      try {
-        e.preventDefault();
-      } catch {}
-
-      // 参照要素を取得
-      const el: HTMLElement | null = isNative
-        ? (e.target as HTMLElement).closest("[data-date-id], [data-day]")
-        : e.currentTarget;
-
-      applyDragToElement(el);
-    },
-    [applyDragToElement]
-  );
-
-  const commonPointerUp = useCallback(
-    (e?: React.PointerEvent<HTMLElement> | PointerEvent) => {
-      // The pointer event is optional because this function may be called without an event
-      // in certain scenarios. When an event is provided, we ensure safe handling by checking
-      // if it has a `currentTarget` property before proceeding.
-      if (e && "currentTarget" in e) {
-        const target = e.currentTarget as HTMLElement;
-        try {
-          if (target.hasPointerCapture(e.pointerId)) {
-            target.releasePointerCapture(e.pointerId);
-          }
-        } catch {
-          // ignore if release fails
-        }
-      }
-      // ドラッグ状態をリセット
-      setIsDragging(false);
-      setDragState(null);
-      setIsDraggingMatrix(false);
-      setMatrixDragState(null);
-      document.body.classList.remove("no-scroll");
-    },
+  const getMatrixKey = useCallback(
+    (weekday: WeekDay, slot: string) => `${weekday}__${slot}`,
     []
   );
 
-  // ネイティブイベント用のラッパー関数
-  const handleNativePointerMove = useCallback(
-    (e: PointerEvent) => {
-      e.preventDefault();
-      applyDragToElement(
-        document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
-      );
-    },
-    [applyDragToElement]
-  );
+  const parseMatrixKey = useCallback((key: string) => {
+    const [weekday, slot] = key.split("__");
+    return { weekday: weekday as WeekDay, slot };
+  }, []);
 
-  const handleNativePointerUp = useCallback(
-    (e: PointerEvent) => {
-      commonPointerUp(e);
-    },
-    [commonPointerUp]
-  );
-  // --- ここまで共通処理 ---
-
-  /* 監視用 useEffect */
-  useEffect(() => {
-    if (isDragging) {
-      // ドラッグ中はbodyにno-scrollクラスを追加してスクロールを防止
-      document.body.classList.add("no-scroll");
-
-      // グローバルなポインターイベントリスナーを追加
-      window.addEventListener("pointermove", handleNativePointerMove);
-      window.addEventListener("pointerup", handleNativePointerUp);
-
-      return () => {
-        document.body.classList.remove("no-scroll");
-        window.removeEventListener("pointermove", handleNativePointerMove);
-        window.removeEventListener("pointerup", handleNativePointerUp);
-      };
-    }
-  }, [isDragging, handleNativePointerMove, handleNativePointerUp]);
-
-  // --- 曜日マトリックス用グローバルポインター＆タッチ監視 ---
-  useEffect(() => {
-    if (isDraggingMatrix) {
-      document.body.classList.add("no-scroll");
-
-      // グローバルポインターイベント監視を追加
-      window.addEventListener("pointermove", handleNativePointerMove);
-      window.addEventListener("pointerup", handleNativePointerUp);
-
-      // タッチ移動・終了を拾う（passive: false）
-      window.addEventListener("touchmove", handleMatrixTouchMove, {
-        passive: false,
+  const applyMatrixSelection = useCallback(
+    (keys: string[], value: boolean) => {
+      setWeekdaySelections((prev) => {
+        let changed = false;
+        const next: Record<WeekDay, WeekDaySchedule> = { ...prev };
+        keys.forEach((rawKey) => {
+          const { weekday, slot } = parseMatrixKey(rawKey);
+          if (!weekday || !slot) return;
+          const schedule = next[weekday];
+          if (!schedule) return;
+          if ((schedule.timeSlots[slot] ?? false) === value) {
+            return;
+          }
+          changed = true;
+          next[weekday] = {
+            selected: value ? true : schedule.selected,
+            timeSlots: {
+              ...schedule.timeSlots,
+              [slot]: value,
+            },
+          };
+        });
+        return changed ? next : prev;
       });
-      window.addEventListener("touchend", handleMatrixDragEnd);
+    },
+    [parseMatrixKey]
+  );
 
-      return () => {
-        document.body.classList.remove("no-scroll");
-        window.removeEventListener("pointermove", handleNativePointerMove);
-        window.removeEventListener("pointerup", handleNativePointerUp);
-        window.removeEventListener("touchmove", handleMatrixTouchMove);
-        window.removeEventListener("touchend", handleMatrixDragEnd);
-      };
-    }
-  }, [
-    isDraggingMatrix,
-    handleMatrixDragEnd,
-    handleMatrixTouchMove,
-    handleNativePointerMove,
-    handleNativePointerUp,
-    commonPointerEnter,
-    commonPointerUp,
-  ]);
+  const weekdaySelectionController = useSelectionDragController({
+    isSelected: (key) => {
+      const { weekday, slot } = parseMatrixKey(key);
+      return Boolean(weekdaySelections[weekday]?.timeSlots[slot]);
+    },
+    applySelection: applyMatrixSelection,
+    rangeResolver: ({ targetKey }) => [targetKey],
+    shouldIgnorePointerDown: (_event, _key) => !isWeekdayModeActive,
+    shouldIgnorePointerEnter: (_event, _key) => !isWeekdayModeActive,
+    disableBodyScroll: true,
+    enableKeyboard: false,
+  });
+
+  const handleMouseLeave = useCallback(() => {
+    dateSelectionController.cancelDrag();
+  }, [dateSelectionController]);
 
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
@@ -594,6 +401,81 @@ export default function AvailabilityForm({
     }
   };
 
+  const uniqueDateKeys = useMemo(() => {
+    const keys = new Set<string>();
+    eventDates.forEach((date) => {
+      const dateObj = new Date(date.start_time);
+      const dateKey = `${dateObj.getFullYear()}-${String(
+        dateObj.getMonth() + 1
+      ).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`;
+      keys.add(dateKey);
+    });
+    return Array.from(keys).sort();
+  }, [eventDates]);
+
+  const weeklyDateBuckets = useMemo(() => {
+    if (uniqueDateKeys.length === 0) {
+      return [] as string[][];
+    }
+    const firstWeekStart = startOfWeek(
+      new Date(`${uniqueDateKeys[0]}T00:00:00`),
+      {
+        weekStartsOn: 1,
+      }
+    );
+    const lastWeekEnd = endOfWeek(
+      new Date(`${uniqueDateKeys[uniqueDateKeys.length - 1]}T00:00:00`),
+      { weekStartsOn: 1 }
+    );
+
+    const buckets: string[][] = [];
+    for (
+      let cursor = new Date(firstWeekStart);
+      cursor.getTime() <= lastWeekEnd.getTime();
+      cursor = addDays(cursor, 7)
+    ) {
+      const week: string[] = [];
+      for (let i = 0; i < 7; i += 1) {
+        const date = addDays(cursor, i);
+        const key = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        week.push(key);
+      }
+      buckets.push(week);
+    }
+
+    return buckets;
+  }, [uniqueDateKeys]);
+
+  useEffect(() => {
+    if (weeklyDateBuckets.length === 0) {
+      if (currentPage !== 0) {
+        setCurrentPage(0);
+      }
+      return;
+    }
+    if (currentPage >= weeklyDateBuckets.length) {
+      setCurrentPage(weeklyDateBuckets.length - 1);
+    }
+  }, [currentPage, weeklyDateBuckets.length]);
+
+  const currentWeekDates = useMemo(() => {
+    if (weeklyDateBuckets.length === 0) {
+      return [] as string[];
+    }
+    const clampedIndex = Math.min(
+      Math.max(currentPage, 0),
+      weeklyDateBuckets.length - 1
+    );
+    return weeklyDateBuckets[clampedIndex];
+  }, [currentPage, weeklyDateBuckets]);
+
+  const currentWeekDateSet = useMemo(
+    () => new Set(currentWeekDates),
+    [currentWeekDates]
+  );
+
   // 日付のグループ化（日付別に時間帯をまとめる）
   const dateGroups = useMemo(() => {
     const groups: Record<string, typeof eventDates> = {};
@@ -630,25 +512,19 @@ export default function AvailabilityForm({
         };
       });
 
-    // テーブルビュー向けにページネーション処理
-    if (viewMode === "table" && pageSize > 0) {
-      return sortedGroups.slice(
-        currentPage * pageSize,
-        (currentPage + 1) * pageSize
-      );
+    if (currentWeekDateSet.size === 0) {
+      return sortedGroups;
     }
 
-    return sortedGroups;
-  }, [eventDates, currentPage, pageSize, viewMode]);
+    return sortedGroups.filter((group) =>
+      currentWeekDateSet.has(group.dateKey)
+    );
+  }, [eventDates, currentWeekDateSet]);
 
   // ヒートマップ表示用のデータ構造を生成
   const heatmapData = useMemo(() => {
-    // 全ての時間スロットを抽出（時:分の形式）
     const allTimeSlots = new Set<string>();
     const dateMap: Record<string, Record<string, string>> = {};
-
-    // 全日付を抽出
-    const allDates = new Set<string>();
 
     eventDates.forEach((date) => {
       const start = new Date(date.start_time);
@@ -659,8 +535,6 @@ export default function AvailabilityForm({
         String(start.getMonth() + 1).padStart(2, "0"),
         String(start.getDate()).padStart(2, "0"),
       ].join("-");
-
-      allDates.add(dateKey);
 
       const timeKey = `${start.getHours().toString().padStart(2, "0")}:${start
         .getMinutes()
@@ -678,58 +552,53 @@ export default function AvailabilityForm({
       dateMap[dateKey][timeKey] = date.id;
     });
 
-    // 時間スロットを時間順にソート
     const sortedTimeSlots = Array.from(allTimeSlots).sort();
+    const displayDates = (
+      currentWeekDates.length > 0
+        ? currentWeekDates
+        : weeklyDateBuckets[0] ?? []
+    ) as string[];
 
-    // 日付を日付順にソート
-    const sortedDates = Array.from(allDates).sort();
+    const dates = displayDates.map((dateStr) => {
+      const date = new Date(`${dateStr}T00:00:00`);
+      return {
+        dateKey: dateStr,
+        formattedDate: date.toLocaleDateString("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+          weekday: "short",
+        }),
+      };
+    });
 
-    // 現在のページとページサイズに基づいて表示する日付をフィルタリング
-    const paginatedDates =
-      pageSize === 0
-        ? sortedDates // pageSize=0の場合はすべて表示
-        : sortedDates.slice(
-            currentPage * pageSize,
-            (currentPage + 1) * pageSize
-          );
-
-    // 総ページ数を計算
-    const totalPages =
-      pageSize === 0 ? 1 : Math.ceil(sortedDates.length / pageSize);
+    const currentDateRange = dates.length
+      ? {
+          startLabel: new Date(
+            `${dates[0].dateKey}T00:00:00`
+          ).toLocaleDateString("ja-JP", {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+          }),
+          endLabel: new Date(
+            `${dates[dates.length - 1].dateKey}T00:00:00`
+          ).toLocaleDateString("ja-JP", {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+          }),
+        }
+      : null;
 
     return {
       timeSlots: sortedTimeSlots,
-      dates: paginatedDates.map((dateStr) => {
-        const date = new Date(dateStr);
-        return {
-          dateKey: dateStr,
-          formattedDate: date.toLocaleDateString("ja-JP", {
-            month: "numeric",
-            day: "numeric",
-            weekday: "short",
-          }),
-        };
-      }),
+      dates,
       dateMap,
-      totalPages,
-      allDatesCount: sortedDates.length,
-      currentDateRange:
-        paginatedDates.length > 0
-          ? {
-              start: new Date(paginatedDates[0]).toLocaleDateString("ja-JP", {
-                month: "numeric",
-                day: "numeric",
-              }),
-              end: new Date(
-                paginatedDates[paginatedDates.length - 1]
-              ).toLocaleDateString("ja-JP", {
-                month: "numeric",
-                day: "numeric",
-              }),
-            }
-          : null,
+      totalPages: weeklyDateBuckets.length || (dates.length > 0 ? 1 : 0),
+      allDatesCount: uniqueDateKeys.length,
+      currentDateRange,
     };
-  }, [eventDates, currentPage, pageSize]);
+  }, [eventDates, currentWeekDates, uniqueDateKeys.length, weeklyDateBuckets]);
 
   // start_time と end_time から時間帯のキーを生成する関数
   const getTimeKey = useCallback(
@@ -799,182 +668,6 @@ export default function AvailabilityForm({
     setWeekdaySelections(updatedSelections);
   };
 
-  // ドラッグ選択の開始
-  const handleMouseDown = useCallback(
-    (dateId: string, initialState: boolean) => {
-      setIsDragging(true);
-      setDragStartId(dateId);
-      setDragState(!initialState); // クリックした時の反対の状態にする
-
-      // クリックした要素の状態を変更（State Batchingを活用するため関数形式を使用）
-      setSelectedDates((prev) => {
-        return {
-          ...prev,
-          [dateId]: !initialState,
-        };
-      });
-    },
-    []
-  );
-
-  // ドラッグ中の処理
-  const handleMouseEnter = useCallback(
-    (dateId: string) => {
-      if (isDragging && dragState !== null) {
-        setSelectedDates((prev) => ({
-          ...prev,
-          [dateId]: dragState,
-        }));
-      }
-    },
-    [isDragging, dragState]
-  );
-
-  // ドラッグ終了
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setDragStartId(null);
-    setDragState(null);
-    // ドラッグ終了時にスクロールを再度許可する
-    document.body.classList.remove("no-scroll");
-  }, []);
-
-  // マウスが領域外に出た時の処理
-  const handleMouseLeave = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      setDragStartId(null);
-      setDragState(null);
-    }
-  }, [isDragging]);
-
-  // タッチ操作開始（スマホ向け）- シンプル化したバージョン
-  const handleTouchStart = useCallback(
-    (dateId: string, initialState: boolean) => {
-      // タッチ操作時はすぐに選択状態に移行
-      setIsTouching(true);
-      setDragStartId(dateId);
-      setDragState(!initialState);
-
-      // 即座に選択状態を反映
-      setSelectedDates((prev) => ({
-        ...prev,
-        [dateId]: !initialState,
-      }));
-
-      // preventDefault()は専用のイベントリスナーで処理するため、ここでは呼び出さない
-    },
-    [] // 依存配列を空のままにして、コールバックが再作成されないようにする
-  );
-
-  // タッチ移動（スマホ向け）- ドラッグ状態の管理を改善
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent | globalThis.TouchEvent) => {
-      // 条件チェックをシンプルに
-      if (isTouching && dragState !== null) {
-        // preventDefault()は専用のイベントリスナーで処理するため、ここでは呼び出さない
-
-        // タッチ位置の要素を取得
-        const touch = e.touches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-
-        // 共通関数に処理を委譲
-        applyDragToElement(
-          element?.closest("[data-date-id]") as HTMLElement | null
-        );
-      }
-    },
-    [isTouching, dragState, applyDragToElement]
-  );
-
-  // タッチ終了（スマホ向け）
-  const handleTouchEnd = useCallback(() => {
-    setIsTouching(false);
-    setDragStartId(null);
-    setDragState(null);
-    // タッチ終了時にスクロールを再度許可する
-    document.body.classList.remove("no-scroll");
-  }, []);
-
-  // 全体にイベントリスナーを設定（ドラッグ終了用）
-  useEffect(() => {
-    if (isDragging) {
-      // ドラッグ中はbodyにno-scrollクラスを追加してスクロールを防止
-      document.body.classList.add("no-scroll");
-      window.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.body.classList.remove("no-scroll");
-        window.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseUp]);
-
-  // タッチ操作のイベントリスナー
-  useEffect(() => {
-    if (isTouching) {
-      // ドラッグ中はbodyにno-scrollクラスを追加
-      document.body.classList.add("no-scroll");
-
-      // タッチ操作用のイベントリスナーを追加
-      window.addEventListener("touchend", handleTouchEnd);
-
-      // touchmoveは明示的にpassive: falseを設定
-      // 型付きのハンドラーを別途定義して、スコープ外で確実に削除できるようにする
-      const handleDomTouchMove = (e: globalThis.TouchEvent) => {
-        // タッチ操作中はスクロールを防止 - ここではpreventDefaultをtry-catchで囲む
-        if (isTouching) {
-          try {
-            // passive: falseが設定されていれば実行される
-            e.preventDefault();
-          } catch {
-            // パッシブイベントの場合は何もしない
-          }
-          handleTouchMove(e);
-        }
-      };
-
-      // passive: false を明示的に指定することで、preventDefault()が可能になる
-      window.addEventListener("touchmove", handleDomTouchMove, {
-        passive: false,
-      });
-
-      return () => {
-        document.body.classList.remove("no-scroll");
-        window.removeEventListener("touchend", handleTouchEnd);
-        window.removeEventListener("touchmove", handleDomTouchMove);
-      };
-    }
-  }, [isTouching, handleTouchEnd, handleTouchMove]);
-
-  // マトリックス用のタッチ操作イベントリスナー
-  useEffect(() => {
-    if (isMatrixTouching) {
-      // ドラッグ中はbodyにno-scrollクラスを追加
-      document.body.classList.add("no-scroll");
-
-      // タッチ操作用のイベントリスナーを追加
-      const handleMatrixTouchEnd = () => {
-        setIsMatrixTouching(false);
-        setMatrixDragState(null);
-        document.body.classList.remove("no-scroll");
-      };
-
-      window.addEventListener("touchend", handleMatrixTouchEnd);
-
-      // マトリクス用のタッチムーブハンドラを登録
-      // passive: false を明示的に指定
-      window.addEventListener("touchmove", handleMatrixTouchMove, {
-        passive: false,
-      });
-
-      return () => {
-        document.body.classList.remove("no-scroll");
-        window.removeEventListener("touchend", handleMatrixTouchEnd);
-        window.removeEventListener("touchmove", handleMatrixTouchMove);
-      };
-    }
-  }, [isMatrixTouching, handleMatrixTouchMove]);
-
   // CellStatusに基づいて表示するアイコンやテキスト
   const getCellContent = (status: CellStatus) => {
     switch (status) {
@@ -994,18 +687,19 @@ export default function AvailabilityForm({
   };
 
   // ページを変更するハンドラー
-  const handlePageChange = useCallback((newPage: number) => {
-    setCurrentPage(newPage);
-  }, []);
-
-  // ページサイズを変更するハンドラー
-  const handlePageSizeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newSize = parseInt(e.target.value, 10);
-      setPageSize(newSize);
-      setCurrentPage(0); // ページサイズ変更時は最初のページに戻る
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      if (weeklyDateBuckets.length === 0) {
+        setCurrentPage(0);
+        return;
+      }
+      const clamped = Math.min(
+        Math.max(newPage, 0),
+        weeklyDateBuckets.length - 1
+      );
+      setCurrentPage(clamped);
     },
-    []
+    [weeklyDateBuckets]
   );
 
   // 編集モードを切り替える処理
@@ -1064,7 +758,7 @@ export default function AvailabilityForm({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
             <span>{feedback}</span>
@@ -1276,7 +970,7 @@ export default function AvailabilityForm({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 1 1-18 0 1 9 0 0 1 18 0z"
+                      d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
                     ></path>
                   </svg>
                   <span>
@@ -1354,66 +1048,121 @@ export default function AvailabilityForm({
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.keys(
-                            Object.values(weekdaySelections)[0]?.timeSlots || {}
-                          ).length > 0 ? (
-                            Object.keys(
-                              Object.values(weekdaySelections)[0].timeSlots
-                            )
-                              .sort()
-                              .map((timeSlot) => {
-                                const [startTime] = timeSlot.split("-");
-                                return (
-                                  <tr key={timeSlot}>
-                                    <td className="font-medium border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10">
-                                      {startTime}
-                                    </td>
-                                    {Object.entries(weekdaySelections).map(
-                                      ([day, daySchedule]) => (
-                                        <td
-                                          key={`${day}-${timeSlot}`}
-                                          className="text-center border border-base-300 p-0 cursor-pointer"
-                                          data-day={day}
-                                          data-time-slot={timeSlot}
-                                          onPointerDown={commonPointerDown}
-                                          onPointerEnter={commonPointerEnter}
-                                          onPointerUp={commonPointerUp}
+                          {(() => {
+                            const baseSchedule =
+                              Object.values(weekdaySelections)[0];
+                            const sortedTimeSlots = baseSchedule
+                              ? Object.keys(baseSchedule.timeSlots).sort()
+                              : [];
+                            if (sortedTimeSlots.length === 0) {
+                              return (
+                                <tr>
+                                  <td
+                                    colSpan={
+                                      1 + Object.keys(weekdaySelections).length
+                                    }
+                                    className="text-center py-4"
+                                  >
+                                    利用可能な時間帯がありません
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return (
+                              <>
+                                {sortedTimeSlots.map((timeSlot) => {
+                                  const [startTime] = timeSlot.split("-");
+                                  return (
+                                    <tr key={timeSlot}>
+                                      <td className=" border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                        <span
+                                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                                          style={{ top: 0 }}
                                         >
-                                          <div
-                                            className={`w-full h-7 flex items-center justify-center ${
-                                              daySchedule.timeSlots[timeSlot]
-                                                ? "bg-success text-success-content"
-                                                : "bg-base-200"
-                                            }`}
-                                          >
-                                            {daySchedule.timeSlots[timeSlot] ? (
-                                              <div className="text-lg font-bold select-none inline-block">
-                                                ○
+                                          {startTime.replace(/^0/, "")}
+                                        </span>
+                                      </td>
+                                      {Object.entries(weekdaySelections).map(
+                                        ([day, daySchedule]) => {
+                                          const matrixKey = getMatrixKey(
+                                            day as WeekDay,
+                                            timeSlot
+                                          );
+                                          return (
+                                            <td
+                                              key={`${day}-${timeSlot}`}
+                                              className="text-center border border-base-300 p-0 cursor-pointer"
+                                              data-day={day}
+                                              data-time-slot={timeSlot}
+                                              data-selection-key={matrixKey}
+                                              {...weekdaySelectionController.getCellProps(
+                                                matrixKey,
+                                                {
+                                                  disabled:
+                                                    !isWeekdayModeActive,
+                                                }
+                                              )}
+                                            >
+                                              <div
+                                                className={`w-full h-7 flex items-center justify-center ${
+                                                  daySchedule.timeSlots[
+                                                    timeSlot
+                                                  ]
+                                                    ? "bg-success text-success-content"
+                                                    : "bg-base-200"
+                                                }`}
+                                              >
+                                                {daySchedule.timeSlots[
+                                                  timeSlot
+                                                ] ? (
+                                                  <div className="text-lg font-bold select-none inline-block">
+                                                    ○
+                                                  </div>
+                                                ) : (
+                                                  <div className="text-lg font-bold opacity-70 select-none inline-block">
+                                                    ×
+                                                  </div>
+                                                )}
                                               </div>
-                                            ) : (
-                                              <div className="text-lg font-bold opacity-70 select-none inline-block">
-                                                ×
-                                              </div>
-                                            )}
-                                          </div>
-                                        </td>
-                                      )
-                                    )}
-                                  </tr>
-                                );
-                              })
-                          ) : (
-                            <tr>
-                              <td
-                                colSpan={
-                                  1 + Object.keys(weekdaySelections).length
-                                }
-                                className="text-center py-4"
-                              >
-                                利用可能な時間帯がありません
-                              </td>
-                            </tr>
-                          )}
+                                            </td>
+                                          );
+                                        }
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                                {(() => {
+                                  const lastSlot =
+                                    sortedTimeSlots[sortedTimeSlots.length - 1];
+                                  const [, rawEnd] = lastSlot.split("-");
+                                  const displayEnd =
+                                    rawEnd === "24:00"
+                                      ? rawEnd
+                                      : rawEnd.replace(/^0/, "");
+                                  return (
+                                    <tr key="weekday-endtime">
+                                      <td className=" border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                        <span
+                                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                                          style={{ top: 0 }}
+                                        >
+                                          {displayEnd}
+                                        </span>
+                                      </td>
+                                      {Object.keys(weekdaySelections).map(
+                                        (day) => (
+                                          <td
+                                            key={`${day}-endtime`}
+                                            className="border border-base-300 p-0"
+                                          />
+                                        )
+                                      )}
+                                    </tr>
+                                  );
+                                })()}
+                              </>
+                            );
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -1461,21 +1210,15 @@ export default function AvailabilityForm({
                 (viewMode === "heatmap" ||
                   viewMode === "table" ||
                   viewMode === "list") &&
-                heatmapData.allDatesCount > pageSize && (
+                heatmapData.totalPages > 1 && (
                   <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-4 bg-base-200 p-3 rounded-lg">
                     <div className="flex items-center gap-2">
                       {heatmapData.currentDateRange && (
                         <span className="text-sm font-medium">
-                          表示期間: {heatmapData.currentDateRange.start} から{" "}
-                          {heatmapData.currentDateRange.end}
+                          表示期間: {heatmapData.currentDateRange.startLabel} 〜{" "}
+                          {heatmapData.currentDateRange.endLabel}
                           <span className="text-xs text-gray-500 ml-1">
-                            (全{heatmapData.allDatesCount}日中{" "}
-                            {currentPage * pageSize + 1}-
-                            {Math.min(
-                              (currentPage + 1) * pageSize,
-                              heatmapData.allDatesCount
-                            )}
-                            日目)
+                            (週 {currentPage + 1} / {heatmapData.totalPages})
                           </span>
                         </span>
                       )}
@@ -1526,18 +1269,7 @@ export default function AvailabilityForm({
                           »
                         </button>
                       </div>
-                      <select
-                        className="select select-sm select-bordered"
-                        value={pageSize}
-                        onChange={handlePageSizeChange}
-                        aria-label="表示日数"
-                      >
-                        {pageSizeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="text-xs text-gray-500">表示: 1週間</span>
                     </div>
                   </div>
                 )}
@@ -1566,48 +1298,42 @@ export default function AvailabilityForm({
                       {/* リストビュー用にページネーションされたイベント日程データを準備 */}
                       {(() => {
                         // 日程を日付順にソート
-                        const sortedDates = [...eventDates].sort(
-                          (a, b) =>
-                            new Date(a.start_time).getTime() -
-                            new Date(b.start_time).getTime()
-                        );
+                        const sortedDates = [...eventDates]
+                          .sort(
+                            (a, b) =>
+                              new Date(a.start_time).getTime() -
+                              new Date(b.start_time).getTime()
+                          )
+                          .filter((date) => {
+                            if (currentWeekDateSet.size === 0) {
+                              return true;
+                            }
+                            const dateKey = new Date(date.start_time)
+                              .toISOString()
+                              .split("T")[0];
+                            return currentWeekDateSet.has(dateKey);
+                          });
 
-                        // ページネーション処理
-                        const paginatedDates =
-                          pageSize === 0
-                            ? sortedDates
-                            : sortedDates.slice(
-                                currentPage * pageSize,
-                                (currentPage + 1) * pageSize
-                              );
-
-                        return paginatedDates.map((date) => {
+                        return sortedDates.map((date) => {
                           const { className, status } = getCellStyle(date.id);
+                          const interactiveProps =
+                            dateSelectionController.getCellProps(date.id, {
+                              disabled: isWeekdayModeActive,
+                            });
                           return (
                             <div
                               key={date.id}
                               data-date-id={date.id}
-                              className={`flex items-center p-3 rounded-md border border-base-300 transition-all cursor-pointer ${
+                              data-selection-key={date.id}
+                              className={`flex items-center p-3 rounded-lg transition-colors cursor-pointer border ${
                                 status === "available"
-                                  ? "bg-base-100"
-                                  : "hover:bg-base-200"
+                                  ? "bg-success/10 border-success/40"
+                                  : "bg-base-200/10 border-base-300/40 hover:bg-base-200/20"
                               }`}
-                              onMouseDown={() =>
-                                handleMouseDown(
-                                  date.id,
-                                  !!selectedDates[date.id]
-                                )
-                              }
-                              onMouseEnter={() => handleMouseEnter(date.id)}
-                              onTouchStart={() =>
-                                handleTouchStart(
-                                  date.id,
-                                  !!selectedDates[date.id]
-                                )
-                              }
+                              {...interactiveProps}
                             >
                               <div
-                                className={`flex items-center justify-center w-10 h-10 rounded-md mr-4 shrink-0 transition-colors duration-200 ease-in-out ${className}`}
+                                className={`flex items-center justify-center w-10 h-10 rounded-md mr-4 shrink-0 transition-colors duration-150 ${className}`}
                               >
                                 {getCellContent(status)}
                               </div>
@@ -1696,21 +1422,11 @@ export default function AvailabilityForm({
                                     <td className="text-center border border-base-300">
                                       <div
                                         className={`w-full h-10 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className}`}
-                                        onMouseDown={() =>
-                                          handleMouseDown(
-                                            date.id,
-                                            !!selectedDates[date.id]
-                                          )
-                                        }
-                                        onMouseEnter={() =>
-                                          handleMouseEnter(date.id)
-                                        }
-                                        onTouchStart={() =>
-                                          handleTouchStart(
-                                            date.id,
-                                            !!selectedDates[date.id]
-                                          )
-                                        }
+                                        data-selection-key={date.id}
+                                        {...dateSelectionController.getCellProps(
+                                          date.id,
+                                          { disabled: isWeekdayModeActive }
+                                        )}
                                       >
                                         {getCellContent(status)}
                                       </div>
@@ -1730,7 +1446,9 @@ export default function AvailabilityForm({
                       className="overflow-x-auto select-none overscroll-contain table-container-mobile"
                       style={{
                         overscrollBehaviorY: "contain",
-                        touchAction: isDragging ? "none" : "pan-x", // ドラッグ中はタッチ操作を無効化
+                        touchAction: dateSelectionController.isDragging
+                          ? "none"
+                          : "pan-x", // ドラッグ中はタッチ操作を無効化
                       }}
                       onMouseLeave={handleMouseLeave}
                     >
@@ -1762,68 +1480,64 @@ export default function AvailabilityForm({
                             <td className="h-3 sm:h-4 sticky left-0 bg-base-100 z-10"></td>
                           </tr>
                           {heatmapData.timeSlots.map((timeSlot) => {
-                              const [startTime] = timeSlot.split("-");
-                              const formattedStartTime = startTime.replace(
-                                /^0/,
-                                ""
-                              );
+                            const [startTime] = timeSlot.split("-");
+                            const formattedStartTime = startTime.replace(
+                              /^0/,
+                              ""
+                            );
 
-                              return (
-                                <tr key={timeSlot} className="hover">
-                                  <td className="relative px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
-                                    <span
-                                      style={{
-                                        position: "absolute",
-                                        top: 0,
-                                        left: "0.5rem",
-                                        transform: "translateY(-50%)",
-                                        backgroundColor:
-                                          "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
-                                        padding: "0 0.25rem",
-                                      }}
-                                      className="text-xs sm:text-sm"
+                            return (
+                              <tr key={timeSlot} className="hover">
+                                <td className=" px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                  <span
+                                    className="absolute left-2 text-xs sm:text-sm font-medium text-base-content/80"
+                                    style={{
+                                      top: 0,
+                                      transform: "translateY(-50%)",
+                                    }}
+                                  >
+                                    {formattedStartTime}
+                                  </span>
+                                </td>
+                                {heatmapData.dates.map((date) => {
+                                  const dateId =
+                                    heatmapData.dateMap[date.dateKey]?.[
+                                      timeSlot
+                                    ];
+                                  const { className, status } =
+                                    getCellStyle(dateId);
+
+                                  return (
+                                    <td
+                                      key={`${date.dateKey}-${timeSlot}`}
+                                      className="p-0 text-center border border-base-300"
+                                      data-date-id={dateId}
                                     >
-                                      {formattedStartTime}
-                                    </span>
-                                  </td>
-                                  {heatmapData.dates.map((date) => {
-                                    const dateId =
-                                      heatmapData.dateMap[date.dateKey]?.[
-                                        timeSlot
-                                      ];
-                                    const { className, status } =
-                                      getCellStyle(dateId);
-
-                                    return (
-                                      <td
-                                        key={`${date.dateKey}-${timeSlot}`}
-                                        className="p-0 text-center border border-base-300"
-                                        data-date-id={dateId}
-                                      >
-                                        {dateId ? (
-                                          <div
-                                            className={`w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className} touch-manipulation`}
-                                            data-date-id={dateId}
-                                            onPointerDown={commonPointerDown}
-                                            onPointerEnter={commonPointerEnter}
-                                            onPointerUp={commonPointerUp}
-                                          >
-                                            {getCellContent(status)}
-                                          </div>
-                                        ) : (
-                                          <div className="w-full h-5 sm:h-6 md:h-8 rounded-none sm:rounded-sm flex items-center justify-center bg-gray-100 text-gray-400">
-                                            <span className="text-xs sm:text-sm">
-                                              ー
-                                            </span>
-                                          </div>
-                                        )}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            }
-                          )}
+                                      {dateId ? (
+                                        <div
+                                          className={`w-full h-9 sm:h-10 flex items-center justify-center cursor-pointer transition-colors duration-150 rounded-sm ${className}`}
+                                          data-date-id={dateId}
+                                          data-selection-key={dateId}
+                                          {...dateSelectionController.getCellProps(
+                                            dateId,
+                                            { disabled: isWeekdayModeActive }
+                                          )}
+                                        >
+                                          {getCellContent(status)}
+                                        </div>
+                                      ) : (
+                                        <div className="w-full h-9 sm:h-10 flex items-center justify-center rounded-sm bg-base-200/30 text-base-content/30">
+                                          <span className="text-xs sm:text-sm">
+                                            ー
+                                          </span>
+                                        </div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
                           {/* Row for the last end time */}
                           {heatmapData.timeSlots.length > 0 &&
                             (() => {
@@ -1838,18 +1552,13 @@ export default function AvailabilityForm({
                               }
                               return (
                                 <tr className="h-0">
-                                  <td className="relative px-1 py-0 sm:px-2 sm:py-1 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                  <td className=" px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
                                     <span
+                                      className="absolute left-2 text-xs sm:text-sm font-medium text-base-content/80"
                                       style={{
-                                        position: "absolute",
                                         top: 0,
-                                        left: "0.5rem",
                                         transform: "translateY(-50%)",
-                                        backgroundColor:
-                                          "var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))",
-                                        padding: "0 0.25rem",
                                       }}
-                                      className="text-xs sm:text-sm"
                                     >
                                       {formattedEndTime}
                                     </span>
@@ -1857,11 +1566,11 @@ export default function AvailabilityForm({
                                   {heatmapData.dates.map((date) => (
                                     <td
                                       key={`${date.dateKey}-endtime-filler`}
-                                    ></td>
+                                    />
                                   ))}
                                 </tr>
                               );
-                            })()} 
+                            })()}
                         </tbody>
                       </table>
                     </div>

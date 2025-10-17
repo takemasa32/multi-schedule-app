@@ -34,6 +34,7 @@ export default function EventDateAddSection({
   >(null);
   const [addModalError, setAddModalError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const latestManualTimeSlotsRef = useRef<TimeSlot[]>([]);
   // エラー発生時に自動スクロール
   useScrollToError(addModalError, errorRef);
   const [showToast, setShowToast] = useState<{
@@ -203,6 +204,7 @@ export default function EventDateAddSection({
                   <div className="mt-4">
                     <DateRangePicker
                       onTimeSlotsChange={(timeSlots) => {
+                        latestManualTimeSlotsRef.current = timeSlots;
                         if (addModalState !== "confirm") {
                           setPendingTimeSlots(timeSlots);
                         }
@@ -214,6 +216,15 @@ export default function EventDateAddSection({
                       }`}
                       type="button"
                       onClick={() => {
+                        setAddModalError(null);
+                        if (latestManualTimeSlotsRef.current.length === 0) {
+                          setAddModalState("error");
+                          setAddModalError("追加する日程が生成されていません");
+                          return;
+                        }
+                        setPendingTimeSlots([
+                          ...latestManualTimeSlotsRef.current,
+                        ]);
                         setAddModalState("confirm");
                       }}
                     >
@@ -242,48 +253,58 @@ export default function EventDateAddSection({
                 }}
               >
                 <div
-                  className="bg-base-100 rounded-lg shadow-lg p-6 w-full max-w-md relative"
+                  className="bg-base-100 rounded-lg shadow-lg p-6 w-full max-w-md relative flex flex-col max-h-[80vh]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <h3 className="font-bold text-lg mb-2">日程追加の確認</h3>
-                  {addModalState === "success" ? (
-                    <div className="alert alert-success mb-4">
-                      日程を追加しました。
-                    </div>
-                  ) : (
-                    <>
-                      <p className="mb-2 text-sm text-gray-700">
-                        以下の日程を追加します。よろしいですか？
-                      </p>
-                      <ul className="mb-4 text-sm">
-                        {(() => {
-                          const grouped: Record<
-                            string,
-                            { date: Date; count: number }
-                          > = {};
-                          pendingTimeSlots.forEach((slot) => {
-                            const key = getLocalDateKey(slot.date);
-                            if (!grouped[key])
-                              grouped[key] = { date: slot.date, count: 0 };
-                            grouped[key].count += 1;
-                          });
-                          return Object.values(grouped)
-                            .sort((a, b) => a.date.getTime() - b.date.getTime())
-                            .map(({ date, count }) => (
-                              <li key={getLocalDateKey(date)} className="mb-1">
-                                <span className="font-semibold">
-                                  {date.getFullYear()}/{date.getMonth() + 1}/
-                                  {date.getDate()}（
-                                  {"日月火水木金土"[date.getDay()]}）
-                                </span>
-                                : {count}枠追加
-                              </li>
-                            ));
-                        })()}
-                      </ul>
-                    </>
-                  )}
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex-1 overflow-y-auto pr-1">
+                    {addModalState === "success" ? (
+                      <div
+                        className="alert alert-success mb-4"
+                        data-testid="event-date-add-success"
+                      >
+                        日程を追加しました。
+                      </div>
+                    ) : (
+                      <>
+                        <p className="mb-2 text-sm text-gray-700">
+                          以下の日程を追加します。よろしいですか？
+                        </p>
+                        <ul className="mb-4 text-sm">
+                          {(() => {
+                            const grouped: Record<
+                              string,
+                              { date: Date; count: number }
+                            > = {};
+                            pendingTimeSlots.forEach((slot) => {
+                              const key = getLocalDateKey(slot.date);
+                              if (!grouped[key])
+                                grouped[key] = { date: slot.date, count: 0 };
+                              grouped[key].count += 1;
+                            });
+                            return Object.values(grouped)
+                              .sort((a, b) =>
+                                a.date.getTime() - b.date.getTime()
+                              )
+                              .map(({ date, count }) => (
+                                <li
+                                  key={getLocalDateKey(date)}
+                                  className="mb-1"
+                                >
+                                  <span className="font-semibold">
+                                    {date.getFullYear()}/{date.getMonth() + 1}/
+                                    {date.getDate()}（
+                                    {"日月火水木金土"[date.getDay()]}）
+                                  </span>
+                                  : {count}枠追加
+                                </li>
+                              ));
+                          })()}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                  <div className="mt-4 flex gap-2 justify-end">
                     {!["loading", "success"].includes(addModalState ?? "") && (
                       <button
                         className="btn btn-outline"
@@ -375,7 +396,11 @@ export default function EventDateAddSection({
                     )}
                   </div>
                   {addModalError && (
-                    <div className="alert alert-error mt-3 text-sm" ref={errorRef}>
+                    <div
+                      className="alert alert-error mt-3 text-sm"
+                      ref={errorRef}
+                      data-testid="event-date-add-error"
+                    >
                       {addModalError}
                     </div>
                   )}

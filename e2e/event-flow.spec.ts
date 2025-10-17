@@ -37,7 +37,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByLabel('イベントタイトル')).toBeVisible();
     await page.getByLabel('イベントタイトル').fill('E2Eテストイベント');
-    await page.getByLabel('説明').fill('E2E自動テスト用イベント');
+    await page.getByTestId('event-description-input').fill('E2E自動テスト用イベント');
     const dateInputs = await page.locator('input[type="date"]').all();
     if (dateInputs.length >= 2) {
       await dateInputs[0].fill('2099-01-01');
@@ -104,7 +104,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
 
     // "個別" タブが表示されるまで待機
-    const individualTab = participantPage.getByText('個別');
+    const individualTab = participantPage.locator('[data-testid$="availability-tab-detailed"]').first();
     await expect(individualTab).toBeVisible({ timeout: 15000 });
     await individualTab.click();
 
@@ -126,8 +126,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible({ timeout: 10000 });
     // 参加者が1人以上いることを検証
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
-    await page.getByText('個別').click();
+    const adminDetailedTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
+    await expect(adminDetailedTab).toBeVisible({ timeout: 10000 });
+    await adminDetailedTab.click();
     try {
       await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
     } catch (e) {
@@ -136,13 +137,13 @@ test.describe.serial('イベントE2Eフロー', () => {
       throw e;
     }
     try {
-      await expect(page.getByText('個別')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('[data-testid$="availability-tab-detailed"]').first()).toBeVisible({ timeout: 10000 });
     } catch (e) {
       const html = await page.content();
       console.log('DEBUG: page.content()', html);
       throw e;
     }
-    await page.getByText('個別').click();
+    await page.locator('[data-testid$="availability-tab-detailed"]').first().click();
     await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
     await page.reload();
     await page.getByRole('link', { name: '新しく回答する' }).click();
@@ -167,7 +168,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
 
     // "個別" タブが表示されるまで待機
-    const individualTab = page.getByText('個別');
+    const individualTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
     await expect(individualTab).toBeVisible({ timeout: 15000 });
     await individualTab.click();
 
@@ -204,7 +205,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
 
     // "個別" タブが表示されるまで待機
-    const individualTab = page.getByText('個別');
+    const individualTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
     await expect(individualTab).toBeVisible({ timeout: 15000 });
     await individualTab.click();
 
@@ -419,7 +420,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByLabel('終了時間', { exact: true }).fill('10:00');
     await page.getByRole('button', { name: /日程を追加/ }).click();
     await page.getByRole('button', { name: /^追加する$/ }).click();
-    await expect(page.getByText(/重複/)).toBeVisible({ timeout: 5000 });
+    const duplicateAlert = page.getByTestId('event-date-add-error');
+    await expect(duplicateAlert).toBeVisible({ timeout: 5000 });
+    await expect(duplicateAlert).toContainText(/重複/);
   });
 
 });

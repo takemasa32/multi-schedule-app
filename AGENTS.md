@@ -1,34 +1,132 @@
-# Repository Agent Instructions
+# AGENTS.md（改善案）
 
-This repository hosts a Next.js + Supabase PWA. Refer to the documentation in `specifications/` for project specs and `.github/copilot-instructions.md` for more guidance.
-
-## Coding and Commit Rules
-
-- Write all commit messages in Japanese using the format `<type>(<scope>): <summary>`.
-  - `type`: feat, fix, docs, style, refactor, test, chore
-- Keep commits small and focused.
-- Run `npm run lint` for ESLint/Prettier checks before committing.
-- Ensure API documentation via JSDoc comments remains up-to-date.
-
-## Testing
-
-- Run unit tests with `npm run test:ci`.
-- Run E2E tests with `npm run e2e` (or `npm run test:e2e` when appropriate).
-- When SQL or migrations change, execute `supabase test db`.
-- All tests must pass and have no TypeScript or lint errors before commit.
-
-## Pull Requests
-
-- Follow Git Flow naming: `feature/*`, `bugfix/*`, `release/x.y.z`, etc.
-- PR titles follow `[<type>] <branch>: <summary>` and bodies describe background, changes, test steps and related issues.
-- Use Squash and merge after CI success.
-
-## Additional Notes
-
-- Remove unused code or comments.
-- Update documentation if implementing features beyond the spec.
-- Ask questions if the spec is unclear or cannot be met.
-- Summaries in PR descriptions and final responses should be written in Japanese.
+本書は本サービスでエージェント／API／UI を実装・運用するための実践的ガイドラインです。**ドキュメント一貫性・安全性・保守性**を最優先に、段階的に機能を拡張します。
 
 ---
-These rules apply to the entire repository.
+
+## 0. 目的
+
+- 常に **/docs** を最新状態に保ち、サービスの仕様変更を即座に共有する。
+- 最小実装（MVP）から **ビルドが通る** ことを優先し、テストで仕様を固めながら拡張する。
+- Supabase など外部サービスへのアクセスは **必ずサーバーサイド** で行い、クライアントから DB へ直接アクセスしない。
+
+---
+
+## 1. 守るべき原則
+
+- 既存コードベースと `/docs` の設計メモを常に参照し、**命名・構成・設計の一貫性**を保つ。
+- 仕様外の実装を行う場合は、**背景・理由・影響範囲**を `/docs`（例: `architecture/*.md`）に追記。
+- 不要コード／デッドコードは残さない。レビューで積極的に削除。
+- コメント・コミットメッセージ・JSDoc は **すべて日本語**。
+
+---
+
+## 2. ドキュメント運用
+
+- **JSDoc は日本語で記述**し、`@param` に型、`@returns` に戻り値を明記。
+- 仕様・設計の検討ログは `/docs/architecture/` にフェーズ別で追加し、README のリンクを更新する。
+- CHANGELOG（`docs/CHANGELOG.md`）は機能追加・破壊的変更ごとに追記。
+- README は開発者向け onboarding 情報の単一ソースとし、更新時は本ファイルと整合を取る。
+- API キーを扱うファイルは `.env` のみに保存し、コードやログへ露出させない。
+- テスト用など、不要な大容量アセットはリポジトリに含めない
+
+---
+
+### 参考スクリプト
+
+| コマンド                  | 用途                   |
+| ------------------------- | ---------------------- |
+| `npm run lint`            | eslint チェック        |
+| `npm run test:jest`       | 単体テスト             |
+| `npm run test:e2e:chrome` | E2E テスト             |
+| `npm run build`           | 本番ビルドの健全性確認 |
+
+## 3. コード品質（TypeScript / Lint / Format）
+
+- TypeScript は **strict** を維持。
+- ESLint + Prettier を CI で強制し、逸脱時はルールの背景を明記して調整。
+- 未使用変数禁止、`any` 禁止（やむを得ない場合は型ガード＋理由コメント）。
+- サーバーコンポーネント優先。クライアントコンポーネントは必要最小限に別ファイル化。
+- 型定義は Supabase CLI (npx supabase gen types ...) で生成した型ファイルをベースとし、@supabase/supabase-js が提供する型を優先的に利用する。不足する箇所については、必要に応じてユーティリティ型を追加する。
+
+---
+
+## 4. Git 運用
+
+- コミットメッセージは **日本語 + Conventional Commits**（例: `feat: OOOを追加`）。
+- 大きな変更はドラフト PR で早期共有し、仕様検討は `/docs/architecture` にまとめてから着手。
+- PR テンプレートの必須項目（目的 / 変更点 / 動作確認 / 影響範囲 / スクショ / 関連 Issue）を満たす。
+
+---
+
+## 5. 実装方針（MVP→ 拡張）
+
+1. 仕様の最小スライスを定義（入出力・正常系のみ）。
+2. **ビルドが通る** 最低限の実装。
+3. 単体テストを追加（正常系）。
+4. 例外系・境界値・回帰をテストで拡張。
+5. ドキュメント更新。
+
+---
+
+## 6. テスト
+
+- テストは **実装と同時**に作成・実行。仕様準拠を自動確認。
+- 種別：ユニット（Jest）、統合、E2E（Playwright）
+- 失敗時は **原因が特定できるメッセージ**にする（入力・前提条件・期待値）。
+- カバレッジ目標：`lines 85%+ / branches 80%+`（暫定）
+- E2E テストでは UI 要素に data-testid や data-e2e を付与し、クラス名や id ではなく専用属性を使うことを推奨する。
+
+---
+
+## 7. エラーハンドリング / ログ / 可観測性
+
+- 例外は **ユーザ向けメッセージ**と **開発者向け詳細**を分離。
+- ログは PII を含めない。必要に応じてマスキング。
+- 監視：Sentry 等のエラートラッキング、OpenTelemetry でトレース（将来拡張）。
+
+---
+
+## 8. セキュリティ / プライバシー
+
+- 外部サービス（Supabase 等）への通信は **サーバーサイドのみ**（Next.js Server Actions / API Routes / Route Handlers など）。
+- **RLS（Row Level Security）** を有効化し、RBAC ポリシーを /docs に明記。
+- 認証・認可は統一レイヤで行い、**権限チェックを境界で**実施。
+- 入力検証は **zod** 等で必須。API 入口でスキーマ検証。
+- **Rate limit / CSRF / CORS** を適用。再試行・バックオフ・冪等性キーを設計。
+- 環境変数とシークレットは **.env 管理 + Vault / プロバイダの Secret Manager**。
+
+---
+
+## 9. Supabase 利用方針
+
+- クライアントから DB へ直接アクセス **しない**。
+- 可能なら **RPC（PostgREST / Edge Functions）** を利用し、サーバーコンポーネント / Server Actions 経由で呼び出す。
+- スキーマ変更は **マイグレーションファイル必須**。手作業変更は禁止。
+- 接続・クエリでのタイムアウトとリトライ方針を定義（/docs に明記）。
+
+---
+
+## 10. API / コンポーネント設計
+
+- Next.js の **Server Actions** を優先的に利用し、API Routes / Route Handlers は必要時のみ。
+- API は **RESTful** に設計し、エンドポイント・HTTP メソッド・ステータスコードを統一。
+- 返却フォーマットは統一（`{ data, error }` 等）。エラーコード表を /docs に掲載。
+- ページネーション・ソート・フィルタの仕様を統一。
+- UI は **Server Components 優先**で可読性・保守性を高める。必要時のみクライアントコンポーネント化。
+
+---
+
+## 14. 例外対応（ヘルプの求め方）
+
+- 解決できないエラー時は、**ログ・スタックトレース・再現手順・期待/実際**を添えてドキュメント化し、 支援を要請。
+
+---
+
+## 15. 禁止事項
+
+- クライアントから DB への直接アクセス。
+- ドキュメント未更新の仕様追加／破壊的変更。
+- テスト未更新での実装。
+- 秘密情報のログ出力・画面表示。
+- 直接指示がない場合の Git 操作

@@ -32,7 +32,7 @@ export default function Card({
         </div>
       )}
       
-      <div className={noPadding ? "" : "p-6"}>
+      <div className={noPadding ? "" : "p-4 sm:p-6"}>
         {children}
       </div>
       

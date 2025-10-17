@@ -1,23 +1,48 @@
 "use client";
 
-import React, { useRef, useState, useTransition } from "react";
+import React, { useRef, useState, useTransition, useEffect } from "react";
 import { format } from "date-fns";
 import { createEvent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import DateRangePicker from "./date-range-picker";
+import ManualTimeSlotPicker from "./manual-time-slot-picker";
 import { TimeSlot, addEventToHistory } from "@/lib/utils";
 import TermsCheckbox from "./terms/terms-checkbox";
 import useScrollToError from "@/hooks/useScrollToError";
+import PortalTooltip from "./common/portal-tooltip";
 
 export default function EventFormClient() {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [autoSlots, setAutoSlots] = useState<TimeSlot[]>([]);
+  const [manualSlots, setManualSlots] = useState<TimeSlot[]>([]);
+  /**
+   * 候補日程の入力方式
+   * - "auto": 期間から自動で作成（初期設定）
+   * - "manual": カレンダーで手動選択
+   */
+  const [inputMode, setInputMode] = useState<"auto" | "manual">("auto");
   const [error, setError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const [tipOpen, setTipOpen] = useState(false);
+  const [tipAnchor, setTipAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [tipText, setTipText] = useState<string>("");
+  const openTip = (e: React.MouseEvent, text: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTipAnchor({ x: rect.left, y: rect.bottom });
+    setTipText(text);
+    setTipOpen(true);
+    e.stopPropagation();
+  };
+
+  // 入力方式変更時に表示するスロットを更新
+  useEffect(() => {
+    setTimeSlots(inputMode === "auto" ? autoSlots : manualSlots);
+  }, [inputMode, autoSlots, manualSlots]);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -89,6 +114,11 @@ export default function EventFormClient() {
   };
 
   const handleTimeSlotsChange = (newSlots: TimeSlot[]) => {
+    if (inputMode === "auto") {
+      setAutoSlots(newSlots);
+    } else {
+      setManualSlots(newSlots);
+    }
     setTimeSlots(newSlots);
   };
 
@@ -142,6 +172,7 @@ export default function EventFormClient() {
           name="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          data-testid="event-description-input"
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
           rows={3}
           disabled={isPending}
@@ -154,12 +185,52 @@ export default function EventFormClient() {
       </div>
 
       <div className="card bg-base-100 shadow-sm border border-base-300 p-4">
-        <h3 className="card-title text-lg mb-4">候補日程の設定</h3>
-        <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
+        <h3 className="card-title text-lg mb-2">候補日程の設定</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+          <div className="flex items-center">
+            <span className="font-medium whitespace-nowrap">入力方式</span>
+          </div>
+          <label className="flex items-center justify-between gap-2 w-full sm:w-auto cursor-pointer">
+            <span className="flex items-center gap-1 text-sm whitespace-nowrap">
+              カレンダーで手動選択
+              <button
+                type="button"
+                tabIndex={-1}
+                className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                aria-label="カレンダーで手動選択のヒント"
+                onClick={(e) =>
+                  openTip(
+                    e,
+                    "オンにすると、日付×時間の表が表示され、セルをドラッグ/タップでON/OFFできます。表は現在の設定（期間・時間帯・間隔）に連動します。"
+                  )
+                }
+              >
+                ?
+              </button>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-label="カレンダーで手動選択"
+              className="toggle toggle-primary"
+              checked={inputMode === "manual"}
+              onChange={(e) => setInputMode(e.target.checked ? "manual" : "auto")}
+            />
+          </label>
+        </div>
+        {inputMode === "auto" ? (
+          <DateRangePicker onTimeSlotsChange={handleTimeSlotsChange} />
+        ) : (
+          <ManualTimeSlotPicker
+            onTimeSlotsChange={handleTimeSlotsChange}
+            initialSlots={manualSlots}
+          />
+        )}
         <p className="text-xs text-gray-500 mt-2">
           日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
         </p>
       </div>
+      <PortalTooltip open={tipOpen} anchor={tipAnchor} text={tipText} onClose={() => setTipOpen(false)} />
       <TermsCheckbox
         isChecked={termsAccepted}
         onChange={setTermsAccepted}
