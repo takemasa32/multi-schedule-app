@@ -128,8 +128,13 @@ export default function ManualTimeSlotPicker({
   const weekAnchors = useMemo(() => {
     const anchors: string[] = [];
     if (dateKeys.length === 0) return anchors;
-    const first = startOfWeek(new Date(dateKeys[0] + "T00:00:00"), { weekStartsOn: 1 });
-    const last = endOfWeek(new Date(dateKeys[dateKeys.length - 1] + "T00:00:00"), { weekStartsOn: 1 });
+    const first = startOfWeek(new Date(dateKeys[0] + "T00:00:00"), {
+      weekStartsOn: 1,
+    });
+    const last = endOfWeek(
+      new Date(dateKeys[dateKeys.length - 1] + "T00:00:00"),
+      { weekStartsOn: 1 }
+    );
     let cur = new Date(first);
     while (cur <= last) {
       anchors.push(format(cur, "yyyy-MM-dd"));
@@ -155,7 +160,9 @@ export default function ManualTimeSlotPicker({
     if (weekAnchors.length === 0) return [] as string[];
     const mondayStr = weekAnchors[Math.min(weekIndex, weekAnchors.length - 1)];
     const monday = new Date(mondayStr + "T00:00:00");
-    return Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), "yyyy-MM-dd"));
+    return Array.from({ length: 7 }, (_, i) =>
+      format(addDays(monday, i), "yyyy-MM-dd")
+    );
   }, [weekAnchors, weekIndex]);
 
   const weekLabel = useMemo(() => {
@@ -164,10 +171,13 @@ export default function ManualTimeSlotPicker({
       "ja-JP",
       { year: "numeric", month: "numeric", day: "numeric" }
     );
-    const last = new Date(`${visibleDates[visibleDates.length - 1]}T00:00:00`).toLocaleDateString(
-      "ja-JP",
-      { year: "numeric", month: "numeric", day: "numeric" }
-    );
+    const last = new Date(
+      `${visibleDates[visibleDates.length - 1]}T00:00:00`
+    ).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
     return `${first} 〜 ${last}`;
   }, [visibleDates]);
 
@@ -182,7 +192,10 @@ export default function ManualTimeSlotPicker({
   // コンパクトなヘッダー日付表示（例: 7/1 + (火) を2行）
   const getCompactDateParts = useCallback((dateStr: string) => {
     const d = new Date(`${dateStr}T00:00:00`);
-    const md = d.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+    const md = d.toLocaleDateString("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+    });
     const wd = d.toLocaleDateString("ja-JP", { weekday: "short" });
     return { md, wd };
   }, []);
@@ -194,7 +207,7 @@ export default function ManualTimeSlotPicker({
           typeof process !== "undefined" && process.env.NODE_ENV === "test";
         const props = isTest
           ? {}
-          : {
+          : ({
               initialStartDate: (() => {
                 const d = new Date();
                 d.setHours(0, 0, 0, 0);
@@ -210,12 +223,9 @@ export default function ManualTimeSlotPicker({
               initialDefaultEndTime: "18:00",
               initialIntervalUnit: "60",
               allowPastDates: true,
-            } as const;
+            } as const);
         return (
-          <DateRangePicker
-            onTimeSlotsChange={handleSlotsGenerate}
-            {...props}
-          />
+          <DateRangePicker onTimeSlotsChange={handleSlotsGenerate} {...props} />
         );
       })()}
       {allSlots.length > 0 && (
@@ -229,7 +239,10 @@ export default function ManualTimeSlotPicker({
         >
           {/* 表示範囲（ボタンとは別行） */}
           {weekAnchors.length > 0 && (
-            <div className="px-4 text-xs sm:text-sm text-base-content/80 mb-1" aria-live="polite">
+            <div
+              className="px-4 text-xs sm:text-sm text-base-content/80 mb-1"
+              aria-live="polite"
+            >
               表示: {weekLabel}（月曜はじまり）
             </div>
           )}
@@ -248,7 +261,9 @@ export default function ManualTimeSlotPicker({
               <button
                 type="button"
                 className="btn btn-sm"
-                onClick={() => setWeekIndex((i) => Math.min(weekAnchors.length - 1, i + 1))}
+                onClick={() =>
+                  setWeekIndex((i) => Math.min(weekAnchors.length - 1, i + 1))
+                }
                 disabled={weekIndex >= weekAnchors.length - 1}
                 aria-label="次の週へ"
               >
@@ -269,24 +284,30 @@ export default function ManualTimeSlotPicker({
                 {visibleDates.map((d) => {
                   const parts = getCompactDateParts(d);
                   return (
-                  <th
-                    key={d}
-                    className={`text-center whitespace-normal bg-base-200 sticky top-0 z-10 ${
-                      isMobile ? "p-0.5 text-[10px] leading-tight" : "p-0.5 text-[11px] leading-tight"
-                    }`}
-                  >
-                    <span className="block">{parts.md}</span>
-                    <span className="block text-[10px] text-base-content/70">({parts.wd})</span>
-                  </th>
+                    <th
+                      key={d}
+                      className={`text-center whitespace-normal bg-base-200 sticky top-0 z-10 ${
+                        isMobile
+                          ? "p-0.5 text-[10px] leading-tight"
+                          : "p-0.5 text-[11px] leading-tight"
+                      }`}
+                    >
+                      <span className="block">{parts.md}</span>
+                      <span className="block text-[10px] text-base-content/70">
+                        ({parts.wd})
+                      </span>
+                    </th>
                   );
                 })}
               </tr>
             </thead>
             <tbody>
               <tr>
-                <th className={`h-3 sticky left-0 bg-base-100 z-10 ${
-                  isMobile ? "p-0" : "p-0"
-                }`}></th>
+                <th
+                  className={`h-3 sticky left-0 bg-base-100 z-10 ${
+                    isMobile ? "p-0" : "p-0"
+                  }`}
+                ></th>
                 {visibleDates.map((date) => (
                   <td key={`${date}-spacer`} className="h-3"></td>
                 ))}
@@ -294,8 +315,10 @@ export default function ManualTimeSlotPicker({
               {timeKeys.map((time) => (
                 <tr key={time}>
                   <th
-                    className={`relative whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
-                      isMobile ? "px-2 py-0 text-[10px]" : "px-2 py-0 text-[11px]"
+                    className={` whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
+                      isMobile
+                        ? "px-2 py-0 text-[10px]"
+                        : "px-2 py-0 text-[11px]"
                     }`}
                   >
                     <span
@@ -347,29 +370,37 @@ export default function ManualTimeSlotPicker({
                   })}
                 </tr>
               ))}
-              {timeKeys.length > 0 && visibleDates.length > 0 && (() => {
-                const lastTime = timeKeys[timeKeys.length - 1].split("-")[1];
-                const formatted = lastTime === "24:00" ? "24:00" : lastTime.replace(/^0/, "");
-                return (
-                  <tr>
-                    <th
-                      className={`relative whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
-                        isMobile ? "px-2 py-0 text-[10px]" : "px-2 py-0 text-[11px]"
-                      }`}
-                    >
-                      <span
-                        className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
-                        style={{ top: 0 }}
+              {timeKeys.length > 0 &&
+                visibleDates.length > 0 &&
+                (() => {
+                  const lastTime = timeKeys[timeKeys.length - 1].split("-")[1];
+                  const formatted =
+                    lastTime === "24:00" ? "24:00" : lastTime.replace(/^0/, "");
+                  return (
+                    <tr>
+                      <th
+                        className={`whitespace-nowrap text-right pr-2 sticky left-0 bg-base-100 z-10 ${
+                          isMobile
+                            ? "px-2 py-0 text-[10px]"
+                            : "px-2 py-0 text-[11px]"
+                        }`}
                       >
-                        {formatted}
-                      </span>
-                    </th>
-                    {visibleDates.map((date) => (
-                      <td key={`${date}-endtime`} className="p-0 text-center border border-base-300" />
-                    ))}
-                  </tr>
-                );
-              })()}
+                        <span
+                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                          style={{ top: 0 }}
+                        >
+                          {formatted}
+                        </span>
+                      </th>
+                      {visibleDates.map((date) => (
+                        <td
+                          key={`${date}-endtime`}
+                          className="p-0 text-center border border-base-300"
+                        />
+                      ))}
+                    </tr>
+                  );
+                })()}
             </tbody>
           </table>
         </div>

@@ -21,7 +21,8 @@
     "e2e:dev": "concurrently \"npm run dev\" \"npx playwright test --headed\"",
     "e2e": "npm run build && concurrently \"npm run start\" \"npx playwright test\"",
     "e2e:headless": "npm run build && npm run start & npx playwright test --reporter=dot",
-    "e2e:ci": "npm run e2e:headless"
+    "e2e:ci": "npm run e2e:headless",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
