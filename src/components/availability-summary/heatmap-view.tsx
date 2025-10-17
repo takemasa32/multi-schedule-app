@@ -152,7 +152,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
               return (
                 <tr key={timeSlot.slotKey}>
                   <td
-                    className="bg-base-100 relative sticky left-0 z-10 whitespace-nowrap p-1 text-left text-xs font-medium sm:px-2 sm:text-sm"
+                    className="bg-base-100 sticky left-0 z-10 whitespace-nowrap p-1 text-left text-xs font-medium sm:px-2 sm:text-sm"
                     aria-label={`${formattedStartTime}〜${formattedEndTime}`}
                   >
                     <span
@@ -242,14 +242,30 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                                 )}
                               </>
                             ) : (
-                              <span className="text-xs text-gray-400 sm:text-sm">-</span>
+                              <>
+                                <span className="sr-only">回答なし</span>
+                                <span
+                                  aria-hidden="true"
+                                  className="text-xs text-gray-400 sm:text-sm"
+                                >
+                                  0
+                                </span>
+                              </>
                             )}
                             {isSelected && (
                               <div className="bg-success absolute right-0 top-0 m-0.5 h-1.5 w-1.5 rounded-full sm:m-1 sm:h-2 sm:w-2"></div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-300">-</span>
+                          <>
+                            <span className="sr-only">イベント未設定</span>
+                            <span
+                              aria-hidden="true"
+                              className="text-xs text-gray-300 sm:text-sm"
+                            >
+                              -
+                            </span>
+                          </>
                         )}
                       </td>
                     );
