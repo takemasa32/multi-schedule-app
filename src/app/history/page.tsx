@@ -93,7 +93,7 @@ export default function HistoryPage() {
                       <div>
                         <Link
                           href={`/event/${event.id}`}
-                          className="text-lg font-medium text-primary hover:underline"
+                          className="text-primary text-lg font-medium hover:underline"
                         >
                           {event.title}
                         </Link>

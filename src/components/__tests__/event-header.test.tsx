@@ -32,12 +32,7 @@ describe('EventHeader', () => {
   it('公開URLにeventIdを使用してShareEventButtonに渡す', () => {
     render(
       <FavoriteEventsProvider>
-        <EventHeader
-          eventId="abc123"
-          title="タイトル"
-          description="説明"
-          isFinalized={false}
-        />
+        <EventHeader eventId="abc123" title="タイトル" description="説明" isFinalized={false} />
       </FavoriteEventsProvider>,
     );
     const { protocol, host } = window.location;

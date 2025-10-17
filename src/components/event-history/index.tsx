@@ -96,7 +96,7 @@ function EventHistoryInner({
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/event/${event.id}`}
-                    className="block truncate text-primary hover:underline"
+                    className="text-primary block truncate hover:underline"
                   >
                     {event.title}
                   </Link>

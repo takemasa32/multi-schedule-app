@@ -11,12 +11,7 @@ interface EventHeaderProps {
   isFinalized: boolean;
 }
 
-export function EventHeader({
-  eventId,
-  title,
-  description,
-  isFinalized,
-}: EventHeaderProps) {
+export function EventHeader({ eventId, title, description, isFinalized }: EventHeaderProps) {
   // イベント公開用URLを生成
   const getShareUrl = () => {
     if (typeof window === 'undefined') return '';
