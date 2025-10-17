@@ -18,6 +18,8 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
 test('トップページが表示される', async ({ page }) => {
   await gotoWithRetry(page, '/');
   // 「今すぐ無料で日程調整を始める」ボタンの存在でトップページ表示を判定
-  const ctaBtn = page.getByRole('link', { name: /今すぐ無料で日程調整を始める/ });
+  const ctaBtn = page.getByRole('link', {
+    name: /今すぐ無料で日程調整を始める/,
+  });
   await expect(ctaBtn).toBeVisible({ timeout: 10000 });
 });

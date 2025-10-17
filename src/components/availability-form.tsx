@@ -1,18 +1,12 @@
-"use client";
+'use client';
 
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
-import { submitAvailability, checkParticipantExists } from "@/lib/actions";
-import { formatDateTimeWithDay } from "@/lib/utils";
-import TermsCheckbox from "./terms/terms-checkbox";
-import useScrollToError from "@/hooks/useScrollToError";
-import useSelectionDragController from "@/hooks/useSelectionDragController";
-import { addDays, endOfWeek, startOfWeek } from "date-fns";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { submitAvailability, checkParticipantExists } from '@/lib/actions';
+import { formatDateTimeWithDay } from '@/lib/utils';
+import TermsCheckbox from './terms/terms-checkbox';
+import useScrollToError from '@/hooks/useScrollToError';
+import useSelectionDragController from '@/hooks/useSelectionDragController';
+import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -30,16 +24,16 @@ interface AvailabilityFormProps {
     comment?: string | null;
   } | null;
   initialAvailabilities?: Record<string, boolean>;
-  mode?: "new" | "edit";
+  mode?: 'new' | 'edit';
 }
 
-type ViewMode = "list" | "table" | "heatmap";
-type WeekDay = "月" | "火" | "水" | "木" | "金" | "土" | "日";
+type ViewMode = 'list' | 'table' | 'heatmap';
+type WeekDay = '月' | '火' | '水' | '木' | '金' | '土' | '日';
 type WeekDaySchedule = {
   selected: boolean;
   timeSlots: Record<string, boolean>;
 };
-type CellStatus = "available" | "unavailable" | "empty";
+type CellStatus = 'available' | 'unavailable' | 'empty';
 
 export default function AvailabilityForm({
   eventId,
@@ -47,47 +41,42 @@ export default function AvailabilityForm({
   eventDates,
   initialParticipant,
   initialAvailabilities = {},
-  mode = "new",
+  mode = 'new',
 }: AvailabilityFormProps) {
-  const [name, setName] = useState(initialParticipant?.name || "");
-  const [comment, setComment] = useState(initialParticipant?.comment || "");
+  const [name, setName] = useState(initialParticipant?.name || '');
+  const [comment, setComment] = useState(initialParticipant?.comment || '');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false); // 更新モード用の状態
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   // 名前の重複確認用状態
-  const [showOverwriteConfirm, setShowOverwriteConfirm] =
-    useState<boolean>(false);
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState<boolean>(false);
   const [isCheckingName, setIsCheckingName] = useState(false);
   // フォーム送信の一時保存用
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   // すべての日程に対して初期状態を設定
-  const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(
-    () => {
-      const initialState: Record<string, boolean> = {};
-      // 初期値がある場合はそれを使用
-      if (Object.keys(initialAvailabilities).length > 0) {
-        return { ...initialState, ...initialAvailabilities };
-      }
-      // すべての日程に対してfalse（不可）を初期値として設定
-      eventDates.forEach((date) => {
-        initialState[date.id] = false;
-      });
-      return initialState;
+  const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {};
+    // 初期値がある場合はそれを使用
+    if (Object.keys(initialAvailabilities).length > 0) {
+      return { ...initialState, ...initialAvailabilities };
     }
-  );
+    // すべての日程に対してfalse（不可）を初期値として設定
+    eventDates.forEach((date) => {
+      initialState[date.id] = false;
+    });
+    return initialState;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
-  const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
+  const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
   // 週入力モード（アコーディオンを表示中か）：この状態が true の時は通常入力を無効化
   const [isWeekdayModeActive, setIsWeekdayModeActive] = useState(false);
   // 曜日ごとの選択状態と時間帯設定
-  const [weekdaySelections, setWeekdaySelections] = useState<
-    Record<WeekDay, WeekDaySchedule>
-  >({
+  const [weekdaySelections, setWeekdaySelections] = useState<Record<WeekDay, WeekDaySchedule>>({
     月: { selected: false, timeSlots: {} },
     火: { selected: false, timeSlots: {} },
     水: { selected: false, timeSlots: {} },
@@ -105,8 +94,8 @@ export default function AvailabilityForm({
     (dateId: string | undefined) => {
       if (!dateId) {
         return {
-          className: "bg-base-200/40 text-base-content/40",
-          status: "empty" as CellStatus,
+          className: 'bg-base-200/40 text-base-content/40',
+          status: 'empty' as CellStatus,
         };
       }
 
@@ -114,24 +103,21 @@ export default function AvailabilityForm({
       if (isSelected) {
         return {
           className:
-            "bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner",
-          status: "available" as CellStatus,
+            'bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner',
+          status: 'available' as CellStatus,
         };
       } else {
         return {
           className:
-            "bg-base-200/70 text-base-content/70 hover:bg-base-200 border border-base-300/40",
-          status: "unavailable" as CellStatus,
+            'bg-base-200/70 text-base-content/70 hover:bg-base-200 border border-base-300/40',
+          status: 'unavailable' as CellStatus,
         };
       }
     },
-    [selectedDates]
+    [selectedDates],
   );
 
-  const orderedDateIds = useMemo(
-    () => eventDates.map((date) => date.id),
-    [eventDates]
-  );
+  const orderedDateIds = useMemo(() => eventDates.map((date) => date.id), [eventDates]);
 
   const applyDateSelection = useCallback((keys: string[], value: boolean) => {
     setSelectedDates((prev) => {
@@ -164,9 +150,7 @@ export default function AvailabilityForm({
         return [targetKey];
       }
       const [from, to] =
-        startIndex <= targetIndex
-          ? [startIndex, targetIndex]
-          : [targetIndex, startIndex];
+        startIndex <= targetIndex ? [startIndex, targetIndex] : [targetIndex, startIndex];
       return orderedDateIds.slice(from, to + 1);
     },
     shouldIgnorePointerDown: (_event, _key) => isWeekdayModeActive,
@@ -174,13 +158,10 @@ export default function AvailabilityForm({
     disableBodyScroll: true,
   });
 
-  const getMatrixKey = useCallback(
-    (weekday: WeekDay, slot: string) => `${weekday}__${slot}`,
-    []
-  );
+  const getMatrixKey = useCallback((weekday: WeekDay, slot: string) => `${weekday}__${slot}`, []);
 
   const parseMatrixKey = useCallback((key: string) => {
-    const [weekday, slot] = key.split("__");
+    const [weekday, slot] = key.split('__');
     return { weekday: weekday as WeekDay, slot };
   }, []);
 
@@ -209,7 +190,7 @@ export default function AvailabilityForm({
         return changed ? next : prev;
       });
     },
-    [parseMatrixKey]
+    [parseMatrixKey],
   );
 
   const weekdaySelectionController = useSelectionDragController({
@@ -235,7 +216,7 @@ export default function AvailabilityForm({
     if (initialParticipant?.name) {
       setName(initialParticipant.name);
     } else {
-      const savedName = localStorage.getItem("participantName");
+      const savedName = localStorage.getItem('participantName');
       if (savedName) {
         setName(savedName);
       }
@@ -262,14 +243,14 @@ export default function AvailabilityForm({
 
         // 終了日が開始日の翌日である場合は24:00と表示
         if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
-          return "24:00";
+          return '24:00';
         }
       }
 
-      return `${end.getHours().toString().padStart(2, "0")}:${end
+      return `${end.getHours().toString().padStart(2, '0')}:${end
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
     };
 
     // 同じ日または24:00にまたがる場合は日付を1回だけ表示
@@ -279,14 +260,10 @@ export default function AvailabilityForm({
     const endDay = new Date(end);
     endDay.setHours(0, 0, 0, 0);
 
-    const oneDayDiff =
-      endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000;
+    const oneDayDiff = endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000;
     const sameDay = startDay.getTime() === endDay.getTime();
 
-    if (
-      sameDay ||
-      (oneDayDiff && end.getHours() === 0 && end.getMinutes() === 0)
-    ) {
+    if (sameDay || (oneDayDiff && end.getHours() === 0 && end.getMinutes() === 0)) {
       return `${formatDateTimeWithDay(start)} 〜 ${formatEndTime()}`;
     } else {
       // 異なる日の場合は両方の日付を表示
@@ -297,12 +274,12 @@ export default function AvailabilityForm({
   // フォーム送信前のバリデーション用
   const validateForm = async () => {
     if (!name.trim()) {
-      setError("お名前を入力してください");
+      setError('お名前を入力してください');
       return false;
     }
 
     if (!termsAccepted) {
-      setError("利用規約への同意が必要です");
+      setError('利用規約への同意が必要です');
       return false;
     }
 
@@ -312,7 +289,7 @@ export default function AvailabilityForm({
   // 同じ名前の参加者がいるかチェックする関数
   const checkExistingParticipant = async () => {
     // 編集モードなら既に自分の回答なので確認不要
-    if (mode === "edit" || initialParticipant?.name === name) {
+    if (mode === 'edit' || initialParticipant?.name === name) {
       return false;
     }
 
@@ -323,7 +300,7 @@ export default function AvailabilityForm({
       setIsCheckingName(false);
       return result.exists;
     } catch (error) {
-      console.error("参加者チェックエラー:", error);
+      console.error('参加者チェックエラー:', error);
       setIsCheckingName(false);
       return false; // エラー時は存在しないとして扱う
     }
@@ -353,7 +330,7 @@ export default function AvailabilityForm({
     e.preventDefault(); // デフォルトの送信をキャンセル
 
     // 名前をLocalStorageに保存
-    localStorage.setItem("participantName", name);
+    localStorage.setItem('participantName', name);
 
     try {
       // 既存の参加者がいるか確認
@@ -369,8 +346,8 @@ export default function AvailabilityForm({
         await handleFormAction(formData);
       }
     } catch (error) {
-      console.error("送信エラー:", error);
-      setError("送信中にエラーが発生しました");
+      console.error('送信エラー:', error);
+      setError('送信中にエラーが発生しました');
     }
   };
 
@@ -378,25 +355,25 @@ export default function AvailabilityForm({
   const handleFormAction = async (formData: FormData): Promise<void> => {
     try {
       // 編集モードの場合、既存の参加者IDを追加
-      if (mode === "edit" && initialParticipant?.id) {
-        formData.append("participantId", initialParticipant.id);
+      if (mode === 'edit' && initialParticipant?.id) {
+        formData.append('participantId', initialParticipant.id);
       }
 
       const response = await submitAvailability(formData);
 
       if (response.success) {
-        setFeedback(response.message ?? "送信が完了しました");
+        setFeedback(response.message ?? '送信が完了しました');
         // 入力ページの場合は元の確認ページに戻る
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
           window.location.href = `/event/${publicToken}`;
         }
       } else {
-        setError(response.message || "送信に失敗しました");
+        setError(response.message || '送信に失敗しました');
       }
 
       setIsSubmitting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "送信に失敗しました");
+      setError(err instanceof Error ? err.message : '送信に失敗しました');
       setIsSubmitting(false);
     }
   };
@@ -405,9 +382,10 @@ export default function AvailabilityForm({
     const keys = new Set<string>();
     eventDates.forEach((date) => {
       const dateObj = new Date(date.start_time);
-      const dateKey = `${dateObj.getFullYear()}-${String(
-        dateObj.getMonth() + 1
-      ).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`;
+      const dateKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(
+        2,
+        '0',
+      )}-${String(dateObj.getDate()).padStart(2, '0')}`;
       keys.add(dateKey);
     });
     return Array.from(keys).sort();
@@ -417,15 +395,12 @@ export default function AvailabilityForm({
     if (uniqueDateKeys.length === 0) {
       return [] as string[][];
     }
-    const firstWeekStart = startOfWeek(
-      new Date(`${uniqueDateKeys[0]}T00:00:00`),
-      {
-        weekStartsOn: 1,
-      }
-    );
+    const firstWeekStart = startOfWeek(new Date(`${uniqueDateKeys[0]}T00:00:00`), {
+      weekStartsOn: 1,
+    });
     const lastWeekEnd = endOfWeek(
       new Date(`${uniqueDateKeys[uniqueDateKeys.length - 1]}T00:00:00`),
-      { weekStartsOn: 1 }
+      { weekStartsOn: 1 },
     );
 
     const buckets: string[][] = [];
@@ -437,9 +412,10 @@ export default function AvailabilityForm({
       const week: string[] = [];
       for (let i = 0; i < 7; i += 1) {
         const date = addDays(cursor, i);
-        const key = `${date.getFullYear()}-${String(
-          date.getMonth() + 1
-        ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+          2,
+          '0',
+        )}-${String(date.getDate()).padStart(2, '0')}`;
         week.push(key);
       }
       buckets.push(week);
@@ -464,17 +440,11 @@ export default function AvailabilityForm({
     if (weeklyDateBuckets.length === 0) {
       return [] as string[];
     }
-    const clampedIndex = Math.min(
-      Math.max(currentPage, 0),
-      weeklyDateBuckets.length - 1
-    );
+    const clampedIndex = Math.min(Math.max(currentPage, 0), weeklyDateBuckets.length - 1);
     return weeklyDateBuckets[clampedIndex];
   }, [currentPage, weeklyDateBuckets]);
 
-  const currentWeekDateSet = useMemo(
-    () => new Set(currentWeekDates),
-    [currentWeekDates]
-  );
+  const currentWeekDateSet = useMemo(() => new Set(currentWeekDates), [currentWeekDates]);
 
   // 日付のグループ化（日付別に時間帯をまとめる）
   const dateGroups = useMemo(() => {
@@ -482,7 +452,7 @@ export default function AvailabilityForm({
 
     eventDates.forEach((date) => {
       const dateObj = new Date(date.start_time);
-      const dateKey = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD形式
+      const dateKey = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD形式
 
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -498,16 +468,14 @@ export default function AvailabilityForm({
         const date = new Date(dateStr);
         return {
           dateKey: dateStr,
-          formattedDate: date.toLocaleDateString("ja-JP", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            weekday: "short",
+          formattedDate: date.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'short',
           }),
           slots: dates.sort(
-            (a, b) =>
-              new Date(a.start_time).getTime() -
-              new Date(b.start_time).getTime()
+            (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
           ),
         };
       });
@@ -516,9 +484,7 @@ export default function AvailabilityForm({
       return sortedGroups;
     }
 
-    return sortedGroups.filter((group) =>
-      currentWeekDateSet.has(group.dateKey)
-    );
+    return sortedGroups.filter((group) => currentWeekDateSet.has(group.dateKey));
   }, [eventDates, currentWeekDateSet]);
 
   // ヒートマップ表示用のデータ構造を生成
@@ -532,17 +498,17 @@ export default function AvailabilityForm({
 
       const dateKey = [
         start.getFullYear(),
-        String(start.getMonth() + 1).padStart(2, "0"),
-        String(start.getDate()).padStart(2, "0"),
-      ].join("-");
+        String(start.getMonth() + 1).padStart(2, '0'),
+        String(start.getDate()).padStart(2, '0'),
+      ].join('-');
 
-      const timeKey = `${start.getHours().toString().padStart(2, "0")}:${start
+      const timeKey = `${start.getHours().toString().padStart(2, '0')}:${start
         .getMinutes()
         .toString()
-        .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
+        .padStart(2, '0')}-${end.getHours().toString().padStart(2, '0')}:${end
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
       allTimeSlots.add(timeKey);
 
       if (!dateMap[dateKey]) {
@@ -554,39 +520,36 @@ export default function AvailabilityForm({
 
     const sortedTimeSlots = Array.from(allTimeSlots).sort();
     const displayDates = (
-      currentWeekDates.length > 0
-        ? currentWeekDates
-        : weeklyDateBuckets[0] ?? []
+      currentWeekDates.length > 0 ? currentWeekDates : (weeklyDateBuckets[0] ?? [])
     ) as string[];
 
     const dates = displayDates.map((dateStr) => {
       const date = new Date(`${dateStr}T00:00:00`);
       return {
         dateKey: dateStr,
-        formattedDate: date.toLocaleDateString("ja-JP", {
-          month: "numeric",
-          day: "numeric",
-          weekday: "short",
+        formattedDate: date.toLocaleDateString('ja-JP', {
+          month: 'numeric',
+          day: 'numeric',
+          weekday: 'short',
         }),
       };
     });
 
     const currentDateRange = dates.length
       ? {
-          startLabel: new Date(
-            `${dates[0].dateKey}T00:00:00`
-          ).toLocaleDateString("ja-JP", {
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
+          startLabel: new Date(`${dates[0].dateKey}T00:00:00`).toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
           }),
-          endLabel: new Date(
-            `${dates[dates.length - 1].dateKey}T00:00:00`
-          ).toLocaleDateString("ja-JP", {
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-          }),
+          endLabel: new Date(`${dates[dates.length - 1].dateKey}T00:00:00`).toLocaleDateString(
+            'ja-JP',
+            {
+              year: 'numeric',
+              month: 'numeric',
+              day: 'numeric',
+            },
+          ),
         }
       : null;
 
@@ -601,20 +564,17 @@ export default function AvailabilityForm({
   }, [eventDates, currentWeekDates, uniqueDateKeys.length, weeklyDateBuckets]);
 
   // start_time と end_time から時間帯のキーを生成する関数
-  const getTimeKey = useCallback(
-    (startTime: string, endTime: string): string => {
-      const start = new Date(startTime);
-      const end = new Date(endTime);
-      return `${start.getHours().toString().padStart(2, "0")}:${start
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}-${end.getHours().toString().padStart(2, "0")}:${end
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}`;
-    },
-    []
-  );
+  const getTimeKey = useCallback((startTime: string, endTime: string): string => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return `${start.getHours().toString().padStart(2, '0')}:${start
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}-${end.getHours().toString().padStart(2, '0')}:${end
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`;
+  }, []);
 
   // 週入力モード用の時間帯スロットを初期化する関数
   const initializeWeekdayTimeSlots = () => {
@@ -642,9 +602,7 @@ export default function AvailabilityForm({
     eventDates.forEach((date) => {
       if (selectedDates[date.id]) {
         const dateObj = new Date(date.start_time);
-        const weekday = ["日", "月", "火", "水", "木", "金", "土"][
-          dateObj.getDay()
-        ] as WeekDay;
+        const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
         const timeKey = getTimeKey(date.start_time, date.end_time);
         weekdayData[weekday][timeKey] = true;
       }
@@ -655,9 +613,7 @@ export default function AvailabilityForm({
     Object.keys(updatedSelections).forEach((day) => {
       const weekday = day as WeekDay;
       // 少なくとも1つ選択されている場合はその曜日を「選択済み」とする
-      const hasSelection = Object.values(weekdayData[weekday]).some(
-        (val) => val
-      );
+      const hasSelection = Object.values(weekdayData[weekday]).some((val) => val);
 
       updatedSelections[weekday] = {
         selected: hasSelection,
@@ -671,18 +627,16 @@ export default function AvailabilityForm({
   // CellStatusに基づいて表示するアイコンやテキスト
   const getCellContent = (status: CellStatus) => {
     switch (status) {
-      case "available":
+      case 'available':
         return (
-          <div className="text-lg font-bold select-none inline-block">○</div> // inline-blockを追加して表示を安定化
+          <div className="inline-block select-none text-lg font-bold">○</div> // inline-blockを追加して表示を安定化
         );
-      case "unavailable":
+      case 'unavailable':
         return (
-          <div className="text-lg font-bold opacity-70 select-none inline-block">
-            ×
-          </div> // 同様にinline-blockを追加
+          <div className="inline-block select-none text-lg font-bold opacity-70">×</div> // 同様にinline-blockを追加
         );
-      case "empty":
-        return <span className="select-none inline-block">ー</span>;
+      case 'empty':
+        return <span className="inline-block select-none">ー</span>;
     }
   };
 
@@ -693,13 +647,10 @@ export default function AvailabilityForm({
         setCurrentPage(0);
         return;
       }
-      const clamped = Math.min(
-        Math.max(newPage, 0),
-        weeklyDateBuckets.length - 1
-      );
+      const clamped = Math.min(Math.max(newPage, 0), weeklyDateBuckets.length - 1);
       setCurrentPage(clamped);
     },
-    [weeklyDateBuckets]
+    [weeklyDateBuckets],
   );
 
   // 編集モードを切り替える処理
@@ -720,9 +671,7 @@ export default function AvailabilityForm({
       // 全イベント日程をループして、選択された曜日に該当する日程を更新
       eventDates.forEach((date) => {
         const dateObj = new Date(date.start_time);
-        const weekday = ["日", "月", "火", "水", "木", "金", "土"][
-          dateObj.getDay()
-        ];
+        const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
 
         if (weekday === day) {
           // この日程の時間帯ID
@@ -742,14 +691,14 @@ export default function AvailabilityForm({
   }, [weekdaySelections, eventDates, selectedDates, getTimeKey]);
 
   return (
-    <div className="mb-8 p-6 bg-base-100 border rounded-lg shadow-sm transition-all animate-fadeIn">
+    <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-6 shadow-sm transition-all">
       {feedback && !isEditing ? (
         <>
-          <h2 className="text-xl font-bold mb-4">回答が送信されました</h2>
+          <h2 className="mb-4 text-xl font-bold">回答が送信されました</h2>
           <div className="feedback-message feedback-success mb-6" role="alert">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 mr-2"
+              className="mr-2 h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -766,17 +715,13 @@ export default function AvailabilityForm({
           <p className="text-base-content">
             ご回答ありがとうございました。他の参加者の回答状況は下のセクションでご確認いただけます。
           </p>
-          <p className="mt-2 mb-6 text-sm text-gray-500">
+          <p className="mb-6 mt-2 text-sm text-gray-500">
             ※ 回答内容を更新したい場合は以下のボタンをクリックしてください。
           </p>
-          <button
-            type="button"
-            onClick={handleEditClick}
-            className="btn btn-outline btn-primary"
-          >
+          <button type="button" onClick={handleEditClick} className="btn btn-outline btn-primary">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 mr-2"
+              className="mr-2 h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -793,12 +738,12 @@ export default function AvailabilityForm({
         </>
       ) : (
         <>
-          <h2 className="text-xl font-bold mb-4">
-            {mode === "edit"
+          <h2 className="mb-4 text-xl font-bold">
+            {mode === 'edit'
               ? `${initialParticipant?.name}さんの予定を編集`
               : isEditing
-              ? "回答を更新する"
-              : "回答する"}
+                ? '回答を更新する'
+                : '回答する'}
           </h2>
 
           {error && (
@@ -810,7 +755,7 @@ export default function AvailabilityForm({
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
+                className="h-6 w-6 shrink-0 stroke-current"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -833,7 +778,7 @@ export default function AvailabilityForm({
               // セルクリックとフォーム送信の競合を防ぐ
               const target = e.target as HTMLElement;
               // セル内クリックの場合は特別処理
-              if (target.closest("[data-date-id]")) {
+              if (target.closest('[data-date-id]')) {
                 // ここでは何もしない（セル側で処理）
               }
             }}
@@ -842,15 +787,8 @@ export default function AvailabilityForm({
             <input type="hidden" name="eventId" value={eventId} />
             <input type="hidden" name="publicToken" value={publicToken} />
 
-            <div
-              className={
-                isWeekdayModeActive ? "opacity-50 pointer-events-none" : ""
-              }
-            >
-              <label
-                htmlFor="participant_name"
-                className="block text-sm font-medium mb-1"
-              >
+            <div className={isWeekdayModeActive ? 'pointer-events-none opacity-50' : ''}>
+              <label htmlFor="participant_name" className="mb-1 block text-sm font-medium">
                 お名前 <span className="text-error">*</span>
               </label>
               <input
@@ -867,7 +805,7 @@ export default function AvailabilityForm({
 
             <div>
               <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                   <label className="block text-sm font-medium">
                     候補日程から参加可能な日を選択してください
                     <span className="text-error">*</span>
@@ -877,24 +815,22 @@ export default function AvailabilityForm({
                     role="group"
                     aria-label="表示形式の選択"
                     className={`join bg-base-200 rounded-lg ${
-                      isWeekdayModeActive
-                        ? "opacity-50 pointer-events-none"
-                        : ""
+                      isWeekdayModeActive ? 'pointer-events-none opacity-50' : ''
                     }`}
                   >
                     <button
                       type="button"
                       className={`join-item btn btn-sm ${
-                        viewMode === "heatmap"
-                          ? "btn-active bg-primary text-primary-content font-medium"
-                          : "text-base-content"
+                        viewMode === 'heatmap'
+                          ? 'btn-active bg-primary text-primary-content font-medium'
+                          : 'text-base-content'
                       }`}
-                      onClick={() => setViewMode("heatmap")}
-                      aria-pressed={viewMode === "heatmap"}
+                      onClick={() => setViewMode('heatmap')}
+                      aria-pressed={viewMode === 'heatmap'}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-1"
+                        className="mr-1 h-4 w-4"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
@@ -905,16 +841,16 @@ export default function AvailabilityForm({
                     <button
                       type="button"
                       className={`join-item btn btn-sm ${
-                        viewMode === "list"
-                          ? "btn-active bg-primary text-primary-content font-medium"
-                          : "text-base-content"
+                        viewMode === 'list'
+                          ? 'btn-active bg-primary text-primary-content font-medium'
+                          : 'text-base-content'
                       }`}
-                      onClick={() => setViewMode("list")}
-                      aria-pressed={viewMode === "list"}
+                      onClick={() => setViewMode('list')}
+                      aria-pressed={viewMode === 'list'}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-1"
+                        className="mr-1 h-4 w-4"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
@@ -929,16 +865,16 @@ export default function AvailabilityForm({
                     <button
                       type="button"
                       className={`join-item btn btn-sm ${
-                        viewMode === "table"
-                          ? "btn-active bg-primary text-primary-content font-medium"
-                          : "text-base-content"
+                        viewMode === 'table'
+                          ? 'btn-active bg-primary text-primary-content font-medium'
+                          : 'text-base-content'
                       }`}
-                      onClick={() => setViewMode("table")}
-                      aria-pressed={viewMode === "table"}
+                      onClick={() => setViewMode('table')}
+                      aria-pressed={viewMode === 'table'}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-1"
+                        className="mr-1 h-4 w-4"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
@@ -954,17 +890,17 @@ export default function AvailabilityForm({
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row gap-3 mb-4">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row">
                 <div
-                  className={`bg-info/10 p-2 text-xs text-info rounded-lg border border-info/20 flex items-center flex-grow ${
-                    isWeekdayModeActive ? "opacity-50" : ""
+                  className={`bg-info/10 text-info border-info/20 flex flex-grow items-center rounded-lg border p-2 text-xs ${
+                    isWeekdayModeActive ? 'opacity-50' : ''
                   }`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
-                    className="stroke-info flex-shrink-0 w-4 h-4 mr-1"
+                    className="stroke-info mr-1 h-4 w-4 flex-shrink-0"
                   >
                     <path
                       strokeLinecap="round"
@@ -975,8 +911,8 @@ export default function AvailabilityForm({
                   </svg>
                   <span>
                     {isWeekdayModeActive
-                      ? "曜日入力モード中です。設定を適用またはキャンセルしてから回答を送信してください。"
-                      : "セルをドラッグすると複数選択できます（タッチ操作も対応）"}
+                      ? '曜日入力モード中です。設定を適用またはキャンセルしてから回答を送信してください。'
+                      : 'セルをドラッグすると複数選択できます（タッチ操作も対応）'}
                   </span>
                 </div>
                 <button
@@ -990,12 +926,12 @@ export default function AvailabilityForm({
                     }
                   }}
                   className={`btn btn-sm ${
-                    isWeekdayModeActive ? "btn-primary" : "btn-accent"
-                  } text-xs sm:text-sm font-medium flex-shrink-0`}
+                    isWeekdayModeActive ? 'btn-primary' : 'btn-accent'
+                  } flex-shrink-0 text-xs font-medium sm:text-sm`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-1"
+                    className="mr-1 h-4 w-4"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -1006,41 +942,39 @@ export default function AvailabilityForm({
                     />
                   </svg>
                   曜日ごとの時間帯設定
-                  {isWeekdayModeActive ? "（閉じる）" : ""}
+                  {isWeekdayModeActive ? '（閉じる）' : ''}
                 </button>
               </div>
 
               {/* 週入力アコーディオンセクション */}
               {isWeekdayModeActive && (
                 <div className="mb-6 animate-fadeIn transition-all duration-300">
-                  <div className="bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
-                    <h3 className="text-lg font-bold mb-4">
-                      曜日ごとの時間帯設定
-                    </h3>
-                    <p className="text-sm mb-4">
+                  <div className="bg-base-200 border-base-300 rounded-lg border p-4 shadow-sm">
+                    <h3 className="mb-4 text-lg font-bold">曜日ごとの時間帯設定</h3>
+                    <p className="mb-4 text-sm">
                       曜日と時間帯で参加可能な枠を一括設定できます。表の各セルをクリックして、参加可能（○）または参加不可（×）を設定してください。
                     </p>
 
                     <div className="divider text-xs">曜日×時間帯表</div>
 
                     <div
-                      className="mb-4 -mx-4 overflow-x-hidden matrix-container touch-none"
-                      style={{ touchAction: "none" }}
+                      className="matrix-container -mx-4 mb-4 touch-none overflow-x-hidden"
+                      style={{ touchAction: 'none' }}
                     >
                       <table
-                        className="table table-xs table-fixed w-full border-collapse"
+                        className="table-xs table w-full table-fixed border-collapse"
                         onMouseDown={(e) => e.preventDefault()} // ドラッグ動作中のテキスト選択を防止
                         onTouchStart={(e) => e.preventDefault()} // タッチ操作中のスクロールを完全に防止
                       >
                         <thead className="sticky top-0 z-20">
                           <tr className="bg-base-200">
-                            <th className="px-2 py-1 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
+                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 border px-2 py-1 text-center">
                               <span className="text-xs">\</span>
                             </th>
                             {Object.entries(weekdaySelections).map(([day]) => (
                               <th
                                 key={day}
-                                className="px-1 py-1 text-center border border-base-300"
+                                className="border-base-300 border px-1 py-1 text-center"
                               >
                                 {day}
                               </th>
@@ -1049,8 +983,7 @@ export default function AvailabilityForm({
                         </thead>
                         <tbody>
                           {(() => {
-                            const baseSchedule =
-                              Object.values(weekdaySelections)[0];
+                            const baseSchedule = Object.values(weekdaySelections)[0];
                             const sortedTimeSlots = baseSchedule
                               ? Object.keys(baseSchedule.timeSlots).sort()
                               : [];
@@ -1058,10 +991,8 @@ export default function AvailabilityForm({
                               return (
                                 <tr>
                                   <td
-                                    colSpan={
-                                      1 + Object.keys(weekdaySelections).length
-                                    }
-                                    className="text-center py-4"
+                                    colSpan={1 + Object.keys(weekdaySelections).length}
+                                    className="py-4 text-center"
                                   >
                                     利用可能な時間帯がありません
                                   </td>
@@ -1071,92 +1002,79 @@ export default function AvailabilityForm({
                             return (
                               <>
                                 {sortedTimeSlots.map((timeSlot) => {
-                                  const [startTime] = timeSlot.split("-");
+                                  const [startTime] = timeSlot.split('-');
                                   return (
                                     <tr key={timeSlot}>
-                                      <td className=" border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                      <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-right">
                                         <span
-                                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                                          className="text-base-content/80 absolute left-2 text-xs font-medium leading-none"
                                           style={{ top: 0 }}
                                         >
-                                          {startTime.replace(/^0/, "")}
+                                          {startTime.replace(/^0/, '')}
                                         </span>
                                       </td>
                                       {Object.entries(weekdaySelections).map(
                                         ([day, daySchedule]) => {
-                                          const matrixKey = getMatrixKey(
-                                            day as WeekDay,
-                                            timeSlot
-                                          );
+                                          const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
                                           return (
                                             <td
                                               key={`${day}-${timeSlot}`}
-                                              className="text-center border border-base-300 p-0 cursor-pointer"
+                                              className="border-base-300 cursor-pointer border p-0 text-center"
                                               data-day={day}
                                               data-time-slot={timeSlot}
                                               data-selection-key={matrixKey}
                                               {...weekdaySelectionController.getCellProps(
                                                 matrixKey,
                                                 {
-                                                  disabled:
-                                                    !isWeekdayModeActive,
-                                                }
+                                                  disabled: !isWeekdayModeActive,
+                                                },
                                               )}
                                             >
                                               <div
-                                                className={`w-full h-7 flex items-center justify-center ${
-                                                  daySchedule.timeSlots[
-                                                    timeSlot
-                                                  ]
-                                                    ? "bg-success text-success-content"
-                                                    : "bg-base-200"
+                                                className={`flex h-7 w-full items-center justify-center ${
+                                                  daySchedule.timeSlots[timeSlot]
+                                                    ? 'bg-success text-success-content'
+                                                    : 'bg-base-200'
                                                 }`}
                                               >
-                                                {daySchedule.timeSlots[
-                                                  timeSlot
-                                                ] ? (
-                                                  <div className="text-lg font-bold select-none inline-block">
+                                                {daySchedule.timeSlots[timeSlot] ? (
+                                                  <div className="inline-block select-none text-lg font-bold">
                                                     ○
                                                   </div>
                                                 ) : (
-                                                  <div className="text-lg font-bold opacity-70 select-none inline-block">
+                                                  <div className="inline-block select-none text-lg font-bold opacity-70">
                                                     ×
                                                   </div>
                                                 )}
                                               </div>
                                             </td>
                                           );
-                                        }
+                                        },
                                       )}
                                     </tr>
                                   );
                                 })}
                                 {(() => {
-                                  const lastSlot =
-                                    sortedTimeSlots[sortedTimeSlots.length - 1];
-                                  const [, rawEnd] = lastSlot.split("-");
+                                  const lastSlot = sortedTimeSlots[sortedTimeSlots.length - 1];
+                                  const [, rawEnd] = lastSlot.split('-');
                                   const displayEnd =
-                                    rawEnd === "24:00"
-                                      ? rawEnd
-                                      : rawEnd.replace(/^0/, "");
+                                    rawEnd === '24:00' ? rawEnd : rawEnd.replace(/^0/, '');
                                   return (
                                     <tr key="weekday-endtime">
-                                      <td className=" border border-base-300 whitespace-nowrap sticky left-0 bg-base-100 z-10 text-right px-2 py-0">
+                                      <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-right">
                                         <span
-                                          className="absolute left-2 text-xs font-medium text-base-content/80 leading-none"
+                                          className="text-base-content/80 absolute left-2 text-xs font-medium leading-none"
                                           style={{ top: 0 }}
                                         >
                                           {displayEnd}
                                         </span>
                                       </td>
-                                      {Object.keys(weekdaySelections).map(
-                                        (day) => (
-                                          <td
-                                            key={`${day}-endtime`}
-                                            className="border border-base-300 p-0"
-                                          />
-                                        )
-                                      )}
+                                      {Object.keys(weekdaySelections).map((day) => (
+                                        <td
+                                          key={`${day}-endtime`}
+                                          className="border-base-300 border p-0"
+                                        />
+                                      ))}
                                     </tr>
                                   );
                                 })()}
@@ -1168,20 +1086,20 @@ export default function AvailabilityForm({
                     </div>
 
                     {Object.entries(weekdaySelections).filter(
-                      ([, daySchedule]) => daySchedule.selected
+                      ([, daySchedule]) => daySchedule.selected,
                     ).length === 0 && (
-                      <div className="text-center text-sm text-gray-500 py-4">
+                      <div className="py-4 text-center text-sm text-gray-500">
                         曜日を選択すると、時間帯の設定が表示されます
                       </div>
                     )}
 
-                    <div className="text-xs text-base-content/70 mb-4">
+                    <div className="text-base-content/70 mb-4 text-xs">
                       ※選択した曜日の時間帯ごとに参加可否を設定できます。
                       <br />
                       チェックがついている時間帯が「参加可能」になります。
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="mt-4 flex justify-end gap-2">
                       <button
                         type="button"
                         className="btn btn-sm btn-outline"
@@ -1207,17 +1125,15 @@ export default function AvailabilityForm({
 
               {/* ページネーションUI - 週入力モードが無効の場合のみ表示 */}
               {!isWeekdayModeActive &&
-                (viewMode === "heatmap" ||
-                  viewMode === "table" ||
-                  viewMode === "list") &&
+                (viewMode === 'heatmap' || viewMode === 'table' || viewMode === 'list') &&
                 heatmapData.totalPages > 1 && (
-                  <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-4 bg-base-200 p-3 rounded-lg">
+                  <div className="bg-base-200 mb-4 flex flex-col items-center justify-between gap-3 rounded-lg p-3 md:flex-row">
                     <div className="flex items-center gap-2">
                       {heatmapData.currentDateRange && (
                         <span className="text-sm font-medium">
-                          表示期間: {heatmapData.currentDateRange.startLabel} 〜{" "}
+                          表示期間: {heatmapData.currentDateRange.startLabel} 〜{' '}
                           {heatmapData.currentDateRange.endLabel}
-                          <span className="text-xs text-gray-500 ml-1">
+                          <span className="ml-1 text-xs text-gray-500">
                             (週 {currentPage + 1} / {heatmapData.totalPages})
                           </span>
                         </span>
@@ -1236,9 +1152,7 @@ export default function AvailabilityForm({
                         <button
                           type="button"
                           className="join-item btn btn-sm btn-outline"
-                          onClick={() =>
-                            handlePageChange(Math.max(0, currentPage - 1))
-                          }
+                          onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
                           disabled={currentPage === 0}
                         >
                           ‹
@@ -1247,12 +1161,7 @@ export default function AvailabilityForm({
                           type="button"
                           className="join-item btn btn-sm btn-outline"
                           onClick={() =>
-                            handlePageChange(
-                              Math.min(
-                                heatmapData.totalPages - 1,
-                                currentPage + 1
-                              )
-                            )
+                            handlePageChange(Math.min(heatmapData.totalPages - 1, currentPage + 1))
                           }
                           disabled={currentPage >= heatmapData.totalPages - 1}
                         >
@@ -1261,9 +1170,7 @@ export default function AvailabilityForm({
                         <button
                           type="button"
                           className="join-item btn btn-sm btn-outline"
-                          onClick={() =>
-                            handlePageChange(heatmapData.totalPages - 1)
-                          }
+                          onClick={() => handlePageChange(heatmapData.totalPages - 1)}
                           disabled={currentPage >= heatmapData.totalPages - 1}
                         >
                           »
@@ -1287,12 +1194,12 @@ export default function AvailabilityForm({
                           name={`availability_${dateId}`}
                           value="on"
                         />
-                      )
+                      ),
                   )}
 
-                  {viewMode === "list" && (
+                  {viewMode === 'list' && (
                     <div
-                      className="grid grid-cols-1 gap-1 select-none"
+                      className="grid select-none grid-cols-1 gap-1"
                       onMouseLeave={handleMouseLeave}
                     >
                       {/* リストビュー用にページネーションされたイベント日程データを準備 */}
@@ -1301,53 +1208,44 @@ export default function AvailabilityForm({
                         const sortedDates = [...eventDates]
                           .sort(
                             (a, b) =>
-                              new Date(a.start_time).getTime() -
-                              new Date(b.start_time).getTime()
+                              new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
                           )
                           .filter((date) => {
                             if (currentWeekDateSet.size === 0) {
                               return true;
                             }
-                            const dateKey = new Date(date.start_time)
-                              .toISOString()
-                              .split("T")[0];
+                            const dateKey = new Date(date.start_time).toISOString().split('T')[0];
                             return currentWeekDateSet.has(dateKey);
                           });
 
                         return sortedDates.map((date) => {
                           const { className, status } = getCellStyle(date.id);
-                          const interactiveProps =
-                            dateSelectionController.getCellProps(date.id, {
-                              disabled: isWeekdayModeActive,
-                            });
+                          const interactiveProps = dateSelectionController.getCellProps(date.id, {
+                            disabled: isWeekdayModeActive,
+                          });
                           return (
                             <div
                               key={date.id}
                               data-date-id={date.id}
                               data-selection-key={date.id}
-                              className={`flex items-center p-3 rounded-lg transition-colors cursor-pointer border ${
-                                status === "available"
-                                  ? "bg-success/10 border-success/40"
-                                  : "bg-base-200/10 border-base-300/40 hover:bg-base-200/20"
+                              className={`flex cursor-pointer items-center rounded-lg border p-3 transition-colors ${
+                                status === 'available'
+                                  ? 'bg-success/10 border-success/40'
+                                  : 'bg-base-200/10 border-base-300/40 hover:bg-base-200/20'
                               }`}
                               {...interactiveProps}
                             >
                               <div
-                                className={`flex items-center justify-center w-10 h-10 rounded-md mr-4 shrink-0 transition-colors duration-150 ${className}`}
+                                className={`mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors duration-150 ${className}`}
                               >
                                 {getCellContent(status)}
                               </div>
                               <div className="grid grid-cols-1">
                                 <span className="font-medium">
-                                  {formatTimeRange(
-                                    date.start_time,
-                                    date.end_time
-                                  )}
+                                  {formatTimeRange(date.start_time, date.end_time)}
                                 </span>
                                 {date.label && (
-                                  <span className="text-sm text-gray-500">
-                                    {date.label}
-                                  </span>
+                                  <span className="text-sm text-gray-500">{date.label}</span>
                                 )}
                               </div>
                             </div>
@@ -1357,23 +1255,14 @@ export default function AvailabilityForm({
                     </div>
                   )}
 
-                  {viewMode === "table" && (
-                    <div
-                      className="overflow-x-auto select-none"
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      <table className="table table-fixed w-full border-collapse">
+                  {viewMode === 'table' && (
+                    <div className="select-none overflow-x-auto" onMouseLeave={handleMouseLeave}>
+                      <table className="table w-full table-fixed border-collapse">
                         <thead>
                           <tr className="bg-base-200">
-                            <th className="w-32 border border-base-300">
-                              日付
-                            </th>
-                            <th className="w-32 border border-base-300">
-                              時間帯
-                            </th>
-                            <th className="w-24 text-center border border-base-300">
-                              参加可否
-                            </th>
+                            <th className="border-base-300 w-32 border">日付</th>
+                            <th className="border-base-300 w-32 border">時間帯</th>
+                            <th className="border-base-300 w-24 border text-center">参加可否</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1385,48 +1274,37 @@ export default function AvailabilityForm({
                                 const timeStr = `${start
                                   .getHours()
                                   .toString()
-                                  .padStart(2, "0")}:${start
+                                  .padStart(2, '0')}:${start
                                   .getMinutes()
                                   .toString()
-                                  .padStart(2, "0")}～${end
+                                  .padStart(2, '0')}～${end
                                   .getHours()
                                   .toString()
-                                  .padStart(2, "0")}:${end
+                                  .padStart(2, '0')}:${end
                                   .getMinutes()
                                   .toString()
-                                  .padStart(2, "0")}`;
+                                  .padStart(2, '0')}`;
 
-                                const { className, status } = getCellStyle(
-                                  date.id
-                                );
+                                const { className, status } = getCellStyle(date.id);
 
                                 return (
-                                  <tr
-                                    key={date.id}
-                                    className="hover"
-                                    data-date-id={date.id}
-                                  >
+                                  <tr key={date.id} className="hover" data-date-id={date.id}>
                                     {index === 0 && (
                                       <td
                                         rowSpan={group.slots.length}
-                                        className="align-middle border border-base-300 bg-base-100"
+                                        className="border-base-300 bg-base-100 border align-middle"
                                       >
-                                        <div className="font-medium">
-                                          {group.formattedDate}
-                                        </div>
+                                        <div className="font-medium">{group.formattedDate}</div>
                                       </td>
                                     )}
-                                    <td className="border border-base-300">
-                                      {timeStr}
-                                    </td>
-                                    <td className="text-center border border-base-300">
+                                    <td className="border-base-300 border">{timeStr}</td>
+                                    <td className="border-base-300 border text-center">
                                       <div
-                                        className={`w-full h-10 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200 ease-in-out ${className}`}
+                                        className={`mx-auto flex h-10 w-full cursor-pointer items-center justify-center rounded-md transition-colors duration-200 ease-in-out ${className}`}
                                         data-selection-key={date.id}
-                                        {...dateSelectionController.getCellProps(
-                                          date.id,
-                                          { disabled: isWeekdayModeActive }
-                                        )}
+                                        {...dateSelectionController.getCellProps(date.id, {
+                                          disabled: isWeekdayModeActive,
+                                        })}
                                       >
                                         {getCellContent(status)}
                                       </div>
@@ -1441,33 +1319,31 @@ export default function AvailabilityForm({
                     </div>
                   )}
 
-                  {viewMode === "heatmap" && (
+                  {viewMode === 'heatmap' && (
                     <div
-                      className="overflow-x-auto select-none overscroll-contain table-container-mobile"
+                      className="table-container-mobile select-none overflow-x-auto overscroll-contain"
                       style={{
-                        overscrollBehaviorY: "contain",
-                        touchAction: dateSelectionController.isDragging
-                          ? "none"
-                          : "pan-x", // ドラッグ中はタッチ操作を無効化
+                        overscrollBehaviorY: 'contain',
+                        touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x', // ドラッグ中はタッチ操作を無効化
                       }}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <table className="table table-xs sm:table-sm table-fixed w-full border-collapse">
+                      <table className="table-xs sm:table-sm table w-full table-fixed border-collapse">
                         <thead className="sticky top-0 z-20">
                           <tr className="bg-base-200">
-                            <th className="w-12 sm:w-24 px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 sticky left-0 top-0 bg-base-200 z-30">
+                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-1 text-center sm:w-24 sm:px-2 sm:py-3">
                               <span className="text-xs sm:text-sm">時間</span>
                             </th>
                             {heatmapData.dates.map((date) => (
                               <th
                                 key={date.dateKey}
-                                className="px-1 py-1 sm:px-2 sm:py-3 text-center border border-base-300 heatmap-cell-mobile"
+                                className="border-base-300 heatmap-cell-mobile border px-1 py-1 text-center sm:px-2 sm:py-3"
                               >
-                                <span className="text-xs sm:text-sm whitespace-nowrap">
-                                  {date.formattedDate.split("(")[0]}
+                                <span className="whitespace-nowrap text-xs sm:text-sm">
+                                  {date.formattedDate.split('(')[0]}
                                   <br />
                                   <span className="text-xs text-gray-500">
-                                    ({date.formattedDate.split("(")[1]}
+                                    ({date.formattedDate.split('(')[1]}
                                   </span>
                                 </span>
                               </th>
@@ -1477,59 +1353,49 @@ export default function AvailabilityForm({
                         <tbody>
                           {/* Spacer for top time label */}
                           <tr>
-                            <td className="h-3 sm:h-4 sticky left-0 bg-base-100 z-10"></td>
+                            <td className="bg-base-100 sticky left-0 z-10 h-3 sm:h-4"></td>
                           </tr>
                           {heatmapData.timeSlots.map((timeSlot) => {
-                            const [startTime] = timeSlot.split("-");
-                            const formattedStartTime = startTime.replace(
-                              /^0/,
-                              ""
-                            );
+                            const [startTime] = timeSlot.split('-');
+                            const formattedStartTime = startTime.replace(/^0/, '');
 
                             return (
                               <tr key={timeSlot} className="hover">
-                                <td className=" px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-center font-medium">
                                   <span
-                                    className="absolute left-2 text-xs sm:text-sm font-medium text-base-content/80"
+                                    className="text-base-content/80 absolute left-2 text-xs font-medium sm:text-sm"
                                     style={{
                                       top: 0,
-                                      transform: "translateY(-50%)",
+                                      transform: 'translateY(-50%)',
                                     }}
                                   >
                                     {formattedStartTime}
                                   </span>
                                 </td>
                                 {heatmapData.dates.map((date) => {
-                                  const dateId =
-                                    heatmapData.dateMap[date.dateKey]?.[
-                                      timeSlot
-                                    ];
-                                  const { className, status } =
-                                    getCellStyle(dateId);
+                                  const dateId = heatmapData.dateMap[date.dateKey]?.[timeSlot];
+                                  const { className, status } = getCellStyle(dateId);
 
                                   return (
                                     <td
                                       key={`${date.dateKey}-${timeSlot}`}
-                                      className="p-0 text-center border border-base-300"
+                                      className="border-base-300 border p-0 text-center"
                                       data-date-id={dateId}
                                     >
                                       {dateId ? (
                                         <div
-                                          className={`w-full h-9 sm:h-10 flex items-center justify-center cursor-pointer transition-colors duration-150 rounded-sm ${className}`}
+                                          className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-sm transition-colors duration-150 sm:h-10 ${className}`}
                                           data-date-id={dateId}
                                           data-selection-key={dateId}
-                                          {...dateSelectionController.getCellProps(
-                                            dateId,
-                                            { disabled: isWeekdayModeActive }
-                                          )}
+                                          {...dateSelectionController.getCellProps(dateId, {
+                                            disabled: isWeekdayModeActive,
+                                          })}
                                         >
                                           {getCellContent(status)}
                                         </div>
                                       ) : (
-                                        <div className="w-full h-9 sm:h-10 flex items-center justify-center rounded-sm bg-base-200/30 text-base-content/30">
-                                          <span className="text-xs sm:text-sm">
-                                            ー
-                                          </span>
+                                        <div className="bg-base-200/30 text-base-content/30 flex h-9 w-full items-center justify-center rounded-sm sm:h-10">
+                                          <span className="text-xs sm:text-sm">ー</span>
                                         </div>
                                       )}
                                     </td>
@@ -1542,31 +1408,27 @@ export default function AvailabilityForm({
                           {heatmapData.timeSlots.length > 0 &&
                             (() => {
                               const lastTimeSlot =
-                                heatmapData.timeSlots[
-                                  heatmapData.timeSlots.length - 1
-                                ];
-                              const [, endTime] = lastTimeSlot.split("-");
-                              let formattedEndTime = endTime.replace(/^0/, "");
-                              if (endTime === "00:00") {
-                                formattedEndTime = "24:00";
+                                heatmapData.timeSlots[heatmapData.timeSlots.length - 1];
+                              const [, endTime] = lastTimeSlot.split('-');
+                              let formattedEndTime = endTime.replace(/^0/, '');
+                              if (endTime === '00:00') {
+                                formattedEndTime = '24:00';
                               }
                               return (
                                 <tr className="h-0">
-                                  <td className=" px-2 py-0 font-medium text-center whitespace-nowrap border border-base-300 bg-base-100 sticky left-0 z-10">
+                                  <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-center font-medium">
                                     <span
-                                      className="absolute left-2 text-xs sm:text-sm font-medium text-base-content/80"
+                                      className="text-base-content/80 absolute left-2 text-xs font-medium sm:text-sm"
                                       style={{
                                         top: 0,
-                                        transform: "translateY(-50%)",
+                                        transform: 'translateY(-50%)',
                                       }}
                                     >
                                       {formattedEndTime}
                                     </span>
                                   </td>
                                   {heatmapData.dates.map((date) => (
-                                    <td
-                                      key={`${date.dateKey}-endtime-filler`}
-                                    />
+                                    <td key={`${date.dateKey}-endtime-filler`} />
                                   ))}
                                 </tr>
                               );
@@ -1580,10 +1442,7 @@ export default function AvailabilityForm({
             </div>
 
             <div className="mt-4">
-              <label
-                htmlFor="comment"
-                className="block text-sm font-medium mb-1"
-              >
+              <label htmlFor="comment" className="mb-1 block text-sm font-medium">
                 コメント・メモ
               </label>
               <textarea
@@ -1599,11 +1458,9 @@ export default function AvailabilityForm({
 
             {/* 名前重複時の確認ダイアログ */}
             {showOverwriteConfirm && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-                <div className="bg-base-100 p-6 rounded-lg shadow-xl max-w-md w-full">
-                  <h3 className="text-lg font-bold mb-4">
-                    同じ名前の回答が既に存在します
-                  </h3>
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+                  <h3 className="mb-4 text-lg font-bold">同じ名前の回答が既に存在します</h3>
                   <p className="mb-6">
                     「{name}
                     」さんの回答は既に登録されています。上書きしてもよろしいですか？
@@ -1637,11 +1494,7 @@ export default function AvailabilityForm({
               </div>
             )}
 
-            <div
-              className={`pt-4 flex flex-wrap gap-2 ${
-                isWeekdayModeActive ? "opacity-50" : ""
-              }`}
-            >
+            <div className={`flex flex-wrap gap-2 pt-4 ${isWeekdayModeActive ? 'opacity-50' : ''}`}>
               <TermsCheckbox
                 isChecked={termsAccepted}
                 onChange={setTermsAccepted}
@@ -1652,16 +1505,14 @@ export default function AvailabilityForm({
               <button
                 type="submit"
                 className={`btn btn-primary w-full md:w-auto ${
-                  isSubmitting || isWeekdayModeActive || isCheckingName
-                    ? "opacity-70"
-                    : ""
+                  isSubmitting || isWeekdayModeActive || isCheckingName ? 'opacity-70' : ''
                 }`}
                 disabled={isSubmitting || isWeekdayModeActive || isCheckingName}
               >
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
-                    {isEditing ? "保存中..." : "送信中..."}
+                    {isEditing ? '保存中...' : '送信中...'}
                   </>
                 ) : isCheckingName ? (
                   <>
@@ -1669,29 +1520,21 @@ export default function AvailabilityForm({
                     名前を確認中...
                   </>
                 ) : isWeekdayModeActive ? (
-                  "曜日ごとの設定を完了してください"
-                ) : mode === "edit" ? (
-                  "回答を更新する"
+                  '曜日ごとの設定を完了してください'
+                ) : mode === 'edit' ? (
+                  '回答を更新する'
                 ) : (
-                  "回答を送信"
+                  '回答を送信'
                 )}
               </button>
 
               {/* キャンセルボタン - 入力ページに戻る */}
               <a
-                href={
-                  isSubmitting || isWeekdayModeActive
-                    ? "#"
-                    : `/event/${publicToken}`
-                }
+                href={isSubmitting || isWeekdayModeActive ? '#' : `/event/${publicToken}`}
                 className={`btn btn-outline w-full md:w-auto ${
-                  isSubmitting || isWeekdayModeActive
-                    ? "opacity-60 pointer-events-none"
-                    : ""
+                  isSubmitting || isWeekdayModeActive ? 'pointer-events-none opacity-60' : ''
                 }`}
-                onClick={(e) =>
-                  (isSubmitting || isWeekdayModeActive) && e.preventDefault()
-                }
+                onClick={(e) => (isSubmitting || isWeekdayModeActive) && e.preventDefault()}
               >
                 キャンセル
               </a>

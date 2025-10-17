@@ -8,9 +8,7 @@
 export function isMobileDevice(): boolean {
   if (typeof window === 'undefined') return false;
 
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 export function isIOS(): boolean {
@@ -33,15 +31,17 @@ interface NavigatorWithStandalone extends Navigator {
 export function isStandalone(): boolean {
   if (typeof window === 'undefined') return false;
 
-  return window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as NavigatorWithStandalone).standalone === true;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as NavigatorWithStandalone).standalone === true
+  );
 }
 
 // Supabase クエリに関するインターフェース
 export interface SupabaseQueryInterface {
   range(from: number, to: number): SupabaseQueryInterface;
   order(column: string, options?: { ascending: boolean }): SupabaseQueryInterface;
-  then<T>(onfulfilled?: ((value: T) => T | PromiseLike<T>)): Promise<T>;
+  then<T>(onfulfilled?: (value: T) => T | PromiseLike<T>): Promise<T>;
 }
 
 // Supabaseのクエリ結果インターフェース
@@ -54,39 +54,39 @@ export interface SupabaseQueryResult<T> {
 export interface TimeSlot {
   date: Date;
   startTime: string; // HH:mm形式
-  endTime: string;   // HH:mm形式
+  endTime: string; // HH:mm形式
 }
 
 // 日付を「YYYY/MM/DD」形式でフォーマットする
 export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === 'string' ? new Date(date) : date;
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${year}/${month}/${day}`;
 }
 
 // 日付を「YYYY/MM/DD HH:MM」形式でフォーマットする
 export function formatDateTime(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === 'string' ? new Date(date) : date;
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
   return `${year}/${month}/${day} ${hours}:${minutes}`;
 }
 
 // 曜日を取得する（日本語）
 export function getDayOfWeek(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
   return dayOfWeek[d.getDay()];
 }
 
 // 日付を「M/D (曜)」形式でフォーマットする
 export function formatDateWithDay(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === 'string' ? new Date(date) : date;
   const month = d.getMonth() + 1;
   const day = d.getDate();
   const dayOfWeek = getDayOfWeek(d);
@@ -95,26 +95,26 @@ export function formatDateWithDay(date: Date | string): string {
 
 // 日付を「M/D (曜) HH:MM」形式でフォーマットする
 export function formatDateTimeWithDay(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === 'string' ? new Date(date) : date;
   const month = d.getMonth() + 1;
   const day = d.getDate();
   const dayOfWeek = getDayOfWeek(d);
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
   return `${month}/${day} (${dayOfWeek}) ${hours}:${minutes}`;
 }
 
 // 時刻を「HH:MM」形式でフォーマットする
 export function formatTime(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
 
   // 00:00は24:00として表示する条件があれば、ここでチェック
-  if (hours === "00" && minutes === "00") {
+  if (hours === '00' && minutes === '00') {
     // 呼び出し側で前日の日付かどうかチェックが必要な場合は
     // そのロジックを追加する。基本的には単純に表示するだけ
-    return "00:00";
+    return '00:00';
   }
 
   return `${hours}:${minutes}`;
@@ -126,11 +126,11 @@ export function formatTime(date: Date | string): string {
  */
 export function formatGoogleCalendarDate(date: Date): string {
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
 
   // GoogleカレンダーではUTC形式（Z付き）
   return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
@@ -142,11 +142,11 @@ export function formatGoogleCalendarDate(date: Date): string {
  */
 export function formatIcsDate(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
 
   // ICS形式（日本時間を想定）
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
@@ -156,7 +156,7 @@ export function formatIcsDate(date: Date): string {
  * 日付を日本語形式でフォーマットする (YYYY年MM月DD日(曜日))
  */
 export function formatJapaneseDate(date: Date): string {
-  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
@@ -169,8 +169,8 @@ export function formatJapaneseDate(date: Date): string {
  * 日時を日本語形式でフォーマットする (YYYY年MM月DD日(曜日) HH:mm)
  */
 export function formatJapaneseDateTime(date: Date): string {
-  const hours = date.getHours().toString().padStart(2, "0");
-  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${formatJapaneseDate(date)} ${hours}:${minutes}`;
 }
 
@@ -178,9 +178,9 @@ export function formatJapaneseDateTime(date: Date): string {
  * UUIDを生成する（クライアント側での一時的なID生成用）
  */
 export function generateUuid(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0,
-      v = c === "x" ? r : (r & 0x3) | 0x8;
+      v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -191,15 +191,20 @@ export function generateUuid(): string {
  * @param pageSize 1回あたりの取得サイズ（最大1000）
  * @returns 全データの配列
  */
-export async function fetchAllPaginated<T>(query: SupabaseQueryInterface, pageSize = 1000): Promise<T[]> {
+export async function fetchAllPaginated<T>(
+  query: SupabaseQueryInterface,
+  pageSize = 1000,
+): Promise<T[]> {
   let allData: T[] = [];
   let page = 0;
   let hasMoreData = true;
 
   while (hasMoreData) {
-    const result = await query
+    const result = (await query
       .range(page * pageSize, (page + 1) * pageSize - 1)
-      .order('created_at', { ascending: false }) as unknown as SupabaseQueryResult<T>;
+      .order('created_at', {
+        ascending: false,
+      })) as unknown as SupabaseQueryResult<T>;
 
     const { data, error } = result;
 
@@ -237,16 +242,16 @@ export async function fetchAllPaginatedWithOrder<T>(
   query: SupabaseQueryInterface,
   orderField: string,
   options: { ascending: boolean } = { ascending: true },
-  pageSize = 1000
+  pageSize = 1000,
 ): Promise<T[]> {
   let allData: T[] = [];
   let page = 0;
   let hasMoreData = true;
 
   while (hasMoreData) {
-    const result = await query
+    const result = (await query
       .order(orderField, options)
-      .range(page * pageSize, (page + 1) * pageSize - 1) as unknown as SupabaseQueryResult<T>;
+      .range(page * pageSize, (page + 1) * pageSize - 1)) as unknown as SupabaseQueryResult<T>;
 
     const { data, error } = result;
 
@@ -275,10 +280,10 @@ export async function fetchAllPaginatedWithOrder<T>(
  * 履歴に保存するイベント情報の型定義
  */
 export interface EventHistoryItem {
-  id: string;           // イベントの公開ID
-  title: string;        // イベントのタイトル
-  adminToken?: string;  // 管理者トークン（作成したイベントの場合のみ）
-  createdAt: string;    // 作成日時またはアクセス日時（ISO文字列）
+  id: string; // イベントの公開ID
+  title: string; // イベントのタイトル
+  adminToken?: string; // 管理者トークン（作成したイベントの場合のみ）
+  createdAt: string; // 作成日時またはアクセス日時（ISO文字列）
   isCreatedByMe: boolean; // 自分が作成したかどうか
 }
 
@@ -315,7 +320,7 @@ export function addEventToHistory(event: EventHistoryItem, maxItems = 10): void 
     let history = getEventHistory();
 
     // 同じIDのイベントが既に存在する場合は削除（後で先頭に追加するため）
-    history = history.filter(item => item.id !== event.id);
+    history = history.filter((item) => item.id !== event.id);
 
     // 新しいイベントを先頭に追加
     history.unshift(event);
@@ -340,7 +345,7 @@ export function removeEventFromHistory(eventId: string): void {
 
   try {
     let history = getEventHistory();
-    history = history.filter(item => item.id !== eventId);
+    history = history.filter((item) => item.id !== eventId);
     localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
   } catch (error) {
     console.error('イベント履歴の削除に失敗しました:', error);
@@ -373,8 +378,8 @@ export function generateGoogleCalendarUrl({
   title,
   start,
   end,
-  description = "",
-  location = ""
+  description = '',
+  location = '',
 }: {
   title: string;
   start: string;
@@ -386,18 +391,22 @@ export function generateGoogleCalendarUrl({
   const format = (iso: string) => {
     const d = new Date(iso);
     // Google Calendar format: YYYYMMDDTHHmmssZ (UTC形式)
-    return d.getUTCFullYear().toString() +
-      (d.getUTCMonth() + 1).toString().padStart(2, "0") +
-      d.getUTCDate().toString().padStart(2, "0") + "T" +
-      d.getUTCHours().toString().padStart(2, "0") +
-      d.getUTCMinutes().toString().padStart(2, "0") +
-      d.getUTCSeconds().toString().padStart(2, "0") + "Z";
+    return (
+      d.getUTCFullYear().toString() +
+      (d.getUTCMonth() + 1).toString().padStart(2, '0') +
+      d.getUTCDate().toString().padStart(2, '0') +
+      'T' +
+      d.getUTCHours().toString().padStart(2, '0') +
+      d.getUTCMinutes().toString().padStart(2, '0') +
+      d.getUTCSeconds().toString().padStart(2, '0') +
+      'Z'
+    );
   };
   const params = new URLSearchParams({
     text: title,
     dates: `${format(start)}/${format(end)}`,
     details: description,
-    location
+    location,
   });
   return `https://calendar.google.com/calendar/r/eventedit?${params.toString()}`;
 }

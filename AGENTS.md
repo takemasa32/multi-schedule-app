@@ -37,6 +37,7 @@
 | コマンド                  | 用途                   |
 | ------------------------- | ---------------------- |
 | `npm run lint`            | eslint チェック        |
+| `npm run format`          | コードフォーマット     |
 | `npm run test:jest`       | 単体テスト             |
 | `npm run test:e2e:chrome` | E2E テスト             |
 | `npm run build`           | 本番ビルドの健全性確認 |

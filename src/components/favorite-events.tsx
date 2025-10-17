@@ -8,36 +8,29 @@
  * - イベントID・タイトル・最終アクセス日時を表示します。
  * - お気に入りが1件もない場合は案内メッセージを表示します。
  */
-import Link from "next/link";
-import { useFavoriteEvents } from "@/components/favorite-events-context";
+import Link from 'next/link';
+import { useFavoriteEvents } from '@/components/favorite-events-context';
 
 export default function FavoriteEvents() {
   const { favorites, removeFavorite } = useFavoriteEvents();
 
   if (!favorites.length) {
-    return (
-      <p className="text-gray-500 text-sm mt-2">
-        お気に入りイベントはありません。
-      </p>
-    );
+    return <p className="mt-2 text-sm text-gray-500">お気に入りイベントはありません。</p>;
   }
 
   return (
     <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
       {favorites.map((ev) => (
-        <li
-          key={ev.id}
-          className="card bg-base-100 shadow-sm flex flex-col p-3"
-        >
+        <li key={ev.id} className="card bg-base-100 flex flex-col p-3 shadow-sm">
           <div className="flex-1">
             <Link
               href={`/event/${ev.id}`}
-              className="font-semibold text-primary text-base hover:underline truncate block"
+              className="text-primary block truncate text-base font-semibold hover:underline"
             >
               {ev.title || ev.id}
             </Link>
             {ev.lastAccessed && (
-              <span className="text-xs text-gray-400 block mt-1">
+              <span className="mt-1 block text-xs text-gray-400">
                 最終アクセス: {new Date(ev.lastAccessed).toLocaleDateString()}
               </span>
             )}

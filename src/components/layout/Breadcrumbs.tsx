@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 interface BreadcrumbItem {
   label: string;
@@ -11,7 +11,7 @@ interface BreadcrumbsProps {
 
 export default function Breadcrumbs({ items }: BreadcrumbsProps) {
   return (
-    <div className="text-sm breadcrumbs mb-4">
+    <div className="breadcrumbs mb-4 text-sm">
       <ul className="flex flex-wrap items-center">
         <li>
           <Link href="/" className="text-base-content/70 hover:text-primary transition">
@@ -20,7 +20,7 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
         </li>
         {items.map((item, index) => (
           <li key={index} className="flex items-center">
-            <span className="mx-2 text-base-content/40">/</span>
+            <span className="text-base-content/40 mx-2">/</span>
             {item.href ? (
               <Link href={item.href} className="text-base-content/70 hover:text-primary transition">
                 {item.label}

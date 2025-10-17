@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import Script from "next/script";
+import Script from 'next/script';
 
 // Google Analyticsのページビュートラッキング関数
 export const pageview = (url: string) => {
-  if (typeof window.gtag !== "undefined") {
-    window.gtag("config", process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS as string, {
+  if (typeof window.gtag !== 'undefined') {
+    window.gtag('config', process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS as string, {
       page_path: url,
     });
   }
@@ -23,8 +23,8 @@ export const event = ({
   label: string;
   value?: number;
 }) => {
-  if (typeof window.gtag !== "undefined") {
-    window.gtag("event", action, {
+  if (typeof window.gtag !== 'undefined') {
+    window.gtag('event', action, {
       event_category: category,
       event_label: label,
       value: value,
@@ -35,7 +35,7 @@ export const event = ({
 // Google Analyticsコンポーネント
 export default function GoogleAnalytics() {
   // 開発環境では実行しない
-  const isDevelopment = process.env.NODE_ENV === "development";
+  const isDevelopment = process.env.NODE_ENV === 'development';
   const gaId = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS;
 
   if (isDevelopment || !gaId) {
@@ -70,10 +70,6 @@ export default function GoogleAnalytics() {
 // TypeScriptのためにグローバル変数を拡張
 declare global {
   interface Window {
-    gtag: (
-      command: string,
-      target: string,
-      config?: Record<string, unknown>
-    ) => void;
+    gtag: (command: string, target: string, config?: Record<string, unknown>) => void;
   }
 }

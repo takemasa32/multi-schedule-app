@@ -41,11 +41,11 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 
 ## ページ別パラメータ
 
-| ページ | rangeResolver | shouldIgnorePointerDown | 備考 |
-| --- | --- | --- | --- |
-| イベント回答 | 日付 ID 配列に基づく連続範囲 | 週次モード中は true | `touchAction` をドラッグ中のみ none |
-| イベント作成（手動） | 単一セル（ペイント方式） | - | 週単位でセルを塗る操作に最適化、`enableKeyboard: false` |
-| 週ごと回答入力 | 単一セル（曜日×時間帯） | 週次モード OFF 時に true | key を `weekday__timeslot` に統一 |
+| ページ               | rangeResolver                | shouldIgnorePointerDown  | 備考                                                    |
+| -------------------- | ---------------------------- | ------------------------ | ------------------------------------------------------- |
+| イベント回答         | 日付 ID 配列に基づく連続範囲 | 週次モード中は true      | `touchAction` をドラッグ中のみ none                     |
+| イベント作成（手動） | 単一セル（ペイント方式）     | -                        | 週単位でセルを塗る操作に最適化、`enableKeyboard: false` |
+| 週ごと回答入力       | 単一セル（曜日×時間帯）      | 週次モード OFF 時に true | key を `weekday__timeslot` に統一                       |
 
 ## 共通仕様
 

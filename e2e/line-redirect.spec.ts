@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('LINE アプリ内ブラウザ リダイレクト処理', () => {
   test('LINEアプリ内ブラウザでアクセスすると自動リダイレクトされる', async ({ browser }) => {
     const context = await browser.newContext({
-      userAgent: 'Line/11.1.0'
+      userAgent: 'Line/11.1.0',
     });
     const page = await context.newPage();
 
@@ -19,7 +19,7 @@ test.describe('LINE アプリ内ブラウザ リダイレクト処理', () => {
 
   test('LINE App (デスクトップ版) でもリダイレクトされる', async ({ browser }) => {
     const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 Line App Desktop'
+      userAgent: 'Mozilla/5.0 Line App Desktop',
     });
     const page = await context.newPage();
 
@@ -39,7 +39,7 @@ test.describe('LINE アプリ内ブラウザ リダイレクト処理', () => {
 
   test('既にopenExternalBrowser=1が付いている場合は重複リダイレクトしない', async ({ browser }) => {
     const context = await browser.newContext({
-      userAgent: 'Line/11.1.0'
+      userAgent: 'Line/11.1.0',
     });
     const page = await context.newPage();
 
@@ -60,7 +60,7 @@ test.describe('LINE アプリ内ブラウザ リダイレクト処理', () => {
 
   test('APIルートはリダイレクトされない', async ({ browser }) => {
     const context = await browser.newContext({
-      userAgent: 'Line/11.1.0'
+      userAgent: 'Line/11.1.0',
     });
     const page = await context.newPage();
 

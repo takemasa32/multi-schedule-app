@@ -141,11 +141,14 @@ project-root/
 
 1.  **コミット粒度・頻度**: 小さな論理単位でこまめに。
 2.  **コミットメッセージ書式**:
+
     ```
     <type>(<scope>): <短い要約>
     <詳細説明 (任意)>
     ```
+
     - `type`: feat, fix, docs, style, refactor, test, chore
+
 3.  **コミット前自動チェック**: `lint-staged`＋`husky`で Prettier/ESLint 必須。
 
 ---
@@ -243,7 +246,6 @@ Route API を使用せず、Server Actions ("use server") を用いる。
 - 補足（タイムゾーン/日時処理）:
   - DB 保存の `start_time`/`end_time` はローカルタイムを前提とし、そのまま出力。
   - Google には `ctz` を付与。ICS では UTC 変換せず `YYYYMMDDTHHMMSS`（Z なし）で記述。
-
 
 # **9. ワイヤーフレーム構成（テキストベース）**
 

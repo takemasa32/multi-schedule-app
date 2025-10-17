@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseClient } from "@/lib/supabase";
+import { createSupabaseClient } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 // Extend dayjs with plugins
 dayjs.extend(utc);
@@ -12,7 +12,7 @@ dayjs.extend(timezone);
 // Next.js 15.3.1のAPIルートハンドラの形式に合わせる
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ event_id: string }> }
+  { params }: { params: Promise<{ event_id: string }> },
 ) {
   try {
     const { event_id: eventId } = await params;
@@ -32,7 +32,7 @@ export async function GET(
 
     if (eventError || !event || !event.is_finalized) {
       return new NextResponse('イベントが見つからないか、まだ確定されていません', {
-        status: 404
+        status: 404,
       });
     }
 
@@ -54,7 +54,7 @@ export async function GET(
       // それでも確定日程がなければエラー
       if (!eventWithFinalDate?.final_date_id) {
         return new NextResponse('確定された日程が見つかりません', {
-          status: 404
+          status: 404,
         });
       }
 
@@ -69,7 +69,7 @@ export async function GET(
 
       if (dateError || !finalDates || finalDates.length === 0) {
         return new NextResponse('日程情報が見つかりません', {
-          status: 404
+          status: 404,
         });
       }
 
@@ -79,7 +79,7 @@ export async function GET(
         let targetIndex = 0;
         let targetDate = finalDates[0];
         if (requestedDateId) {
-          const idx = finalDates.findIndex(d => d.id === requestedDateId);
+          const idx = finalDates.findIndex((d) => d.id === requestedDateId);
           if (idx !== -1) {
             targetIndex = idx;
             targetDate = finalDates[idx];
@@ -98,7 +98,9 @@ export async function GET(
         });
 
         // Google Calendarリンクにリダイレクト
-        return NextResponse.redirect(`https://calendar.google.com/calendar/render?${googleParams.toString()}`);
+        return NextResponse.redirect(
+          `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+        );
       }
 
       // ICSファイルの生成（単一日程）
@@ -106,7 +108,7 @@ export async function GET(
       let targetIndex = 0;
       let targetDate = finalDates[0];
       if (requestedDateId) {
-        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        const idx = finalDates.findIndex((d) => d.id === requestedDateId);
         if (idx !== -1) {
           targetIndex = idx;
           targetDate = finalDates[idx];
@@ -122,8 +124,8 @@ export async function GET(
               ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
               : event.title,
           description: event.description || '',
-          eventId: `${event.id}-${date.id}`
-        }))
+          eventId: `${event.id}-${date.id}`,
+        })),
       });
 
       // ファイル名に使用できるようにタイトルを整形
@@ -138,7 +140,7 @@ export async function GET(
       });
     } else {
       // 複数確定日程の処理
-      const finalDateIds = finalizedDates.map(fd => fd.event_date_id);
+      const finalDateIds = finalizedDates.map((fd) => fd.event_date_id);
 
       // 複数の確定日程の詳細情報を取得
       const { data: finalDates, error: dateError } = await supabase
@@ -148,7 +150,7 @@ export async function GET(
 
       if (dateError || !finalDates || finalDates.length === 0) {
         return new NextResponse('日程情報が見つかりません', {
-          status: 404
+          status: 404,
         });
       }
 
@@ -158,7 +160,7 @@ export async function GET(
         let targetIndex = 0;
         let targetDate = finalDates[0];
         if (requestedDateId) {
-          const idx = finalDates.findIndex(d => d.id === requestedDateId);
+          const idx = finalDates.findIndex((d) => d.id === requestedDateId);
           if (idx !== -1) {
             targetIndex = idx;
             targetDate = finalDates[idx];
@@ -177,7 +179,9 @@ export async function GET(
         });
 
         // Google Calendarリンクにリダイレクト
-        return NextResponse.redirect(`https://calendar.google.com/calendar/render?${googleParams.toString()}`);
+        return NextResponse.redirect(
+          `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+        );
       }
 
       // 複数イベント用のICSファイルを生成
@@ -185,7 +189,7 @@ export async function GET(
       let targetIndex = 0;
       let targetDate = finalDates[0];
       if (requestedDateId) {
-        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        const idx = finalDates.findIndex((d) => d.id === requestedDateId);
         if (idx !== -1) {
           targetIndex = idx;
           targetDate = finalDates[idx];
@@ -201,8 +205,8 @@ export async function GET(
               ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
               : event.title,
           description: event.description || '',
-          eventId: `${event.id}-${date.id}`
-        }))
+          eventId: `${event.id}-${date.id}`,
+        })),
       });
 
       // ファイル名に使用できるようにタイトルを整形
@@ -219,7 +223,7 @@ export async function GET(
   } catch (error) {
     console.error('カレンダーデータ生成エラー:', error);
     return new NextResponse('カレンダーデータの生成に失敗しました', {
-      status: 500
+      status: 500,
     });
   }
 }
@@ -245,7 +249,7 @@ function generateIcsContent({ events }: IcsEventProps): string {
   ];
 
   // 複数のイベントをサポート
-  events.forEach(event => {
+  events.forEach((event) => {
     lines.push(
       'BEGIN:VEVENT',
       `UID:${event.eventId}@multischeduleapp.example.com`,
@@ -254,7 +258,7 @@ function generateIcsContent({ events }: IcsEventProps): string {
       `DTEND:${formatIcsDate(event.endDate)}`,
       `SUMMARY:${escapeIcsValue(event.title)}`,
       `DESCRIPTION:${escapeIcsValue(event.description)}`,
-      'END:VEVENT'
+      'END:VEVENT',
     );
   });
 
@@ -274,5 +278,5 @@ function escapeIcsValue(value: string): string {
 // Google Calendar用の日付フォーマット（YYYYMMDDTHHMMSS形式、Zなしローカルタイム）
 function formatGoogleDate(date: Date): string {
   // 入力値をそのままローカルタイムで出力
-  return dayjs(date).format("YYYYMMDDTHHmmss");
+  return dayjs(date).format('YYYYMMDDTHHmmss');
 }

@@ -1,27 +1,20 @@
-"use client";
+'use client';
 
-import {
-  useState,
-  useMemo,
-  useRef,
-  useCallback,
-  useEffect,
-  useId,
-} from "react";
-import { Tooltip, TooltipState } from "./tooltip";
-import ListView from "./list-view";
-import HeatmapView from "./heatmap-view";
-import DetailedView from "./detailed-view";
-import { formatDate, formatTime, getDateString } from "./date-utils";
-import useDragScrollBlocker from "../../hooks/useDragScrollBlocker";
-import { useDeviceDetect } from "../../hooks/useDeviceDetect";
-import MobileInfoPanel from "./mobile-info-panel";
-import type { Participant } from "@/types/participant";
+import { useState, useMemo, useRef, useCallback, useEffect, useId } from 'react';
+import { Tooltip, TooltipState } from './tooltip';
+import ListView from './list-view';
+import HeatmapView from './heatmap-view';
+import DetailedView from './detailed-view';
+import { formatDate, formatTime, getDateString } from './date-utils';
+import useDragScrollBlocker from '../../hooks/useDragScrollBlocker';
+import { useDeviceDetect } from '../../hooks/useDeviceDetect';
+import MobileInfoPanel from './mobile-info-panel';
+import type { Participant } from '@/types/participant';
 import {
   calcTooltipPosition,
   buildDateTimeLabel,
   fetchParticipantsByDate,
-} from "../../lib/tooltip-utils";
+} from '../../lib/tooltip-utils';
 
 type EventDate = {
   id: string;
@@ -54,7 +47,7 @@ type AvailabilitySummaryProps = {
   onShowParticipantForm?: (
     participantId: string,
     participantName: string,
-    participantAvailabilities: Record<string, boolean>
+    participantAvailabilities: Record<string, boolean>,
   ) => void;
   publicToken?: string;
   excludedParticipantIds?: string[];
@@ -83,9 +76,7 @@ export default function AvailabilitySummary({
   minColoredCount = 1,
 }: AvailabilitySummaryProps) {
   // viewModeは内部でuseState管理
-  const [viewMode, setViewMode] = useState<"list" | "heatmap" | "detailed">(
-    "heatmap"
-  );
+  const [viewMode, setViewMode] = useState<'list' | 'heatmap' | 'detailed'>('heatmap');
   // 色付けの最小人数を保持
   const [minColored, setMinColored] = useState<number>(minColoredCount);
   // useDeviceDetectは必ずトップレベルで呼び出す
@@ -103,15 +94,12 @@ export default function AvailabilitySummary({
   // 除外されていない参加者リストを作成
   const filteredParticipants = useMemo(
     () => participants.filter((p) => !excludedParticipantIds.includes(p.id)),
-    [participants, excludedParticipantIds]
+    [participants, excludedParticipantIds],
   );
   // 除外されていない参加者のみでavailabilitiesもフィルタ
   const filteredAvailabilities = useMemo(
-    () =>
-      availabilities.filter(
-        (a) => !excludedParticipantIds.includes(a.participant_id)
-      ),
-    [availabilities, excludedParticipantIds]
+    () => availabilities.filter((a) => !excludedParticipantIds.includes(a.participant_id)),
+    [availabilities, excludedParticipantIds],
   );
 
   // スクロール中かどうかを追跡するstate
@@ -146,7 +134,7 @@ export default function AvailabilitySummary({
 
   // ツールチップ表示のためのポータル用参照
   const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
-  const internalId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const internalId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const tabTestIdBase = useMemo(() => {
     if (testIdPrefix) {
       return `${testIdPrefix}-availability-tab`;
@@ -154,18 +142,17 @@ export default function AvailabilitySummary({
     return `availability-tab-${internalId}`;
   }, [testIdPrefix, internalId]);
   const buildTabTestId = useCallback(
-    (key: "heatmap" | "detailed" | "list") => `${tabTestIdBase}-${key}`,
-    [tabTestIdBase]
+    (key: 'heatmap' | 'detailed' | 'list') => `${tabTestIdBase}-${key}`,
+    [tabTestIdBase],
   );
 
   // コンポーネントマウント時にポータル要素を作成
   useMemo(() => {
-    if (typeof document !== "undefined") {
+    if (typeof document !== 'undefined') {
       const portalElement =
-        document.getElementById("tooltip-portal") ||
-        document.createElement("div");
-      if (!document.getElementById("tooltip-portal")) {
-        portalElement.id = "tooltip-portal";
+        document.getElementById('tooltip-portal') || document.createElement('div');
+      if (!document.getElementById('tooltip-portal')) {
+        portalElement.id = 'tooltip-portal';
         document.body.appendChild(portalElement);
       }
       tooltipPortalRef.current = portalElement as HTMLDivElement;
@@ -187,9 +174,7 @@ export default function AvailabilitySummary({
       }
     });
 
-    return Array.from(dateMap.values()).sort(
-      (a, b) => a.dateObj.getTime() - b.dateObj.getTime()
-    );
+    return Array.from(dateMap.values()).sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }, [eventDates]);
 
   // 時間帯をまとめる (重複を排除)
@@ -209,13 +194,10 @@ export default function AvailabilitySummary({
       const startTimeObj = new Date(date.start_time);
       const endTimeObj = new Date(date.end_time);
 
-      const startTimeKey = `${startTimeObj
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${startTimeObj
+      const startTimeKey = `${startTimeObj.getHours().toString().padStart(2, '0')}:${startTimeObj
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
 
       let endTimeKey: string;
       if (endTimeObj.getHours() === 0 && endTimeObj.getMinutes() === 0) {
@@ -226,24 +208,18 @@ export default function AvailabilitySummary({
         endDate.setHours(0, 0, 0, 0);
 
         if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
-          endTimeKey = "24:00";
+          endTimeKey = '24:00';
         } else {
-          endTimeKey = `${endTimeObj
-            .getHours()
-            .toString()
-            .padStart(2, "0")}:${endTimeObj
+          endTimeKey = `${endTimeObj.getHours().toString().padStart(2, '0')}:${endTimeObj
             .getMinutes()
             .toString()
-            .padStart(2, "0")}`;
+            .padStart(2, '0')}`;
         }
       } else {
-        endTimeKey = `${endTimeObj
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${endTimeObj
+        endTimeKey = `${endTimeObj.getHours().toString().padStart(2, '0')}:${endTimeObj
           .getMinutes()
           .toString()
-          .padStart(2, "0")}`;
+          .padStart(2, '0')}`;
       }
 
       const slotKey = `${startTimeKey}-${endTimeKey}`;
@@ -277,8 +253,8 @@ export default function AvailabilitySummary({
           return aMinutes - bMinutes;
         }
         // 同じ開始時刻の場合は終了時刻の早い順
-        const aEnd = parseInt(a.endTime.replace(":", ""), 10);
-        const bEnd = parseInt(b.endTime.replace(":", ""), 10);
+        const aEnd = parseInt(a.endTime.replace(':', ''), 10);
+        const bEnd = parseInt(b.endTime.replace(':', ''), 10);
         return aEnd - bEnd;
       });
   }, [eventDates]);
@@ -287,10 +263,10 @@ export default function AvailabilitySummary({
   const summary = useMemo(() => {
     return eventDates.map((date) => {
       const availableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability
+        (a) => a.event_date_id === date.id && a.availability,
       ).length;
       const unavailableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && !a.availability
+        (a) => a.event_date_id === date.id && !a.availability,
       ).length;
 
       // ヒートマップの色の強さを計算
@@ -316,12 +292,11 @@ export default function AvailabilitySummary({
         availableCount,
         unavailableCount,
         heatmapLevel,
-        availabilityRate:
-          totalResponses > 0 ? availableCount / totalResponses : 0,
+        availabilityRate: totalResponses > 0 ? availableCount / totalResponses : 0,
         formattedDate: formatDate(date.start_time),
         formattedTime: `${formatTime(
           date.start_time,
-          eventDates
+          eventDates,
         )}〜${formatTime(date.end_time, eventDates)}`,
         isSelected: finalizedDateIds?.includes(date.id) || false,
       };
@@ -332,24 +307,20 @@ export default function AvailabilitySummary({
   const isParticipantAvailable = useCallback(
     (participantId: string, dateId: string) => {
       const availability = filteredAvailabilities.find(
-        (a) => a.participant_id === participantId && a.event_date_id === dateId
+        (a) => a.participant_id === participantId && a.event_date_id === dateId,
       );
       return availability ? availability.availability : null;
     },
-    [filteredAvailabilities]
+    [filteredAvailabilities],
   );
 
   // ツールチップ表示処理（Pointerイベント）
-  const handlePointerEnter = (
-    event: React.PointerEvent<Element>,
-    dateId: string
-  ) => {
-    const { availableParticipants, unavailableParticipants } =
-      fetchParticipantsByDate(
-        filteredParticipants,
-        filteredAvailabilities,
-        dateId
-      );
+  const handlePointerEnter = (event: React.PointerEvent<Element>, dateId: string) => {
+    const { availableParticipants, unavailableParticipants } = fetchParticipantsByDate(
+      filteredParticipants,
+      filteredAvailabilities,
+      dateId,
+    );
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
     setTooltip({
@@ -369,20 +340,16 @@ export default function AvailabilitySummary({
   /**
    * ツールチップ/モバイルパネル表示処理（Pointerイベント）
    */
-  const handlePointerClick = (
-    event: React.PointerEvent<Element>,
-    dateId: string
-  ) => {
+  const handlePointerClick = (event: React.PointerEvent<Element>, dateId: string) => {
     event.stopPropagation();
     if (event.nativeEvent) {
       event.nativeEvent.stopImmediatePropagation();
     }
-    const { availableParticipants, unavailableParticipants } =
-      fetchParticipantsByDate(
-        filteredParticipants,
-        filteredAvailabilities,
-        dateId
-      );
+    const { availableParticipants, unavailableParticipants } = fetchParticipantsByDate(
+      filteredParticipants,
+      filteredAvailabilities,
+      dateId,
+    );
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     if (isMobile) {
       // モバイルは下部パネルで表示
@@ -398,7 +365,7 @@ export default function AvailabilitySummary({
           unavailableParticipants,
           dateLabel,
           timeLabel,
-          lastEvent: "mobile-tap",
+          lastEvent: 'mobile-tap',
           lastUpdate: Date.now(),
         });
       }
@@ -409,7 +376,7 @@ export default function AvailabilitySummary({
       setTooltip((prev) => ({
         ...prev,
         show: false,
-        lastEvent: "close",
+        lastEvent: 'close',
         lastUpdate: Date.now(),
       }));
       return;
@@ -426,7 +393,7 @@ export default function AvailabilitySummary({
       timeLabel,
       lastEvent: `pointerup:${event.pointerType}`,
       lastUpdate: Date.now(),
-      lastPointerType: event.pointerType as "touch" | "mouse" | "pen",
+      lastPointerType: event.pointerType as 'touch' | 'mouse' | 'pen',
     });
   };
 
@@ -468,14 +435,14 @@ export default function AvailabilitySummary({
         }
       }
     },
-    [handleScroll, isScrolling]
+    [handleScroll, isScrolling],
   );
 
   // 最大参加可能者数を算出（セルごとの availableCount の最大値）
   const maxAvailable = useMemo(() => {
     return eventDates.reduce((max, date) => {
       const cnt = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability
+        (a) => a.event_date_id === date.id && a.availability,
       ).length;
       return Math.max(max, cnt);
     }, 0);
@@ -491,13 +458,10 @@ export default function AvailabilitySummary({
       const startDate = new Date(date.start_time);
       const dateStr = getDateString(date.start_time);
       // 時間部分をキーに使用
-      const startTimeStr = `${startDate
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${startDate
+      const startTimeStr = `${startDate.getHours().toString().padStart(2, '0')}:${startDate
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
       let endTimeStr: string;
       const endDateObj = new Date(date.end_time);
       if (endDateObj.getHours() === 0 && endDateObj.getMinutes() === 0) {
@@ -506,39 +470,32 @@ export default function AvailabilitySummary({
         const endDay = new Date(endDateObj);
         endDay.setHours(0, 0, 0, 0);
         if (endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000) {
-          endTimeStr = "24:00";
+          endTimeStr = '24:00';
         } else {
-          endTimeStr = `${endDateObj
-            .getHours()
-            .toString()
-            .padStart(2, "0")}:${endDateObj
+          endTimeStr = `${endDateObj.getHours().toString().padStart(2, '0')}:${endDateObj
             .getMinutes()
             .toString()
-            .padStart(2, "0")}`;
+            .padStart(2, '0')}`;
         }
       } else {
-        endTimeStr = `${endDateObj
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${endDateObj
+        endTimeStr = `${endDateObj.getHours().toString().padStart(2, '0')}:${endDateObj
           .getMinutes()
           .toString()
-          .padStart(2, "0")}`;
+          .padStart(2, '0')}`;
       }
 
       const slotKey = `${startTimeStr}-${endTimeStr}`;
       const key = `${dateStr}_${slotKey}`;
 
       const availableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability
+        (a) => a.event_date_id === date.id && a.availability,
       ).length;
       const unavailableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && !a.availability
+        (a) => a.event_date_id === date.id && !a.availability,
       ).length;
 
       const totalResponses = availableCount + unavailableCount;
-      const availabilityRate =
-        totalResponses > 0 ? availableCount / totalResponses : 0;
+      const availabilityRate = totalResponses > 0 ? availableCount / totalResponses : 0;
       const heatmapLevel = Math.round(availabilityRate * 10);
 
       cellMap.set(key, {
@@ -563,8 +520,7 @@ export default function AvailabilitySummary({
       eventDates.forEach((date) => {
         // 該当する参加者の回答を検索
         const response = filteredAvailabilities.find(
-          (a) =>
-            a.participant_id === participantId && a.event_date_id === date.id
+          (a) => a.participant_id === participantId && a.event_date_id === date.id,
         );
 
         // 回答が見つかれば、その値を使用。なければデフォルトでfalse
@@ -573,19 +529,14 @@ export default function AvailabilitySummary({
 
       return result;
     },
-    [eventDates, filteredAvailabilities]
+    [eventDates, filteredAvailabilities],
   );
 
   // 参加者の編集ボタンがクリックされたときの処理
   const handleEditClick = (participantId: string, participantName: string) => {
     if (onShowParticipantForm) {
-      const participantAvailabilities =
-        getParticipantAvailabilities(participantId);
-      onShowParticipantForm(
-        participantId,
-        participantName,
-        participantAvailabilities
-      );
+      const participantAvailabilities = getParticipantAvailabilities(participantId);
+      onShowParticipantForm(participantId, participantName, participantAvailabilities);
     }
   };
 
@@ -599,57 +550,49 @@ export default function AvailabilitySummary({
       if (!tooltip.show) return;
 
       // タッチ直後のtouchendは無視
-      if (e.type === "touchend" && justOpenedTooltipRef.current) {
+      if (e.type === 'touchend' && justOpenedTooltipRef.current) {
         return;
       }
 
       // 可用性サマリーコンテナ内のクリックは無視
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setTooltip((prev) => ({ ...prev, show: false }));
       }
     },
-    [tooltip.show]
+    [tooltip.show],
   );
 
   // マウント時にグローバルイベントリスナーを追加
   useEffect(() => {
     // PCとタッチデバイス両方に対応
-    document.addEventListener("click", closeTooltipOnOutsideClick);
-    document.addEventListener("touchend", closeTooltipOnOutsideClick);
+    document.addEventListener('click', closeTooltipOnOutsideClick);
+    document.addEventListener('touchend', closeTooltipOnOutsideClick);
     // スクロール時にもツールチップを閉じる
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     // タッチイベント検出
-    document.addEventListener("touchstart", handleTouchStart, {
+    document.addEventListener('touchstart', handleTouchStart, {
       passive: true,
     });
-    document.addEventListener("touchmove", handleTouchMove, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
 
     // クリーンアップ関数
     return () => {
-      document.removeEventListener("click", closeTooltipOnOutsideClick);
-      document.removeEventListener("touchend", closeTooltipOnOutsideClick);
-      window.removeEventListener("scroll", handleScroll);
-      document.removeEventListener("touchstart", handleTouchStart);
-      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener('click', closeTooltipOnOutsideClick);
+      document.removeEventListener('touchend', closeTooltipOnOutsideClick);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
       if (scrollTimerRef.current) {
         clearTimeout(scrollTimerRef.current);
       }
     };
-  }, [
-    closeTooltipOnOutsideClick,
-    handleScroll,
-    handleTouchStart,
-    handleTouchMove,
-  ]);
+  }, [closeTooltipOnOutsideClick, handleScroll, handleTouchStart, handleTouchMove]);
 
   // Tooltip自動非表示（スマホタップ時）
   useEffect(() => {
     const handler = () => setTooltip((prev) => ({ ...prev, show: false }));
-    window.addEventListener("tooltip:autohide", handler);
-    return () => window.removeEventListener("tooltip:autohide", handler);
+    window.addEventListener('tooltip:autohide', handler);
+    return () => window.removeEventListener('tooltip:autohide', handler);
   }, []);
 
   // ドラッグ・スクロール判定
@@ -657,59 +600,57 @@ export default function AvailabilitySummary({
 
   return (
     <div
-      className="mb-8 bg-base-100 border rounded-lg shadow-sm transition-all availability-summary"
+      className="bg-base-100 availability-summary mb-8 rounded-lg border shadow-sm transition-all"
       ref={containerRef}
       onScroll={handleScroll}
       onClick={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
       <div className="p-2 sm:p-4">
-        <h2 className="text-xl font-bold mb-2 sm:mb-4">みんなの回答状況</h2>
+        <h2 className="mb-2 text-xl font-bold sm:mb-4">みんなの回答状況</h2>
 
         {/* 表示切り替えタブ */}
-        <div className="tabs space-x-4 tabs-boxed mb-2 sm:mb-4 bg-base-300 p-1 rounded-lg">
+        <div className="tabs tabs-boxed bg-base-300 mb-2 space-x-4 rounded-lg p-1 sm:mb-4">
           <a
-            className={`tab  transition-all ${
-              viewMode === "heatmap"
-                ? "tab-active bg-primary text-primary-content font-medium px-2"
-                : "text-base-content"
+            className={`tab transition-all ${
+              viewMode === 'heatmap'
+                ? 'tab-active bg-primary text-primary-content px-2 font-medium'
+                : 'text-base-content'
             }`}
-            data-testid={buildTabTestId("heatmap")}
-            onClick={() => setViewMode("heatmap")}
+            data-testid={buildTabTestId('heatmap')}
+            onClick={() => setViewMode('heatmap')}
           >
             ヒートマップ
           </a>
           <a
             className={`tab transition-all ${
-              viewMode === "detailed"
-                ? "tab-active bg-primary text-primary-content font-medium px-2"
-                : "text-base-content"
+              viewMode === 'detailed'
+                ? 'tab-active bg-primary text-primary-content px-2 font-medium'
+                : 'text-base-content'
             }`}
-            data-testid={buildTabTestId("detailed")}
-            onClick={() => setViewMode("detailed")}
+            data-testid={buildTabTestId('detailed')}
+            onClick={() => setViewMode('detailed')}
           >
             個別
           </a>
           <a
             className={`tab transition-all ${
-              viewMode === "list"
-                ? "tab-active bg-primary text-primary-content font-medium px-2"
-                : "text-base-content"
+              viewMode === 'list'
+                ? 'tab-active bg-primary text-primary-content px-2 font-medium'
+                : 'text-base-content'
             }`}
-            data-testid={buildTabTestId("list")}
-            onClick={() => setViewMode("list")}
+            data-testid={buildTabTestId('list')}
+            onClick={() => setViewMode('list')}
           >
             リスト
           </a>
         </div>
 
         {/* リスト表示モード */}
-        {viewMode === "list" && (
-          <ListView summary={summary} eventDates={eventDates} />
-        )}
+        {viewMode === 'list' && <ListView summary={summary} eventDates={eventDates} />}
 
         {/* ヒートマップ表示モード */}
-        {viewMode === "heatmap" && (
+        {viewMode === 'heatmap' && (
           <HeatmapView
             uniqueDates={uniqueDates}
             uniqueTimeSlots={uniqueTimeSlots}
@@ -725,7 +666,7 @@ export default function AvailabilitySummary({
         )}
 
         {/* 詳細表示モード（個人ごとの回答詳細） */}
-        {viewMode === "detailed" && (
+        {viewMode === 'detailed' && (
           <DetailedView
             eventDates={eventDates}
             participants={filteredParticipants}
@@ -737,9 +678,7 @@ export default function AvailabilitySummary({
         )}
       </div>
       {/* PCのみツールチップ */}
-      {!isMobile && (
-        <Tooltip tooltip={tooltip} portalElement={tooltipPortalRef.current} />
-      )}
+      {!isMobile && <Tooltip tooltip={tooltip} portalElement={tooltipPortalRef.current} />}
       {/* モバイルのみ下部パネル */}
       {isMobile && (
         <MobileInfoPanel

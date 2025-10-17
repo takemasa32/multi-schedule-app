@@ -1,5 +1,5 @@
-import Link from "next/link";
-import siteConfig from "@/lib/site-config";
+import Link from 'next/link';
+import siteConfig from '@/lib/site-config';
 
 export const metadata = {
   title: `ページが見つかりません | ${siteConfig.name.full}`,
@@ -16,10 +16,10 @@ export const metadata = {
  */
 export default function NotFound() {
   return (
-    <div className="flex flex-col min-h-[60vh] items-center justify-center py-16 px-4 text-center">
-      <div className="max-w-md w-full space-y-8">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="w-full max-w-md space-y-8">
         <div className="space-y-4">
-          <h1 className="text-6xl font-bold text-primary">404</h1>
+          <h1 className="text-primary text-6xl font-bold">404</h1>
           <h2 className="text-2xl font-semibold">ページが見つかりません</h2>
           <p className="text-base-content/70">
             お探しのページは存在しないか、移動または削除された可能性があります。
@@ -27,14 +27,11 @@ export default function NotFound() {
           </p>
         </div>
 
-        <div className="pt-6 space-y-4">
-          <Link
-            href="/"
-            className="btn btn-primary inline-flex items-center justify-center"
-          >
+        <div className="space-y-4 pt-6">
+          <Link href="/" className="btn btn-primary inline-flex items-center justify-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 mr-2"
+              className="mr-2 h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

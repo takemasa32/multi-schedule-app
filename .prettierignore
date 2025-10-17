@@ -1,0 +1,10 @@
+.next
+node_modules
+coverage
+dist
+out
+build
+playwright-report
+test-results
+supabase/functions/**/*.ts
+supabase/functions/**/*.tsx

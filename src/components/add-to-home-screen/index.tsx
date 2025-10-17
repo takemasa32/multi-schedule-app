@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { isIOS, isMobileDevice, isStandalone } from "@/lib/utils";
+import { useEffect, useState } from 'react';
+import { isIOS, isMobileDevice, isStandalone } from '@/lib/utils';
 
 export default function AddToHomeScreenBanner() {
   const [showBanner, setShowBanner] = useState(false);
@@ -14,13 +14,12 @@ export default function AddToHomeScreenBanner() {
     const standalone = isStandalone();
 
     // ローカルストレージから以前に閉じた日時を取得
-    const lastClosed = localStorage.getItem("add_to_home_banner_closed");
+    const lastClosed = localStorage.getItem('add_to_home_banner_closed');
     const lastClosedDate = lastClosed ? new Date(parseInt(lastClosed)) : null;
     const now = new Date();
 
     // 7日間（604800000ミリ秒）経過していれば再表示
-    const shouldShowAgain =
-      !lastClosedDate || now.getTime() - lastClosedDate.getTime() > 604800000;
+    const shouldShowAgain = !lastClosedDate || now.getTime() - lastClosedDate.getTime() > 604800000;
 
     setIsIOSDevice(ios);
     // モバイルデバイスで、すでにホーム画面に追加されていなくて、最近閉じていなければ表示
@@ -38,7 +37,7 @@ export default function AddToHomeScreenBanner() {
   const closeBanner = () => {
     setShowBanner(false);
     // 閉じた時間をローカルストレージに保存
-    localStorage.setItem("add_to_home_banner_closed", Date.now().toString());
+    localStorage.setItem('add_to_home_banner_closed', Date.now().toString());
   };
 
   if (!showBanner) {
@@ -46,33 +45,31 @@ export default function AddToHomeScreenBanner() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-4 bg-primary/95 text-primary-content z-[100] animate-slideUp shadow-2xl rounded-t-2xl border-t-4 border-primary-focus transition-all duration-200">
-      <div className="container mx-auto relative max-w-xl flex flex-col items-center">
+    <div className="bg-primary/95 text-primary-content border-primary-focus fixed bottom-0 left-0 right-0 z-[100] animate-slideUp rounded-t-2xl border-t-4 px-4 pb-6 pt-4 shadow-2xl transition-all duration-200">
+      <div className="container relative mx-auto flex max-w-xl flex-col items-center">
         {/* ドラッグバー風アクセント */}
-        <div className="w-12 h-1.5 bg-primary-content/40 rounded-full mb-3" />
+        <div className="bg-primary-content/40 mb-3 h-1.5 w-12 rounded-full" />
         <button
           onClick={closeBanner}
-          className="btn btn-md btn-circle btn-ghost text-primary-content absolute top-2 right-2"
+          className="btn btn-md btn-circle btn-ghost text-primary-content absolute right-2 top-2"
           aria-label="閉じる"
         >
           ✕
         </button>
-        <div className="pr-2 w-full flex flex-col items-center">
-          <h3 className="font-bold text-lg mb-2 text-center tracking-wide drop-shadow-sm">
+        <div className="flex w-full flex-col items-center pr-2">
+          <h3 className="mb-2 text-center text-lg font-bold tracking-wide drop-shadow-sm">
             ホーム画面に追加しよう！
           </h3>
           {isIOSDevice ? (
-            <div className="text-sm text-center">
-              <p className="mb-2 font-medium">
-                iPhoneでより快適にご利用いただくには：
-              </p>
-              <ol className="list-decimal pl-5 space-y-1 text-left inline-block mx-auto">
+            <div className="text-center text-sm">
+              <p className="mb-2 font-medium">iPhoneでより快適にご利用いただくには：</p>
+              <ol className="mx-auto inline-block list-decimal space-y-1 pl-5 text-left">
                 <li>
                   画面下部の
                   <span className="inline-flex items-center font-semibold">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-1"
+                      className="mr-1 h-4 w-4"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -103,9 +100,9 @@ export default function AddToHomeScreenBanner() {
               </ol>
             </div>
           ) : (
-            <div className="text-sm text-center">
+            <div className="text-center text-sm">
               <p className="mb-2 font-medium">より快適にご利用いただくには：</p>
-              <ol className="list-decimal pl-5 space-y-1 text-left inline-block mx-auto">
+              <ol className="mx-auto inline-block list-decimal space-y-1 pl-5 text-left">
                 <li>
                   ブラウザの設定メニュー（<span className="font-bold">⋮</span>
                   ）をタップ

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import React from "react";
-import PortalTooltip from "./common/portal-tooltip";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
+import PortalTooltip from './common/portal-tooltip';
 import {
   format,
   eachDayOfInterval,
@@ -11,8 +11,8 @@ import {
   parseISO,
   setHours,
   setMinutes,
-} from "date-fns";
-import { TimeSlot } from "@/lib/utils"; // 共通のTimeSlot型をインポート
+} from 'date-fns';
+import { TimeSlot } from '@/lib/utils'; // 共通のTimeSlot型をインポート
 
 interface DateRangePickerProps {
   onDatesChange?: (dates: Date[]) => void; // 後方互換性のため残す
@@ -36,15 +36,15 @@ export default function DateRangePicker({
   onTimeSlotsChange,
   initialStartDate = null,
   initialEndDate = null,
-  initialDefaultStartTime = "00:00",
-  initialDefaultEndTime = "24:00",
-  initialIntervalUnit = "120",
+  initialDefaultStartTime = '00:00',
+  initialDefaultEndTime = '24:00',
+  initialIntervalUnit = '120',
   allowPastDates = false,
 }: DateRangePickerProps) {
   const [startDate, setStartDate] = useState<Date | null>(initialStartDate);
   const [endDate, setEndDate] = useState<Date | null>(initialEndDate);
   const [excludedDates, setExcludedDates] = useState<Date[]>([]);
-  const [excludeDate, setExcludeDate] = useState<string>("");
+  const [excludeDate, setExcludeDate] = useState<string>('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [intervalUnit, setIntervalUnit] = useState<string>(initialIntervalUnit); // 時間帯の単位（分）
@@ -56,7 +56,7 @@ export default function DateRangePicker({
   // 期間全体を時間帯に分割する（15分、30分、60分など）
   const generatePeriodTimeSlots = useCallback(() => {
     if (!startDate || !endDate) {
-      setErrorMessage("開始日と終了日を設定してください");
+      setErrorMessage('開始日と終了日を設定してください');
       setTimeSlots([]);
       return;
     }
@@ -65,18 +65,18 @@ export default function DateRangePicker({
     today.setHours(0, 0, 0, 0);
     if (!allowPastDates) {
       if (startDate < today) {
-        setErrorMessage("開始日は本日以降の日付を選択してください");
+        setErrorMessage('開始日は本日以降の日付を選択してください');
         setTimeSlots([]);
         return;
       }
       if (endDate < today) {
-        setErrorMessage("終了日は本日以降の日付を選択してください");
+        setErrorMessage('終了日は本日以降の日付を選択してください');
         setTimeSlots([]);
         return;
       }
     }
     if (startDate > endDate) {
-      setErrorMessage("開始日は終了日より前である必要があります");
+      setErrorMessage('開始日は終了日より前である必要があります');
       setTimeSlots([]);
       return;
     }
@@ -85,18 +85,13 @@ export default function DateRangePicker({
     let targetDates = eachDayOfInterval({
       start: startDate,
       end: endDate,
-    })
-      .filter(
-        (date) => !excludedDates.some((excluded) => isEqual(excluded, date))
-      );
+    }).filter((date) => !excludedDates.some((excluded) => isEqual(excluded, date)));
     if (!allowPastDates) {
       targetDates = targetDates.filter((date) => date >= today);
     }
 
     if (targetDates.length === 0) {
-      setErrorMessage(
-        "候補日程が1つもありません。期間や除外日を見直してください"
-      );
+      setErrorMessage('候補日程が1つもありません。期間や除外日を見直してください');
       setTimeSlots([]);
       return;
     }
@@ -104,7 +99,7 @@ export default function DateRangePicker({
     // 文字列から数値に変換（分単位）
     const intervalMinutes = parseInt(intervalUnit);
     if (isNaN(intervalMinutes) || intervalMinutes <= 0) {
-      setErrorMessage("有効な時間間隔を選択してください");
+      setErrorMessage('有効な時間間隔を選択してください');
       return;
     }
 
@@ -112,21 +107,18 @@ export default function DateRangePicker({
 
     targetDates.forEach((date) => {
       // デフォルト開始時間を設定
-      const [startHour, startMinute] = defaultStartTime.split(":").map(Number);
-      let currentTime = setHours(
-        setMinutes(date, startMinute || 0),
-        startHour || 0
-      );
+      const [startHour, startMinute] = defaultStartTime.split(':').map(Number);
+      let currentTime = setHours(setMinutes(date, startMinute || 0), startHour || 0);
 
       let endTime;
       // 終了時間が24:00の場合は翌日の0:00として扱う
-      if (defaultEndTime === "24:00") {
+      if (defaultEndTime === '24:00') {
         const nextDay = new Date(date);
         nextDay.setDate(nextDay.getDate() + 1);
         endTime = setHours(setMinutes(nextDay, 0), 0);
       } else {
         // それ以外の場合は当日の指定時刻
-        const [endHour, endMinute] = defaultEndTime.split(":").map(Number);
+        const [endHour, endMinute] = defaultEndTime.split(':').map(Number);
         endTime = setHours(setMinutes(date, endMinute || 0), endHour || 0);
 
         // 終了時間が開始時間より前の場合は翌日として扱う
@@ -136,7 +128,7 @@ export default function DateRangePicker({
       }
 
       while (currentTime < endTime) {
-        const slotStartTime = format(currentTime, "HH:mm");
+        const slotStartTime = format(currentTime, 'HH:mm');
         // intervalMinutesを使って正しい時間間隔で加算する
         const nextTime = new Date(currentTime);
         nextTime.setMinutes(nextTime.getMinutes() + intervalMinutes);
@@ -144,10 +136,10 @@ export default function DateRangePicker({
         // 次の時間が終了時間を超えないようにする
         const slotEndTime =
           nextTime > endTime
-            ? defaultEndTime === "24:00"
-              ? "24:00"
-              : format(endTime, "HH:mm")
-            : format(nextTime, "HH:mm");
+            ? defaultEndTime === '24:00'
+              ? '24:00'
+              : format(endTime, 'HH:mm')
+            : format(nextTime, 'HH:mm');
 
         newTimeSlots.push({
           date,
@@ -192,8 +184,7 @@ export default function DateRangePicker({
 
         // 除外日を除いたリストを作成
         const filteredDates = allDates.filter(
-          (date) =>
-            !excludedDates.some((excludedDate) => isEqual(excludedDate, date))
+          (date) => !excludedDates.some((excludedDate) => isEqual(excludedDate, date)),
         );
 
         // 状態更新とコールバック
@@ -202,9 +193,7 @@ export default function DateRangePicker({
         // 日付が設定されたら時間枠を自動生成
         generatePeriodTimeSlots();
       } catch {
-        setErrorMessage(
-          "正しい期間を選択してください。開始日は終了日より前である必要があります。"
-        );
+        setErrorMessage('正しい期間を選択してください。開始日は終了日より前である必要があります。');
         onDatesChange?.([]);
       }
     }
@@ -227,13 +216,13 @@ export default function DateRangePicker({
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (newDate && newDate < today) {
-        setErrorMessage("開始日は本日以降の日付を選択してください");
+        setErrorMessage('開始日は本日以降の日付を選択してください');
         return;
       }
     }
 
     if (newDate && endDate && newDate > endDate) {
-      setErrorMessage("開始日は終了日より前である必要があります");
+      setErrorMessage('開始日は終了日より前である必要があります');
     } else {
       setErrorMessage(null);
     }
@@ -247,13 +236,13 @@ export default function DateRangePicker({
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (newDate && newDate < today) {
-        setErrorMessage("終了日は本日以降の日付を選択してください");
+        setErrorMessage('終了日は本日以降の日付を選択してください');
         return;
       }
     }
 
     if (startDate && newDate && startDate > newDate) {
-      setErrorMessage("終了日は開始日より後である必要があります");
+      setErrorMessage('終了日は開始日より後である必要があります');
     } else {
       setErrorMessage(null);
     }
@@ -262,13 +251,13 @@ export default function DateRangePicker({
   // 除外日を追加
   const handleAddExcludeDate = () => {
     if (!excludeDate) {
-      setErrorMessage("除外する日付を選択してください");
+      setErrorMessage('除外する日付を選択してください');
       return;
     }
 
     const newExcludeDate = parseDateSafely(excludeDate);
     if (!newExcludeDate) {
-      setErrorMessage("有効な日付を選択してください");
+      setErrorMessage('有効な日付を選択してください');
       return;
     }
 
@@ -276,14 +265,14 @@ export default function DateRangePicker({
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (newExcludeDate < today) {
-        setErrorMessage("除外日は本日以降の日付のみ指定できます");
+        setErrorMessage('除外日は本日以降の日付のみ指定できます');
         return;
       }
     }
 
     // 既に追加済みの日付は追加しない
     if (excludedDates.some((date) => isEqual(date, newExcludeDate))) {
-      setErrorMessage("この日付は既に除外リストに追加されています");
+      setErrorMessage('この日付は既に除外リストに追加されています');
       return;
     }
 
@@ -294,18 +283,16 @@ export default function DateRangePicker({
       isWithinInterval(newExcludeDate, { start: startDate, end: endDate })
     ) {
       setExcludedDates([...excludedDates, newExcludeDate]);
-      setExcludeDate("");
+      setExcludeDate('');
       setErrorMessage(null);
     } else {
-      setErrorMessage("除外日は選択した期間内である必要があります");
+      setErrorMessage('除外日は選択した期間内である必要があります');
     }
   };
 
   // 除外日を削除
   const handleRemoveExcludeDate = (dateToRemove: Date) => {
-    setExcludedDates(
-      excludedDates.filter((date) => !isEqual(date, dateToRemove))
-    );
+    setExcludedDates(excludedDates.filter((date) => !isEqual(date, dateToRemove)));
   };
 
   // タイムスロットに変更があったらコールバック実行
@@ -330,7 +317,7 @@ export default function DateRangePicker({
     const cb = onDatesChangeRef.current;
     if (cb) {
       const uniqueDates = Array.from(
-        new Set(timeSlots.map((slot) => format(slot.date, "yyyy-MM-dd")))
+        new Set(timeSlots.map((slot) => format(slot.date, 'yyyy-MM-dd'))),
       ).map((dateStr) => new Date(dateStr));
       cb(uniqueDates);
     }
@@ -342,9 +329,7 @@ export default function DateRangePicker({
   };
 
   // デフォルト開始時間変更ハンドラ
-  const handleDefaultStartTimeChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleDefaultStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDefaultStartTime(e.target.value);
     // 時間が変更されたら時間枠を再生成
     if (startDate && endDate) {
@@ -353,11 +338,9 @@ export default function DateRangePicker({
   };
 
   // デフォルト終了時間変更ハンドラ
-  const handleDefaultEndTimeChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleDefaultEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // 「24:00」の特殊ケースを処理
-    const value = e.target.value === "00:00" ? "24:00" : e.target.value;
+    const value = e.target.value === '00:00' ? '24:00' : e.target.value;
     setDefaultEndTime(value);
     // 時間が変更されたら時間枠を再生成
     if (startDate && endDate) {
@@ -373,7 +356,7 @@ export default function DateRangePicker({
         <div className="alert alert-warning flex items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-5 w-5"
+            className="h-5 w-5 shrink-0 stroke-current"
             fill="none"
             viewBox="0 0 24 24"
           >
@@ -388,7 +371,7 @@ export default function DateRangePicker({
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
         <div className="form-control w-full">
           <div className="flex items-center gap-1">
             <label htmlFor="drp-start-date" className="label-text font-semibold">
@@ -397,12 +380,16 @@ export default function DateRangePicker({
             <button
               type="button"
               tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
               aria-label="開始日ヘルプ"
               onClick={(e) => {
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = { x: rect.left, y: rect.bottom, text: "イベント期間の開始日" } as const;
-                window.dispatchEvent(new CustomEvent("form:show-tip", { detail }));
+                const detail = {
+                  x: rect.left,
+                  y: rect.bottom,
+                  text: 'イベント期間の開始日',
+                } as const;
+                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
               }}
             >
               ?
@@ -411,8 +398,8 @@ export default function DateRangePicker({
           <input
             id="drp-start-date"
             type="date"
-            className="input input-bordered w-full mt-1"
-            value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+            className="input input-bordered mt-1 w-full"
+            value={startDate ? format(startDate, 'yyyy-MM-dd') : ''}
             onChange={handleStartDateChange}
             aria-label="開始日"
           />
@@ -425,12 +412,16 @@ export default function DateRangePicker({
             <button
               type="button"
               tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
               aria-label="終了日ヘルプ"
               onClick={(e) => {
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = { x: rect.left, y: rect.bottom, text: "イベント期間の終了日" } as const;
-                window.dispatchEvent(new CustomEvent("form:show-tip", { detail }));
+                const detail = {
+                  x: rect.left,
+                  y: rect.bottom,
+                  text: 'イベント期間の終了日',
+                } as const;
+                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
               }}
             >
               ?
@@ -439,27 +430,31 @@ export default function DateRangePicker({
           <input
             id="drp-end-date"
             type="date"
-            className="input input-bordered w-full mt-1"
-            value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+            className="input input-bordered mt-1 w-full"
+            value={endDate ? format(endDate, 'yyyy-MM-dd') : ''}
             onChange={handleEndDateChange}
             aria-label="終了日"
           />
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow border border-base-200">
+      <div className="card bg-base-100 border-base-200 border shadow">
         <div className="card-body p-3 sm:p-4">
-          <h3 className="card-title text-base font-bold mb-2 flex items-center gap-1">
+          <h3 className="card-title mb-2 flex items-center gap-1 text-base font-bold">
             除外日の設定
             <button
               type="button"
               tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
               aria-label="除外日ヘルプ"
               onClick={(e) => {
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = { x: rect.left, y: rect.bottom, text: "候補から外したい日付を指定できます" } as const;
-                window.dispatchEvent(new CustomEvent("form:show-tip", { detail }));
+                const detail = {
+                  x: rect.left,
+                  y: rect.bottom,
+                  text: '候補から外したい日付を指定できます',
+                } as const;
+                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
               }}
             >
               ?
@@ -483,16 +478,11 @@ export default function DateRangePicker({
             </div>
             {excludedDates.length > 0 && (
               <div className="mt-2">
-                <h4 className="text-xs font-semibold mb-1 text-gray-500">
-                  除外する日：
-                </h4>
+                <h4 className="mb-1 text-xs font-semibold text-gray-500">除外する日：</h4>
                 <div className="flex flex-wrap gap-2">
                   {excludedDates.map((date, index) => (
-                    <div
-                      key={index}
-                      className="badge badge-outline gap-2 p-2 bg-base-200"
-                    >
-                      {format(date, "yyyy/MM/dd")}
+                    <div key={index} className="badge badge-outline bg-base-200 gap-2 p-2">
+                      {format(date, 'yyyy/MM/dd')}
                       <button
                         type="button"
                         className="btn btn-ghost btn-xs ml-1"
@@ -510,10 +500,10 @@ export default function DateRangePicker({
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow border border-base-200">
+      <div className="card bg-base-100 border-base-200 border shadow">
         <div className="card-body p-3 sm:p-4">
-          <h3 className="card-title text-base font-bold mb-2">時間枠の設定</h3>
-          <div className="grid md:grid-cols-2 gap-4 mb-4">
+          <h3 className="card-title mb-2 text-base font-bold">時間枠の設定</h3>
+          <div className="mb-4 grid gap-4 md:grid-cols-2">
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-start-time" className="label-text">
@@ -522,12 +512,16 @@ export default function DateRangePicker({
                 <button
                   type="button"
                   tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
                   aria-label="開始時間ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = { x: rect.left, y: rect.bottom, text: "各日の開始範囲時間を設定します" } as const;
-                    window.dispatchEvent(new CustomEvent("form:show-tip", { detail }));
+                    const detail = {
+                      x: rect.left,
+                      y: rect.bottom,
+                      text: '各日の開始範囲時間を設定します',
+                    } as const;
+                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
                 >
                   ?
@@ -536,7 +530,7 @@ export default function DateRangePicker({
               <input
                 id="drp-default-start-time"
                 type="time"
-                className="input input-bordered w-full mt-1"
+                className="input input-bordered mt-1 w-full"
                 value={defaultStartTime}
                 onChange={handleDefaultStartTimeChange}
                 aria-label="開始時間"
@@ -550,12 +544,16 @@ export default function DateRangePicker({
                 <button
                   type="button"
                   tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
                   aria-label="終了時間ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = { x: rect.left, y: rect.bottom, text: "各日の終了範囲時間を設定します" } as const;
-                    window.dispatchEvent(new CustomEvent("form:show-tip", { detail }));
+                    const detail = {
+                      x: rect.left,
+                      y: rect.bottom,
+                      text: '各日の終了範囲時間を設定します',
+                    } as const;
+                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
                 >
                   ?
@@ -564,36 +562,38 @@ export default function DateRangePicker({
               <input
                 id="drp-default-end-time"
                 type="time"
-                className="input input-bordered w-full mt-1"
-                value={defaultEndTime === "24:00" ? "00:00" : defaultEndTime}
+                className="input input-bordered mt-1 w-full"
+                value={defaultEndTime === '24:00' ? '00:00' : defaultEndTime}
                 onChange={handleDefaultEndTimeChange}
                 aria-label="終了時間"
               />
-              <span className="label-text-alt text-info mt-1">
-                00:00は翌日0:00として扱われます
-              </span>
+              <span className="label-text-alt text-info mt-1">00:00は翌日0:00として扱われます</span>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex flex-col items-end gap-4 md:flex-row">
             <label className="form-control w-full">
               <span className="label-text flex items-center gap-1">
                 時間枠の間隔
                 <button
                   type="button"
                   tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost p-0 min-h-0 h-5 w-5"
+                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
                   aria-label="時間間隔ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = { x: rect.left, y: rect.bottom, text: "1枠あたりの時間の長さを選択してください" } as const;
-                    window.dispatchEvent(new CustomEvent("form:show-tip", { detail }));
+                    const detail = {
+                      x: rect.left,
+                      y: rect.bottom,
+                      text: '1枠あたりの時間の長さを選択してください',
+                    } as const;
+                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
                 >
                   ?
                 </button>
               </span>
               <select
-                className="select select-bordered w-full bg-base-100 text-base-content mt-1"
+                className="select select-bordered bg-base-100 text-base-content mt-1 w-full"
                 value={intervalUnit}
                 onChange={handleIntervalChange}
                 aria-label="時間間隔"
@@ -618,7 +618,7 @@ export default function DateRangePicker({
 function FormTipsRelay() {
   const [open, setOpen] = React.useState(false);
   const [anchor, setAnchor] = React.useState<{ x: number; y: number } | null>(null);
-  const [text, setText] = React.useState("");
+  const [text, setText] = React.useState('');
 
   React.useEffect(() => {
     const handler = (e: Event) => {
@@ -628,11 +628,9 @@ function FormTipsRelay() {
       setOpen(true);
       e.stopPropagation();
     };
-    window.addEventListener("form:show-tip", handler as EventListener);
-    return () => window.removeEventListener("form:show-tip", handler as EventListener);
+    window.addEventListener('form:show-tip', handler as EventListener);
+    return () => window.removeEventListener('form:show-tip', handler as EventListener);
   }, []);
 
-  return (
-    <PortalTooltip open={open} anchor={anchor} text={text} onClose={() => setOpen(false)} />
-  );
+  return <PortalTooltip open={open} anchor={anchor} text={text} onClose={() => setOpen(false)} />;
 }

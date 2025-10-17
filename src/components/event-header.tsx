@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Card from "@/components/layout/Card";
-import ShareEventButton from "@/components/share-event-button";
-import FavoriteToggle from "@/components/favorite-toggle";
+import Card from '@/components/layout/Card';
+import ShareEventButton from '@/components/share-event-button';
+import FavoriteToggle from '@/components/favorite-toggle';
 
 interface EventHeaderProps {
   eventId: string;
@@ -21,32 +21,24 @@ export function EventHeader({
 }: EventHeaderProps) {
   // イベント公開用URLを生成
   const getShareUrl = () => {
-    if (typeof window === "undefined") return "";
+    if (typeof window === 'undefined') return '';
     const { protocol, host } = window.location;
     return `${protocol}//${host}/event/${eventId}`;
   };
 
   return (
     <Card className="mb-8" isHighlighted={isFinalized}>
-      <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+      <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <h1 className="text-3xl font-bold">
               {isFinalized && <span className="text-success mr-2">✓</span>}
               {title}
             </h1>
             <FavoriteToggle eventId={eventId} title={title} />
           </div>
-          {isFinalized && (
-            <div className="badge badge-success text-white mb-3">
-              日程確定済み
-            </div>
-          )}
-          {description && (
-            <p className="text-base-content/70 whitespace-pre-wrap">
-              {description}
-            </p>
-          )}
+          {isFinalized && <div className="badge badge-success mb-3 text-white">日程確定済み</div>}
+          {description && <p className="text-base-content/70 whitespace-pre-wrap">{description}</p>}
         </div>
         <ShareEventButton
           url={getShareUrl()}
@@ -57,10 +49,10 @@ export function EventHeader({
       </div>
 
       {!isFinalized && isAdmin && (
-        <div className="alert bg-info/10 text-info border-l-4 border-info text-sm">
+        <div className="alert bg-info/10 text-info border-info border-l-4 text-sm">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6 mr-2"
+            className="mr-2 h-6 w-6 shrink-0 stroke-current"
             fill="none"
             viewBox="0 0 24 24"
           >

@@ -1,12 +1,12 @@
-"use client";
-import { useMemo, useState } from "react";
-import ShareEventButton from "./share-event-button";
-import { buildAvailableDatesMessage } from "@/lib/share-utils";
+'use client';
+import { useMemo, useState } from 'react';
+import ShareEventButton from './share-event-button';
+import { buildAvailableDatesMessage } from '@/lib/share-utils';
 import type {
   EventDate,
   Participant,
   Availability,
-} from "@/components/event-client/event-details-section";
+} from '@/components/event-client/event-details-section';
 
 interface Props {
   eventTitle: string;
@@ -26,16 +26,14 @@ export default function ShareAvailableDatesButton({
   const [minCount, setMinCount] = useState(participants.length);
   const shareText = useMemo(
     () => buildAvailableDatesMessage(eventDates, availabilities, minCount),
-    [eventDates, availabilities, minCount]
+    [eventDates, availabilities, minCount],
   );
   const shareUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/event/${publicToken}`
-      : "";
+    typeof window !== 'undefined' ? `${window.location.origin}/event/${publicToken}` : '';
 
   return (
     <div className="md:flex md:items-end md:justify-center md:gap-4">
-      <div className="flex gap-2 items-end ">
+      <div className="flex items-end gap-2">
         <input
           type="number"
           className="input input-sm input-bordered w-10"
@@ -52,8 +50,8 @@ export default function ShareAvailableDatesButton({
               isNaN(value) || value < 1
                 ? 1
                 : value > participants.length
-                ? participants.length
-                : value;
+                  ? participants.length
+                  : value;
             setMinCount(validValue);
             // 入力フィールドの値も更新して先頭の0を除去
             e.target.value = validValue.toString();
@@ -68,7 +66,7 @@ export default function ShareAvailableDatesButton({
         text={`${eventTitle}\n${shareText}`}
         label="共通日程を共有"
         ariaLabel="共通日程を共有"
-        className="btn-sm mt-2 mx-auto md:ml-0"
+        className="btn-sm mx-auto mt-2 md:ml-0"
         includeTextInClipboard={true}
       />
     </div>

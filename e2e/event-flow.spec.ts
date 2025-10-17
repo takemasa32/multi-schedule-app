@@ -81,11 +81,11 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
     const dateDivs = participantPage.locator('div[data-date-id]');
     await dateDivs.first().click();
-    if (await dateDivs.count() >= 2) {
+    if ((await dateDivs.count()) >= 2) {
       await dateDivs.nth(1).click();
     }
     await expect(dateDivs.first()).toContainText('○');
-    if (await dateDivs.count() >= 2) {
+    if ((await dateDivs.count()) >= 2) {
       await expect(dateDivs.nth(1)).toContainText('○');
     }
     expect(participantPage.url()).toContain('/input');
@@ -98,19 +98,27 @@ test.describe.serial('イベントE2Eフロー', () => {
     // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
     const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
     await participantPage.waitForURL(publicEventUrl, { timeout: 15000 });
-    const backToSummaryBtn = participantPage.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
+    const backToSummaryBtn = participantPage.getByRole('button', {
+      name: /回答状況の確認・集計に戻る/,
+    });
     if (await backToSummaryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
 
     // "個別" タブが表示されるまで待機
-    const individualTab = participantPage.locator('[data-testid$="availability-tab-detailed"]').first();
+    const individualTab = participantPage
+      .locator('[data-testid$="availability-tab-detailed"]')
+      .first();
     await expect(individualTab).toBeVisible({ timeout: 15000 });
     await individualTab.click();
 
     // 新しく追加した参加者が表示されるまで待機
     try {
-      await expect(participantPage.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 15000 });
+      await expect(
+        participantPage.getByRole('cell', {
+          name: new RegExp(participantName),
+        }),
+      ).toBeVisible({ timeout: 15000 });
     } catch (e) {
       const html = await participantPage.content();
       console.log('DEBUG: 参加者表示失敗 page.content()', html);
@@ -123,28 +131,36 @@ test.describe.serial('イベントE2Eフロー', () => {
     await gotoWithRetry(page, eventUrl); // 明示的にイベント詳細ページへ遷移
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
-    await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible({
+      timeout: 10000,
+    });
     // 参加者が1人以上いることを検証
     await page.waitForLoadState('networkidle');
     const adminDetailedTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
     await expect(adminDetailedTab).toBeVisible({ timeout: 10000 });
     await adminDetailedTab.click();
     try {
-      await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({
+        timeout: 10000,
+      });
     } catch (e) {
       const html = await page.content();
       console.log('DEBUG: 3件目参加者表示失敗 page.content()', html);
       throw e;
     }
     try {
-      await expect(page.locator('[data-testid$="availability-tab-detailed"]').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('[data-testid$="availability-tab-detailed"]').first()).toBeVisible({
+        timeout: 10000,
+      });
     } catch (e) {
       const html = await page.content();
       console.log('DEBUG: page.content()', html);
       throw e;
     }
     await page.locator('[data-testid$="availability-tab-detailed"]').first().click();
-    await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({
+      timeout: 10000,
+    });
     await page.reload();
     await page.getByRole('link', { name: '新しく回答する' }).click();
     await page.waitForURL(/\/input$/);
@@ -162,7 +178,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     // 回答送信後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
     const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
     await page.waitForURL(publicEventUrl, { timeout: 15000 });
-    const backToSummaryBtn = page.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
+    const backToSummaryBtn = page.getByRole('button', {
+      name: /回答状況の確認・集計に戻る/,
+    });
     if (await backToSummaryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
@@ -173,9 +191,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await individualTab.click();
 
     // 新しく追加した参加者が表示されるまで待機
-    await expect(
-      page.getByRole('cell', { name: /週表示参加者/ })
-    ).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('cell', { name: /週表示参加者/ })).toBeVisible({
+      timeout: 20000,
+    });
   });
 
   test('既存回答の編集', async ({ page }) => {
@@ -184,7 +202,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.waitForTimeout(1000); // 安定化
     await page.getByRole('button', { name: /既存の回答を編集/ }).click();
 
-    const originalParticipantName = await page.getByRole('link', { name: '週表示参加者' }).textContent();
+    const originalParticipantName = await page
+      .getByRole('link', { name: '週表示参加者' })
+      .textContent();
     const participantNamePrefix = originalParticipantName?.split(' ')[0] || '週表示参加者';
     await page.getByRole('link', { name: new RegExp(`^${participantNamePrefix}`) }).click();
     await page.waitForURL(/\/input\?participant_id=/);
@@ -199,7 +219,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     // 回答更新後の画面遷移を待機し、"回答状況の確認・集計に戻る" ボタンがあればクリック
     const publicEventUrl = eventUrl.replace(/\?admin=.*/, '');
     await page.waitForURL(publicEventUrl, { timeout: 15000 });
-    const backToSummaryBtn = page.getByRole('button', { name: /回答状況の確認・集計に戻る/ });
+    const backToSummaryBtn = page.getByRole('button', {
+      name: /回答状況の確認・集計に戻る/,
+    });
     if (await backToSummaryBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await backToSummaryBtn.click();
     }
@@ -210,7 +232,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await individualTab.click();
 
     // 編集後の参加者名が表示されるまで待機
-    await expect(page.getByRole('cell', { name: new RegExp(newName) })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('cell', { name: new RegExp(newName) })).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('主催者確定・カレンダー連携', async ({ context }) => {
@@ -218,10 +242,14 @@ test.describe.serial('イベントE2Eフロー', () => {
     await gotoWithRetry(adminPage, eventUrl);
     await adminPage.waitForLoadState('networkidle');
 
-    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({ timeout: 10000 });
+    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 日程の確定セクションを展開
-    const openFinalizeBtn = adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    const openFinalizeBtn = adminPage.getByRole('button', {
+      name: /日程の確定を開く/,
+    });
     await expect(openFinalizeBtn).toBeVisible();
     await openFinalizeBtn.click();
 
@@ -229,13 +257,19 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(selectableCell).toBeVisible();
     await selectableCell.click();
 
-    await expect(adminPage.getByText(/選択中: *1件/)).toBeVisible({ timeout: 3000 });
+    await expect(adminPage.getByText(/選択中: *1件/)).toBeVisible({
+      timeout: 3000,
+    });
 
-    const finalizeBtn = adminPage.getByRole('button', { name: /選択した日程で確定する|確定する/ });
+    const finalizeBtn = adminPage.getByRole('button', {
+      name: /選択した日程で確定する|確定する/,
+    });
     await expect(finalizeBtn).toBeVisible();
     await finalizeBtn.click();
 
-    const confirmBtn = adminPage.getByRole('button', { name: /確定する|現在の確定内容を維持する/ });
+    const confirmBtn = adminPage.getByRole('button', {
+      name: /確定する|現在の確定内容を維持する/,
+    });
     await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();
 
@@ -246,12 +280,16 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(icsLink).toBeVisible({ timeout: 10000 });
     const icsHref = await icsLink.getAttribute('href');
     expect(icsHref).toMatch(/\/api\/calendar\/ics\//);
-    const googleCalLink = adminPage.getByRole('link', { name: /Googleカレンダー/ });
+    const googleCalLink = adminPage.getByRole('link', {
+      name: /Googleカレンダー/,
+    });
     await expect(googleCalLink).toBeVisible();
     const googleHref = await googleCalLink.getAttribute('href');
     expect(googleHref).toMatch(/\/api\/calendar\/.*\?googleCalendar=true/);
     // 2) request フィクスチャを使って GET、リダイレクトを追わない
-    const apiResponse = await adminPage.request.get(googleHref!, { maxRedirects: 0 });
+    const apiResponse = await adminPage.request.get(googleHref!, {
+      maxRedirects: 0,
+    });
     expect(apiResponse.status()).toBe(307);
     const redirectUrl = apiResponse.headers()['location'];
     expect(redirectUrl).toMatch(/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
@@ -262,9 +300,13 @@ test.describe.serial('イベントE2Eフロー', () => {
     const adminPage = await context.newPage();
     await gotoWithRetry(adminPage, eventUrl);
     await adminPage.waitForLoadState('networkidle');
-    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({ timeout: 10000 });
+    await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({
+      timeout: 10000,
+    });
     // 日程の確定セクションを展開
-    const openFinalizeBtn = adminPage.getByRole('button', { name: /日程の確定を開く/ });
+    const openFinalizeBtn = adminPage.getByRole('button', {
+      name: /日程の確定を開く/,
+    });
     await expect(openFinalizeBtn).toBeVisible();
     await openFinalizeBtn.click();
     // 既に確定済みのセルをすべてクリックして選択解除
@@ -273,15 +315,21 @@ test.describe.serial('イベントE2Eフロー', () => {
       await cell.click();
     }
     // 「選択中: 0件の日程」表示を確認
-    await expect(adminPage.getByText(/選択中: *0件/)).toBeVisible({ timeout: 3000 });
+    await expect(adminPage.getByText(/選択中: *0件/)).toBeVisible({
+      timeout: 3000,
+    });
     // 確定ボタンを押す
-    const finalizeBtn = adminPage.getByRole('button', { name: /確定を解除する|解除する/ });
+    const finalizeBtn = adminPage.getByRole('button', {
+      name: /確定を解除する|解除する/,
+    });
     await expect(finalizeBtn).toBeVisible();
     await finalizeBtn.click();
 
     await adminPage.waitForLoadState('networkidle');
     // 解除後、確定済み日程のアラートが消えていること（または確定済み日程が0件であること）
-    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible({ timeout: 10000 });
+    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible({
+      timeout: 10000,
+    });
     await adminPage.close();
   });
 
@@ -291,7 +339,7 @@ test.describe.serial('イベントE2Eフロー', () => {
       // navigator.share を無効化
       Object.defineProperty(navigator, 'share', {
         value: undefined,
-        configurable: true
+        configurable: true,
       });
 
       // clipboard.writeText をモックして window._copiedText に書き込む
@@ -300,9 +348,9 @@ test.describe.serial('イベントE2Eフロー', () => {
           writeText: (text: string) => {
             window._copiedText = text;
             return Promise.resolve();
-          }
+          },
         },
-        configurable: true
+        configurable: true,
       });
 
       // テスト用変数も初期化
@@ -314,7 +362,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.waitForLoadState('networkidle');
 
     // 共有ボタンをクリック
-    const shareBtn = page.getByRole('button', { name: /イベントを共有|イベントURLを共有/ });
+    const shareBtn = page.getByRole('button', {
+      name: /イベントを共有|イベントURLを共有/,
+    });
     await expect(shareBtn).toBeVisible();
     await shareBtn.click();
 
@@ -332,14 +382,21 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
-
     // 日程追加セクションを展開
     const addSection = page.getByText('日程を追加する', { exact: false });
     await addSection.click();
     // details要素を強制的にopenにする
-    await page.locator('details').first().evaluate((el) => { el.setAttribute('open', ''); });
+    await page
+      .locator('details')
+      .first()
+      .evaluate((el) => {
+        el.setAttribute('open', '');
+      });
     // input#extendToDateがvisibleになるまで明示的に待機
-    await page.waitForSelector('input#extendToDate', { state: 'visible', timeout: 5000 });
+    await page.waitForSelector('input#extendToDate', {
+      state: 'visible',
+      timeout: 5000,
+    });
     const dateInput = page.getByLabel('延長したい最終日');
 
     // input#extendToDateのmin属性値を取得し、+1日した日付を延長日とする
@@ -354,7 +411,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     const dateStr = `${yyyy}-${mm}-${dd}`;
     await dateInput.fill(dateStr);
     // quickBtnがenabledになるまで待機
-    const quickBtn = page.getByRole('button', { name: /この日まで自動延長して追加/ });
+    const quickBtn = page.getByRole('button', {
+      name: /この日まで自動延長して追加/,
+    });
     await expect(quickBtn).toBeEnabled({ timeout: 5000 });
 
     // クイック自動延長ボタン押下
@@ -364,7 +423,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('button', { name: /^追加する$/ }).click();
 
     // 完了ダイアログの表示
-    await expect(page.getByText('日程を追加しました').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('日程を追加しました').first()).toBeVisible({
+      timeout: 10000,
+    });
 
     // 同じ日程で再度追加し重複バリデーション
     await page.locator('input[type="date"]').first().fill(dateStr);
@@ -392,11 +453,16 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(addSection).toBeVisible();
     await addSection.click();
     // input[type="date"]がvisibleかつ有効になるまで待機
-    await page.waitForSelector('input[type="date"]:not([disabled])', { state: 'visible', timeout: 5000 });
+    await page.waitForSelector('input[type="date"]:not([disabled])', {
+      state: 'visible',
+      timeout: 5000,
+    });
     // 柔軟な日程追加（詳細な日程追加）が閉じている場合は開く
-    const detailsSummary = page.locator('summary', { hasText: '詳細な日程追加' });
+    const detailsSummary = page.locator('summary', {
+      hasText: '詳細な日程追加',
+    });
     const details = detailsSummary.locator('..'); // 親のdetails要素
-    if (!(await details.evaluate(el => (el as HTMLDetailsElement).open))) {
+    if (!(await details.evaluate((el) => (el as HTMLDetailsElement).open))) {
       await detailsSummary.click({ force: true });
     }
     // details内のvisibleなinputのみを取得しfill
@@ -424,5 +490,4 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(duplicateAlert).toBeVisible({ timeout: 5000 });
     await expect(duplicateAlert).toContainText(/重複/);
   });
-
 });

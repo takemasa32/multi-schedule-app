@@ -12,7 +12,7 @@ jest.mock('next/server', () => ({
     redirect: jest.fn((url: URL, status: number) => ({
       type: 'redirect',
       url: url.toString(),
-      status
+      status,
     })),
   },
 }));
@@ -40,8 +40,12 @@ describe('middleware', () => {
     });
 
     it('LINE以外のUser-Agentを正しく判定する', () => {
-      expect(isLineInAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)')).toBe(false);
-      expect(isLineInAppBrowser('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')).toBe(false);
+      expect(isLineInAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)')).toBe(
+        false,
+      );
+      expect(
+        isLineInAppBrowser('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'),
+      ).toBe(false);
       expect(isLineInAppBrowser('Instagram 123.0.0.21.114')).toBe(false);
       expect(isLineInAppBrowser('FBAN/FBIOS')).toBe(false);
       expect(isLineInAppBrowser('')).toBe(false);
@@ -55,7 +59,11 @@ describe('middleware', () => {
   });
 
   describe('middleware function', () => {
-    const createMockRequest = (pathname: string, userAgent: string, searchParams?: Record<string, string>) => {
+    const createMockRequest = (
+      pathname: string,
+      userAgent: string,
+      searchParams?: Record<string, string>,
+    ) => {
       const url = new URL(`http://localhost:3000${pathname}`);
       if (searchParams) {
         Object.entries(searchParams).forEach(([key, value]) => {
@@ -105,7 +113,10 @@ describe('middleware', () => {
     });
 
     it('LINEアプリ以外のUser-Agentではリダイレクトしない', () => {
-      const request = createMockRequest('/event/test-id', 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)');
+      const request = createMockRequest(
+        '/event/test-id',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
+      );
       const response = middleware(request);
 
       expect(response).toEqual({ type: 'next' });
@@ -115,10 +126,7 @@ describe('middleware', () => {
       const request = createMockRequest('/event/test-id', 'Line/11.1.0');
       middleware(request);
 
-      expect(NextResponse.redirect).toHaveBeenCalledWith(
-        expect.any(URL),
-        302
-      );
+      expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
       const redirectCall = (NextResponse.redirect as jest.Mock).mock.calls[0];
       const redirectUrl = redirectCall[0] as URL;
@@ -127,7 +135,9 @@ describe('middleware', () => {
     });
 
     it('既にopenExternalBrowser=1が設定されている場合はリダイレクトしない', () => {
-      const request = createMockRequest('/event/test-id', 'Line/11.1.0', { openExternalBrowser: '1' });
+      const request = createMockRequest('/event/test-id', 'Line/11.1.0', {
+        openExternalBrowser: '1',
+      });
       const response = middleware(request);
 
       expect(response).toEqual({ type: 'next' });
@@ -137,10 +147,7 @@ describe('middleware', () => {
       const request = createMockRequest('/', 'Line/11.1.0');
       middleware(request);
 
-      expect(NextResponse.redirect).toHaveBeenCalledWith(
-        expect.any(URL),
-        302
-      );
+      expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
       const redirectCall = (NextResponse.redirect as jest.Mock).mock.calls[0];
       const redirectUrl = redirectCall[0] as URL;
@@ -152,10 +159,7 @@ describe('middleware', () => {
       const request = createMockRequest('/home', 'Line/11.1.0');
       middleware(request);
 
-      expect(NextResponse.redirect).toHaveBeenCalledWith(
-        expect.any(URL),
-        302
-      );
+      expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
       const redirectCall = (NextResponse.redirect as jest.Mock).mock.calls[0];
       const redirectUrl = redirectCall[0] as URL;
@@ -167,10 +171,7 @@ describe('middleware', () => {
       const request = createMockRequest('/event/test-id', 'Mozilla/5.0 Line App Desktop');
       middleware(request);
 
-      expect(NextResponse.redirect).toHaveBeenCalledWith(
-        expect.any(URL),
-        302
-      );
+      expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
     });
   });
 

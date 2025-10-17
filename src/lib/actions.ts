@@ -106,12 +106,15 @@ export async function createEvent(formData: FormData) {
         p_public_token: publicToken,
         p_admin_token: adminToken,
         p_event_dates: timeslots,
-      }
+      },
     );
 
     if (createError || !created?.length) {
       console.error('イベント作成エラー:', createError);
-      return { success: false, message: 'DBエラー: イベント作成に失敗しました。もう一度お試しください。' };
+      return {
+        success: false,
+        message: 'DBエラー: イベント作成に失敗しました。もう一度お試しください。',
+      };
     }
 
     const event = created[0];
@@ -122,9 +125,8 @@ export async function createEvent(formData: FormData) {
       success: true,
       publicToken: event.public_token,
       adminToken: event.admin_token,
-      redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}`
+      redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}`,
     };
-
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
     return {
@@ -149,35 +151,40 @@ export async function getParticipantById(participantId: string, eventId: string)
     .single();
 
   if (participantError || !participant) {
-    console.error("参加者取得エラー:", participantError);
+    console.error('参加者取得エラー:', participantError);
     return null;
   }
 
   // 参加者の回答を取得
   const { data: availabilities, error: availError } = await supabase
     .from('availabilities')
-    .select(`
+    .select(
+      `
       id,
       event_date_id,
       availability
-    `)
+    `,
+    )
     .eq('participant_id', participantId)
     .eq('event_id', eventId);
 
   if (availError) {
-    console.error("回答取得エラー:", availError);
+    console.error('回答取得エラー:', availError);
     return null;
   }
 
   // 回答をイベント日付IDでマップ化
-  const availabilityMap = availabilities.reduce((acc, item) => {
-    acc[item.event_date_id] = item.availability;
-    return acc;
-  }, {} as Record<string, boolean>);
+  const availabilityMap = availabilities.reduce(
+    (acc, item) => {
+      acc[item.event_date_id] = item.availability;
+      return acc;
+    },
+    {} as Record<string, boolean>,
+  );
 
   return {
     participant,
-    availabilityMap
+    availabilityMap,
   };
 }
 
@@ -225,21 +232,20 @@ export async function getEvent(publicToken: string) {
  * イベントIDに基づいて参加者一覧を取得する
  */
 export async function getParticipants(
-  eventId: string
+  eventId: string,
 ): Promise<Database['public']['Tables']['participants']['Row'][]> {
   const supabase = createSupabaseAdmin();
 
   try {
-    const query = supabase
-      .from('participants')
-      .select('*')
-      .eq('event_id', eventId);
+    const query = supabase.from('participants').select('*').eq('event_id', eventId);
 
-    return await fetchAllPaginatedWithOrder<
-      Database['public']['Tables']['participants']['Row']
-    >(query as unknown as SupabaseQueryInterface, 'created_at', {
-      ascending: true,
-    });
+    return await fetchAllPaginatedWithOrder<Database['public']['Tables']['participants']['Row']>(
+      query as unknown as SupabaseQueryInterface,
+      'created_at',
+      {
+        ascending: true,
+      },
+    );
   } catch (error) {
     console.error('参加者一覧取得エラー:', error);
     return [];
@@ -250,21 +256,20 @@ export async function getParticipants(
  * イベントの全回答データを取得する
  */
 export async function getAvailabilities(
-  eventId: string
+  eventId: string,
 ): Promise<Database['public']['Tables']['availabilities']['Row'][]> {
   const supabase = createSupabaseAdmin();
 
   try {
-    const query = supabase
-      .from('availabilities')
-      .select('*')
-      .eq('event_id', eventId);
+    const query = supabase.from('availabilities').select('*').eq('event_id', eventId);
 
-    return await fetchAllPaginatedWithOrder<
-      Database['public']['Tables']['availabilities']['Row']
-    >(query as unknown as SupabaseQueryInterface, 'created_at', {
-      ascending: true,
-    });
+    return await fetchAllPaginatedWithOrder<Database['public']['Tables']['availabilities']['Row']>(
+      query as unknown as SupabaseQueryInterface,
+      'created_at',
+      {
+        ascending: true,
+      },
+    );
   } catch (error) {
     console.error('回答データ取得エラー:', error);
     return [];
@@ -297,7 +302,7 @@ export async function getFinalizedDateIds(eventId: string, finalDateId: string |
 
   if (data && data.length > 0) {
     // event_date_idの配列を返す
-    return data.map(item => item.event_date_id);
+    return data.map((item) => item.event_date_id);
   } else if (finalDateId) {
     // 旧形式の互換性のため、finalized_dates テーブルにデータがない場合は
     // final_date_id があれば使用
@@ -317,7 +322,7 @@ type EventDate = {
   id: string;
   event_id: string;
   start_time: string; // ISO 8601形式のタイムスタンプ
-  end_time: string;   // ISO 8601形式のタイムスタンプ
+  end_time: string; // ISO 8601形式のタイムスタンプ
   label?: string | undefined; // 任意のラベル
   created_at: string; // ISO 8601形式のタイムスタンプ
 };
@@ -327,8 +332,8 @@ type EventDate = {
  */
 export async function getEventDates(eventId: string): Promise<EventDate[]> {
   const supabase = createSupabaseAdmin();
-  const pageSize = 1000;    // 1ページあたり取得件数
-  let page = 0;             // ページカウンタ
+  const pageSize = 1000; // 1ページあたり取得件数
+  let page = 0; // ページカウンタ
   let allDates: EventDate[] = [];
 
   while (true) {
@@ -336,18 +341,18 @@ export async function getEventDates(eventId: string): Promise<EventDate[]> {
     const to = from + pageSize - 1;
 
     const { data, error } = await supabase
-      .from("event_dates")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("start_time", { ascending: true })
+      .from('event_dates')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('start_time', { ascending: true })
       .range(from, to);
 
     if (error) {
-      console.error("イベント日程取得エラー:", error);
-      break;  // エラー時はループを抜けてこれまでの結果を返す
+      console.error('イベント日程取得エラー:', error);
+      break; // エラー時はループを抜けてこれまでの結果を返す
     }
     if (!data || data.length === 0) {
-      break;  // 取得データが空なら最後のページに到達
+      break; // 取得データが空なら最後のページに到達
     }
 
     // Supabaseの型ではlabelがstring | nullのためnullを除外して結合
@@ -355,7 +360,7 @@ export async function getEventDates(eventId: string): Promise<EventDate[]> {
       data.map((d) => ({
         ...d,
         label: d.label ?? undefined,
-      }))
+      })),
     );
 
     if (data.length < pageSize) {
@@ -373,29 +378,29 @@ export async function getEventDates(eventId: string): Promise<EventDate[]> {
  */
 export async function submitAvailability(formData: FormData) {
   try {
-    const eventId = formData.get("eventId") as string;
-    const publicToken = formData.get("publicToken") as string;
-    const participantName = formData.get("participant_name") as string;
-    const comment = (formData.get("comment") as string) || null;
+    const eventId = formData.get('eventId') as string;
+    const publicToken = formData.get('publicToken') as string;
+    const participantName = formData.get('participant_name') as string;
+    const comment = (formData.get('comment') as string) || null;
 
     // 編集モードの場合、既存の参加者IDが提供される
-    const participantId = formData.get("participantId") as string | null;
+    const participantId = formData.get('participantId') as string | null;
 
     if (!eventId || !publicToken || !participantName) {
-      return { success: false, message: "必須項目が未入力です" };
+      return { success: false, message: '必須項目が未入力です' };
     }
 
     const supabase = createSupabaseAdmin();
 
     const { data: event, error: eventError } = await supabase
-      .from("events")
-      .select("id")
-      .eq("public_token", publicToken)
-      .eq("id", eventId)
+      .from('events')
+      .select('id')
+      .eq('public_token', publicToken)
+      .eq('id', eventId)
       .single();
 
     if (eventError || !event) {
-      return { success: false, message: "イベントが見つかりません" };
+      return { success: false, message: 'イベントが見つかりません' };
     }
 
     let existingParticipantId = participantId;
@@ -403,9 +408,9 @@ export async function submitAvailability(formData: FormData) {
 
     if (existingParticipantId) {
       const { data: currentParticipant } = await supabase
-        .from("participants")
-        .select("name")
-        .eq("id", existingParticipantId)
+        .from('participants')
+        .select('name')
+        .eq('id', existingParticipantId)
         .maybeSingle();
       if (currentParticipant) {
         const updateData: { name?: string; comment: string | null } = {
@@ -415,46 +420,43 @@ export async function submitAvailability(formData: FormData) {
           updateData.name = participantName;
         }
         const { error: updateError } = await supabase
-          .from("participants")
+          .from('participants')
           .update(updateData)
-          .eq("id", existingParticipantId);
+          .eq('id', existingParticipantId);
         if (updateError) {
-          console.error("Participant update error:", updateError);
-          return { success: false, message: "参加者情報の更新に失敗しました" };
+          console.error('Participant update error:', updateError);
+          return { success: false, message: '参加者情報の更新に失敗しました' };
         }
       }
     }
 
     if (!existingParticipantId) {
       const { data: existingParticipant } = await supabase
-        .from("participants")
-        .select("id")
-        .eq("event_id", eventId)
-        .eq("name", participantName)
+        .from('participants')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('name', participantName)
         .maybeSingle();
 
       if (existingParticipant) {
         existingParticipantId = existingParticipant.id;
-        await supabase
-          .from("participants")
-          .update({ comment })
-          .eq("id", existingParticipantId);
+        await supabase.from('participants').update({ comment }).eq('id', existingParticipantId);
       } else {
         const responseToken = uuidv4();
         const { data: newParticipant, error: participantError } = await supabase
-          .from("participants")
+          .from('participants')
           .insert({
             event_id: eventId,
             name: participantName,
             response_token: responseToken,
             comment,
           })
-          .select("id")
+          .select('id')
           .single();
 
         if (participantError || !newParticipant) {
-          console.error("Participant creation error:", participantError);
-          return { success: false, message: "参加者登録に失敗しました" };
+          console.error('Participant creation error:', participantError);
+          return { success: false, message: '参加者登録に失敗しました' };
         }
 
         existingParticipantId = newParticipant.id;
@@ -470,73 +472,73 @@ export async function submitAvailability(formData: FormData) {
     }>;
 
     for (const [key, value] of formData.entries()) {
-      if (key.startsWith("availability_")) {
-        const dateId = key.replace("availability_", "");
+      if (key.startsWith('availability_')) {
+        const dateId = key.replace('availability_', '');
         availabilityEntries.push({
           event_id: eventId,
           participant_id: existingParticipantId!,
           event_date_id: dateId,
-          availability: value === "on",
+          availability: value === 'on',
         });
       }
     }
 
     if (availabilityEntries.length === 0) {
-      return { success: false, message: "少なくとも1つの回答を入力してください" };
+      return {
+        success: false,
+        message: '少なくとも1つの回答を入力してください',
+      };
     }
 
     if (!isNewParticipant) {
-      const { error: transactionError } = await supabase.rpc(
-        "update_participant_availability",
-        {
-          p_participant_id: existingParticipantId,
-          p_event_id: eventId,
-          p_availabilities: availabilityEntries.map((entry) => ({
-            event_date_id: entry.event_date_id,
-            availability: entry.availability,
-          })),
-        }
-      );
+      const { error: transactionError } = await supabase.rpc('update_participant_availability', {
+        p_participant_id: existingParticipantId,
+        p_event_id: eventId,
+        p_availabilities: availabilityEntries.map((entry) => ({
+          event_date_id: entry.event_date_id,
+          availability: entry.availability,
+        })),
+      });
 
       if (transactionError) {
-        console.error("Availability transaction error:", transactionError);
+        console.error('Availability transaction error:', transactionError);
         return {
           success: false,
-          message: "回答の更新に失敗しました。既存データは保持されています。",
+          message: '回答の更新に失敗しました。既存データは保持されています。',
         };
       }
     } else {
       const { error: availabilityError } = await supabase
-        .from("availabilities")
+        .from('availabilities')
         .insert(availabilityEntries);
       if (availabilityError) {
-        console.error("Availability submission error:", availabilityError);
-        return { success: false, message: "回答の保存に失敗しました" };
+        console.error('Availability submission error:', availabilityError);
+        return { success: false, message: '回答の保存に失敗しました' };
       }
     }
 
     await supabase
-      .from("events")
+      .from('events')
       .update({ last_accessed_at: new Date().toISOString() })
-      .eq("id", eventId);
+      .eq('id', eventId);
 
     try {
       revalidatePath(`/event/${publicToken}`);
     } catch (e) {
-      if (process.env.NODE_ENV !== "test") {
-        console.error("revalidatePath error:", e);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('revalidatePath error:', e);
       }
     }
 
     return {
       success: true,
-      message: "回答を送信しました。ありがとうございます！",
+      message: '回答を送信しました。ありがとうございます！',
     };
   } catch (err) {
-    console.error("Error in submitAvailability:", err);
+    console.error('Error in submitAvailability:', err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+      message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
   }
 }
@@ -547,63 +549,60 @@ export async function submitAvailability(formData: FormData) {
 export async function finalizeEvent(eventId: string, dateIds: string[]) {
   try {
     if (!eventId || !dateIds) {
-      return { success: false, message: "必須パラメータが不足しています" };
+      return { success: false, message: '必須パラメータが不足しています' };
     }
 
     const supabase = createSupabaseAdmin();
 
     const { data: event, error: eventError } = await supabase
-      .from("events")
-      .select("id, public_token")
-      .eq("id", eventId)
+      .from('events')
+      .select('id, public_token')
+      .eq('id', eventId)
       .single();
 
     if (eventError || !event) {
-      console.error("Event retrieval error:", eventError);
-      return { success: false, message: "イベントが見つかりません" };
+      console.error('Event retrieval error:', eventError);
+      return { success: false, message: 'イベントが見つかりません' };
     }
 
     if (dateIds.length > 0) {
       const { data: dateCheck, error: dateCheckError } = await supabase
-        .from("event_dates")
-        .select("id")
-        .eq("event_id", eventId)
-        .in("id", dateIds);
+        .from('event_dates')
+        .select('id')
+        .eq('event_id', eventId)
+        .in('id', dateIds);
 
       if (dateCheckError || !dateCheck || dateCheck.length !== dateIds.length) {
-        console.error("Invalid date selection:", dateCheckError);
-        return { success: false, message: "選択された日程が見つかりません" };
+        console.error('Invalid date selection:', dateCheckError);
+        return { success: false, message: '選択された日程が見つかりません' };
       }
     }
 
-    const { error: finalizeError } = await supabase.rpc(
-      "finalize_event_safe",
-      {
-        p_event_id: eventId,
-        p_date_ids: dateIds,
-      }
-    );
+    const { error: finalizeError } = await supabase.rpc('finalize_event_safe', {
+      p_event_id: eventId,
+      p_date_ids: dateIds,
+    });
 
     if (finalizeError) {
-      console.error("Event finalization error:", finalizeError);
-      return { success: false, message: "イベント確定処理に失敗しました" };
+      console.error('Event finalization error:', finalizeError);
+      return { success: false, message: 'イベント確定処理に失敗しました' };
     }
 
     try {
       revalidatePath(`/event/${event.public_token}`);
     } catch (e) {
-      if (process.env.NODE_ENV !== "test") {
-        console.error("revalidatePath error:", e);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('revalidatePath error:', e);
       }
     }
 
-    const message = dateIds.length === 0 ? "イベント確定を解除しました" : undefined;
+    const message = dateIds.length === 0 ? 'イベント確定を解除しました' : undefined;
     return { success: true, message };
   } catch (err) {
-    console.error("Error in finalizeEvent:", err);
+    console.error('Error in finalizeEvent:', err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+      message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
   }
 }
@@ -615,41 +614,41 @@ export async function getEventInfoFromUrl(eventUrl: string) {
   try {
     let publicToken = eventUrl.trim();
 
-    if (publicToken.includes("/")) {
-      const urlParts = publicToken.split("/");
+    if (publicToken.includes('/')) {
+      const urlParts = publicToken.split('/');
       publicToken = urlParts[urlParts.length - 1];
 
-      if (publicToken.includes("?")) {
-        publicToken = publicToken.split("?")[0];
+      if (publicToken.includes('?')) {
+        publicToken = publicToken.split('?')[0];
       }
     }
 
     if (!publicToken || publicToken.length < 5) {
-      return { success: false, message: "無効なイベントURLまたはトークンです" };
+      return { success: false, message: '無効なイベントURLまたはトークンです' };
     }
 
     const supabase = createSupabaseClient();
 
     const { data: event, error: eventError } = await supabase
-      .from("events")
-      .select("id, title, public_token, created_at")
-      .eq("public_token", publicToken)
+      .from('events')
+      .select('id, title, public_token, created_at')
+      .eq('public_token', publicToken)
       .single();
 
     if (eventError || !event) {
-      console.error("Event retrieval error:", eventError);
-      return { success: false, message: "イベントが見つかりません" };
+      console.error('Event retrieval error:', eventError);
+      return { success: false, message: 'イベントが見つかりません' };
     }
 
     const { data: eventDates, error: datesError } = await supabase
-      .from("event_dates")
-      .select("id, start_time, end_time")
-      .eq("event_id", event.id)
-      .order("start_time", { ascending: true });
+      .from('event_dates')
+      .select('id, start_time, end_time')
+      .eq('event_id', event.id)
+      .order('start_time', { ascending: true });
 
     if (datesError) {
-      console.error("Event dates retrieval error:", datesError);
-      return { success: false, message: "イベント日程の取得に失敗しました" };
+      console.error('Event dates retrieval error:', datesError);
+      return { success: false, message: 'イベント日程の取得に失敗しました' };
     }
 
     return {
@@ -658,10 +657,10 @@ export async function getEventInfoFromUrl(eventUrl: string) {
       eventDates,
     };
   } catch (err) {
-    console.error("Error in getEventInfoFromUrl:", err);
+    console.error('Error in getEventInfoFromUrl:', err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+      message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
   }
 }
@@ -673,11 +672,11 @@ export async function copyAvailabilityBetweenEvents(
   sourceEventUrl: string,
   targetEventId: string,
   participantName: string,
-  matchType: "exact" | "time" | "day" | "both" = "both"
+  matchType: 'exact' | 'time' | 'day' | 'both' = 'both',
 ) {
   try {
     if (!sourceEventUrl || !targetEventId || !participantName) {
-      return { success: false, message: "必須パラメータが不足しています" };
+      return { success: false, message: '必須パラメータが不足しています' };
     }
 
     const sourceResult = await getEventInfoFromUrl(sourceEventUrl);
@@ -688,36 +687,36 @@ export async function copyAvailabilityBetweenEvents(
     const supabase = createSupabaseClient();
 
     const { data: targetEvent, error: targetEventError } = await supabase
-      .from("events")
-      .select("id, public_token")
-      .eq("id", targetEventId)
+      .from('events')
+      .select('id, public_token')
+      .eq('id', targetEventId)
       .single();
 
     if (targetEventError || !targetEvent) {
-      console.error("Target event retrieval error:", targetEventError);
-      return { success: false, message: "コピー先のイベントが見つかりません" };
+      console.error('Target event retrieval error:', targetEventError);
+      return { success: false, message: 'コピー先のイベントが見つかりません' };
     }
 
     const { data: targetDates, error: targetDatesError } = await supabase
-      .from("event_dates")
-      .select("id, start_time, end_time")
-      .eq("event_id", targetEventId);
+      .from('event_dates')
+      .select('id, start_time, end_time')
+      .eq('event_id', targetEventId);
 
     if (targetDatesError || !targetDates || targetDates.length === 0) {
-      console.error("Target dates retrieval error:", targetDatesError);
-      return { success: false, message: "コピー先の日程情報が取得できません" };
+      console.error('Target dates retrieval error:', targetDatesError);
+      return { success: false, message: 'コピー先の日程情報が取得できません' };
     }
 
     const { data: sourceParticipant, error: participantError } = await supabase
-      .from("participants")
-      .select("id")
-      .eq("event_id", sourceResult.event.id)
-      .eq("name", participantName)
+      .from('participants')
+      .select('id')
+      .eq('event_id', sourceResult.event.id)
+      .eq('name', participantName)
       .maybeSingle();
 
     if (participantError) {
-      console.error("Source participant retrieval error:", participantError);
-      return { success: false, message: "参加者情報の取得に失敗しました" };
+      console.error('Source participant retrieval error:', participantError);
+      return { success: false, message: '参加者情報の取得に失敗しました' };
     }
 
     if (!sourceParticipant) {
@@ -728,15 +727,16 @@ export async function copyAvailabilityBetweenEvents(
     }
 
     const { data: sourceAvailabilities, error: availError } = await supabase
-      .from("availabilities")
-      .select(
-        "event_date_id, availability, event_date:event_dates(start_time, end_time)"
-      )
-      .eq("participant_id", sourceParticipant.id);
+      .from('availabilities')
+      .select('event_date_id, availability, event_date:event_dates(start_time, end_time)')
+      .eq('participant_id', sourceParticipant.id);
 
     if (availError || !sourceAvailabilities || sourceAvailabilities.length === 0) {
-      console.error("Source availabilities retrieval error:", availError);
-      return { success: false, message: "コピー元の回答データが見つかりません" };
+      console.error('Source availabilities retrieval error:', availError);
+      return {
+        success: false,
+        message: 'コピー元の回答データが見つかりません',
+      };
     }
 
     interface AvailabilityMatch {
@@ -754,19 +754,13 @@ export async function copyAvailabilityBetweenEvents(
     targetDates.forEach((targetDate) => {
       const targetStart = new Date(targetDate.start_time);
       const targetEnd = new Date(targetDate.end_time);
-      const targetTimeKey = `${targetStart
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${targetStart
+      const targetTimeKey = `${targetStart.getHours().toString().padStart(2, '0')}:${targetStart
         .getMinutes()
         .toString()
-        .padStart(2, "0")}-${targetEnd
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${targetEnd
+        .padStart(2, '0')}-${targetEnd.getHours().toString().padStart(2, '0')}:${targetEnd
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
       const targetDay = targetStart.getDay();
 
       let matchFound = false;
@@ -782,36 +776,30 @@ export async function copyAvailabilityBetweenEvents(
 
         const sourceStart = new Date(eventDate.start_time);
         const sourceEnd = new Date(eventDate.end_time);
-        const sourceTimeKey = `${sourceStart
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${sourceStart
+        const sourceTimeKey = `${sourceStart.getHours().toString().padStart(2, '0')}:${sourceStart
           .getMinutes()
           .toString()
-          .padStart(2, "0")}-${sourceEnd
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${sourceEnd
+          .padStart(2, '0')}-${sourceEnd.getHours().toString().padStart(2, '0')}:${sourceEnd
           .getMinutes()
           .toString()
-          .padStart(2, "0")}`;
+          .padStart(2, '0')}`;
         const sourceDay = sourceStart.getDay();
 
         let isMatch = false;
 
         switch (matchType) {
-          case "exact":
+          case 'exact':
             isMatch =
               sourceStart.toISOString() === targetStart.toISOString() &&
               sourceEnd.toISOString() === targetEnd.toISOString();
             break;
-          case "time":
+          case 'time':
             isMatch = sourceTimeKey === targetTimeKey;
             break;
-          case "day":
+          case 'day':
             isMatch = sourceDay === targetDay;
             break;
-          case "both":
+          case 'both':
           default:
             isMatch = sourceTimeKey === targetTimeKey && sourceDay === targetDay;
             break;
@@ -844,34 +832,31 @@ export async function copyAvailabilityBetweenEvents(
     let targetParticipantId: string;
 
     const { data: existingParticipant } = await supabase
-      .from("participants")
-      .select("id")
-      .eq("event_id", targetEventId)
-      .eq("name", participantName)
+      .from('participants')
+      .select('id')
+      .eq('event_id', targetEventId)
+      .eq('name', participantName)
       .maybeSingle();
 
     if (existingParticipant) {
       targetParticipantId = existingParticipant.id;
 
-      await supabase
-        .from("availabilities")
-        .delete()
-        .eq("participant_id", targetParticipantId);
+      await supabase.from('availabilities').delete().eq('participant_id', targetParticipantId);
     } else {
       const responseToken = uuidv4();
       const { data: newParticipant, error: newPartError } = await supabase
-        .from("participants")
+        .from('participants')
         .insert({
           event_id: targetEventId,
           name: participantName,
           response_token: responseToken,
         })
-        .select("id")
+        .select('id')
         .single();
 
       if (newPartError || !newParticipant) {
-        console.error("Participant creation error:", newPartError);
-        return { success: false, message: "参加者の作成に失敗しました" };
+        console.error('Participant creation error:', newPartError);
+        return { success: false, message: '参加者の作成に失敗しました' };
       }
 
       targetParticipantId = newParticipant.id;
@@ -883,21 +868,23 @@ export async function copyAvailabilityBetweenEvents(
     }));
 
     const { error: insertError } = await supabase
-      .from("availabilities")
+      .from('availabilities')
       .insert(
-        finalAvailabilities.map(({ _sourceTimeKey, _targetTimeKey, _sourceDay, _targetDay, ...rest }) => rest)
+        finalAvailabilities.map(
+          ({ _sourceTimeKey, _targetTimeKey, _sourceDay, _targetDay, ...rest }) => rest,
+        ),
       );
 
     if (insertError) {
-      console.error("Availability insertion error:", insertError);
-      return { success: false, message: "回答のコピーに失敗しました" };
+      console.error('Availability insertion error:', insertError);
+      return { success: false, message: '回答のコピーに失敗しました' };
     }
 
     try {
       revalidatePath(`/event/${targetEvent.public_token}`);
     } catch (e) {
-      if (process.env.NODE_ENV !== "test") {
-        console.error("revalidatePath error:", e);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('revalidatePath error:', e);
       }
     }
 
@@ -909,10 +896,10 @@ export async function copyAvailabilityBetweenEvents(
       participantId: targetParticipantId,
     };
   } catch (err) {
-    console.error("Error in copyAvailabilityBetweenEvents:", err);
+    console.error('Error in copyAvailabilityBetweenEvents:', err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+      message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
   }
 }
@@ -922,12 +909,15 @@ export async function copyAvailabilityBetweenEvents(
  */
 export async function addEventDates(formData: FormData) {
   try {
-    const eventId = formData.get("eventId") as string;
-    const starts = formData.getAll("start") as string[];
-    const ends = formData.getAll("end") as string[];
+    const eventId = formData.get('eventId') as string;
+    const starts = formData.getAll('start') as string[];
+    const ends = formData.getAll('end') as string[];
 
     if (!eventId || !starts.length || !ends.length || starts.length !== ends.length) {
-      return { success: false, message: "日程追加に必要な情報が不足しています" };
+      return {
+        success: false,
+        message: '日程追加に必要な情報が不足しています',
+      };
     }
 
     const supabase = createSupabaseAdmin();
@@ -937,28 +927,25 @@ export async function addEventDates(formData: FormData) {
       end_time: ends[i],
     }));
 
-    const { error: addError } = await supabase.rpc("add_event_dates_safe", {
+    const { error: addError } = await supabase.rpc('add_event_dates_safe', {
       p_event_id: eventId,
       p_event_dates: dateEntries,
     });
 
     if (addError) {
-      console.error("Event dates addition error:", addError);
-      if (
-        addError.message &&
-        addError.message.includes("既存の日程と重複しています")
-      ) {
-        return { success: false, message: "既存の日程と重複しています" };
+      console.error('Event dates addition error:', addError);
+      if (addError.message && addError.message.includes('既存の日程と重複しています')) {
+        return { success: false, message: '既存の日程と重複しています' };
       }
-      return { success: false, message: "日程の追加に失敗しました" };
+      return { success: false, message: '日程の追加に失敗しました' };
     }
 
     return { success: true };
   } catch (err) {
-    console.error("addEventDates error:", err);
+    console.error('addEventDates error:', err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : "予期せぬエラーが発生しました",
+      message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
   }
 }
@@ -973,18 +960,18 @@ export async function checkParticipantExists(eventId: string, name: string) {
     }
     const supabase = createSupabaseClient();
     const { data, error } = await supabase
-      .from("participants")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("name", name.trim())
+      .from('participants')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('name', name.trim())
       .maybeSingle();
     if (error) {
-      console.error("参加者検索エラー:", error);
+      console.error('参加者検索エラー:', error);
       return { exists: false };
     }
     return { exists: !!data };
   } catch (err) {
-    console.error("checkParticipantExists error:", err);
+    console.error('checkParticipantExists error:', err);
     return { exists: false };
   }
 }

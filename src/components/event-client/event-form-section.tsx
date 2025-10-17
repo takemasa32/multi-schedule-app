@@ -1,11 +1,11 @@
-"use client";
-import React from "react";
-import Link from "next/link";
-import { CalendarLinks } from "@/components/calendar-links";
-import ShareEventButton from "@/components/share-event-button";
-import { addEventToHistory } from "@/lib/utils";
+'use client';
+import React from 'react';
+import Link from 'next/link';
+import { CalendarLinks } from '@/components/calendar-links';
+import ShareEventButton from '@/components/share-event-button';
+import { addEventToHistory } from '@/lib/utils';
 
-import { EventDate } from "./event-details-section";
+import { EventDate } from './event-details-section';
 
 interface EventFormSectionProps {
   event: {
@@ -36,9 +36,9 @@ export default function EventFormSection({
    * @returns 確定済み日程の配列
    */
   const getFinalizedDates = (
-    event: EventFormSectionProps["event"],
+    event: EventFormSectionProps['event'],
     eventDates: EventDate[],
-    finalizedDateIds: string[]
+    finalizedDateIds: string[],
   ): EventDate[] => {
     if (!event.is_finalized) {
       return [];
@@ -62,7 +62,7 @@ export default function EventFormSection({
 
   // 共有用URLを生成
   const getShareUrl = React.useCallback(() => {
-    if (typeof window === "undefined") return "";
+    if (typeof window === 'undefined') return '';
     return `${window.location.origin}/event/${event.public_token}`;
   }, [event.public_token]);
 
@@ -74,7 +74,7 @@ export default function EventFormSection({
       createdAt: new Date().toISOString(),
       isCreatedByMe: false,
     },
-    30
+    30,
   );
 
   return (
@@ -82,11 +82,11 @@ export default function EventFormSection({
       {/* 確定済み日程表示・カレンダー連携 */}
       {event.is_finalized && finalizedDates.length > 0 && (
         <div>
-          <div className="alert alert-success mt-4 mb-8">
+          <div className="alert alert-success mb-8 mt-4">
             <span>日程が確定しました！</span>
           </div>
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between">
               <h3 className="text-lg font-bold">確定した日程:</h3>
               <ShareEventButton
                 url={getShareUrl()}
@@ -98,62 +98,51 @@ export default function EventFormSection({
                 includeTextInClipboard={true}
               />
             </div>
-            <ul className="list-disc pl-5 space-y-1">
+            <ul className="list-disc space-y-1 pl-5">
               {finalizedDates.map((date) => (
                 <li key={date.id}>
-                  {new Date(date.start_time).toLocaleDateString("ja-JP", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    weekday: "short",
-                  })}{" "}
-                  {new Date(date.start_time).toLocaleTimeString("ja-JP", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}{" "}
-                  〜{" "}
-                  {new Date(date.end_time).toLocaleTimeString("ja-JP", {
-                    hour: "2-digit",
-                    minute: "2-digit",
+                  {new Date(date.start_time).toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short',
+                  })}{' '}
+                  {new Date(date.start_time).toLocaleTimeString('ja-JP', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  〜{' '}
+                  {new Date(date.end_time).toLocaleTimeString('ja-JP', {
+                    hour: '2-digit',
+                    minute: '2-digit',
                   })}
                 </li>
               ))}
             </ul>
           </div>
-          <CalendarLinks
-            eventTitle={event.title}
-            eventDates={finalizedDates}
-            eventId={event.id}
-          />
+          <CalendarLinks eventTitle={event.title} eventDates={finalizedDates} eventId={event.id} />
         </div>
       )}
       {/* 参加回答ボタンエリア */}
-      <div className="card bg-base-100 shadow-md border border-base-200 overflow-visible mb-8">
+      <div className="card bg-base-100 border-base-200 mb-8 overflow-visible border shadow-md">
         <div className="card-body">
           <h3 className="card-title text-lg">参加予定を入力する</h3>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="mb-4 text-sm text-gray-600">
             {event.is_finalized
-              ? "イベントは確定していますが、引き続き回答を更新できます。"
-              : "以下のボタンから参加予定を入力してください。"}
+              ? 'イベントは確定していますが、引き続き回答を更新できます。'
+              : '以下のボタンから参加予定を入力してください。'}
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/event/${event.public_token}/input`}
-              className="btn btn-primary"
-            >
+            <Link href={`/event/${event.public_token}/input`} className="btn btn-primary">
               新しく回答する
             </Link>
             {/* 既存の回答を編集ボタン（参加者が1人以上いる場合のみ） */}
             {participants.length > 0 && (
               <div className="dropdown dropdown-bottom dropdown-end relative">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="btn btn-secondary m-1"
-                >
+                <div tabIndex={0} role="button" className="btn btn-secondary m-1">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-1"
+                    className="mr-1 h-5 w-5"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -163,8 +152,8 @@ export default function EventFormSection({
                 </div>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 max-h-60 overflow-y-auto z-[100] absolute"
-                  style={{ maxHeight: "300px" }}
+                  className="dropdown-content menu bg-base-100 rounded-box absolute z-[100] max-h-60 w-52 overflow-y-auto p-2 shadow"
+                  style={{ maxHeight: '300px' }}
                 >
                   {participants.map((participant) => (
                     <li key={participant.id}>

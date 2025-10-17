@@ -1,9 +1,5 @@
-import AvailabilitySummary from "./index";
-import {
-  getEventDates,
-  getParticipants,
-  getAvailabilities,
-} from "@/lib/actions";
+import AvailabilitySummary from './index';
+import { getEventDates, getParticipants, getAvailabilities } from '@/lib/actions';
 
 interface Props {
   eventId: string;
