@@ -55,6 +55,16 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
   - イベントは存在するが参加可能人数が 0 人の場合は `0` を表示し、背景は集計値 0 として扱う。
   - 集計対象があり、最小カラー表示人数未満のセルはグレースケール適用で視覚的に区別する。
 
+### ヒートマップビュー（回答集計UI）
+
+- 旧実装で利用していた `heatmapLevel` はデータ構造上は保持するが、描画時は `availableCount / maxAvailable` の比率から不透明度を算出する。`0.2` を最低値として `Math.round(raw / 5) * 5` で 5% 刻みに丸め、`rgba(var(--p-rgb), opacity)` で単色グラデーションを実現する。
+- `totalResponses === 0` のセルは数値 `0` を表示しつつ背景色は透明（回答なし）とし、視覚的には空欄に近い扱い。スクリーンリーダー向けに `回答なし` の sr-only テキストを併記する。
+- 選択中のセルは `border-success` + 角ステータスドットを描画し、主催者が確定候補を把握しやすくする。
+- 色の凡例は 11 段（0.20〜1.00、0.08 刻み）を横に並べ、実際の `rgba` スケールと齟齬が出ないよう `var(--p-rgb)` を利用した同一ロジックで生成する。
+- `minColoredCount` を props で受け取り、UI では「フィルター設定」アコーディオン + range スライダーで閾値を変更可能。値は `0〜maxAvailable` を 1 刻みで指定し、閾値未満のセルへは `filter: grayscale(1)` を適用する。現在値はバッジ表示し、文言も `〜人未満の時間帯をグレー表示` と同期。
+- モバイル操作では `onTouchStart/Move/End` で 10px 以上の移動をドラッグとみなし、`isDraggingRef` を立てることでスクロール中はツールチップを抑止する。`useDragScrollBlocker` から渡される `isDragging` も考慮し、スクロールジェスチャとセルタップ（ツールチップ表示）が競合しないようにしている。
+- ツールチップは `onPointerEnter/Leave/Up` で制御する。マウス環境ではホバー開始/終了で表示を切り替え、タッチ環境では PointerUp（タップ）で表示。スクロール検知中 (`isDragging === true`) や空セルではイベントを握り潰す。
+
 ## テスト
 
 - `src/components/__tests__/manual-time-slot-picker.test.tsx`
