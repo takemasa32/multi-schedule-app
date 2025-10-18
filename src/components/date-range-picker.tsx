@@ -3,15 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import React from 'react';
 import PortalTooltip from './common/portal-tooltip';
-import {
-  format,
-  eachDayOfInterval,
-  isWithinInterval,
-  isEqual,
-  parseISO,
-  setHours,
-  setMinutes,
-} from 'date-fns';
+import { format, eachDayOfInterval, isEqual, parseISO, setHours, setMinutes } from 'date-fns';
 import { TimeSlot } from '@/lib/utils'; // 共通のTimeSlot型をインポート
 
 interface DateRangePickerProps {
@@ -27,6 +19,8 @@ interface DateRangePickerProps {
   initialDefaultEndTime?: string;
   /** 初期時間間隔（分、文字列。例: "60"。未指定時は"120"） */
   initialIntervalUnit?: string;
+  /** 時間間隔を固定する場合の分指定（指定時は UI をロックする） */
+  forcedIntervalMinutes?: number | null;
   /** 過去日もスロット生成対象にする（手動入力UIで使用） */
   allowPastDates?: boolean;
 }
@@ -40,14 +34,17 @@ export default function DateRangePicker({
   initialDefaultEndTime = '24:00',
   initialIntervalUnit = '120',
   allowPastDates = false,
+  forcedIntervalMinutes = null,
 }: DateRangePickerProps) {
   const [startDate, setStartDate] = useState<Date | null>(initialStartDate);
   const [endDate, setEndDate] = useState<Date | null>(initialEndDate);
-  const [excludedDates, setExcludedDates] = useState<Date[]>([]);
-  const [excludeDate, setExcludeDate] = useState<string>('');
+  const [excludedDates] = useState<Date[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [intervalUnit, setIntervalUnit] = useState<string>(initialIntervalUnit); // 時間帯の単位（分）
+  const forcedIntervalUnit = forcedIntervalMinutes != null ? String(forcedIntervalMinutes) : null;
+  const [intervalUnit, setIntervalUnit] = useState<string>(
+    forcedIntervalUnit ?? initialIntervalUnit,
+  ); // 時間帯の単位（分）
 
   // デフォルトの開始時間と終了時間を0時から24時に設定
   const [defaultStartTime, setDefaultStartTime] = useState<string>(initialDefaultStartTime);
@@ -163,6 +160,12 @@ export default function DateRangePicker({
     allowPastDates,
   ]);
 
+  useEffect(() => {
+    if (forcedIntervalUnit) {
+      setIntervalUnit(forcedIntervalUnit);
+    }
+  }, [forcedIntervalUnit]);
+
   // 日付文字列を安全にDate型に変換
   const parseDateSafely = (dateString: string): Date | null => {
     try {
@@ -248,53 +251,6 @@ export default function DateRangePicker({
     }
   };
 
-  // 除外日を追加
-  const handleAddExcludeDate = () => {
-    if (!excludeDate) {
-      setErrorMessage('除外する日付を選択してください');
-      return;
-    }
-
-    const newExcludeDate = parseDateSafely(excludeDate);
-    if (!newExcludeDate) {
-      setErrorMessage('有効な日付を選択してください');
-      return;
-    }
-
-    if (!allowPastDates) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (newExcludeDate < today) {
-        setErrorMessage('除外日は本日以降の日付のみ指定できます');
-        return;
-      }
-    }
-
-    // 既に追加済みの日付は追加しない
-    if (excludedDates.some((date) => isEqual(date, newExcludeDate))) {
-      setErrorMessage('この日付は既に除外リストに追加されています');
-      return;
-    }
-
-    // 期間内の日付のみ除外可能
-    if (
-      startDate &&
-      endDate &&
-      isWithinInterval(newExcludeDate, { start: startDate, end: endDate })
-    ) {
-      setExcludedDates([...excludedDates, newExcludeDate]);
-      setExcludeDate('');
-      setErrorMessage(null);
-    } else {
-      setErrorMessage('除外日は選択した期間内である必要があります');
-    }
-  };
-
-  // 除外日を削除
-  const handleRemoveExcludeDate = (dateToRemove: Date) => {
-    setExcludedDates(excludedDates.filter((date) => !isEqual(date, dateToRemove)));
-  };
-
   // タイムスロットに変更があったらコールバック実行
   // 親から渡されるコールバックの参照が毎レンダーで変わっても
   // 無限ループを避けるためにref経由で最新を呼び出す
@@ -322,11 +278,6 @@ export default function DateRangePicker({
       cb(uniqueDates);
     }
   }, [timeSlots]);
-
-  // 時間間隔の選択肢変更ハンドラ
-  const handleIntervalChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setIntervalUnit(e.target.value);
-  };
 
   // デフォルト開始時間変更ハンドラ
   const handleDefaultStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,68 +391,6 @@ export default function DateRangePicker({
 
       <div className="card bg-base-100 border-base-200 border shadow">
         <div className="card-body p-3 sm:p-4">
-          <h3 className="card-title mb-2 flex items-center gap-1 text-base font-bold">
-            除外日の設定
-            <button
-              type="button"
-              tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-              aria-label="除外日ヘルプ"
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = {
-                  x: rect.left,
-                  y: rect.bottom,
-                  text: '候補から外したい日付を指定できます',
-                } as const;
-                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-              }}
-            >
-              ?
-            </button>
-          </h3>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <input
-                type="date"
-                className="input input-bordered flex-grow"
-                value={excludeDate}
-                onChange={(e) => setExcludeDate(e.target.value)}
-              />
-              <button
-                type="button"
-                className="btn btn-outline btn-primary"
-                onClick={handleAddExcludeDate}
-              >
-                追加
-              </button>
-            </div>
-            {excludedDates.length > 0 && (
-              <div className="mt-2">
-                <h4 className="mb-1 text-xs font-semibold text-gray-500">除外する日：</h4>
-                <div className="flex flex-wrap gap-2">
-                  {excludedDates.map((date, index) => (
-                    <div key={index} className="badge badge-outline bg-base-200 gap-2 p-2">
-                      {format(date, 'yyyy/MM/dd')}
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-xs ml-1"
-                        onClick={() => handleRemoveExcludeDate(date)}
-                        aria-label="除外日を削除"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="card bg-base-100 border-base-200 border shadow">
-        <div className="card-body p-3 sm:p-4">
           <h3 className="card-title mb-2 text-base font-bold">時間枠の設定</h3>
           <div className="mb-4 grid gap-4 md:grid-cols-2">
             <div className="form-control w-full">
@@ -569,44 +458,6 @@ export default function DateRangePicker({
               />
               <span className="label-text-alt text-info mt-1">00:00は翌日0:00として扱われます</span>
             </div>
-          </div>
-          <div className="flex flex-col items-end gap-4 md:flex-row">
-            <label className="form-control w-full">
-              <span className="label-text flex items-center gap-1">
-                時間枠の間隔
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="時間間隔ヘルプ"
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = {
-                      x: rect.left,
-                      y: rect.bottom,
-                      text: '1枠あたりの時間の長さを選択してください',
-                    } as const;
-                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-                  }}
-                >
-                  ?
-                </button>
-              </span>
-              <select
-                className="select select-bordered bg-base-100 text-base-content mt-1 w-full"
-                value={intervalUnit}
-                onChange={handleIntervalChange}
-                aria-label="時間間隔"
-              >
-                <option value="15">15分</option>
-                <option value="30">30分</option>
-                <option value="60">1時間</option>
-                <option value="120">2時間</option>
-                <option value="180">3時間</option>
-                <option value="360">6時間</option>
-                <option value="720">12時間</option>
-              </select>
-            </label>
           </div>
         </div>
       </div>

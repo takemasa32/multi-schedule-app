@@ -15,6 +15,10 @@ interface ManualTimeSlotPickerProps {
   onTimeSlotsChange: (slots: TimeSlot[]) => void;
   /** 初期選択済みマス */
   initialSlots?: TimeSlot[];
+  /** 選択不可セルのキー（YYYY-MM-DD_HH:mm-HH:mm形式） */
+  disabledSlotKeys?: string[];
+  /** 時間間隔を固定したい場合の分指定 */
+  forcedIntervalMinutes?: number | null;
 }
 
 /**
@@ -23,6 +27,8 @@ interface ManualTimeSlotPickerProps {
 export default function ManualTimeSlotPicker({
   onTimeSlotsChange,
   initialSlots = [],
+  disabledSlotKeys = [],
+  forcedIntervalMinutes = null,
 }: ManualTimeSlotPickerProps) {
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   // ★ ソースオブトゥルースは「選択されたキー集合」
@@ -82,24 +88,32 @@ export default function ManualTimeSlotPicker({
     return map;
   }, [allSlots, selectedKeys]);
 
-  const applySelection = useCallback((keys: string[], value: boolean) => {
-    setSelectedKeys((prev) => {
-      let changed = false;
-      const next = new Set(prev);
-      for (const key of keys) {
-        if (value) {
-          if (!next.has(key)) {
-            next.add(key);
+  const disabledKeySet = useMemo(() => new Set(disabledSlotKeys), [disabledSlotKeys]);
+
+  const applySelection = useCallback(
+    (keys: string[], value: boolean) => {
+      setSelectedKeys((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const key of keys) {
+          if (disabledKeySet.has(key)) {
+            continue;
+          }
+          if (value) {
+            if (!next.has(key)) {
+              next.add(key);
+              changed = true;
+            }
+          } else if (next.has(key)) {
+            next.delete(key);
             changed = true;
           }
-        } else if (next.has(key)) {
-          next.delete(key);
-          changed = true;
         }
-      }
-      return changed ? next : prev;
-    });
-  }, []);
+        return changed ? next : prev;
+      });
+    },
+    [disabledKeySet],
+  );
 
   /**
    * 親への通知は派生配列をメモ化してから effect で一回通知
@@ -180,17 +194,37 @@ export default function ManualTimeSlotPicker({
     rangeResolver: ({ targetKey }) => (targetKey ? [targetKey] : []),
     disableBodyScroll: true,
     enableKeyboard: false,
+    shouldIgnorePointerDown: (_, key) => disabledKeySet.has(key),
+    shouldIgnorePointerEnter: (_, key) => disabledKeySet.has(key),
   });
 
-  // コンパクトなヘッダー日付表示（例: 7/1 + (火) を2行）
-  const getCompactDateParts = useCallback((dateStr: string) => {
-    const d = new Date(`${dateStr}T00:00:00`);
-    const md = d.toLocaleDateString('ja-JP', {
-      month: 'numeric',
-      day: 'numeric',
-    });
-    const wd = d.toLocaleDateString('ja-JP', { weekday: 'short' });
-    return { md, wd };
+  // カレンダーヘッダーで月・年の表示を抑制しつつ境界では明示する
+  const getHeaderDisplayParts = useCallback((dateStr: string, prevDateStr: string | null) => {
+    const current = new Date(`${dateStr}T00:00:00`);
+    const prev = prevDateStr ? new Date(`${prevDateStr}T00:00:00`) : null;
+
+    const year = current.getFullYear();
+    const month = current.getMonth() + 1;
+    const day = current.getDate();
+
+    const weekday = current.toLocaleDateString('ja-JP', { weekday: 'short' });
+
+    const label = (() => {
+      if (!prev) {
+        return `${month}/${day}`;
+      }
+      const prevYear = prev.getFullYear();
+      const prevMonth = prev.getMonth() + 1;
+      if (year !== prevYear) {
+        return `${year}/${month}/${day}`;
+      }
+      if (month !== prevMonth) {
+        return `${month}/${day}`;
+      }
+      return String(day);
+    })();
+
+    return { label, weekday };
   }, []);
 
   return (
@@ -215,6 +249,7 @@ export default function ManualTimeSlotPicker({
               initialDefaultEndTime: '18:00',
               initialIntervalUnit: '60',
               allowPastDates: true,
+              forcedIntervalMinutes,
             } as const);
         return <DateRangePicker onTimeSlotsChange={handleSlotsGenerate} {...props} />;
       })()}
@@ -264,19 +299,35 @@ export default function ManualTimeSlotPicker({
                 >
                   時間
                 </th>
-                {visibleDates.map((d) => {
-                  const parts = getCompactDateParts(d);
+                {visibleDates.map((d, index) => {
+                  const prevDate = index > 0 ? visibleDates[index - 1] : null;
+                  const parts = getHeaderDisplayParts(d, prevDate);
+                  const labelSegments = parts.label.split('/');
+                  const hasMonthLabel = labelSegments.length > 1;
+                  const leadingLabel = hasMonthLabel
+                    ? `${labelSegments.slice(0, -1).join('/')}/`
+                    : undefined;
+                  const dayLabel = labelSegments[labelSegments.length - 1];
                   return (
                     <th
                       key={d}
-                      className={`bg-base-200 sticky top-0 z-10 whitespace-normal text-center ${
+                      className={`bg-base-200 sticky top-0 z-10 whitespace-normal text-center align-middle ${
                         isMobile
                           ? 'p-0.5 text-[10px] leading-tight'
                           : 'p-0.5 text-[11px] leading-tight'
                       }`}
                     >
-                      <span className="block">{parts.md}</span>
-                      <span className="text-base-content/70 block text-[10px]">({parts.wd})</span>
+                      <div className="flex flex-col items-center justify-center gap-[2px]">
+                        {hasMonthLabel ? (
+                          <div className="flex w-full flex-col leading-tight">
+                            <span className="w-full text-left">{leadingLabel}</span>
+                            <span className="w-full text-right">{dayLabel}</span>
+                          </div>
+                        ) : (
+                          <span className="leading-tight">{dayLabel}</span>
+                        )}
+                        <span className="text-base-content/70 text-[10px]">({parts.weekday})</span>
+                      </div>
                     </th>
                   );
                 })}
@@ -309,6 +360,7 @@ export default function ManualTimeSlotPicker({
                     const key = `${date}_${time}`;
                     const exists = key in selectedMap;
                     const active = exists ? selectedMap[key] : false;
+                    const disabled = disabledKeySet.has(key);
                     return (
                       <td
                         key={key}
@@ -323,15 +375,23 @@ export default function ManualTimeSlotPicker({
                             data-selection-key={key}
                             className={`w-full ${
                               isMobile ? 'h-8' : 'h-9'
-                            } flex cursor-pointer select-none items-center justify-center rounded-sm transition-colors ${
-                              active
-                                ? 'bg-success text-success-content font-semibold'
-                                : 'bg-base-200/70 text-base-content/70'
+                            } flex select-none items-center justify-center rounded-sm transition-colors ${
+                              disabled
+                                ? 'bg-base-300 text-base-content/40 cursor-not-allowed'
+                                : active
+                                  ? 'bg-success text-success-content cursor-pointer font-semibold'
+                                  : 'bg-base-200/70 text-base-content/70 cursor-pointer'
                             }`}
-                            {...selectionController.getCellProps(key)}
-                            aria-label={active ? '選択済み' : '未選択'}
+                            {...selectionController.getCellProps(key, {
+                              disabled,
+                              role: 'switch',
+                            })}
+                            aria-label={
+                              disabled ? '既存の日程のため選択不可' : active ? '選択済み' : '未選択'
+                            }
+                            title={disabled ? '既存の日程のため選択できません' : undefined}
                           >
-                            {active ? '○' : '×'}
+                            {disabled ? '済' : active ? '○' : '×'}
                           </div>
                         ) : (
                           <div

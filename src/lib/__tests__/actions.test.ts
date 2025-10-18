@@ -122,7 +122,9 @@ describe('createEvent', () => {
     if (result.success) {
       expect(result.publicToken).toMatch(publicTokenRegex);
       expect(result.adminToken).toMatch(adminTokenRegex);
-      expect(result.redirectUrl).toContain(`/event/${result.publicToken}?admin=${result.adminToken}`);
+      expect(result.redirectUrl).toContain(
+        `/event/${result.publicToken}?admin=${result.adminToken}`,
+      );
     }
   });
 

@@ -1,6 +1,8 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { differenceInMinutes, parseISO } from 'date-fns';
 import DateRangePicker from '../date-range-picker';
+import ManualTimeSlotPicker from '../manual-time-slot-picker';
 import { addEventDates } from '@/lib/actions';
 import { TimeSlot } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -17,27 +19,160 @@ interface EventDateAddSectionProps {
 }
 
 export default function EventDateAddSection({ event, eventDates }: EventDateAddSectionProps) {
+  const inferPreferredMode = useCallback((dates: EventDate[]): 'auto' | 'manual' => {
+    if (dates.length < 2) {
+      return 'manual';
+    }
+    const byDay: Record<string, { start: string; end: string }[]> = {};
+    dates.forEach((d) => {
+      const day = d.start_time.slice(0, 10);
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push({
+        start: d.start_time.slice(11, 16),
+        end: d.end_time.slice(11, 16),
+      });
+    });
+    const normalizedPatterns = Object.values(byDay).map((slots) =>
+      slots
+        .slice()
+        .sort((a, b) => `${a.start}-${a.end}`.localeCompare(`${b.start}-${b.end}`))
+        .map(({ start, end }) => `${start}-${end}`)
+        .join('|'),
+    );
+    const uniquePatterns = new Set(normalizedPatterns);
+    return uniquePatterns.size === 1 ? 'auto' : 'manual';
+  }, []);
   // クイック自動延長用state
   const sortedDates = [...eventDates].sort((a, b) => a.start_time.localeCompare(b.start_time));
   const last = sortedDates[sortedDates.length - 1];
   const defaultLastDate = last ? last.start_time.slice(0, 10) : '';
+  const [addMode, setAddModeState] = useState<'auto' | 'manual'>(() =>
+    inferPreferredMode(eventDates),
+  );
   const [extendTo, setExtendTo] = useState<string>(defaultLastDate);
   const [quickSlots, setQuickSlots] = useState<TimeSlot[]>([]);
+  const [manualSlots, setManualSlots] = useState<TimeSlot[]>([]);
+  const [autoRangeSource, setAutoRangeSource] = useState<TimeSlot[]>([]);
   const [pendingTimeSlots, setPendingTimeSlots] = useState<TimeSlot[]>([]);
   const [addModalState, setAddModalState] = useState<
     'confirm' | 'loading' | 'success' | 'error' | null
   >(null);
   const [addModalError, setAddModalError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
-  const latestManualTimeSlotsRef = useRef<TimeSlot[]>([]);
+  const manualOverrideRef = useRef(false);
   // エラー発生時に自動スクロール
   useScrollToError(addModalError, errorRef);
+  useEffect(() => {
+    setAddModalError(null);
+  }, [addMode]);
   const [showToast, setShowToast] = useState<{
     message: string;
     key: number;
   } | null>(null);
+  const [optimisticSlotKeys, setOptimisticSlotKeys] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const existingSlotKeySet = useMemo(() => {
+    const set = new Set<string>(optimisticSlotKeys);
+    eventDates.forEach((d) => {
+      const day = d.start_time.slice(0, 10);
+      const start = d.start_time.slice(11, 16);
+      const end = d.end_time.slice(11, 16);
+      set.add(`${day}_${start}-${end}`);
+    });
+    return set;
+  }, [eventDates, optimisticSlotKeys]);
+
+  const disabledManualKeys = useMemo(() => Array.from(existingSlotKeySet), [existingSlotKeySet]);
+
+  const baseIntervalMinutes = useMemo(() => {
+    const intervals: number[] = [];
+    eventDates.forEach((d) => {
+      const start = parseISO(d.start_time);
+      const end = parseISO(d.end_time);
+      const diff = differenceInMinutes(end, start);
+      if (diff > 0) {
+        intervals.push(diff);
+      }
+    });
+    if (intervals.length === 0) {
+      return 60;
+    }
+    const unique = Array.from(new Set(intervals));
+    if (unique.length === 1) {
+      return unique[0];
+    }
+    return Math.min(...unique);
+  }, [eventDates]);
+
+  const preferredMode = useMemo(
+    () => inferPreferredMode(eventDates),
+    [eventDates, inferPreferredMode],
+  );
+
+  useEffect(() => {
+    manualOverrideRef.current = false;
+  }, [eventDates]);
+
+  useEffect(() => {
+    if (!manualOverrideRef.current && addMode !== preferredMode) {
+      setAddModeState(preferredMode);
+    }
+  }, [preferredMode, addMode]);
+
+  const setAddMode = useCallback((mode: 'auto' | 'manual') => {
+    manualOverrideRef.current = true;
+    setAddModeState(mode);
+  }, []);
+
+  const toSlotKey = (slot: TimeSlot) => {
+    const y = slot.date.getFullYear();
+    const m = String(slot.date.getMonth() + 1).padStart(2, '0');
+    const d = String(slot.date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}_${slot.startTime}-${slot.endTime}`;
+  };
+
+  const filterNewSlots = useCallback(
+    (slots: TimeSlot[]) => {
+      const acceptedMap = new Map<string, TimeSlot>();
+      let skippedExisting = 0;
+      let skippedDuplicate = 0;
+      slots.forEach((slot) => {
+        const key = toSlotKey(slot);
+        if (existingSlotKeySet.has(key)) {
+          skippedExisting += 1;
+          return;
+        }
+        if (acceptedMap.has(key)) {
+          skippedDuplicate += 1;
+          return;
+        }
+        acceptedMap.set(key, slot);
+      });
+      return {
+        accepted: Array.from(acceptedMap.values()),
+        skippedExisting,
+        skippedDuplicate,
+      };
+    },
+    [existingSlotKeySet],
+  );
+
+  const manualFilterResult = useMemo(
+    () => filterNewSlots(manualSlots),
+    [manualSlots, filterNewSlots],
+  );
+  const manualEffectiveSlots = manualFilterResult.accepted;
+  const manualDuplicateCount =
+    manualFilterResult.skippedExisting + manualFilterResult.skippedDuplicate;
+
+  const autoRangeFilterResult = useMemo(
+    () => filterNewSlots(autoRangeSource),
+    [autoRangeSource, filterNewSlots],
+  );
+  const autoRangePreview = autoRangeFilterResult.accepted;
+  const autoRangeSkippedExisting = autoRangeFilterResult.skippedExisting;
+  const autoRangeSkippedDuplicate = autoRangeFilterResult.skippedDuplicate;
 
   // 代表パターン抽出
   function extractDailyPatterns(dates: EventDate[]) {
@@ -108,6 +243,20 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
       2,
       '0',
     )}-${String(date.getDate()).padStart(2, '0')}`;
+  const weekdayChars = '日月火水木金土';
+  const groupSlotsByDate = (slots: TimeSlot[]) => {
+    const grouped: Record<string, { date: Date; count: number }> = {};
+    slots.forEach((slot) => {
+      const key = getLocalDateKey(slot.date);
+      if (!grouped[key]) {
+        grouped[key] = { date: slot.date, count: 0 };
+      }
+      grouped[key].count += 1;
+    });
+    return Object.values(grouped).sort((a, b) => a.date.getTime() - b.date.getTime());
+  };
+  const formatDateListItem = (date: Date) =>
+    `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}（${weekdayChars[date.getDay()]}）`;
 
   return (
     <div className="my-4 flex flex-col gap-4">
@@ -125,89 +274,216 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
               <div>既存日程がありません</div>
             ) : (
               <>
-                <label className="label" htmlFor="extendToDate">
-                  <span className="label-text">延長したい最終日</span>
-                </label>
-                <input
-                  id="extendToDate"
-                  type="date"
-                  className="input input-bordered w-full max-w-xs"
-                  min={defaultLastDate}
-                  value={extendTo}
-                  onChange={(e) => setExtendTo(e.target.value)}
-                  disabled={addModalState === 'loading'}
-                />
-                <div className="my-2 text-sm">
-                  追加される日程:
-                  <ul className="list-disc pl-5">
-                    {(() => {
-                      const grouped: Record<string, { date: Date; count: number }> = {};
-                      quickSlots.forEach((slot) => {
-                        const key = getLocalDateKey(slot.date);
-                        if (!grouped[key]) grouped[key] = { date: slot.date, count: 0 };
-                        grouped[key].count += 1;
-                      });
-                      const sorted = Object.values(grouped).sort(
-                        (a, b) => a.date.getTime() - b.date.getTime(),
-                      );
-                      if (sorted.length === 0) return <li>なし</li>;
-                      return sorted.map(({ date, count }) => (
-                        <li key={getLocalDateKey(date)}>
-                          {date.getFullYear()}/{date.getMonth() + 1}/{date.getDate()}（
-                          {'日月火水木金土'[date.getDay()]}）: {count}枠追加
-                        </li>
-                      ));
-                    })()}
-                  </ul>
-                </div>
-                <button
-                  className={`btn btn-primary${addModalState === 'loading' ? 'loading' : ''}`}
-                  type="button"
-                  disabled={
-                    quickSlots.length === 0 ||
-                    !!(addModalState && ['loading', 'success'].includes(addModalState))
-                  }
-                  onClick={() => {
-                    setPendingTimeSlots([...quickSlots]);
-                    setAddModalState('confirm');
-                  }}
-                >
-                  {addModalState === 'loading' ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm mr-2" />
-                      追加準備中...
-                    </>
-                  ) : (
-                    'この日まで自動延長して追加'
-                  )}
-                </button>
-                {/* 柔軟な日程追加（サブUI, 折りたたみ） */}
-                <details className="mt-4">
-                  <summary className="mb-2 cursor-pointer text-base font-bold opacity-70">
-                    詳細な日程追加（任意の範囲・時間帯）
-                  </summary>
-                  <div className="mt-4">
-                    <DateRangePicker
-                      onTimeSlotsChange={(timeSlots) => {
-                        latestManualTimeSlotsRef.current = timeSlots;
-                        if (addModalState !== 'confirm') {
-                          setPendingTimeSlots(timeSlots);
-                        }
-                      }}
-                    />
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-600">追加方式</span>
+                  <div className="btn-group">
                     <button
-                      className={`btn btn-primary mt-2 ${
-                        addModalState === 'loading' ? 'loading' : ''
-                      }`}
+                      type="button"
+                      className={`btn btn-sm ${addMode === 'auto' ? 'btn-primary btn-active' : 'btn-outline'}`}
+                      onClick={() => setAddMode('auto')}
+                      disabled={addMode === 'auto'}
+                    >
+                      期間ベース
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${addMode === 'manual' ? 'btn-primary btn-active' : 'btn-outline'}`}
+                      onClick={() => setAddMode('manual')}
+                      disabled={addMode === 'manual'}
+                    >
+                      カレンダー手動選択
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {addMode === 'auto'
+                    ? '既存日程と同じ時間割で期間を指定し、一括で候補日程を追加します。'
+                    : 'カレンダー上で候補枠を個別に塗りつぶして追加します（既存日程は選択不可）。'}
+                </p>
+                <div className="border-base-200 my-4 border-t" />
+                {addMode === 'auto' ? (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="label" htmlFor="extendToDate">
+                        <span className="label-text">延長したい最終日</span>
+                      </label>
+                      <input
+                        id="extendToDate"
+                        type="date"
+                        className="input input-bordered w-full max-w-xs"
+                        min={defaultLastDate}
+                        value={extendTo}
+                        onChange={(e) => setExtendTo(e.target.value)}
+                        disabled={addModalState === 'loading'}
+                      />
+                      <div className="my-2 text-sm">
+                        追加される日程:
+                        <ul className="list-disc pl-5">
+                          {(() => {
+                            const grouped = groupSlotsByDate(quickSlots);
+                            if (grouped.length === 0) return <li>なし</li>;
+                            return grouped.map(({ date, count }) => (
+                              <li key={getLocalDateKey(date)}>
+                                {formatDateListItem(date)}: {count}枠追加
+                              </li>
+                            ));
+                          })()}
+                        </ul>
+                      </div>
+                      <button
+                        className={`btn btn-primary${addModalState === 'loading' ? 'loading' : ''}`}
+                        type="button"
+                        disabled={quickSlots.length === 0 || addModalState === 'loading'}
+                        onClick={() => {
+                          setAddModalError(null);
+                          const filtered = filterNewSlots(quickSlots);
+                          if (filtered.accepted.length === 0) {
+                            setAddModalState('error');
+                            setAddModalError('追加する日程がありません');
+                            return;
+                          }
+                          setPendingTimeSlots(filtered.accepted);
+                          setAddModalState('confirm');
+                        }}
+                      >
+                        {addModalState === 'loading' ? (
+                          <>
+                            <span className="loading loading-spinner loading-sm mr-2" />
+                            追加準備中...
+                          </>
+                        ) : (
+                          'この日まで自動延長して追加'
+                        )}
+                      </button>
+                    </div>
+                    <details>
+                      <summary className="mb-2 cursor-pointer text-base font-bold opacity-70">
+                        詳細な日程追加（任意の範囲・時間帯）
+                      </summary>
+                      <div className="space-y-3 pt-2">
+                        <DateRangePicker
+                          onTimeSlotsChange={(timeSlots) => {
+                            setAutoRangeSource(timeSlots);
+                            if (addModalState !== 'confirm') {
+                              const filtered = filterNewSlots(timeSlots);
+                              setPendingTimeSlots(filtered.accepted);
+                            }
+                          }}
+                          forcedIntervalMinutes={baseIntervalMinutes}
+                        />
+                        {autoRangePreview.length > 0 ? (
+                          <div className="bg-base-200/60 rounded-lg p-3 text-sm">
+                            <div className="font-semibold">生成された日程概要</div>
+                            <ul className="mt-2 list-disc pl-5">
+                              {groupSlotsByDate(autoRangePreview).map(({ date, count }) => (
+                                <li key={getLocalDateKey(date)}>
+                                  {formatDateListItem(date)}: {count}枠追加
+                                </li>
+                              ))}
+                            </ul>
+                            {autoRangeSkippedExisting + autoRangeSkippedDuplicate > 0 && (
+                              <p className="text-warning mt-2 text-xs">
+                                既存日程と重複した {autoRangeSkippedExisting} 件
+                                {autoRangeSkippedDuplicate > 0
+                                  ? ` / 重複選択 ${autoRangeSkippedDuplicate} 件`
+                                  : ''}
+                                は除外されました。
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            期間と時間帯を設定すると生成結果が表示されます。
+                          </p>
+                        )}
+                        <button
+                          className={`btn btn-primary${
+                            addModalState === 'loading' ? 'loading' : ''
+                          }`}
+                          type="button"
+                          onClick={() => {
+                            if (addModalState === 'loading') {
+                              return;
+                            }
+                            setAddModalError(null);
+                            if (autoRangePreview.length === 0) {
+                              setPendingTimeSlots([]);
+                              setAddModalError(
+                                '既存日程と重複しているため追加できる枠がありません',
+                              );
+                              setAddModalState('error');
+                              return;
+                            }
+                            setPendingTimeSlots([...autoRangePreview]);
+                            setAddModalState('confirm');
+                          }}
+                        >
+                          {addModalState === 'loading' ? (
+                            <>
+                              <span className="loading loading-spinner loading-sm mr-2" />
+                              追加中...
+                            </>
+                          ) : (
+                            '日程を追加'
+                          )}
+                        </button>
+                      </div>
+                    </details>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <ManualTimeSlotPicker
+                      onTimeSlotsChange={setManualSlots}
+                      disabledSlotKeys={disabledManualKeys}
+                      forcedIntervalMinutes={baseIntervalMinutes}
+                    />
+                    {manualSlots.length === 0 ? (
+                      <p className="text-xs text-gray-500">
+                        カレンダーで追加したい枠を選択すると概要が表示されます。
+                      </p>
+                    ) : (
+                      <div className="bg-base-200/60 rounded-lg p-3 text-sm">
+                        <div className="font-semibold">選択中の日程</div>
+                        {manualEffectiveSlots.length > 0 ? (
+                          <ul className="mt-2 list-disc pl-5">
+                            {groupSlotsByDate(manualEffectiveSlots).map(({ date, count }) => (
+                              <li key={getLocalDateKey(date)}>
+                                {formatDateListItem(date)}: {count}枠追加予定
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-warning mt-2 text-xs">
+                            既存日程と重複しているため追加対象がありません。
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {manualDuplicateCount > 0 && (
+                      <p className="text-warning text-xs">
+                        既存日程または重複選択 {manualDuplicateCount} 件の枠は自動的に除外されます。
+                      </p>
+                    )}
+                    <button
+                      className={`btn btn-primary${addModalState === 'loading' ? 'loading' : ''}`}
                       type="button"
                       onClick={() => {
-                        setAddModalError(null);
-                        if (latestManualTimeSlotsRef.current.length === 0) {
-                          setAddModalState('error');
-                          setAddModalError('追加する日程が生成されていません');
+                        if (addModalState === 'loading') {
                           return;
                         }
-                        setPendingTimeSlots([...latestManualTimeSlotsRef.current]);
+                        setAddModalError(null);
+                        if (manualSlots.length === 0) {
+                          setAddModalState('error');
+                          setAddModalError('追加する日程が選択されていません');
+                          return;
+                        }
+                        if (manualEffectiveSlots.length === 0) {
+                          setPendingTimeSlots([]);
+                          setAddModalState('error');
+                          setAddModalError('既存日程と重複しているため追加できる枠がありません');
+                          return;
+                        }
+                        setPendingTimeSlots([...manualEffectiveSlots]);
                         setAddModalState('confirm');
                       }}
                     >
@@ -217,11 +493,11 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                           追加中...
                         </>
                       ) : (
-                        '日程を追加'
+                        '選択した日程を確認'
                       )}
                     </button>
                   </div>
-                </details>
+                )}
               </>
             )}
             {/* 日程追加確認モーダル */}
@@ -232,7 +508,8 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
                 style={{
-                  pointerEvents: addModalState === 'loading' ? 'none' : 'auto',
+                  pointerEvents:
+                    addModalState === 'loading' || addModalState === 'success' ? 'none' : 'auto',
                 }}
               >
                 <div
@@ -295,12 +572,18 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                       <button
                         className={`btn btn-primary${addModalState === 'loading' ? 'loading' : ''}`}
                         onClick={async () => {
+                          const slotsToAdd = [...pendingTimeSlots];
+                          if (slotsToAdd.length === 0) {
+                            setAddModalState('error');
+                            setAddModalError('重複や除外により追加できる候補がありません');
+                            return;
+                          }
                           setAddModalState('loading');
                           setAddModalError(null);
                           try {
                             const formData = new FormData();
                             formData.append('eventId', event.id);
-                            pendingTimeSlots.forEach((slot) => {
+                            slotsToAdd.forEach((slot) => {
                               const y = slot.date.getFullYear();
                               const m = String(slot.date.getMonth() + 1).padStart(2, '0');
                               const d = String(slot.date.getDate()).padStart(2, '0');
@@ -313,9 +596,15 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                               setAddModalError(res.message || '追加に失敗しました');
                               setAddModalState('error');
                             } else {
+                              const addedKeys = slotsToAdd.map(toSlotKey);
+                              setOptimisticSlotKeys((prev) => {
+                                const merged = new Set(prev);
+                                addedKeys.forEach((key) => merged.add(key));
+                                return Array.from(merged);
+                              });
                               setAddModalState('success');
                               setShowToast({
-                                message: `${pendingTimeSlots.length}件の日程を追加しました`,
+                                message: `${slotsToAdd.length}件の日程を追加しました`,
                                 key: Date.now(),
                               });
                               setTimeout(() => {
@@ -335,9 +624,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                           }
                         }}
                         type="button"
-                        disabled={
-                          !!(addModalState && ['loading', 'success'].includes(addModalState))
-                        }
+                        disabled={addModalState === 'loading'}
                       >
                         {addModalState === 'loading' ? (
                           <>

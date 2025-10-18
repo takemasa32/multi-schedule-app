@@ -259,10 +259,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         ) : (
                           <>
                             <span className="sr-only">イベント未設定</span>
-                            <span
-                              aria-hidden="true"
-                              className="text-xs text-gray-300 sm:text-sm"
-                            >
+                            <span aria-hidden="true" className="text-xs text-gray-300 sm:text-sm">
                               -
                             </span>
                           </>
