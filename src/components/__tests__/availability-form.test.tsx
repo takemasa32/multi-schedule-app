@@ -186,9 +186,7 @@ describe('AvailabilityForm', () => {
       },
     ];
 
-    const { container } = render(
-      <AvailabilityForm {...defaultProps} eventDates={extendedDates} />,
-    );
+    const { container } = render(<AvailabilityForm {...defaultProps} eventDates={extendedDates} />);
 
     const cell1 = container.querySelector<HTMLElement>('[data-selection-key="date1"]');
     const cell2 = container.querySelector<HTMLElement>('[data-selection-key="date2"]');
