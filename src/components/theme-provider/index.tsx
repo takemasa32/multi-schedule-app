@@ -1,10 +1,7 @@
-"use client";
+'use client';
 
-import {
-  ThemeProvider as NextThemesProvider,
-  type Attribute,
-} from "next-themes";
-import { type ReactNode } from "react";
+import { ThemeProvider as NextThemesProvider, type Attribute } from 'next-themes';
+import { type ReactNode } from 'react';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -15,8 +12,8 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({
   children,
-  attribute = "data-theme" as Attribute,
-  defaultTheme = "system",
+  attribute = 'data-theme' as Attribute,
+  defaultTheme = 'system',
   enableSystem = true, // OSのカラースキーム設定を優先
   ...props
 }: ThemeProviderProps) {

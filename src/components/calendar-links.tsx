@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { formatDateTimeWithDay } from "@/lib/utils";
+import { useState } from 'react';
+import { formatDateTimeWithDay } from '@/lib/utils';
 
 interface CalendarLinksProps {
   eventTitle: string;
@@ -32,11 +32,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
   };
 
   // 特定の日程のローディング状態を更新
-  const setLoading = (
-    dateId: string,
-    type: "google" | "ics",
-    value: boolean
-  ) => {
+  const setLoading = (dateId: string, type: 'google' | 'ics', value: boolean) => {
     setLoadingStates((prev) => ({
       ...prev,
       [dateId]: {
@@ -73,14 +69,14 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
 
         // 終了日が開始日の翌日である場合は24:00と表示
         if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
-          return "24:00";
+          return '24:00';
         }
       }
 
-      return `${end.getHours().toString().padStart(2, "0")}:${end
+      return `${end.getHours().toString().padStart(2, '0')}:${end
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
     };
 
     // 同じ日または24:00にまたがる場合は日付を1回だけ表示
@@ -90,14 +86,10 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
     const endDay = new Date(end);
     endDay.setHours(0, 0, 0, 0);
 
-    const oneDayDiff =
-      endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000;
+    const oneDayDiff = endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000;
     const sameDay = startDay.getTime() === endDay.getTime();
 
-    if (
-      sameDay ||
-      (oneDayDiff && end.getHours() === 0 && end.getMinutes() === 0)
-    ) {
+    if (sameDay || (oneDayDiff && end.getHours() === 0 && end.getMinutes() === 0)) {
       return `${formatDateTimeWithDay(start)} 〜 ${formatEndTime()}`;
     } else {
       // 異なる日の場合は両方の日付を表示
@@ -106,12 +98,12 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
   };
 
   return (
-    <div className="card bg-base-100 shadow-lg p-6">
-      <h3 className="text-lg font-semibold mb-4">カレンダーに追加</h3>
+    <div className="card bg-base-100 p-6 shadow-lg">
+      <h3 className="mb-4 text-lg font-semibold">カレンダーに追加</h3>
 
       <p className="mb-4">
         {eventDates.length === 1 ? (
-          "確定された日程をカレンダーに追加できます。"
+          '確定された日程をカレンダーに追加できます。'
         ) : (
           <>
             <strong>{eventDates.length}件</strong>
@@ -120,19 +112,15 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
         )}
       </p>
 
-      <div className="divide-y divide-base-300">
+      <div className="divide-base-300 divide-y">
         {eventDates.map((date) => (
           <div key={date.id} className="py-4 first:pt-0 last:pb-0">
-            <div className="font-medium mb-3">
+            <div className="mb-3 font-medium">
               {formatTimeRange(date.start_time, date.end_time)}
-              {date.label && (
-                <span className="text-sm ml-2 text-gray-500">
-                  ({date.label})
-                </span>
-              )}
+              {date.label && <span className="ml-2 text-sm text-gray-500">({date.label})</span>}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               {/* Google Calendar ボタン */}
               <a
                 href={generateGoogleCalendarLink(date.id)}
@@ -140,8 +128,8 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm"
                 onClick={() => {
-                  setLoading(date.id, "google", true);
-                  setTimeout(() => setLoading(date.id, "google", false), 3000);
+                  setLoading(date.id, 'google', true);
+                  setTimeout(() => setLoading(date.id, 'google', false), 3000);
                 }}
               >
                 {isGoogleLoading(date.id) ? (
@@ -153,7 +141,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                   <>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
+                      className="mr-2 h-4 w-4"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -169,8 +157,8 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                 href={generateIcsDownloadLink(date.id)}
                 className="btn btn-secondary btn-sm"
                 onClick={() => {
-                  setLoading(date.id, "ics", true);
-                  setTimeout(() => setLoading(date.id, "ics", false), 3000);
+                  setLoading(date.id, 'ics', true);
+                  setTimeout(() => setLoading(date.id, 'ics', false), 3000);
                 }}
               >
                 {isIcsLoading(date.id) ? (
@@ -182,7 +170,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
                   <>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
+                      className="mr-2 h-4 w-4"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -198,7 +186,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
         ))}
       </div>
 
-      <p className="text-xs text-gray-500 mt-4">
+      <p className="mt-4 text-xs text-gray-500">
         ※ カレンダーに追加すると、イベント日時を自動設定します。
       </p>
     </div>

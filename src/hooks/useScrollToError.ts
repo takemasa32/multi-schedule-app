@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 /**
  * エラー表示位置へ自動でスクロールするカスタムフック
@@ -7,11 +7,11 @@ import { useEffect } from "react";
  */
 export default function useScrollToError(
   error: string | null,
-  ref: React.RefObject<HTMLElement | null>
+  ref: React.RefObject<HTMLElement | null>,
 ) {
   useEffect(() => {
-    if (error && ref.current && typeof ref.current.scrollIntoView === "function") {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (error && ref.current && typeof ref.current.scrollIntoView === 'function') {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [error, ref]);
 }

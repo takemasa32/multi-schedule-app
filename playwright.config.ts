@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 :  undefined,
+  workers: process.env.CI ? 1 : 2,
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: 'http://localhost:3000',
@@ -32,7 +32,7 @@ export default defineConfig({
       },
     },
     {
-      name: 'webkit',               // Desktop Safari
+      name: 'webkit', // Desktop Safari
       use: { ...devices['Desktop Safari'] },
     },
     {
@@ -40,7 +40,7 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'] },
     },
     {
-      name: 'Mobile Safari',        // iPhone
+      name: 'Mobile Safari', // iPhone
       use: { ...devices['iPhone 12'] },
     },
   ],

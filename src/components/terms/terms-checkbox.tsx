@@ -1,5 +1,5 @@
-import React from "react";
-import Link from "next/link";
+import React from 'react';
+import Link from 'next/link';
 
 type TermsCheckboxProps = {
   isChecked: boolean;
@@ -11,7 +11,7 @@ type TermsCheckboxProps = {
 export default function TermsCheckbox({
   isChecked,
   onChange,
-  id = "terms-checkbox",
+  id = 'terms-checkbox',
   disabled = false,
 }: TermsCheckboxProps) {
   return (

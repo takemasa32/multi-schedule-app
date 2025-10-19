@@ -1,14 +1,14 @@
-import Link from "next/link";
-import siteConfig from "@/lib/site-config";
+import Link from 'next/link';
+import siteConfig from '@/lib/site-config';
 
 export default function Footer() {
   return (
-    <footer className="bg-base-200 border-t border-base-300 py-8 mt-auto">
+    <footer className="bg-base-200 border-base-300 mt-auto border-t py-8">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {/* サービス情報 */}
           <div>
-            <h3 className="font-bold text-lg mb-4">{siteConfig.name.full}</h3>
+            <h3 className="mb-4 text-lg font-bold">{siteConfig.name.full}</h3>
             <p className="text-base-content/70 text-sm">
               グループのイベント日程調整を簡単に。
               <br />
@@ -18,7 +18,7 @@ export default function Footer() {
 
           {/* リンク集 */}
           <div>
-            <h3 className="font-bold mb-4">リンク</h3>
+            <h3 className="mb-4 font-bold">リンク</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/" className="hover:text-primary transition">
@@ -53,7 +53,7 @@ export default function Footer() {
         </div>
 
         {/* コピーライト */}
-        <div className="border-t border-base-300 mt-6 pt-6 text-center text-sm text-base-content/60">
+        <div className="border-base-300 text-base-content/60 mt-6 border-t pt-6 text-center text-sm">
           &copy; {siteConfig.copyright.year} {siteConfig.copyright.holder}
         </div>
       </div>

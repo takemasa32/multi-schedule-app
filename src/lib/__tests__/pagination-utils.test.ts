@@ -1,6 +1,8 @@
 import { fetchAllPaginated, fetchAllPaginatedWithOrder, SupabaseQueryInterface } from '../utils';
 
-function createQueryForFetchAll(pages: Array<{ data: number[] | null; error: Error | null }>): SupabaseQueryInterface {
+function createQueryForFetchAll(
+  pages: Array<{ data: number[] | null; error: Error | null }>,
+): SupabaseQueryInterface {
   let call = 0;
   return {
     range: jest.fn().mockReturnThis(),
@@ -8,7 +10,9 @@ function createQueryForFetchAll(pages: Array<{ data: number[] | null; error: Err
   } as unknown as SupabaseQueryInterface;
 }
 
-function createQueryForFetchAllWithOrder(pages: Array<{ data: number[] | null; error: Error | null }>): SupabaseQueryInterface {
+function createQueryForFetchAllWithOrder(
+  pages: Array<{ data: number[] | null; error: Error | null }>,
+): SupabaseQueryInterface {
   let call = 0;
   return {
     order: jest.fn().mockReturnThis(),
@@ -29,9 +33,7 @@ describe('fetchAllPaginated', () => {
   });
 
   it('エラー時は例外を投げる', async () => {
-    const query = createQueryForFetchAll([
-      { data: null, error: new Error('NG') },
-    ]);
+    const query = createQueryForFetchAll([{ data: null, error: new Error('NG') }]);
     await expect(fetchAllPaginated<number>(query, 2)).rejects.toThrow('NG');
   });
 });
@@ -42,9 +44,16 @@ describe('fetchAllPaginatedWithOrder', () => {
       { data: [1], error: null },
       { data: [2], error: null },
     ]);
-    const result = await fetchAllPaginatedWithOrder<number>(query, 'created_at', { ascending: false }, 1);
+    const result = await fetchAllPaginatedWithOrder<number>(
+      query,
+      'created_at',
+      { ascending: false },
+      1,
+    );
     expect(result).toEqual([1, 2]);
-    expect(query.order).toHaveBeenCalledWith('created_at', { ascending: false });
+    expect(query.order).toHaveBeenCalledWith('created_at', {
+      ascending: false,
+    });
     expect(query.range).toHaveBeenCalledTimes(3);
   });
 });

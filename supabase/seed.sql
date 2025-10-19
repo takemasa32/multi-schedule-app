@@ -4,7 +4,7 @@
 -- events テーブルのサンプルイベント
 insert into events (id, public_token, admin_token, title, description, is_finalized, created_at)
 values
-  ('00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'テストイベント', 'テスト用のイベントです', false, now());
+  ('00000000-0000-0000-0000-000000000001', 'SeedToken0001', '22222222-2222-2222-2222-222222222222', 'テストイベント', 'テスト用のイベントです', false, now());
 
 -- event_dates テーブルのサンプル候補日程
 insert into event_dates (id, event_id, start_time, end_time, label, created_at)

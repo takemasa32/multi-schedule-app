@@ -1,10 +1,10 @@
 // 利用規約ページ用ローディングUI
 export default function Loading() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <span className="skeleton w-32 h-8 mb-4" />
-      <span className="skeleton w-64 h-4 mb-2" />
-      <span className="skeleton w-56 h-4 mb-2" />
+    <div className="flex min-h-[60vh] flex-col items-center justify-center">
+      <span className="skeleton mb-4 h-8 w-32" />
+      <span className="skeleton mb-2 h-4 w-64" />
+      <span className="skeleton mb-2 h-4 w-56" />
     </div>
   );
 }

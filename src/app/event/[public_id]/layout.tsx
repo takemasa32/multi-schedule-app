@@ -1,8 +1,8 @@
-import { getEvent } from "@/lib/actions";
-import { notFound } from "next/navigation";
-import { EventNotFoundError } from "@/lib/errors";
-import { EventHeader } from "@/components/event-header";
-import { FavoriteEventsProvider } from "@/components/favorite-events-context";
+import { getEvent } from '@/lib/actions';
+import { notFound } from 'next/navigation';
+import { EventNotFoundError } from '@/lib/errors';
+import { EventHeader } from '@/components/event-header';
+import { FavoriteEventsProvider } from '@/components/favorite-events-context';
 
 export default async function EventLayout({
   children,
@@ -30,7 +30,6 @@ export default async function EventLayout({
           title={event.title}
           description={event.description}
           isFinalized={event.is_finalized}
-          isAdmin={false}
         />
         {children}
       </div>

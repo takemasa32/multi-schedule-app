@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useMemo, useRef } from "react";
-import { finalizeEvent } from "@/lib/actions";
-import useScrollToError from "@/hooks/useScrollToError";
+import { useState, useMemo, useRef } from 'react';
+import { finalizeEvent } from '@/lib/actions';
+import useScrollToError from '@/hooks/useScrollToError';
 
 interface FinalizeEventSectionProps {
   eventId: string;
@@ -33,8 +33,7 @@ export default function FinalizeEventSection({
   finalizedDateIds = [], // 確定済み日程IDのデフォルト値を空配列にする
 }: FinalizeEventSectionProps) {
   const [isConfirming, setIsConfirming] = useState(false);
-  const [selectedDateIds, setSelectedDateIds] =
-    useState<string[]>(finalizedDateIds); // 確定済みの日程IDで初期化
+  const [selectedDateIds, setSelectedDateIds] = useState<string[]>(finalizedDateIds); // 確定済みの日程IDで初期化
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false); // 折りたたみ状態
@@ -45,16 +44,14 @@ export default function FinalizeEventSection({
 
   const handleDateToggle = (dateId: string) => {
     setSelectedDateIds((prev) =>
-      prev.includes(dateId)
-        ? prev.filter((id) => id !== dateId)
-        : [...prev, dateId]
+      prev.includes(dateId) ? prev.filter((id) => id !== dateId) : [...prev, dateId],
     );
   };
 
   const handleProceedToConfirm = () => {
     // 「全解除」も許可: 既存確定がある場合は選択ゼロでもOK
     if (selectedDateIds.length === 0 && finalizedDateIds.length === 0) {
-      setError("少なくとも1つの日程を選択してください");
+      setError('少なくとも1つの日程を選択してください');
       return;
     }
     setError(null);
@@ -67,7 +64,7 @@ export default function FinalizeEventSection({
 
     // eventId/selectedDateIdsのバリデーション
     if (!eventId || !Array.isArray(selectedDateIds)) {
-      setError("必須パラメータが不足しています");
+      setError('必須パラメータが不足しています');
       setIsProcessing(false);
       return;
     }
@@ -76,19 +73,15 @@ export default function FinalizeEventSection({
       const result = await finalizeEvent(eventId, selectedDateIds);
 
       if (!result.success) {
-        setError(result.message || "確定処理に失敗しました");
+        setError(result.message || '確定処理に失敗しました');
         setIsProcessing(false);
         return;
       }
 
       window.location.reload();
     } catch (error) {
-      console.error("確定処理でエラーが発生しました:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "確定処理中にエラーが発生しました"
-      );
+      console.error('確定処理でエラーが発生しました:', error);
+      setError(error instanceof Error ? error.message : '確定処理中にエラーが発生しました');
       setIsProcessing(false);
       setIsConfirming(false);
     }
@@ -101,28 +94,26 @@ export default function FinalizeEventSection({
   // 日付を読みやすい形式にフォーマット
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short',
     });
   };
 
   // 時間だけをフォーマット
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return date.toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   // 選択した日程に参加可能な人数を計算
   const getAvailableParticipantsCount = (dateId: string) => {
-    return availabilities.filter(
-      (a) => a.event_date_id === dateId && a.availability
-    ).length;
+    return availabilities.filter((a) => a.event_date_id === dateId && a.availability).length;
   };
 
   // 選択された複数の時間枠に参加可能な人数を計算（すべての選択時間枠を満たす人）
@@ -141,15 +132,11 @@ export default function FinalizeEventSection({
 
     // すべての選択された日程に参加可能な参加者を特定
     const availableForAll = allParticipantIds.filter((participantId) => {
-      return availableByDate.every((dateParticipants) =>
-        dateParticipants.includes(participantId)
-      );
+      return availableByDate.every((dateParticipants) => dateParticipants.includes(participantId));
     });
 
     // 参加者IDから名前に変換
-    return participants
-      .filter((p) => availableForAll.includes(p.id))
-      .map((p) => p.name);
+    return participants.filter((p) => availableForAll.includes(p.id)).map((p) => p.name);
   };
 
   // 日付部分だけを抽出する（年月日）
@@ -157,18 +144,18 @@ export default function FinalizeEventSection({
     const date = new Date(dateString);
     return [
       date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, "0"),
-      String(date.getDate()).padStart(2, "0"),
-    ].join("-");
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
   };
 
   // 時間部分だけを抽出する（時分）
   const extractTimeString = (dateString: string) => {
     const date = new Date(dateString);
-    return `${date.getHours().toString().padStart(2, "0")}:${date
+    return `${date.getHours().toString().padStart(2, '0')}:${date
       .getMinutes()
       .toString()
-      .padStart(2, "0")}`;
+      .padStart(2, '0')}`;
   };
 
   // ユニークな日付と時間帯を取得
@@ -193,10 +180,10 @@ export default function FinalizeEventSection({
       const date = new Date(dateStr);
       return {
         dateStr,
-        label: date.toLocaleDateString("ja-JP", {
-          month: "numeric",
-          day: "numeric",
-          weekday: "short",
+        label: date.toLocaleDateString('ja-JP', {
+          month: 'numeric',
+          day: 'numeric',
+          weekday: 'short',
         }),
       };
     });
@@ -217,21 +204,13 @@ export default function FinalizeEventSection({
   }, [eventDates]);
 
   // 特定の日付と時間帯に対応するイベント日程IDを取得
-  const getDateIdForSlot = (
-    dateStr: string,
-    startTime: string,
-    endTime: string
-  ) => {
+  const getDateIdForSlot = (dateStr: string, startTime: string, endTime: string) => {
     const matchedDate = eventDates.find((date) => {
       const dateOnly = extractDateString(date.start_time);
       const startTimeOnly = extractTimeString(date.start_time);
       const endTimeOnly = extractTimeString(date.end_time);
 
-      return (
-        dateOnly === dateStr &&
-        startTimeOnly === startTime &&
-        endTimeOnly === endTime
-      );
+      return dateOnly === dateStr && startTimeOnly === startTime && endTimeOnly === endTime;
     });
 
     return matchedDate?.id || null;
@@ -251,7 +230,7 @@ export default function FinalizeEventSection({
           <div className="alert alert-success mb-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
+              className="h-6 w-6 shrink-0 stroke-current"
               fill="none"
               viewBox="0 0 24 24"
             >
@@ -264,19 +243,19 @@ export default function FinalizeEventSection({
             </svg>
             <div>
               <h4 className="font-bold">確定済みの日程があります</h4>
-              <ul className="list-disc list-inside mt-1 text-sm">
+              <ul className="mt-1 list-inside list-disc text-sm">
                 {finalizedDateIds.map((dateId) => {
                   const date = eventDates.find((d) => d.id === dateId);
                   if (!date) return null;
                   return (
                     <li key={dateId}>
-                      {formatDate(date.start_time)}{" "}
-                      {formatTime(date.start_time)}〜{formatTime(date.end_time)}
+                      {formatDate(date.start_time)} {formatTime(date.start_time)}〜
+                      {formatTime(date.end_time)}
                     </li>
                   );
                 })}
               </ul>
-              <p className="text-xs mt-1">
+              <p className="mt-1 text-xs">
                 ※
                 これらの日程は既に選択状態になっています。修正する場合はマトリクスから選択/解除してください。
               </p>
@@ -284,17 +263,17 @@ export default function FinalizeEventSection({
           </div>
         )}
 
-        <div className="overflow-x-auto mb-6">
+        <div className="mb-6 overflow-x-auto">
           <table className="table w-full text-sm md:text-base">
             <thead>
               <tr>
-                <th className="bg-base-300 sticky left-0 z-10 whitespace-normal min-w-20 max-w-24">
+                <th className="bg-base-300 sticky left-0 z-10 min-w-20 max-w-24 whitespace-normal">
                   時間帯
                 </th>
                 {uniqueDates.map((date) => (
                   <th
                     key={date.dateStr}
-                    className="text-center whitespace-normal min-w-16 px-1 py-2"
+                    className="min-w-16 whitespace-normal px-1 py-2 text-center"
                   >
                     {date.label}
                   </th>
@@ -304,24 +283,16 @@ export default function FinalizeEventSection({
             <tbody>
               {uniqueTimeslots.map((slot) => (
                 <tr key={`${slot.start}-${slot.end}`}>
-                  <th className="bg-base-300 sticky left-0 z-10 text-xs md:text-sm whitespace-nowrap">
+                  <th className="bg-base-300 sticky left-0 z-10 whitespace-nowrap text-xs md:text-sm">
                     {slot.start}
                   </th>
                   {uniqueDates.map((date) => {
-                    const dateId = getDateIdForSlot(
-                      date.dateStr,
-                      slot.start,
-                      slot.end
-                    );
+                    const dateId = getDateIdForSlot(date.dateStr, slot.start, slot.end);
                     const isSelected = isDateSelected(dateId);
-                    const availableCount = dateId
-                      ? getAvailableParticipantsCount(dateId)
-                      : 0;
+                    const availableCount = dateId ? getAvailableParticipantsCount(dateId) : 0;
                     const availabilityPercent =
                       participants.length > 0
-                        ? Math.round(
-                            (availableCount / participants.length) * 100
-                          )
+                        ? Math.round((availableCount / participants.length) * 100)
                         : 0;
 
                     if (!dateId) {
@@ -338,15 +309,15 @@ export default function FinalizeEventSection({
                     // セルの色・バッジは「現在の選択状態（selectedDateIds）」で判定
                     let bgStyle = {};
                     if (availabilityPercent >= 75) {
-                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.8)" };
+                      bgStyle = { backgroundColor: 'rgba(52, 211, 153, 0.8)' };
                     } else if (availabilityPercent >= 50) {
-                      bgStyle = { backgroundColor: "rgba(52, 211, 153, 0.6)" };
+                      bgStyle = { backgroundColor: 'rgba(52, 211, 153, 0.6)' };
                     } else if (availabilityPercent >= 25) {
-                      bgStyle = { backgroundColor: "rgba(251, 191, 36, 0.6)" };
+                      bgStyle = { backgroundColor: 'rgba(251, 191, 36, 0.6)' };
                     } else if (availabilityPercent > 0) {
-                      bgStyle = { backgroundColor: "rgba(239, 68, 68, 0.4)" };
+                      bgStyle = { backgroundColor: 'rgba(239, 68, 68, 0.4)' };
                     } else {
-                      bgStyle = { backgroundColor: "rgba(243, 244, 246, 0.8)" };
+                      bgStyle = { backgroundColor: 'rgba(243, 244, 246, 0.8)' };
                     }
 
                     // 選択状態で色・枠・バッジを切り替え
@@ -354,9 +325,9 @@ export default function FinalizeEventSection({
                       ...bgStyle,
                       ...(isSelected
                         ? {
-                            backgroundColor: "rgba(6, 182, 212, 0.5)",
-                            borderWidth: "2px",
-                            borderColor: "rgb(6, 182, 212)",
+                            backgroundColor: 'rgba(6, 182, 212, 0.5)',
+                            borderWidth: '2px',
+                            borderColor: 'rgb(6, 182, 212)',
                           }
                         : {}),
                     };
@@ -364,29 +335,25 @@ export default function FinalizeEventSection({
                     return (
                       <td
                         key={`${date.dateStr}-${slot.start}`}
-                        className={`text-center transition-all p-1 md:p-2 z-10 ${
-                          isSelected ? "border-2 border-accent" : ""
+                        className={`z-10 p-1 text-center transition-all md:p-2 ${
+                          isSelected ? 'border-accent border-2' : ''
                         }`}
                         style={cellStyle}
                       >
                         <button
                           type="button"
-                          className="w-full h-full flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-accent rounded"
+                          className="focus:ring-accent flex h-full w-full flex-col items-center justify-center rounded focus:outline-none focus:ring-2"
                           aria-pressed={isSelected}
                           tabIndex={0}
                           onClick={() => dateId && handleDateToggle(dateId)}
                         >
-                          <span className="font-semibold text-xs md:text-sm">
+                          <span className="text-xs font-semibold md:text-sm">
                             {availableCount}人
                           </span>
-                          <span className="text-xs hidden md:block">
-                            {availabilityPercent}%
-                          </span>
+                          <span className="hidden text-xs md:block">{availabilityPercent}%</span>
                           {isSelected && (
                             <span className="badge badge-accent badge-xs md:badge-sm mt-1">
-                              {finalizedDateIds.includes(dateId)
-                                ? "確定"
-                                : "選択"}
+                              {finalizedDateIds.includes(dateId) ? '確定' : '選択'}
                             </span>
                           )}
                         </button>
@@ -399,20 +366,17 @@ export default function FinalizeEventSection({
           </table>
         </div>
 
-        <div className="flex flex-col items-center mt-4">
+        <div className="mt-4 flex flex-col items-center">
           <div className="mb-4">
-            <span className="font-semibold">
-              選択中: {selectedDateIds.length}件の日程
-            </span>
+            <span className="font-semibold">選択中: {selectedDateIds.length}件の日程</span>
             {selectedDateIds.length > 0 && (
               <div className="mt-2">
                 <p className="text-sm font-medium">
-                  全ての選択日程で参加可能:{" "}
-                  {getParticipantsForAllSelectedDates().length}人
+                  全ての選択日程で参加可能: {getParticipantsForAllSelectedDates().length}人
                 </p>
                 {getParticipantsForAllSelectedDates().length > 0 && (
                   <p className="text-xs text-gray-600">
-                    {getParticipantsForAllSelectedDates().join(", ")}
+                    {getParticipantsForAllSelectedDates().join(', ')}
                   </p>
                 )}
               </div>
@@ -422,38 +386,34 @@ export default function FinalizeEventSection({
           <button
             onClick={handleProceedToConfirm}
             className="btn btn-accent"
-            disabled={
-              selectedDateIds.length === 0 && finalizedDateIds.length === 0
-            }
+            disabled={selectedDateIds.length === 0 && finalizedDateIds.length === 0}
           >
             {selectedDateIds.length === 0 && finalizedDateIds.length > 0
-              ? "確定を解除する"
-              : "選択した日程で確定する (" +
-                selectedDateIds.length +
-                "件選択中)"}
+              ? '確定を解除する'
+              : '選択した日程で確定する (' + selectedDateIds.length + '件選択中)'}
           </button>
         </div>
 
         <div className="mt-8">
-          <h4 className="text-sm font-semibold mb-2">凡例：</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h4 className="mb-2 text-sm font-semibold">凡例：</h4>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
               <h5 className="text-xs font-medium">参加率に応じた色：</h5>
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-error bg-opacity-30 mr-1"></div>
+                  <div className="bg-error mr-1 h-4 w-4 bg-opacity-30"></div>
                   <span>0〜25%</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-warning bg-opacity-50 mr-1"></div>
+                  <div className="bg-warning mr-1 h-4 w-4 bg-opacity-50"></div>
                   <span>25〜50%</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-success bg-opacity-50 mr-1"></div>
+                  <div className="bg-success mr-1 h-4 w-4 bg-opacity-50"></div>
                   <span>50〜75%</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-success bg-opacity-80 mr-1"></div>
+                  <div className="bg-success mr-1 h-4 w-4 bg-opacity-80"></div>
                   <span>75〜100%</span>
                 </div>
               </div>
@@ -463,11 +423,11 @@ export default function FinalizeEventSection({
               <h5 className="text-xs font-medium">日程の状態：</h5>
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-success bg-opacity-30 border-2 border-success mr-1"></div>
+                  <div className="bg-success border-success mr-1 h-4 w-4 border-2 bg-opacity-30"></div>
                   <span>確定済み</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-accent bg-opacity-50 border-2 border-accent mr-1"></div>
+                  <div className="bg-accent border-accent mr-1 h-4 w-4 border-2 bg-opacity-50"></div>
                   <span>選択中（未確定）</span>
                 </div>
               </div>
@@ -483,30 +443,20 @@ export default function FinalizeEventSection({
     // 全解除モード
     if (finalizedDateIds.length > 0 && selectedDateIds.length === 0) {
       return (
-        <div className="bg-info bg-opacity-15 p-4 rounded-lg border border-info shadow-sm">
-          <h4 className="font-bold mb-2 text-info-content">
-            全ての確定を解除しますか？
-          </h4>
-          <div className="flex gap-3 mt-4">
-            <button
-              onClick={confirmFinalize}
-              disabled={isProcessing}
-              className="btn btn-primary"
-            >
+        <div className="bg-info border-info rounded-lg border bg-opacity-15 p-4 shadow-sm">
+          <h4 className="text-info-content mb-2 font-bold">全ての確定を解除しますか？</h4>
+          <div className="mt-4 flex gap-3">
+            <button onClick={confirmFinalize} disabled={isProcessing} className="btn btn-primary">
               {isProcessing ? (
                 <>
                   <span className="loading loading-spinner"></span>
                   処理中...
                 </>
               ) : (
-                "確定を解除する"
+                '確定を解除する'
               )}
             </button>
-            <button
-              onClick={cancelConfirm}
-              disabled={isProcessing}
-              className="btn btn-ghost"
-            >
+            <button onClick={cancelConfirm} disabled={isProcessing} className="btn btn-ghost">
               キャンセル
             </button>
           </div>
@@ -515,62 +465,49 @@ export default function FinalizeEventSection({
     }
     // 新規確定 or 変更モード
     return (
-      <div className="bg-info bg-opacity-15 p-4 rounded-lg border border-info shadow-sm">
-        <h4 className="font-bold mb-2 text-info-content">
-          以下の日程で確定しますか？
-        </h4>
+      <div className="bg-info border-info rounded-lg border bg-opacity-15 p-4 shadow-sm">
+        <h4 className="text-info-content mb-2 font-bold">以下の日程で確定しますか？</h4>
         {finalizedDateIds.length > 0 && (
           <div className="mb-4">
-            <h5 className="font-semibold text-sm mb-1">既に確定済みの日程:</h5>
-            <ul className="list-disc pl-5 mb-2 text-sm">
+            <h5 className="mb-1 text-sm font-semibold">既に確定済みの日程:</h5>
+            <ul className="mb-2 list-disc pl-5 text-sm">
               {finalizedDateIds.map((dateId) => {
                 const date = eventDates.find((d) => d.id === dateId);
                 const willBeRemoved = !selectedDateIds.includes(dateId);
                 return date ? (
-                  <li
-                    key={dateId}
-                    className={willBeRemoved ? "text-error line-through" : ""}
-                  >
-                    {formatDate(date.start_time)} {formatTime(date.start_time)}
-                    〜{formatTime(date.end_time)}
+                  <li key={dateId} className={willBeRemoved ? 'text-error line-through' : ''}>
+                    {formatDate(date.start_time)} {formatTime(date.start_time)}〜
+                    {formatTime(date.end_time)}
                     {willBeRemoved && (
-                      <span className="ml-2 text-xs badge badge-error badge-sm">
-                        解除されます
-                      </span>
+                      <span className="badge badge-error badge-sm ml-2 text-xs">解除されます</span>
                     )}
                   </li>
                 ) : null;
               })}
             </ul>
             {finalizedDateIds.some((id) => !selectedDateIds.includes(id)) && (
-              <p className="text-xs text-error">
-                ※ 取り消し線の日程は選択が解除されます。
-              </p>
+              <p className="text-error text-xs">※ 取り消し線の日程は選択が解除されます。</p>
             )}
           </div>
         )}
         {selectedDateIds.length > 0 && (
           <>
-            <h5 className="font-semibold mb-1">
-              {finalizedDateIds.length > 0
-                ? "確定する日程:"
-                : "以下の日程を確定します:"}
+            <h5 className="mb-1 font-semibold">
+              {finalizedDateIds.length > 0 ? '確定する日程:' : '以下の日程を確定します:'}
             </h5>
-            <ul className="list-disc pl-5 mb-4">
+            <ul className="mb-4 list-disc pl-5">
               {selectedDateIds.map((dateId) => {
                 const date = eventDates.find((d) => d.id === dateId);
                 const isNewlySelected = !finalizedDateIds.includes(dateId);
                 return date ? (
                   <li key={dateId}>
-                    {formatDate(date.start_time)} {formatTime(date.start_time)}
-                    〜{formatTime(date.end_time)}
+                    {formatDate(date.start_time)} {formatTime(date.start_time)}〜
+                    {formatTime(date.end_time)}
                     <span className="ml-2 text-sm">
                       (参加可能: {getAvailableParticipantsCount(dateId)}人)
                     </span>
                     {isNewlySelected && finalizedDateIds.length > 0 && (
-                      <span className="badge badge-accent badge-sm ml-2">
-                        新規
-                      </span>
+                      <span className="badge badge-accent badge-sm ml-2">新規</span>
                     )}
                   </li>
                 ) : null;
@@ -587,13 +524,13 @@ export default function FinalizeEventSection({
               </strong>
             </p>
             {getParticipantsForAllSelectedDates().length > 0 && (
-              <p className="text-sm text-neutral-content">
-                {getParticipantsForAllSelectedDates().join(", ")}
+              <p className="text-neutral-content text-sm">
+                {getParticipantsForAllSelectedDates().join(', ')}
               </p>
             )}
           </div>
         )}
-        <p className="text-error mb-4 text-sm font-medium flex items-center gap-2">
+        <p className="text-error mb-4 flex items-center gap-2 text-sm font-medium">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"
@@ -610,36 +547,24 @@ export default function FinalizeEventSection({
           </svg>
           確定後も必要に応じて変更可能です（この画面から再選択して確定し直せます）。
         </p>
-        <div className="flex gap-3 mt-4">
-          <button
-            onClick={confirmFinalize}
-            disabled={isProcessing}
-            className="btn btn-primary"
-          >
+        <div className="mt-4 flex gap-3">
+          <button onClick={confirmFinalize} disabled={isProcessing} className="btn btn-primary">
             {isProcessing ? (
               <>
                 <span className="loading loading-spinner"></span>
                 処理中...
               </>
             ) : (
-              "確定する"
+              '確定する'
             )}
           </button>
-          <button
-            onClick={cancelConfirm}
-            disabled={isProcessing}
-            className="btn btn-ghost"
-          >
+          <button onClick={cancelConfirm} disabled={isProcessing} className="btn btn-ghost">
             キャンセル
           </button>
           {/* 現状維持ボタン: 変更がない場合のみ */}
           {selectedDateIds.length === finalizedDateIds.length &&
             selectedDateIds.every((id) => finalizedDateIds.includes(id)) && (
-              <button
-                onClick={cancelConfirm}
-                disabled={isProcessing}
-                className="btn btn-outline"
-              >
+              <button onClick={cancelConfirm} disabled={isProcessing} className="btn btn-outline">
                 現在の確定内容を維持する
               </button>
             )}
@@ -657,7 +582,7 @@ export default function FinalizeEventSection({
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
         >
-          {isOpen ? "閉じる" : "日程の確定を開く"}
+          {isOpen ? '閉じる' : '日程の確定を開く'}
         </button>
       </div>
       {isOpen && (
@@ -666,7 +591,7 @@ export default function FinalizeEventSection({
             <div className="alert alert-error mb-4" ref={errorRef}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
+                className="h-6 w-6 shrink-0 stroke-current"
                 fill="none"
                 viewBox="0 0 24 24"
               >

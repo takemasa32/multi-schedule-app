@@ -1,15 +1,9 @@
-"use client";
+'use client';
 /**
  * @fileoverview お気に入りイベントのグローバル状態管理用Context/Provider/フック
  * @module FavoriteEventsContext
  */
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 /**
  * お気に入りイベント情報の型
@@ -39,18 +33,16 @@ interface FavoriteEventsContextType {
   refreshFavorites: () => void;
 }
 
-const FAVORITE_KEY = "favoriteEvents";
+const FAVORITE_KEY = 'favoriteEvents';
 
-const FavoriteEventsContext = createContext<
-  FavoriteEventsContextType | undefined
->(undefined);
+const FavoriteEventsContext = createContext<FavoriteEventsContextType | undefined>(undefined);
 
 /**
  * ローカルストレージからお気に入りイベント一覧を取得
  * @returns {FavoriteEvent[]}
  */
 function getFavoriteEventsFromStorage(): FavoriteEvent[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(FAVORITE_KEY);
     if (!raw) return [];
@@ -74,11 +66,7 @@ function setFavoriteEventsToStorage(events: FavoriteEvent[]) {
  * @param {ReactNode} props.children
  * @returns {JSX.Element}
  */
-export const FavoriteEventsProvider = ({
-  children,
-}: {
-  children: ReactNode;
-}) => {
+export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<FavoriteEvent[]>([]);
 
   useEffect(() => {
@@ -132,9 +120,6 @@ export const FavoriteEventsProvider = ({
  */
 export function useFavoriteEvents() {
   const ctx = useContext(FavoriteEventsContext);
-  if (!ctx)
-    throw new Error(
-      "useFavoriteEvents must be used within FavoriteEventsProvider"
-    );
+  if (!ctx) throw new Error('useFavoriteEvents must be used within FavoriteEventsProvider');
   return ctx;
 }

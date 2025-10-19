@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { submitAvailability } from "@/lib/actions";
-import Link from "next/link";
-import useScrollToError from "@/hooks/useScrollToError";
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { submitAvailability } from '@/lib/actions';
+import Link from 'next/link';
+import useScrollToError from '@/hooks/useScrollToError';
 
 interface EventDate {
   id: string;
@@ -23,7 +23,7 @@ interface InputFormProps {
     availabilities: Record<string, boolean>;
     comment?: string | null;
   } | null;
-  mode: "new" | "edit";
+  mode: 'new' | 'edit';
 }
 
 export default function InputForm({
@@ -33,11 +33,9 @@ export default function InputForm({
   mode,
 }: InputFormProps) {
   const router = useRouter();
-  const [participantName, setParticipantName] = useState("");
-  const [comment, setComment] = useState("");
-  const [availabilities, setAvailabilities] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [participantName, setParticipantName] = useState('');
+  const [comment, setComment] = useState('');
+  const [availabilities, setAvailabilities] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
@@ -55,10 +53,13 @@ export default function InputForm({
       }
     } else {
       // 新規の場合、全てのイベント日程をfalseで初期化
-      const initialAvailabilities = eventDates.reduce((acc, date) => {
-        acc[date.id] = false;
-        return acc;
-      }, {} as Record<string, boolean>);
+      const initialAvailabilities = eventDates.reduce(
+        (acc, date) => {
+          acc[date.id] = false;
+          return acc;
+        },
+        {} as Record<string, boolean>,
+      );
       setAvailabilities(initialAvailabilities);
     }
   }, [existingParticipant, eventDates]);
@@ -75,25 +76,25 @@ export default function InputForm({
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    if (participantName.trim() === "") {
-      setErrorMessage("名前を入力してください");
+    if (participantName.trim() === '') {
+      setErrorMessage('名前を入力してください');
       setIsSubmitting(false);
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("participant_name", participantName);
-      formData.append("event_token", publicToken);
-      formData.append("comment", comment);
+      formData.append('participant_name', participantName);
+      formData.append('event_token', publicToken);
+      formData.append('comment', comment);
 
-      if (mode === "edit" && existingParticipant) {
-        formData.append("participant_id", existingParticipant.id);
+      if (mode === 'edit' && existingParticipant) {
+        formData.append('participant_id', existingParticipant.id);
       }
 
       // 利用可能状況を追加
       Object.entries(availabilities).forEach(([dateId, isAvailable]) => {
-        formData.append(`availability_${dateId}`, isAvailable ? "on" : "off");
+        formData.append(`availability_${dateId}`, isAvailable ? 'on' : 'off');
       });
 
       await submitAvailability(formData);
@@ -101,11 +102,9 @@ export default function InputForm({
       // 送信成功したら元のイベントページに戻る
       router.push(`/event/${publicToken}`);
     } catch (error) {
-      console.error("回答送信エラー:", error);
+      console.error('回答送信エラー:', error);
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "回答の送信中にエラーが発生しました。"
+        error instanceof Error ? error.message : '回答の送信中にエラーが発生しました。',
       );
       setIsSubmitting(false);
     }
@@ -114,20 +113,20 @@ export default function InputForm({
   // 日付フォーマット関数
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short',
     });
   };
 
   // 時間フォーマット関数
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return date.toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -137,7 +136,7 @@ export default function InputForm({
         <div className="alert alert-error" ref={errorRef}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
+            className="h-6 w-6 shrink-0 stroke-current"
             fill="none"
             viewBox="0 0 24 24"
           >
@@ -172,14 +171,12 @@ export default function InputForm({
       <div className="space-y-4">
         {eventDates.map((date) => (
           <div key={date.id} className="form-control">
-            <label className="cursor-pointer label justify-start gap-4">
+            <label className="label cursor-pointer justify-start gap-4">
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary"
                 checked={availabilities[date.id] || false}
-                onChange={(e) =>
-                  handleAvailabilityChange(date.id, e.target.checked)
-                }
+                onChange={(e) => handleAvailabilityChange(date.id, e.target.checked)}
                 disabled={isSubmitting}
               />
               <span className="label-text">
@@ -204,19 +201,15 @@ export default function InputForm({
         />
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={isSubmitting}
-        >
+      <div className="mt-6 flex flex-col justify-center gap-4 sm:flex-row">
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <span className="loading loading-spinner"></span>
               送信中...
             </>
           ) : (
-            "回答を送信"
+            '回答を送信'
           )}
         </button>
         <Link href={`/event/${publicToken}`} className="btn btn-neutral">

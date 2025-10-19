@@ -1,15 +1,11 @@
 // src/app/event/[public_id]/page.tsx
-import {
-  getEvent,
-  getEventDates,
-  getParticipantById,
-} from "@/lib/actions";
-import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import AvailabilityForm from "@/components/availability-form";
-import siteConfig from "@/lib/site-config";
-import { Metadata } from "next";
-import { EventNotFoundError } from "@/lib/errors";
+import { getEvent, getEventDates, getParticipantById } from '@/lib/actions';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import AvailabilityForm from '@/components/availability-form';
+import siteConfig from '@/lib/site-config';
+import { Metadata } from 'next';
+import { EventNotFoundError } from '@/lib/errors';
 
 export async function generateMetadata({
   params,
@@ -24,15 +20,13 @@ export async function generateMetadata({
     if (err instanceof EventNotFoundError) {
       return {
         title: `イベントが見つかりません | ${siteConfig.name.full}`,
-        description:
-          `お探しのイベントは存在しないか、削除された可能性があります。`,
+        description: `お探しのイベントは存在しないか、削除された可能性があります。`,
       };
     }
     console.error('メタデータ取得エラー:', err);
     return {
       title: `イベント取得エラー | ${siteConfig.name.full}`,
-      description:
-        `イベント情報の取得中に問題が発生しました。時間をおいて再度お試しください。`,
+      description: `イベント情報の取得中に問題が発生しました。時間をおいて再度お試しください。`,
     };
   }
   const eventTitle = event.title;
@@ -58,36 +52,28 @@ async function AvailabilityFormSectionLoader({
   eventId: string;
   publicToken: string;
   eventDates: Promise<{ id: string; start_time: string; end_time: string }[]>;
-  participantPromise: Promise<
-    | {
-        participant: { id: string; name: string };
-        availabilityMap: Record<string, boolean>;
-      }
-    | null
-  >;
+  participantPromise: Promise<{
+    participant: { id: string; name: string };
+    availabilityMap: Record<string, boolean>;
+  } | null>;
 }) {
-  const [dates, participantResult] = await Promise.all([
-    eventDates,
-    participantPromise,
-  ]);
+  const [dates, participantResult] = await Promise.all([eventDates, participantPromise]);
 
   const existingParticipant = participantResult?.participant || null;
   const existingAvailabilities = participantResult?.availabilityMap || null;
   const isEditMode = !!existingParticipant;
-  const pageTitle = isEditMode ? "回答を編集する" : "新しく回答する";
+  const pageTitle = isEditMode ? '回答を編集する' : '新しく回答する';
 
   return (
     <>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">{pageTitle}</h2>
+        <h2 className="mb-4 text-2xl font-bold">{pageTitle}</h2>
         {isEditMode ? (
-          <p className="text-gray-600 mb-4">
+          <p className="mb-4 text-gray-600">
             「{existingParticipant?.name}」さんの回答を編集しています。
           </p>
         ) : (
-          <p className="text-gray-600 mb-4">
-            あなたの名前と参加可能な日程を入力してください。
-          </p>
+          <p className="mb-4 text-gray-600">あなたの名前と参加可能な日程を入力してください。</p>
         )}
       </div>
 
@@ -98,7 +84,7 @@ async function AvailabilityFormSectionLoader({
           eventDates={dates}
           initialParticipant={existingParticipant}
           initialAvailabilities={existingAvailabilities || undefined}
-          mode={isEditMode ? "edit" : "new"}
+          mode={isEditMode ? 'edit' : 'new'}
         />
       </div>
     </>
@@ -110,10 +96,7 @@ type EventPageProps = {
   searchParams: Promise<{ participant_id?: string }>;
 };
 
-export default async function EventPage({
-  params,
-  searchParams,
-}: EventPageProps) {
+export default async function EventPage({ params, searchParams }: EventPageProps) {
   const { public_id } = await params;
   const { participant_id: participantId } = await searchParams;
 
@@ -134,49 +117,48 @@ export default async function EventPage({
     : Promise.resolve(null);
 
   return (
-    <div className="container mx-auto md:px-4 py-8">
-
-        <Suspense
-          fallback={
-            <div className="my-8">
-              <div className="flex flex-col gap-4">
-                <div className="skeleton h-8 w-1/2" />
-                <div className="skeleton h-6 w-full" />
-                <div className="skeleton h-6 w-5/6" />
-              </div>
+    <div className="container mx-auto py-8 md:px-4">
+      <Suspense
+        fallback={
+          <div className="my-8">
+            <div className="flex flex-col gap-4">
+              <div className="skeleton h-8 w-1/2" />
+              <div className="skeleton h-6 w-full" />
+              <div className="skeleton h-6 w-5/6" />
             </div>
-          }
-        >
-          <AvailabilityFormSectionLoader
-            eventId={event.id}
-            publicToken={public_id}
-            eventDates={eventDatesPromise}
-            participantPromise={participantPromise}
-          />
-        </Suspense>
+          </div>
+        }
+      >
+        <AvailabilityFormSectionLoader
+          eventId={event.id}
+          publicToken={public_id}
+          eventDates={eventDatesPromise}
+          participantPromise={participantPromise}
+        />
+      </Suspense>
 
-        <div className="mt-6">
-          <a
-            href={`/event/${public_id}`}
-            className="text-blue-600 hover:text-blue-800 flex items-center"
+      <div className="mt-6">
+        <a
+          href={`/event/${public_id}`}
+          className="flex items-center text-blue-600 hover:text-blue-800"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 mr-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            回答状況の確認・集計に戻る
-          </a>
-        </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          回答状況の確認・集計に戻る
+        </a>
       </div>
+    </div>
   );
 }

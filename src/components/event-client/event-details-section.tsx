@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import FinalizeEventSection from "@/components/finalize-event-section";
-import EventHistory from "@/components/event-history";
-import EventDateAddSection from "@/components/event-client/event-date-add-section";
-import AvailabilitySummary from "@/components/availability-summary";
-import { useState } from "react";
-import ShareAvailableDatesButton from "@/components/share-available-dates-button";
+import FinalizeEventSection from '@/components/finalize-event-section';
+import EventHistory from '@/components/event-history';
+import EventDateAddSection from '@/components/event-client/event-date-add-section';
+import AvailabilitySummary from '@/components/availability-summary';
+import { useState } from 'react';
+import ShareAvailableDatesButton from '@/components/share-available-dates-button';
 
 // 型定義
 export type EventDate = {
@@ -42,22 +42,18 @@ export default function EventDetailsSection({
   finalizedDateIds,
 }: EventDetailsSectionProps) {
   // 参加者名バッジのトグルUI
-  const [excludedParticipantIds, setExcludedParticipantIds] = useState<
-    string[]
-  >([]);
+  const [excludedParticipantIds, setExcludedParticipantIds] = useState<string[]>([]);
   const handleToggleParticipant = (id: string) => {
     setExcludedParticipantIds((prev) =>
-      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id],
     );
   };
   return (
     <>
       {/* 回答状況（集計）セクション */}
-      <div className="card bg-base-100 shadow-md border border-base-200 mb-8">
+      <div className="card bg-base-100 border-base-200 mb-8 border shadow-md">
         <div className="card-body p-0">
-          <h2 className="p-4 border-b border-base-200 font-bold text-xl">
-            回答状況
-          </h2>
+          <h2 className="border-base-200 border-b p-4 text-xl font-bold">回答状況</h2>
           {/* 回答集計コンポーネント */}
           <AvailabilitySummary
             eventDates={eventDates}
@@ -65,63 +61,60 @@ export default function EventDetailsSection({
             availabilities={availabilities}
             finalizedDateIds={finalizedDateIds}
             excludedParticipantIds={excludedParticipantIds}
+            testIdPrefix="public"
           />
           {/* 参加者名リスト（表示/非表示トグル） */}
           {participants.length > 0 && (
-            <div className="flex flex-wrap gap-2 px-4 py-2 mb-2 items-center border-b border-base-200">
-              <span className="text-sm text-gray-500 mr-2">表示選択:</span>
-          {participants.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`badge px-3 py-2 cursor-pointer transition-all border-2 ${
-                excludedParticipantIds.includes(p.id)
-                  ? "badge-outline border-error text-error bg-error/10"
-                  : "badge-primary border-primary"
-              }`}
+            <div className="border-base-200 mb-2 flex flex-wrap items-center gap-2 border-b px-4 py-2">
+              <span className="mr-2 text-sm text-gray-500">表示選択:</span>
+              {participants.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`badge cursor-pointer border-2 px-3 py-2 transition-all ${
+                    excludedParticipantIds.includes(p.id)
+                      ? 'badge-outline border-error text-error bg-error/10'
+                      : 'badge-primary border-primary'
+                  }`}
                   aria-pressed={excludedParticipantIds.includes(p.id)}
                   onClick={() => handleToggleParticipant(p.id)}
-                  title={
-                    excludedParticipantIds.includes(p.id)
-                      ? "表示に戻す"
-                      : "非表示にする"
-                  }
+                  title={excludedParticipantIds.includes(p.id) ? '表示に戻す' : '非表示にする'}
                 >
                   {excludedParticipantIds.includes(p.id) ? (
                     <span className="mr-1">🚫</span>
                   ) : (
                     <span className="mr-1">👤</span>
                   )}
-              {p.name}
-            </button>
-          ))}
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {participants.length > 0 && (
+            <div className="border-base-200 border-t px-4 py-4">
+              <ShareAvailableDatesButton
+                eventTitle={event.title}
+                publicToken={event.public_token}
+                eventDates={eventDates}
+                participants={participants}
+                availabilities={availabilities}
+              />
+            </div>
+          )}
         </div>
-      )}
-        {participants.length > 0 && (
-          <div className="px-4 py-4 border-t border-base-200">
-            <ShareAvailableDatesButton
-              eventTitle={event.title}
-              publicToken={event.public_token}
-              eventDates={eventDates}
-              participants={participants}
-              availabilities={availabilities}
-            />
-          </div>
-        )}
       </div>
-    </div>
       {/* --- イベント管理・修正セクション --- */}
-      <div className="card bg-base-100 shadow-md border border-base-200 my-8">
+      <div className="card bg-base-100 border-base-200 my-8 border shadow-md">
         <div className="card-body">
-          <h2 className="font-bold text-xl mb-2">イベント管理・修正</h2>
-          <p className="text-sm text-gray-500 mb-4">
+          <h2 className="mb-2 text-xl font-bold">イベント管理・修正</h2>
+          <p className="mb-4 text-sm text-gray-500">
             主催者向け：
             <br />
             日程の確定や候補日程の追加・修正を行えます。
           </p>
-          <div className="flex flex-col md:flex-row gap-8">
+          <div className="flex flex-col gap-8 md:flex-row">
             {/* 日程確定セクション */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <FinalizeEventSection
                 eventId={event.id}
                 eventDates={eventDates}
@@ -132,8 +125,8 @@ export default function EventDetailsSection({
             </div>
             <div className="divider md:divider-horizontal my-1 md:my-0" />
             {/* 日程追加セクション */}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg mb-2">候補日程の追加</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="mb-2 text-lg font-semibold">候補日程の追加</h3>
               <EventDateAddSection event={event} eventDates={eventDates} />
             </div>
           </div>

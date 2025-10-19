@@ -23,7 +23,7 @@ export function buildAvailableDatesMessage(
   availabilities: ShareAvailability[],
   minCount: number,
 ): string {
-  if (minCount <= 0) return "";
+  if (minCount <= 0) return '';
 
   // 日付ごとに参加可能な時間帯を配列で保持
   const grouped = new Map<string, { start: Date; end: Date }[]>();
@@ -65,22 +65,19 @@ export function buildAvailableDatesMessage(
       }
 
       const rangeStrings = merged.map((m) => {
-        const startStr = `${m.start
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${m.start
+        const startStr = `${m.start.getHours().toString().padStart(2, '0')}:${m.start
           .getMinutes()
           .toString()
-          .padStart(2, "0")}`;
-        const endStr = `${m.end.getHours().toString().padStart(2, "0")}:${m.end
+          .padStart(2, '0')}`;
+        const endStr = `${m.end.getHours().toString().padStart(2, '0')}:${m.end
           .getMinutes()
           .toString()
-          .padStart(2, "0")}`;
+          .padStart(2, '0')}`;
         return `${startStr}-${endStr}`;
       });
 
-      return `- ${label} ${rangeStrings.join(", ")}`;
+      return `- ${label} ${rangeStrings.join(', ')}`;
     });
 
-  return `[${minCount}人以上が参加可能な日程]` + "\n" + lines.join("\n");
+  return `[${minCount}人以上が参加可能な日程]` + '\n' + lines.join('\n');
 }

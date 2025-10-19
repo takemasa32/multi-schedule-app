@@ -62,9 +62,15 @@ beforeEach(() => {
 describe('デバイス判定ユーティリティ', () => {
   it('isMobileDevice判定', () => {
     const original = window.navigator.userAgent;
-    Object.defineProperty(window.navigator, 'userAgent', { value: 'iPhone', configurable: true });
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: 'iPhone',
+      configurable: true,
+    });
     expect(isMobileDevice()).toBe(true);
-    Object.defineProperty(window.navigator, 'userAgent', { value: 'Mozilla', configurable: true });
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: 'Mozilla',
+      configurable: true,
+    });
     expect(isMobileDevice()).toBe(false);
     Object.defineProperty(window.navigator, 'userAgent', { value: original });
   });

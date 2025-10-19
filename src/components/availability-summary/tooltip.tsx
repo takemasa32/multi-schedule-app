@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import type { ParticipantSummary } from "@/types/participant";
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import type { ParticipantSummary } from '@/types/participant';
 
 // ツールチップの状態を表す型
 export interface TooltipState {
@@ -17,7 +17,7 @@ export interface TooltipState {
   /** デバッグ用: 最後に更新されたタイムスタンプ */
   lastUpdate?: number;
   /** 最後に開いたPointer種別（"touch"|"mouse"|"pen"） */
-  lastPointerType?: "touch" | "mouse" | "pen";
+  lastPointerType?: 'touch' | 'mouse' | 'pen';
 }
 
 interface TooltipProps {
@@ -41,10 +41,10 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
       setRootEl(portalElement);
       return;
     }
-    const id = "tooltip-portal";
+    const id = 'tooltip-portal';
     let elem = document.getElementById(id) as HTMLDivElement | null;
     if (!elem) {
-      elem = document.createElement("div");
+      elem = document.createElement('div');
       elem.id = id;
       document.body.appendChild(elem);
     }
@@ -60,10 +60,10 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
       clearTimeout(autoHideTimerRef.current);
       autoHideTimerRef.current = null;
     }
-    if (tooltip.show && tooltip.lastPointerType === "touch") {
+    if (tooltip.show && tooltip.lastPointerType === 'touch') {
       autoHideTimerRef.current = setTimeout(() => {
         if (tooltip.show && !isTouchActiveRef.current) {
-          window.dispatchEvent(new CustomEvent("tooltip:autohide"));
+          window.dispatchEvent(new CustomEvent('tooltip:autohide'));
         }
       }, 3000);
     }
@@ -77,20 +77,19 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
 
   // 参加者情報が全くない場合
   const hasNoParticipants =
-    tooltip.availableParticipants.length === 0 &&
-    tooltip.unavailableParticipants.length === 0;
+    tooltip.availableParticipants.length === 0 && tooltip.unavailableParticipants.length === 0;
 
   // ツールチップ自体へのポインターイベントハンドラ
   const handleTooltipPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
-    if (e.pointerType === "touch") {
+    if (e.pointerType === 'touch') {
       isTouchActiveRef.current = true;
     }
   };
 
   const handleTooltipPointerUp = (e: React.PointerEvent) => {
     e.stopPropagation();
-    if (e.pointerType === "touch") {
+    if (e.pointerType === 'touch') {
       isTouchActiveRef.current = false;
     }
   };
@@ -103,18 +102,18 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
       {createPortal(
         <div
           style={{
-            position: "fixed",
+            position: 'fixed',
             top: `${tooltip.y + 10}px`,
             left: `${tooltip.x + 10}px`,
             zIndex: 1000,
-            backgroundColor: "white",
-            borderRadius: "8px",
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
-            padding: "12px",
-            maxWidth: "300px",
-            fontSize: "14px",
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+            padding: '12px',
+            maxWidth: '300px',
+            fontSize: '14px',
           }}
-          className="bg-base-100 border border-base-300 shadow-lg p-3 rounded-lg"
+          className="bg-base-100 border-base-300 rounded-lg border p-3 shadow-lg"
           onPointerDown={handleTooltipPointerDown}
           onPointerUp={handleTooltipPointerUp}
           onPointerEnter={(e) => {
@@ -126,9 +125,9 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
           }}
           onPointerLeave={(e) => {
             e.stopPropagation();
-            if (tooltip.lastPointerType === "touch") {
+            if (tooltip.lastPointerType === 'touch') {
               autoHideTimerRef.current = setTimeout(() => {
-                window.dispatchEvent(new CustomEvent("tooltip:autohide"));
+                window.dispatchEvent(new CustomEvent('tooltip:autohide'));
               }, 3000);
             }
           }}
@@ -138,25 +137,21 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
         >
           {/* 日付・時間ラベルを先頭に表示 */}
           {(tooltip.dateLabel || tooltip.timeLabel) && (
-            <div className="mb-2 text-base text-center">
+            <div className="mb-2 text-center text-base">
               {tooltip.dateLabel && (
-                <span className="font-bold text-primary">
-                  {tooltip.dateLabel}
-                </span>
+                <span className="text-primary font-bold">{tooltip.dateLabel}</span>
               )}
               {tooltip.dateLabel && tooltip.timeLabel && <span> </span>}
               {tooltip.timeLabel && (
-                <span className="font-bold text-secondary">
-                  {tooltip.timeLabel}
-                </span>
+                <span className="text-secondary font-bold">{tooltip.timeLabel}</span>
               )}
             </div>
           )}
           {hasNoParticipants ? (
-            <div className="text-center text-gray-500 py-2">
+            <div className="py-2 text-center text-gray-500">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mx-auto mb-1"
+                className="mx-auto mb-1 h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -174,20 +169,16 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             <>
               {tooltip.availableParticipants.length > 0 && (
                 <div className="mb-3">
-                  <div className="font-medium text-success mb-2 flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded-full bg-success flex-shrink-0"></span>
-                    <span>
-                      参加可能（{tooltip.availableParticipants.length}名）
-                    </span>
+                  <div className="text-success mb-2 flex items-center gap-1.5 font-medium">
+                    <span className="bg-success h-3.5 w-3.5 flex-shrink-0 rounded-full"></span>
+                    <span>参加可能（{tooltip.availableParticipants.length}名）</span>
                   </div>
-                  <ul className="pl-5 list-disc text-primary">
+                  <ul className="text-primary list-disc pl-5">
                     {tooltip.availableParticipants.map((p, idx) => (
                       <li key={`avail-${idx}`} className="mb-0.5">
                         {p.name}
                         {p.comment && (
-                          <div className="text-xs text-gray-500 break-words">
-                            {p.comment}
-                          </div>
+                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -196,20 +187,16 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
               )}
               {tooltip.unavailableParticipants.length > 0 && (
                 <div>
-                  <div className="font-medium text-error mb-2 flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded-full bg-error flex-shrink-0"></span>
-                    <span>
-                      参加不可（{tooltip.unavailableParticipants.length}名）
-                    </span>
+                  <div className="text-error mb-2 flex items-center gap-1.5 font-medium">
+                    <span className="bg-error h-3.5 w-3.5 flex-shrink-0 rounded-full"></span>
+                    <span>参加不可（{tooltip.unavailableParticipants.length}名）</span>
                   </div>
-                  <ul className="pl-5 list-disc text-primary">
+                  <ul className="text-primary list-disc pl-5">
                     {tooltip.unavailableParticipants.map((p, idx) => (
                       <li key={`unavail-${idx}`} className="mb-0.5">
                         {p.name}
                         {p.comment && (
-                          <div className="text-xs text-gray-500 break-words">
-                            {p.comment}
-                          </div>
+                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -218,14 +205,14 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
               )}
               {tooltip.availableParticipants.length === 0 &&
                 tooltip.unavailableParticipants.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-200 text-gray-500 text-sm">
+                  <div className="mt-2 border-t border-gray-200 pt-2 text-sm text-gray-500">
                     <p>参加可能な方はいません</p>
                   </div>
                 )}
             </>
           )}
         </div>,
-        rootEl
+        rootEl,
       )}
     </>
   );
@@ -235,7 +222,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
  * タイプガード：タッチイベントかどうかを判定
  */
 export function isTouchEvent(
-  e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
+  e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
 ): e is React.TouchEvent<HTMLElement> {
-  return "touches" in e || "changedTouches" in e;
+  return 'touches' in e || 'changedTouches' in e;
 }

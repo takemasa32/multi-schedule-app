@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from 'react';
 
 /**
  * ドラッグ・スクロール判定用カスタムフック
@@ -13,7 +13,7 @@ function useDragScrollBlocker(threshold = 10) {
 
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === "touch" || e.pointerType === "pen") {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
         startRef.current = { x: e.clientX, y: e.clientY };
         moveCountRef.current = 0;
         setIsDragging(false);
@@ -33,13 +33,13 @@ function useDragScrollBlocker(threshold = 10) {
       moveCountRef.current = 0;
       startRef.current = null;
     };
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
     return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
     };
   }, [threshold]);
 

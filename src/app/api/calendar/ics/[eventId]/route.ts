@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ eventId: string }> },
+) {
   try {
     const { eventId } = await params;
     const url = new URL(request.url);
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (eventError || !event || !event.is_finalized) {
       return new NextResponse('イベントが見つからないか、まだ確定されていません', {
-        status: 404
+        status: 404,
       });
     }
 
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // それでも確定日程がなければエラー
       if (!eventWithFinalDate?.final_date_id) {
         return new NextResponse('確定された日程が見つかりません', {
-          status: 404
+          status: 404,
         });
       }
 
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
       if (dateError || !finalDates || finalDates.length === 0) {
         return new NextResponse('日程情報が見つかりません', {
-          status: 404
+          status: 404,
         });
       }
 
@@ -66,57 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       let targetIndex = 0;
       let targetDate = finalDates[0];
       if (requestedDateId) {
-        const idx = finalDates.findIndex(d => d.id === requestedDateId);
-        if (idx !== -1) {
-          targetIndex = idx;
-          targetDate = finalDates[idx];
-        }
-      }
-
-      const icsContent = generateIcsContent({
-        events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
-          startDate: new Date(date.start_time),
-          endDate: new Date(date.end_time),
-          title: totalCount > 1 ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})` : event.title,
-          description: event.description || '',
-          eventId: `${event.id}-${date.id}`,
-          // タイムゾーン情報を追加（日本時間として扱う）
-          timezone: 'Asia/Tokyo'
-        }))
-      });
-
-      // ファイル名に使用できるようにタイトルを整形
-      const safeTitle = event.title.replace(/[^\w\s]/gi, '').trim() || 'event';
-
-      // iCSファイルをダウンロード
-      return new NextResponse(icsContent, {
-        headers: {
-          'Content-Type': 'text/calendar',
-          'Content-Disposition': `attachment; filename="${safeTitle}.ics"`,
-        },
-      });
-    } else {
-      // 複数確定日程の処理
-      const finalDateIds = finalizedDates.map(fd => fd.event_date_id);
-
-      // 複数の確定日程の詳細情報を取得
-      const { data: finalDates, error: dateError } = await supabase
-        .from('event_dates')
-        .select('id, start_time, end_time, label')
-        .in('id', finalDateIds);
-
-      if (dateError || !finalDates || finalDates.length === 0) {
-        return new NextResponse('日程情報が見つかりません', {
-          status: 404
-        });
-      }
-
-      // 複数イベント用のICSファイルを生成
-      const totalCount = finalDates.length;
-      let targetIndex = 0;
-      let targetDate = finalDates[0];
-      if (requestedDateId) {
-        const idx = finalDates.findIndex(d => d.id === requestedDateId);
+        const idx = finalDates.findIndex((d) => d.id === requestedDateId);
         if (idx !== -1) {
           targetIndex = idx;
           targetDate = finalDates[idx];
@@ -132,8 +85,61 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
               : event.title,
           description: event.description || '',
-          eventId: `${event.id}-${date.id}`
-        }))
+          eventId: `${event.id}-${date.id}`,
+          // タイムゾーン情報を追加（日本時間として扱う）
+          timezone: 'Asia/Tokyo',
+        })),
+      });
+
+      // ファイル名に使用できるようにタイトルを整形
+      const safeTitle = event.title.replace(/[^\w\s]/gi, '').trim() || 'event';
+
+      // iCSファイルをダウンロード
+      return new NextResponse(icsContent, {
+        headers: {
+          'Content-Type': 'text/calendar',
+          'Content-Disposition': `attachment; filename="${safeTitle}.ics"`,
+        },
+      });
+    } else {
+      // 複数確定日程の処理
+      const finalDateIds = finalizedDates.map((fd) => fd.event_date_id);
+
+      // 複数の確定日程の詳細情報を取得
+      const { data: finalDates, error: dateError } = await supabase
+        .from('event_dates')
+        .select('id, start_time, end_time, label')
+        .in('id', finalDateIds);
+
+      if (dateError || !finalDates || finalDates.length === 0) {
+        return new NextResponse('日程情報が見つかりません', {
+          status: 404,
+        });
+      }
+
+      // 複数イベント用のICSファイルを生成
+      const totalCount = finalDates.length;
+      let targetIndex = 0;
+      let targetDate = finalDates[0];
+      if (requestedDateId) {
+        const idx = finalDates.findIndex((d) => d.id === requestedDateId);
+        if (idx !== -1) {
+          targetIndex = idx;
+          targetDate = finalDates[idx];
+        }
+      }
+
+      const icsContent = generateIcsContent({
+        events: (requestedDateId ? [targetDate] : finalDates).map((date, index) => ({
+          startDate: new Date(date.start_time),
+          endDate: new Date(date.end_time),
+          title:
+            totalCount > 1
+              ? `${event.title} (${requestedDateId ? targetIndex + 1 : index + 1}/${totalCount})`
+              : event.title,
+          description: event.description || '',
+          eventId: `${event.id}-${date.id}`,
+        })),
       });
 
       // ファイル名に使用できるようにタイトルを整形
@@ -150,7 +156,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error) {
     console.error('カレンダーデータ生成エラー:', error);
     return new NextResponse('カレンダーデータの生成に失敗しました', {
-      status: 500
+      status: 500,
     });
   }
 }
@@ -184,22 +190,21 @@ function generateIcsContent({ events }: IcsEventProps): string {
     'END:VTIMEZONE',
   ];
 
-    // 複数のイベントをサポート
-  events.forEach(event => {
+  // 複数のイベントをサポート
+  events.forEach((event) => {
     lines.push(
       'BEGIN:VEVENT',
       `UID:${event.eventId}@multischeduleapp.example.com`,
       // 生成日時は UTCで出したい場合は別途toISOString()系を使ってZ付き
-      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
       // JST（Asia/Tokyo）として明示する
       `DTSTART;TZID=Asia/Tokyo:${formatIcsDate(event.startDate)}`,
       `DTEND;TZID=Asia/Tokyo:${formatIcsDate(event.endDate)}`,
       `SUMMARY:${escapeIcsValue(event.title)}`,
       `DESCRIPTION:${escapeIcsValue(event.description)}`,
-      'END:VEVENT'
+      'END:VEVENT',
     );
   });
-
 
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');

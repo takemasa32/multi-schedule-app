@@ -1,16 +1,22 @@
-@import "tailwindcss";
-@plugin "daisyui";
+@import 'tailwindcss';
+@plugin 'daisyui';
 
 body {
   @apply bg-base-100 text-base-content;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 /* Card Component Styles */
 @layer components {
   .card {
-    @apply bg-base-100 border border-base-300 rounded-xl overflow-hidden transition-all;
+    @apply bg-base-100 border-base-300 overflow-hidden rounded-xl border transition-all;
   }
 
   .card:hover {
@@ -20,7 +26,7 @@ body {
   /* Button Styles */
   /* DaisyUIのボタンクラス(btn, btn-primary, btn-secondary)を活用する */
   .btn-custom {
-    @apply transition-all duration-200 font-medium;
+    @apply font-medium transition-all duration-200;
   }
 }
 
@@ -31,19 +37,19 @@ body {
   }
 
   .form-control label {
-    @apply block mb-2 text-sm font-medium text-base-content;
+    @apply text-base-content mb-2 block text-sm font-medium;
   }
 
   .form-control input,
   .form-control select,
   .form-control textarea {
-    @apply w-full px-4 py-2 border border-base-300 rounded-lg bg-base-100 text-base-content transition-all;
+    @apply border-base-300 bg-base-100 text-base-content w-full rounded-lg border px-4 py-2 transition-all;
   }
 
   .form-control input:focus,
   .form-control select:focus,
   .form-control textarea:focus {
-    @apply border-primary outline-none ring-2 ring-primary/20;
+    @apply border-primary ring-primary/20 outline-none ring-2;
   }
 }
 
@@ -63,36 +69,36 @@ body {
   }
 
   .loading-spinner {
-    @apply w-6 h-6 rounded-full border-2 border-base-300 border-t-primary inline-block mr-2;
+    @apply border-base-300 border-t-primary mr-2 inline-block h-6 w-6 rounded-full border-2;
     animation: spinner 0.8s linear infinite;
   }
 
   .loading-spinner-sm {
-    @apply w-4 h-4 border-2;
+    @apply h-4 w-4 border-2;
   }
 }
 
 /* Feedback Messages */
 @layer components {
   .feedback-message {
-    @apply flex items-center p-3 rounded mb-4;
+    @apply mb-4 flex items-center rounded p-3;
     animation: slideUp 0.3s ease-out;
   }
 
   .feedback-success {
-    @apply bg-success/10 text-success border-l-4 border-success;
+    @apply bg-success/10 text-success border-success border-l-4;
   }
 
   .feedback-error {
-    @apply bg-error/10 text-error border-l-4 border-error;
+    @apply bg-error/10 text-error border-error border-l-4;
   }
 
   .feedback-info {
-    @apply bg-info/10 text-info border-l-4 border-info;
+    @apply bg-info/10 text-info border-info border-l-4;
   }
 
   .feedback-warning {
-    @apply bg-warning/10 text-warning border-l-4 border-warning;
+    @apply bg-warning/10 text-warning border-warning border-l-4;
   }
 
   /* Responsive Table */
@@ -102,7 +108,7 @@ body {
   }
 
   .table-container {
-    @apply w-full border border-base-300 rounded-lg overflow-hidden mb-6;
+    @apply border-base-300 mb-6 w-full overflow-hidden rounded-lg border;
   }
 }
 

@@ -21,7 +21,8 @@
     "e2e:dev": "concurrently \"npm run dev\" \"npx playwright test --headed\"",
     "e2e": "npm run build && concurrently \"npm run start\" \"npx playwright test\"",
     "e2e:headless": "npm run build && npm run start & npx playwright test --reporter=dot",
-    "e2e:ci": "npm run e2e:headless"
+    "e2e:ci": "npm run e2e:headless",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -63,7 +64,9 @@
     "jest-environment-jsdom": "^29.7.0",
     "jest-junit": "^16.0.0",
     "next": "^15.3.2",
-    "supabase": "^2.31.8",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.7.0",
+    "supabase": "^2.51.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "undici": "^7.8.0",

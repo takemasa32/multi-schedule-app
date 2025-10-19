@@ -2,6 +2,16 @@
 
 複数の日程候補から最適な日程を決めるための調整アプリケーションです。
 
+## ドキュメント
+
+- [カレンダー操作UI共通ロジック](docs/architecture/calendar-interaction.md)
+
+### イベント作成機能
+
+- 期間から候補日程を自動生成
+- カレンダーで手動選択で候補日程を設定
+  - 期間を設定後、カレンダー上でクリック（ドラッグ）して必要な枠だけを選択
+
 ## Supabase ローカル開発環境
 
 Supabase のローカル開発環境を使用して、オフラインでの開発や高速なフィードバックループを実現します。
@@ -52,6 +62,12 @@ npx supabase migration up
 
 # データベースリセット（全テーブル削除後にマイグレーション再適用）
 npx supabase db reset
+
+# プロジェクトを現在のディレクトリにリンク
+npx supabase link
+
+# 最新のマイグレーションをデータベースにプッシュ
+npx supabase db push
 ```
 
 ### 型定義の生成
@@ -153,7 +169,16 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 
 ## PWA/Workbox 生成ファイルについて
 
-`public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています。
+`public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています（不要になった生成物はリポジトリから削除済み）。
+
+## カレンダー連携（Google / ICS）
+
+本プロジェクトでは、複数確定日程に対応したカレンダー連携APIを提供します。いずれもローカル時間をそのまま扱い、Google には `ctz` を明示、ICSはZ無しで書き出します。
+
+- Google カレンダー: `/api/calendar/<event_id>?googleCalendar=true&dateId=<event_date_id>`
+- ICS ダウンロード: `/api/calendar/ics/<event_id>?dateId=<event_date_id>`
+
+旧API（`/api/generate-ics`）は廃止しました。UI からは `CalendarLinks` コンポーネント経由でこれらのエンドポイントを利用します。
 
 ## e2e テストについて
 
@@ -167,23 +192,19 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 
 - **通常の e2e テスト実行**
   `npm run e2e`
-
   - Next.js サーバー・Supabase ローカル環境・Playwright テストを並列で自動起動します。
   - テストはヘッドレスモードで実行され、結果は HTML レポートとして `playwright-report/` ディレクトリに出力されます。
 
 - **開発モードでの e2e テスト実行**
   `npm run e2e:dev`
-
   - Next.js を開発モードで起動し、テストを実行します。
 
 - **ヘッドレスモードでの e2e テスト実行**
   `npm run e2e:headless`
-
   - 完全ヘッドレスでテストを実行します。
 
 - **CI 用（簡易レポート）**
   `npm run e2e:ci`
-
   - CI/CD での利用を想定した簡易レポート出力です。
 
 - **テストレポートの確認**

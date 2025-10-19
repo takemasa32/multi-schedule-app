@@ -1,6 +1,6 @@
-import React from "react";
-import type { Participant } from "@/types/participant";
-import { formatDate, formatTime } from "./date-utils";
+import React from 'react';
+import type { Participant } from '@/types/participant';
+import { formatDate, formatTime } from './date-utils';
 
 interface DetailedViewProps {
   eventDates: Array<{
@@ -10,10 +10,7 @@ interface DetailedViewProps {
     label?: string;
   }>;
   participants: Participant[];
-  isParticipantAvailable: (
-    participantId: string,
-    dateId: string
-  ) => boolean | null;
+  isParticipantAvailable: (participantId: string, dateId: string) => boolean | null;
   finalizedDateIds: string[];
   onEditClick?: (participantId: string, participantName: string) => void;
   publicToken?: string;
@@ -31,12 +28,12 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   publicToken,
 }) => {
   return (
-    <div className="mt-4 overflow-x-auto fade-in">
+    <div className="fade-in mt-4 overflow-x-auto">
       <div className="relative">
-        <table className="table table-xs w-full min-w-[400px]">
+        <table className="table-xs table w-full min-w-[400px]">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-base-200 z-20 text-xs sm:text-sm min-w-[90px] whitespace-nowrap shadow-md">
+              <th className="bg-base-200 sticky left-0 z-20 min-w-[90px] whitespace-nowrap text-xs shadow-md sm:text-sm">
                 参加者
               </th>
               {eventDates.map((date, index, arr) => {
@@ -54,26 +51,19 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                   currentDate.getFullYear() === prevDate.getFullYear();
 
                 // 時刻表示を簡素化
-                const formattedTime = formatTime(
-                  date.start_time,
-                  eventDates
-                ).replace(/^0/, "");
+                const formattedTime = formatTime(date.start_time, eventDates).replace(/^0/, '');
 
                 return (
                   <th
                     key={date.id}
-                    className={`text-center whitespace-nowrap text-xs sm:text-sm ${
-                      finalizedDateIds?.includes(date.id)
-                        ? "bg-success bg-opacity-10"
-                        : ""
+                    className={`whitespace-nowrap text-center text-xs sm:text-sm ${
+                      finalizedDateIds?.includes(date.id) ? 'bg-success bg-opacity-10' : ''
                     }`}
                   >
                     {!isSameDay && formatDate(date.start_time)}
                     <div className="text-xs">{formattedTime}</div>
                     {finalizedDateIds?.includes(date.id) && (
-                      <span className="block badge badge-xs badge-success mt-1">
-                        確定
-                      </span>
+                      <span className="badge badge-xs badge-success mt-1 block">確定</span>
                     )}
                   </th>
                 );
@@ -82,93 +72,83 @@ const DetailedView: React.FC<DetailedViewProps> = ({
           </thead>
           <tbody>
             {participants.map((participant) => (
-              <tr
-                key={participant.id}
-                className="hover:bg-base-200 transition-colors"
-              >
-              <td className="whitespace-nowrap font-medium sticky left-0 bg-base-100 z-10">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span>{participant.name}</span>
-                    {participant.comment && (
-                      <div className="text-xs text-gray-500 break-words">
-                        {participant.comment}
-                      </div>
+              <tr key={participant.id} className="hover:bg-base-200 transition-colors">
+                <td className="bg-base-100 sticky left-0 z-10 whitespace-nowrap font-medium">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span>{participant.name}</span>
+                      {participant.comment && (
+                        <div className="break-words text-xs text-gray-500">
+                          {participant.comment}
+                        </div>
+                      )}
+                    </div>
+                    {onEditClick ? (
+                      <button
+                        onClick={() => onEditClick(participant.id, participant.name)}
+                        className="btn btn-ghost btn-xs tooltip tooltip-right"
+                        data-tip="この参加者の予定を編集"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          />
+                        </svg>
+                      </button>
+                    ) : (
+                      <a
+                        href={`/event/${publicToken}/input?participant_id=${participant.id}`}
+                        className="btn btn-ghost btn-xs tooltip tooltip-right"
+                        data-tip="この参加者の予定を編集"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          />
+                        </svg>
+                      </a>
                     )}
                   </div>
-                  {onEditClick ? (
-                    <button
-                      onClick={() =>
-                        onEditClick(participant.id, participant.name)
-                      }
-                      className="btn btn-ghost btn-xs tooltip tooltip-right"
-                      data-tip="この参加者の予定を編集"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                        />
-                      </svg>
-                    </button>
-                  ) : (
-                    <a
-                      href={`/event/${publicToken}/input?participant_id=${participant.id}`}
-                      className="btn btn-ghost btn-xs tooltip tooltip-right"
-                      data-tip="この参加者の予定を編集"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                        />
-                      </svg>
-                    </a>
-                  )}
-                </div>
-              </td>
+                </td>
                 {eventDates.map((date) => {
-                  const isAvailable = isParticipantAvailable(
-                    participant.id,
-                    date.id
-                  );
+                  const isAvailable = isParticipantAvailable(participant.id, date.id);
                   const isFinalized = finalizedDateIds?.includes(date.id);
                   return (
                     <td
                       key={date.id}
                       className={`text-center transition-colors ${
-                        isFinalized ? "bg-success bg-opacity-10" : ""
+                        isFinalized ? 'bg-success bg-opacity-10' : ''
                       }`}
                     >
                       {isAvailable === true && (
-                        <div className="text-success font-bold w-6 h-6 rounded-full bg-success bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
+                        <div className="text-success bg-success mx-auto flex h-6 w-6 animate-fadeIn items-center justify-center rounded-full bg-opacity-10 font-bold">
                           ○
                         </div>
                       )}
                       {isAvailable === false && (
-                        <div className="text-error font-bold w-6 h-6 rounded-full bg-error bg-opacity-10 flex items-center justify-center mx-auto animate-fadeIn">
+                        <div className="text-error bg-error mx-auto flex h-6 w-6 animate-fadeIn items-center justify-center rounded-full bg-opacity-10 font-bold">
                           ×
                         </div>
                       )}
-                      {isAvailable === null && (
-                        <span className="text-gray-300">-</span>
-                      )}
+                      {isAvailable === null && <span className="text-gray-300">-</span>}
                     </td>
                   );
                 })}

@@ -3,7 +3,10 @@ import { useDeviceDetect } from '../useDeviceDetect';
 
 describe('useDeviceDetect', () => {
   it('画面幅に応じてモバイル判定が切り替わる', () => {
-    Object.defineProperty(window, 'innerWidth', { value: 500, configurable: true });
+    Object.defineProperty(window, 'innerWidth', {
+      value: 500,
+      configurable: true,
+    });
     const { result } = renderHook(() => useDeviceDetect());
     expect(result.current.isMobile).toBe(true);
     act(() => {

@@ -10,8 +10,20 @@ const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
 // 汎用的なSupabaseチェーンモック
 function createSupabaseChainMock(result: Record<string, unknown> = { data: null, error: null }) {
   const methods = [
-    'insert', 'select', 'eq', 'in', 'order', 'update', 'delete', 'range',
-    'from', 'not', 'or', 'like', 'ilike', 'limit'
+    'insert',
+    'select',
+    'eq',
+    'in',
+    'order',
+    'update',
+    'delete',
+    'range',
+    'from',
+    'not',
+    'or',
+    'like',
+    'ilike',
+    'limit',
   ];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function makeChain(res: any) {
@@ -35,11 +47,12 @@ describe('getEvent', () => {
   });
 
   it('正常にイベントを取得できる', async () => {
-    const selectChain = createSupabaseChainMock({ data: { id: 'e1', public_token: 'tok' }, error: null });
+    const selectChain = createSupabaseChainMock({
+      data: { id: 'e1', public_token: 'tok' },
+      error: null,
+    });
     const updateChain = createSupabaseChainMock({ data: null, error: null });
-    const fromMock = jest.fn()
-      .mockReturnValueOnce(selectChain)
-      .mockReturnValueOnce(updateChain);
+    const fromMock = jest.fn().mockReturnValueOnce(selectChain).mockReturnValueOnce(updateChain);
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
 
     const event = await getEvent('tok');
@@ -48,13 +61,19 @@ describe('getEvent', () => {
   });
 
   it('行が存在しない場合は EventNotFoundError', async () => {
-    const chain = createSupabaseChainMock({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
+    const chain = createSupabaseChainMock({
+      data: null,
+      error: { code: 'PGRST116', message: 'no rows' },
+    });
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
     await expect(getEvent('none')).rejects.toBeInstanceOf(EventNotFoundError);
   });
 
   it('Supabase エラー時は EventFetchError', async () => {
-    const chain = createSupabaseChainMock({ data: null, error: { code: '500', message: 'server error' } });
+    const chain = createSupabaseChainMock({
+      data: null,
+      error: { code: '500', message: 'server error' },
+    });
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
     await expect(getEvent('tok')).rejects.toBeInstanceOf(EventFetchError);
   });

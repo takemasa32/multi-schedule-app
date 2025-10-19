@@ -1,8 +1,10 @@
-import EventForm from "@/components/event-form";
-import Breadcrumbs from "@/components/layout/Breadcrumbs";
-import Card from "@/components/layout/Card";
-import siteConfig from "@/lib/site-config";
-import { Metadata } from "next";
+import EventForm from '@/components/event-form';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import Card from '@/components/layout/Card';
+import siteConfig from '@/lib/site-config';
+import { Metadata } from 'next';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: `イベント作成 | ${siteConfig.name.full}`,
@@ -26,14 +28,14 @@ export default function CreateEventPage() {
     <>
       <div className="bg-base-200 mb-6 py-4">
         <div className="container mx-auto max-w-5xl px-4">
-          <Breadcrumbs items={[{ label: "イベント作成" }]} />
+          <Breadcrumbs items={[{ label: 'イベント作成' }]} />
         </div>
       </div>
 
       <div className="container mx-auto max-w-3xl px-4 pb-12">
-        <div className="text-center mb-8 fade-in">
-          <h1 className="text-4xl font-bold mb-3">新規イベント作成</h1>
-          <p className="text-base-content/70 max-w-xl mx-auto">
+        <div className="fade-in mb-8 text-center">
+          <h1 className="mb-3 text-4xl font-bold">新規イベント作成</h1>
+          <p className="text-base-content/70 mx-auto max-w-xl">
             候補日程を複数選択して、参加者に共有する{siteConfig.name.full}
             を作成します。 作成後に共有用リンクが発行されます。
           </p>

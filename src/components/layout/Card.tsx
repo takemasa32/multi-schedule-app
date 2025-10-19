@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
 
 interface CardProps {
   children: ReactNode;
@@ -10,37 +10,31 @@ interface CardProps {
   noPadding?: boolean;
 }
 
-export default function Card({ 
-  children, 
-  title, 
-  subtitle, 
-  className = "", 
-  footer, 
+export default function Card({
+  children,
+  title,
+  subtitle,
+  className = '',
+  footer,
   isHighlighted = false,
-  noPadding = false 
+  noPadding = false,
 }: CardProps) {
   return (
-    <div 
+    <div
       className={`card transition-all ${
-        isHighlighted ? "border-primary/50 bg-primary/5" : ""
+        isHighlighted ? 'border-primary/50 bg-primary/5' : ''
       } hover:shadow-md ${className}`}
     >
       {(title || subtitle) && (
-        <div className="px-6 py-4 border-b border-base-200">
-          {title && <h3 className="font-bold text-lg">{title}</h3>}
-          {subtitle && <p className="text-base-content/70 text-sm mt-1">{subtitle}</p>}
+        <div className="border-base-200 border-b px-6 py-4">
+          {title && <h3 className="text-lg font-bold">{title}</h3>}
+          {subtitle && <p className="text-base-content/70 mt-1 text-sm">{subtitle}</p>}
         </div>
       )}
-      
-      <div className={noPadding ? "" : "p-6"}>
-        {children}
-      </div>
-      
-      {footer && (
-        <div className="px-6 py-4 bg-base-200/50 border-t border-base-200">
-          {footer}
-        </div>
-      )}
+
+      <div className={noPadding ? '' : 'p-4 sm:p-6'}>{children}</div>
+
+      {footer && <div className="bg-base-200/50 border-base-200 border-t px-6 py-4">{footer}</div>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
-"use client";
-import { useState } from "react";
-import toast from "react-hot-toast";
+'use client';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface ShareEventButtonProps {
   url: string;
@@ -17,9 +17,9 @@ export default function ShareEventButton({
   url,
   title,
   text,
-  className = "",
-  label = "イベントを共有",
-  ariaLabel = "イベントURLを共有",
+  className = '',
+  label = 'イベントを共有',
+  ariaLabel = 'イベントURLを共有',
   includeTextInClipboard = false,
 }: ShareEventButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
@@ -31,30 +31,28 @@ export default function ShareEventButton({
       if (navigator.share) {
         await navigator.share({
           url,
-          title: title || "イベント日程調整リンク",
-          text: text || "このリンクから日程調整に参加できます。",
+          title: title || 'イベント日程調整リンク',
+          text: text || 'このリンクから日程調整に参加できます。',
         });
-        toast.success("リンクを共有しました");
+        toast.success('リンクを共有しました');
       } else if (navigator.clipboard) {
         // クリップボードAPI使用時、設定に応じてテキストを含める
-        const clipboardText =
-          includeTextInClipboard && text ? `${text}\n${url}` : url;
+        const clipboardText = includeTextInClipboard && text ? `${text}\n${url}` : url;
         await navigator.clipboard.writeText(clipboardText);
-        toast.success("URLをコピーしました");
+        toast.success('URLをコピーしました');
       } else {
         // fallback: input要素で選択コピー
-        const clipboardText =
-          includeTextInClipboard && text ? `${text}\n${url}` : url;
-        const input = document.createElement("input");
+        const clipboardText = includeTextInClipboard && text ? `${text}\n${url}` : url;
+        const input = document.createElement('input');
         input.value = clipboardText;
         document.body.appendChild(input);
         input.select();
-        document.execCommand("copy");
+        document.execCommand('copy');
         document.body.removeChild(input);
-        toast.success("URLをコピーしました");
+        toast.success('URLをコピーしました');
       }
     } catch {
-      toast.error("共有に失敗しました");
+      toast.error('共有に失敗しました');
     } finally {
       setIsSharing(false);
     }

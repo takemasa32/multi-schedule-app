@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
 
 interface SectionDividerProps {
   title: string;
@@ -6,15 +6,15 @@ interface SectionDividerProps {
   className?: string;
 }
 
-export default function SectionDivider({ title, icon, className = "" }: SectionDividerProps) {
+export default function SectionDivider({ title, icon, className = '' }: SectionDividerProps) {
   return (
-    <div className={`flex items-center my-8 ${className}`}>
-      <div className="h-px bg-base-300 flex-grow"></div>
-      <div className="flex items-center px-4 font-medium text-base-content/80">
+    <div className={`my-8 flex items-center ${className}`}>
+      <div className="bg-base-300 h-px flex-grow"></div>
+      <div className="text-base-content/80 flex items-center px-4 font-medium">
         {icon && <span className="mr-2">{icon}</span>}
         {title}
       </div>
-      <div className="h-px bg-base-300 flex-grow"></div>
+      <div className="bg-base-300 h-px flex-grow"></div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 
 export default function ThemeSwitcher() {
   const [mounted, setMounted] = useState(false);
@@ -14,14 +14,14 @@ export default function ThemeSwitcher() {
 
   // ハイドレーションの問題を避けるため、マウント前はレンダリングしない
   if (!mounted) {
-    return <div className="w-10 h-10"></div>;
+    return <div className="h-10 w-10"></div>;
   }
 
   const toggleTheme = () => {
-    if (theme === "dark") {
-      setTheme("light");
+    if (theme === 'dark') {
+      setTheme('light');
     } else {
-      setTheme("dark");
+      setTheme('dark');
     }
   };
 
@@ -31,7 +31,7 @@ export default function ThemeSwitcher() {
       className="btn btn-sm btn-ghost btn-circle"
       aria-label="テーマ切り替え"
     >
-      {theme === "dark" ? (
+      {theme === 'dark' ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5"

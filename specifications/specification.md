@@ -68,7 +68,7 @@ flowchart LR
   B -- 主催者が日程確定 --> C["確定後の結果表示 (同ページ)"]
 ```
 
-- **イベント作成ページ (/event/new):**
+- **イベント作成ページ (/create):**
   - 主要要素: イベントタイトル入力、説明入力、候補日程設定（開始日・終了日選択、時間帯指定、除外日設定）、イベント作成ボタン。
   - 入力検証: タイトル、1 つ以上の候補日程。
   - 成功時: イベント詳細ページへリダイレクト。
@@ -76,7 +76,7 @@ flowchart LR
   - 主要要素: イベントタイトル・説明表示。
   - 回答フォーム: 名前入力、候補日程一覧と回答入力 UI（チェックボックス等）、送信ボタン。
   - 回答状況集計表示: テーブル形式（日程別人数、参加者別回答）。
-  - 主催者用機能 UI (管理用 URL `/event/[公開トークン]?admin=[管理トークン]` でアクセス時のみ表示): 最終日程確定ボタン。確定操作は後で変更可能。
+  - 最終日程確定ボタンを同ページ内に常設し、確定操作は後から変更可能。
 - **確定結果表示 (同ページ、日程確定後):**
   - 回答フォームに確定日を表示（参加者は引き続き回答可能）。
   - 確定日程、出席予定者一覧を表示。
@@ -92,16 +92,16 @@ project-root/
 │   │   ├── layout.tsx
 │   │   ├── home/          # PWAホーム画面
 │   │   │   └── page.tsx
-│   │   ├── page.tsx          # ホーム（LP）
-│   │   ├── actions.ts        # Server Actions関数
+│   │   ├── page.tsx       # ホーム（LP）
+│   │   ├── create/
+│   │   │   └── page.tsx   # イベント作成ページ
 │   │   ├── event/
-│   │   │   ├── new/
-│   │   │   │   ├── page.tsx  #イベント作成ページ
-│   │   │   ├── [public_id]/
-│   │   │   │   ├── page.tsx  # イベント詳細ページ
+│   │   │   └── [public_id]/
+│   │   │       └── page.tsx  # イベント詳細ページ
 │   │   └── api/
-│   │       └── generate-ics/
-│   │           └── route.ts
+│   │       └── calendar/
+│   │           ├── [event_id]/route.ts  # Google/ICSリンク生成（複数確定対応）
+│   │           └── ics/[eventId]/route.ts  # ICSダウンロード（個別/複数対応）
 │   ├── components/
 │   │   ├── event-form.tsx
 │   │   ├── availability-form.tsx
@@ -117,7 +117,13 @@ project-root/
 └── ...
 ```
 
-(管理用サブルート `/admin/[token]` は廃止し、クエリパラメータ方式に統一)
+---
+
+### 5.x ミドルウェア（LINEアプリ内ブラウザ対策）
+
+- `src/middleware.ts` で LINE アプリ内ブラウザを検知し、`openExternalBrowser=1` を付与して再遷移。
+- 除外パス: `/_next/*`, `/api/*`, `/logo/*`, `/favicon.ico` 等。
+- 本番のみ簡易ログ出力。
 
 **コーディング規約:**
 
@@ -133,11 +139,14 @@ project-root/
 
 1.  **コミット粒度・頻度**: 小さな論理単位でこまめに。
 2.  **コミットメッセージ書式**:
+
     ```
     <type>(<scope>): <短い要約>
     <詳細説明 (任意)>
     ```
+
     - `type`: feat, fix, docs, style, refactor, test, chore
+
 3.  **コミット前自動チェック**: `lint-staged`＋`husky`で Prettier/ESLint 必須。
 
 ---
@@ -160,7 +169,7 @@ RLS を有効化。匿名キー(anon)は RLS と組み合わせ、サービス�
 **テーブル:**
 
 1.  **events:**
-    - `id` (UUID, PK), `public_token` (UUID, Unique), `admin_token` (UUID, Unique), `title` (text), `description` (text, NULL 可), `is_finalized` (boolean, default false), `final_date_id` (UUID, FK event_dates.id, NULL 可), `created_at` (timestamp), `created_by` (UUID, NULL 可)
+    - `id` (UUID, PK), `public_token` (text, Unique), `admin_token` (UUID, Unique), `title` (text), `description` (text, NULL 可), `is_finalized` (boolean, default false), `final_date_id` (UUID, FK event_dates.id, NULL 可), `created_at` (timestamp), `created_by` (UUID, NULL 可)
 2.  **event_dates:** (イベント候補日程)
     - `id` (UUID, PK), `event_id` (UUID, FK events.id, CASCADE), `start_time` (timestamp, NOT NULL), `end_time` (timestamp, NOT NULL), `label` (text, NULL 可), `created_at` (timestamp)
     - **補足:** `start_time`, `end_time` はローカルタイムとして保存・表示。タイムゾーン変換なし。
@@ -192,7 +201,7 @@ RLS を有効化。匿名キー(anon)は RLS と組み合わせ、サービス�
 
 **トークン:**
 
-- `public_token`: UUID。イベント情報取得・回答用。
+- `public_token`: 短い英数字テキスト。イベント情報取得・回答用で、URL に埋め込んでも扱いやすい形式とする。
 - `admin_token`: UUID。イベント管理操作用。非公開。
 
 **スキーマ例:** (仕様書記載の SQL DDL 参照)
@@ -204,33 +213,37 @@ Route API を使用せず、Server Actions ("use server") を用いる。
 1.  **イベント作成 (createEvent):**
     - 入力: FormData (タイトル, 説明, 候補日程リスト)
     - 処理: バリデーション、DB 挿入 (events, event_dates)、トークンは DB 側で生成。
-    - 出力/遷移: 作成イベントの管理ページへリダイレクト (`/event/[public_token]?admin=[admin_token]`)。
+    - 出力/遷移: 作成イベントの詳細ページへリダイレクト (`/event/[public_token]`)。
 2.  **回答送信 (submitAvailability):**
     - 入力: FormData (参加者名, event_token, 各候補日程の可否)
     - 処理: イベント特定、参加者取得 or 作成、古い回答削除、新回答挿入 (participants, availabilities)。
     - 出力/遷移: `revalidatePath`で同イベントページを再検証・更新。
 3.  **日程確定 (finalizeEvent):**
-    - 入力: 確定する event_date_id, admin_token (または event_id)
-    - 処理: admin_token 検証、DB 更新 (events.is_finalized=true, events.final_date_id=確定 ID)。
+    - 入力: 確定する event_date_id と event_id。
+    - 処理: event_id を基に DB 更新 (events.is_finalized=true, events.final_date_id=確定 ID)。
     - 出力/遷移: `revalidatePath`で同イベントページを再検証・更新。
 
 **型付き I/O:** TypeScript で型定義。Supabase クライアントに DB スキーマ型を指定。
 
-# **8. カレンダー連携の実装方針（.ics, Google Calendar）**
+# **8. カレンダー連携の実装方針（Google / ICS）**
 
-**.ics ファイル連携:**
+実装は複数確定日程に対応し、ローカル時間をそのまま扱います。
 
-- Next.js Route Handler (`app/api/generate-ics/route.ts`)で実装。
-- イベント ID をクエリパラメータで受け取り、ICS 文字列を生成 (`text/calendar`形式でレスポンス)。
-- `ics`や`ical-generator`等のライブラリ利用検討。
-- DTSTART/DTEND は DB 保存値をそのまま UTC 形式「YYYYMMDDTHHMMSSZ」で記述。(仕様書 12 章の追記に基づき、ローカルタイムをそのまま利用。UTC 変換なし)
-- リンク例: `/api/generate-ics?event=[public_token]`
+- ルート構成:
+  - `app/api/calendar/[event_id]/route.ts`
+    - Google カレンダーリンク生成（`?googleCalendar=true`）。`dateId` 指定で個別日程、未指定で最初の確定日程。
+    - ローカル時間を使用し、`ctz=Asia/Tokyo` 等のタイムゾーンを明示。
+  - `app/api/calendar/ics/[eventId]/route.ts`
+    - ICS 生成・ダウンロード。複数 VEVENT を1ファイルに出力（`dateId` 指定で個別）。
+    - ICS はローカル時間（Z なし）。
 
-**Google カレンダー直接リンク:**
+- 例:
+  - Google: `/api/calendar/<event_id>?googleCalendar=true&dateId=<event_date_id>`
+  - ICS: `/api/calendar/ics/<event_id>?dateId=<event_date_id>`
 
-- URL パラメータで予定情報（タイトル、日時、詳細）を指定して Google カレンダーのイベント作成画面を開く。
-  - `dates`: 開始日時/終了日時を RFC5545 形式 (YYYYMMDDTHHMMSSZ/YYYYMMDDTHHMMSSZ)。(仕様書 12 章の追記に基づき、ローカルタイムをそのまま利用。UTC 変換なし)
-- リンク例: `https://calendar.google.com/calendar/r/eventedit?text=...&dates=...&details=...`
+- 補足（タイムゾーン/日時処理）:
+  - DB 保存の `start_time`/`end_time` はローカルタイムを前提とし、そのまま出力。
+  - Google には `ctz` を付与。ICS では UTC 変換せず `YYYYMMDDTHHMMSS`（Z なし）で記述。
 
 # **9. ワイヤーフレーム構成（テキストベース）**
 
