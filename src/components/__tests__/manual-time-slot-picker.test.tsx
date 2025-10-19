@@ -160,4 +160,28 @@ describe('ManualTimeSlotPicker', () => {
     expect(headerLabels).toContain('2100/1/1');
     expect(headerLabels).toContain('2');
   });
+
+  test('初期値が指定された場合はDateRangePickerへ伝搬される', () => {
+    const initialDate = new Date('2099-01-05T00:00:00');
+    render(
+      <ManualTimeSlotPicker
+        onTimeSlotsChange={jest.fn()}
+        initialStartDate={initialDate}
+        initialEndDate={initialDate}
+        initialDefaultStartTime="08:30"
+        initialDefaultEndTime="12:00"
+        initialIntervalUnit="30"
+      />,
+    );
+
+    const startInput = screen.getAllByLabelText(/開始日/)[0] as HTMLInputElement;
+    const endInput = screen.getAllByLabelText(/終了日/)[0] as HTMLInputElement;
+    const defaultStartTimeInput = screen.getByLabelText(/デフォルト開始時間/) as HTMLInputElement;
+    const defaultEndTimeInput = screen.getByLabelText(/デフォルト終了時間/) as HTMLInputElement;
+
+    expect(startInput.value).toBe('2099-01-05');
+    expect(endInput.value).toBe('2099-01-05');
+    expect(defaultStartTimeInput.value).toBe('08:30');
+    expect(defaultEndTimeInput.value).toBe('12:00');
+  });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { ComponentProps } from 'react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import DateRangePicker from './date-range-picker';
 import { TimeSlot } from '@/lib/utils';
@@ -19,6 +20,16 @@ interface ManualTimeSlotPickerProps {
   disabledSlotKeys?: string[];
   /** 時間間隔を固定したい場合の分指定 */
   forcedIntervalMinutes?: number | null;
+  /** DateRangePicker の初期開始日 */
+  initialStartDate?: Date | null;
+  /** DateRangePicker の初期終了日 */
+  initialEndDate?: Date | null;
+  /** 初期デフォルト開始時間 */
+  initialDefaultStartTime?: string;
+  /** 初期デフォルト終了時間 */
+  initialDefaultEndTime?: string;
+  /** 初期の時間間隔（分） */
+  initialIntervalUnit?: string;
 }
 
 /**
@@ -29,6 +40,11 @@ export default function ManualTimeSlotPicker({
   initialSlots = [],
   disabledSlotKeys = [],
   forcedIntervalMinutes = null,
+  initialStartDate,
+  initialEndDate,
+  initialDefaultStartTime,
+  initialDefaultEndTime,
+  initialIntervalUnit,
 }: ManualTimeSlotPickerProps) {
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   // ★ ソースオブトゥルースは「選択されたキー集合」
@@ -188,6 +204,60 @@ export default function ManualTimeSlotPicker({
     return `${first} 〜 ${last}`;
   }, [visibleDates]);
 
+  const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+
+  const dateRangeProps = useMemo(() => {
+    const props: Partial<ComponentProps<typeof DateRangePicker>> = {
+      allowPastDates: true,
+      forcedIntervalMinutes,
+    };
+
+    if (initialStartDate !== undefined) {
+      props.initialStartDate = initialStartDate;
+    } else if (!isTest) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      props.initialStartDate = d;
+    }
+
+    if (initialEndDate !== undefined) {
+      props.initialEndDate = initialEndDate;
+    } else if (!isTest) {
+      const d = new Date();
+      d.setDate(d.getDate() + 6);
+      d.setHours(0, 0, 0, 0);
+      props.initialEndDate = d;
+    }
+
+    if (initialDefaultStartTime !== undefined) {
+      props.initialDefaultStartTime = initialDefaultStartTime;
+    } else if (!isTest) {
+      props.initialDefaultStartTime = '09:00';
+    }
+
+    if (initialDefaultEndTime !== undefined) {
+      props.initialDefaultEndTime = initialDefaultEndTime;
+    } else if (!isTest) {
+      props.initialDefaultEndTime = '18:00';
+    }
+
+    if (initialIntervalUnit !== undefined) {
+      props.initialIntervalUnit = initialIntervalUnit;
+    } else if (!isTest) {
+      props.initialIntervalUnit = '60';
+    }
+
+    return props;
+  }, [
+    forcedIntervalMinutes,
+    initialStartDate,
+    initialEndDate,
+    initialDefaultStartTime,
+    initialDefaultEndTime,
+    initialIntervalUnit,
+    isTest,
+  ]);
+
   const selectionController = useSelectionDragController({
     isSelected: (key) => selectedKeys.has(key),
     applySelection,
@@ -229,30 +299,7 @@ export default function ManualTimeSlotPicker({
 
   return (
     <div className="space-y-4">
-      {(() => {
-        const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
-        const props = isTest
-          ? {}
-          : ({
-              initialStartDate: (() => {
-                const d = new Date();
-                d.setHours(0, 0, 0, 0);
-                return d;
-              })(),
-              initialEndDate: (() => {
-                const d = new Date();
-                d.setDate(d.getDate() + 6);
-                d.setHours(0, 0, 0, 0);
-                return d;
-              })(),
-              initialDefaultStartTime: '09:00',
-              initialDefaultEndTime: '18:00',
-              initialIntervalUnit: '60',
-              allowPastDates: true,
-              forcedIntervalMinutes,
-            } as const);
-        return <DateRangePicker onTimeSlotsChange={handleSlotsGenerate} {...props} />;
-      })()}
+      <DateRangePicker onTimeSlotsChange={handleSlotsGenerate} {...dateRangeProps} />
       {allSlots.length > 0 && (
         <p className="text-sm text-gray-500">
           カレンダー上でクリックして、候補の日時を個別に追加します。

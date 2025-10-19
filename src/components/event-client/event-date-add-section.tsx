@@ -105,6 +105,75 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
     return Math.min(...unique);
   }, [eventDates]);
 
+  const baseTimeDefaults = useMemo(() => {
+    if (eventDates.length === 0) {
+      return { start: '09:00', end: '18:00' } as const;
+    }
+
+    const dailyPattern = extractDailyPatterns(eventDates);
+    const source =
+      dailyPattern.length > 0
+        ? dailyPattern
+        : eventDates.map((d) => ({
+            start: d.start_time.slice(11, 16),
+            end: d.end_time.slice(11, 16),
+          }));
+
+    const timeStringToMinutes = (time: string): number => {
+      if (time === '24:00') {
+        return 24 * 60;
+      }
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const minutesToTimeString = (minutes: number): string => {
+      if (minutes >= 24 * 60) {
+        return '24:00';
+      }
+      const hours = Math.floor(minutes / 60)
+        .toString()
+        .padStart(2, '0');
+      const mins = (minutes % 60).toString().padStart(2, '0');
+      return `${hours}:${mins}`;
+    };
+
+    let minStart = Number.POSITIVE_INFINITY;
+    let maxEnd = Number.NEGATIVE_INFINITY;
+
+    source.forEach(({ start, end }) => {
+      minStart = Math.min(minStart, timeStringToMinutes(start));
+      maxEnd = Math.max(maxEnd, timeStringToMinutes(end));
+    });
+
+    if (!Number.isFinite(minStart) || !Number.isFinite(maxEnd)) {
+      return { start: '09:00', end: '18:00' } as const;
+    }
+
+    return {
+      start: minutesToTimeString(minStart),
+      end: minutesToTimeString(maxEnd),
+    } as const;
+  }, [eventDates]);
+
+  const lastSlotDate = useMemo(() => {
+    if (!last) {
+      return null;
+    }
+    const base = new Date(last.start_time.slice(0, 10));
+    base.setHours(0, 0, 0, 0);
+    return Number.isNaN(base.getTime()) ? null : base;
+  }, [last]);
+
+  const manualInitialDate = useMemo(() => {
+    if (!lastSlotDate) {
+      return null;
+    }
+    const next = new Date(lastSlotDate);
+    next.setDate(next.getDate() + 1);
+    return Number.isNaN(next.getTime()) ? null : next;
+  }, [lastSlotDate]);
+
   const preferredMode = useMemo(
     () => inferPreferredMode(eventDates),
     [eventDates, inferPreferredMode],
@@ -370,6 +439,11 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                             }
                           }}
                           forcedIntervalMinutes={baseIntervalMinutes}
+                          initialDefaultStartTime={baseTimeDefaults.start}
+                          initialDefaultEndTime={baseTimeDefaults.end}
+                          initialIntervalUnit={String(baseIntervalMinutes)}
+                          initialStartDate={lastSlotDate}
+                          initialEndDate={lastSlotDate}
                         />
                         {autoRangePreview.length > 0 ? (
                           <div className="bg-base-200/60 rounded-lg p-3 text-sm">
@@ -436,6 +510,11 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                       onTimeSlotsChange={setManualSlots}
                       disabledSlotKeys={disabledManualKeys}
                       forcedIntervalMinutes={baseIntervalMinutes}
+                      initialDefaultStartTime={baseTimeDefaults.start}
+                      initialDefaultEndTime={baseTimeDefaults.end}
+                      initialIntervalUnit={String(baseIntervalMinutes)}
+                      initialStartDate={manualInitialDate}
+                      initialEndDate={manualInitialDate}
                     />
                     {manualSlots.length === 0 ? (
                       <p className="text-xs text-gray-500">
