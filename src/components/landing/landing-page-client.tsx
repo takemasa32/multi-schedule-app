@@ -2,7 +2,20 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { CalendarRange, Users, BarChart2, Music, Gamepad2, Briefcase, History } from 'lucide-react';
+import {
+  CalendarRange,
+  Users,
+  BarChart2,
+  Music,
+  Gamepad2,
+  Briefcase,
+  History,
+  CalendarPlus,
+  Share2,
+  CheckCircle2,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
 import Card from '@/components/layout/Card';
 import EventHistory from '@/components/event-history';
 
@@ -61,6 +74,60 @@ export default function LandingPageClient() {
       desc: '部署横断のミーティング日程をスマートに。',
     },
   ];
+
+  const howToSteps = [
+    {
+      title: 'イベント作成',
+      description:
+        'タイトル・候補日など基本情報を入力するだけで、自動でイベントページを作成できます。',
+      icon: CalendarPlus,
+      accent: 'primary',
+      highlight: '作成したイベントは履歴に自動保存',
+    },
+    {
+      title: 'リンク共有',
+      description:
+        'ワンクリックで共有リンクをコピー。メールやチャットに貼り付けるだけで参加者に案内できます。',
+      icon: Share2,
+      accent: 'secondary',
+      highlight: '共有はWeb Shareとクリップボードに対応',
+    },
+    {
+      title: '日程確定',
+      description:
+        '回答状況をリアルタイムで集計。最適枠を選ぶと全員のカレンダーにも同期が可能です。',
+      icon: CheckCircle2,
+      accent: 'accent',
+      highlight: '確定後はGoogle/ICSリンクで簡単に共有可能',
+    },
+  ] as const;
+
+  const howToAccentStyles = {
+    primary: {
+      border: 'border-t-4 border-t-primary/60',
+      number: 'bg-primary/10 text-primary ring-primary/30',
+      icon: 'text-primary',
+      highlightBg: 'bg-primary/10',
+      highlightText: 'text-primary',
+      highlightRing: 'ring-primary/20',
+    },
+    secondary: {
+      border: 'border-t-4 border-t-secondary/60',
+      number: 'bg-secondary/10 text-secondary ring-secondary/30',
+      icon: 'text-secondary',
+      highlightBg: 'bg-secondary/10',
+      highlightText: 'text-secondary',
+      highlightRing: 'ring-secondary/20',
+    },
+    accent: {
+      border: 'border-t-4 border-t-accent/60',
+      number: 'bg-accent/10 text-accent ring-accent/30',
+      icon: 'text-accent',
+      highlightBg: 'bg-accent/10',
+      highlightText: 'text-accent',
+      highlightRing: 'ring-accent/20',
+    },
+  } as const;
 
   // Comparison data
   const comparisons = [
@@ -263,44 +330,106 @@ export default function LandingPageClient() {
       </section>
 
       {/* HOW-TO */}
-      <section className="bg-base-100 px-2 py-20 sm:px-4">
-        <div className="container mx-auto max-w-6xl text-center">
-          <motion.h2
-            className="mb-4 text-3xl font-bold sm:text-4xl"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeUp}
-            custom={0}
-          >
-            簡単 3 ステップで日程調整
-          </motion.h2>
-          <motion.p
-            className="text-base-content/70 mx-auto mb-12 max-w-2xl"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeUp}
-            custom={1}
-          >
-            初めてでも迷わないシンプルな操作フロー。
-          </motion.p>
-          <ul className="steps steps-vertical md:steps-horizontal mx-auto w-full snap-x overflow-x-auto md:w-auto">
-            {['イベント作成', 'リンク共有', '日程確定'].map((t, i) => (
-              <li key={t} className="step step-primary bg-base-200 min-w-[160px] snap-start shadow">
-                <span className="font-semibold">
-                  {i + 1}. {t}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-10 sm:mt-14">
-            <Link
-              href="/create"
-              className="btn btn-primary btn-lg w-full px-4 py-3 text-base shadow-lg sm:w-auto"
+      <section className="bg-base-100 px-4 py-20 sm:px-6">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-center">
+            <div>
+              <motion.span
+                className="border-base-300 bg-base-100 text-base-content/70 inline-flex items-center gap-2 rounded-full border px-4 py-1 text-sm font-medium shadow-sm"
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.4 }}
+                variants={fadeUp}
+                custom={0}
+              >
+                <Sparkles className="text-primary h-4 w-4" aria-hidden />
+                HOW TO
+              </motion.span>
+              <motion.h2
+                className="text-base-content mt-4 text-3xl font-bold leading-tight sm:text-4xl"
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.4 }}
+                variants={fadeUp}
+                custom={1}
+              >
+                簡単 3 ステップで日程調整
+              </motion.h2>
+              <motion.p
+                className="text-base-content/70 mt-4 max-w-xl text-base leading-relaxed"
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.4 }}
+                variants={fadeUp}
+                custom={2}
+              >
+                初めてでも迷わないシンプルな操作フロー。回答の集計からカレンダー連携まで、一貫したUIで迷わず進められます。
+              </motion.p>
+              <motion.div
+                className="mt-10 sm:mt-12"
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.4 }}
+                variants={fadeUp}
+                custom={3}
+              >
+                <Link
+                  href="/create"
+                  className="btn btn-primary btn-lg w-full px-5 py-3 text-base shadow transition duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
+                >
+                  イベントを作成してみる
+                  <ArrowRight className="ml-2 h-5 w-5" aria-hidden />
+                </Link>
+              </motion.div>
+            </div>
+            <motion.ol
+              className="grid gap-6 md:grid-cols-3"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              variants={fadeUp}
+              custom={1}
             >
-              イベントを作成してみる
-            </Link>
+              {howToSteps.map((step, index) => {
+                const Icon = step.icon;
+                const styles = howToAccentStyles[step.accent];
+
+                return (
+                  <motion.li
+                    key={step.title}
+                    className={`border-base-200 bg-base-100 flex h-full flex-col rounded-2xl border p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md ${styles.border}`}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, amount: 0.4 }}
+                    variants={fadeUp}
+                    custom={index + 2}
+                  >
+                    <div className="flex flex-1 flex-col">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold shadow-sm ring-1 ${styles.number}`}
+                        >
+                          {index + 1}
+                        </span>
+                        <Icon className={`h-6 w-6 ${styles.icon}`} aria-hidden />
+                      </div>
+                      <h3 className="text-base-content mt-5 text-lg font-semibold">{step.title}</h3>
+                      <p className="text-base-content/70 mt-3 text-sm leading-relaxed">
+                        {step.description}
+                      </p>
+                      <div className="text-base-content/60 mt-6 flex items-center gap-2 text-xs font-medium">
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 shadow-inner ring-1 ${styles.highlightBg} ${styles.highlightText} ${styles.highlightRing}`}
+                        >
+                          <Sparkles className="h-4 w-4" aria-hidden />
+                          {step.highlight}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.li>
+                );
+              })}
+            </motion.ol>
           </div>
         </div>
       </section>
