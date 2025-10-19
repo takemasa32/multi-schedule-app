@@ -364,8 +364,8 @@ export default function ManualTimeSlotPicker({
                     return (
                       <td
                         key={key}
-                        className={`border-base-300 border text-center ${
-                          isMobile ? 'p-0.5' : 'p-0.5'
+                        className={`border-base-300 w-16 border text-center sm:w-auto ${
+                          isMobile ? 'p-0' : 'p-0.5'
                         }`}
                       >
                         {exists ? (
@@ -375,7 +375,7 @@ export default function ManualTimeSlotPicker({
                             data-selection-key={key}
                             className={`w-full ${
                               isMobile ? 'h-8' : 'h-9'
-                            } flex select-none items-center justify-center rounded-sm transition-colors ${
+                            } flex select-none items-center justify-center rounded-none transition-colors sm:rounded-sm ${
                               disabled
                                 ? 'bg-base-300 text-base-content/40 cursor-not-allowed'
                                 : active
@@ -397,7 +397,7 @@ export default function ManualTimeSlotPicker({
                           <div
                             className={`w-full ${
                               isMobile ? 'h-8' : 'h-9'
-                            } bg-base-200/30 text-base-content/30 flex select-none items-center justify-center rounded-sm`}
+                            } bg-base-200/30 text-base-content/30 flex select-none items-center justify-center rounded-none sm:rounded-sm`}
                           >
                             -
                           </div>

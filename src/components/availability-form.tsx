@@ -1019,7 +1019,7 @@ export default function AvailabilityForm({
                                           return (
                                             <td
                                               key={`${day}-${timeSlot}`}
-                                              className="border-base-300 cursor-pointer border p-0 text-center"
+                                              className="border-base-300 cursor-pointer border p-0 text-center w-16 sm:w-auto"
                                               data-day={day}
                                               data-time-slot={timeSlot}
                                               data-selection-key={matrixKey}
@@ -1031,7 +1031,7 @@ export default function AvailabilityForm({
                                               )}
                                             >
                                               <div
-                                                className={`flex h-7 w-full items-center justify-center ${
+                                                className={`flex h-7 w-full items-center justify-center rounded-none sm:rounded-sm ${
                                                   daySchedule.timeSlots[timeSlot]
                                                     ? 'bg-success text-success-content'
                                                     : 'bg-base-200'
@@ -1298,9 +1298,9 @@ export default function AvailabilityForm({
                                       </td>
                                     )}
                                     <td className="border-base-300 border">{timeStr}</td>
-                                    <td className="border-base-300 border text-center">
+                                    <td className="border-base-300 border text-center w-20 sm:w-auto">
                                       <div
-                                        className={`mx-auto flex h-10 w-full cursor-pointer items-center justify-center rounded-md transition-colors duration-200 ease-in-out ${className}`}
+                                        className={`flex h-10 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-200 ease-in-out sm:rounded-md ${className}`}
                                         data-selection-key={date.id}
                                         {...dateSelectionController.getCellProps(date.id, {
                                           disabled: isWeekdayModeActive,
@@ -1379,12 +1379,12 @@ export default function AvailabilityForm({
                                   return (
                                     <td
                                       key={`${date.dateKey}-${timeSlot}`}
-                                      className="border-base-300 border p-0 text-center"
+                                      className="border-base-300 border p-0 text-center w-16 sm:w-auto"
                                       data-date-id={dateId}
                                     >
                                       {dateId ? (
                                         <div
-                                          className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-sm transition-colors duration-150 sm:h-10 ${className}`}
+                                          className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-150 sm:h-10 sm:rounded-sm ${className}`}
                                           data-date-id={dateId}
                                           data-selection-key={dateId}
                                           {...dateSelectionController.getCellProps(dateId, {
@@ -1394,7 +1394,7 @@ export default function AvailabilityForm({
                                           {getCellContent(status)}
                                         </div>
                                       ) : (
-                                        <div className="bg-base-200/30 text-base-content/30 flex h-9 w-full items-center justify-center rounded-sm sm:h-10">
+                                        <div className="bg-base-200/30 text-base-content/30 flex h-9 w-full items-center justify-center rounded-none sm:h-10 sm:rounded-sm">
                                           <span className="text-xs sm:text-sm">ー</span>
                                         </div>
                                       )}

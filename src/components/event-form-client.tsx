@@ -188,7 +188,7 @@ export default function EventFormClient() {
         </p>
       </div>
 
-      <div className="card bg-base-100 border-base-300 border p-4 shadow-sm">
+      <div className="card bg-base-100 border-base-300 border p-2 shadow-sm md:p-4">
         <h3 className="card-title mb-2 text-lg">候補日程の設定</h3>
         <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center">
