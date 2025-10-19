@@ -16,50 +16,52 @@ jest.mock('@/lib/actions', () => ({
 
 let lastForcedIntervalMinutes: number | null = null;
 jest.mock('../date-range-picker', () => {
-  const React = require('react');
-  const { useEffect, useRef } = React;
+  const ReactModule = jest.requireActual('react') as typeof import('react');
+  const { useEffect, useRef } = ReactModule;
+  type MockDateRangePickerProps = {
+    onTimeSlotsChange: (slots: { date: Date; startTime: string; endTime: string }[]) => void;
+    forcedIntervalMinutes?: number | null;
+  };
+  function MockDateRangePicker({
+    onTimeSlotsChange,
+    forcedIntervalMinutes,
+  }: MockDateRangePickerProps) {
+    const calledRef = useRef(false);
+    lastForcedIntervalMinutes = forcedIntervalMinutes ?? null;
+    useEffect(() => {
+      if (calledRef.current) return;
+      calledRef.current = true;
+      onTimeSlotsChange([
+        { date: new Date('2099-01-03T00:00:00'), startTime: '09:00', endTime: '10:00' },
+      ]);
+    }, [onTimeSlotsChange]);
+    return <div data-testid="mock-date-range-picker">date-range</div>;
+  }
   return {
     __esModule: true,
-    default: ({
-      onTimeSlotsChange,
-      forcedIntervalMinutes,
-    }: {
-      onTimeSlotsChange: (slots: { date: Date; startTime: string; endTime: string }[]) => void;
-      forcedIntervalMinutes?: number | null;
-    }) => {
-      const calledRef = useRef(false);
-      lastForcedIntervalMinutes = forcedIntervalMinutes ?? null;
-      useEffect(() => {
-        if (calledRef.current) return;
-        calledRef.current = true;
-        onTimeSlotsChange([
-          { date: new Date('2099-01-03T00:00:00'), startTime: '09:00', endTime: '10:00' },
-        ]);
-      }, [onTimeSlotsChange]);
-      return <div data-testid="mock-date-range-picker">date-range</div>;
-    },
+    default: MockDateRangePicker,
   };
 });
 
 jest.mock('../manual-time-slot-picker', () => {
-  const React = require('react');
-  const { useEffect } = React;
+  const ReactModule = jest.requireActual('react') as typeof import('react');
+  const { useEffect } = ReactModule;
+  type MockManualTimeSlotPickerProps = {
+    onTimeSlotsChange: (slots: { date: Date; startTime: string; endTime: string }[]) => void;
+    disabledSlotKeys?: string[];
+  };
+  function MockManualTimeSlotPicker({ onTimeSlotsChange }: MockManualTimeSlotPickerProps) {
+    useEffect(() => {
+      onTimeSlotsChange([
+        { date: new Date('2099-01-01T00:00:00'), startTime: '09:00', endTime: '10:00' },
+        { date: new Date('2099-01-02T00:00:00'), startTime: '09:00', endTime: '10:00' },
+      ]);
+    }, [onTimeSlotsChange]);
+    return <div data-testid="mock-manual-time-slot-picker">manual</div>;
+  }
   return {
     __esModule: true,
-    default: ({
-      onTimeSlotsChange,
-    }: {
-      onTimeSlotsChange: (slots: { date: Date; startTime: string; endTime: string }[]) => void;
-      disabledSlotKeys?: string[];
-    }) => {
-      useEffect(() => {
-        onTimeSlotsChange([
-          { date: new Date('2099-01-01T00:00:00'), startTime: '09:00', endTime: '10:00' },
-          { date: new Date('2099-01-02T00:00:00'), startTime: '09:00', endTime: '10:00' },
-        ]);
-      }, [onTimeSlotsChange]);
-      return <div data-testid="mock-manual-time-slot-picker">manual</div>;
-    },
+    default: MockManualTimeSlotPicker,
   };
 });
 

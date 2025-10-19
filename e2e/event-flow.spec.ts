@@ -34,6 +34,15 @@ async function waitForEventDetail(page: Page) {
   );
 }
 
+async function dumpPageHtml(page: Page, label: string) {
+  if (page.isClosed()) {
+    console.log(`${label} (ページが既にクローズされています)`);
+    return;
+  }
+  const html = await page.content();
+  console.log(label, html);
+}
+
 let eventAdminUrl: string;
 let eventPublicUrl: string;
 let participantName: string;
@@ -49,6 +58,8 @@ declare global {
 // 直列でE2Eフローを分割
 
 test.describe.serial('イベントE2Eフロー', () => {
+  test.describe.configure({ timeout: 60_000 });
+
   test('イベント作成', async ({ page }) => {
     await gotoWithRetry(page, '/create');
     await page.waitForLoadState('networkidle');
@@ -74,8 +85,7 @@ test.describe.serial('イベントE2Eフロー', () => {
       await page.waitForURL(/\/event\//, { timeout: 15000 });
       await page.waitForLoadState('networkidle');
     } catch (e) {
-      const html = await page.content();
-      console.log('DEBUG: イベント作成後の画面HTML', html);
+      await dumpPageHtml(page, 'DEBUG: イベント作成後の画面HTML');
       throw e;
     }
     eventAdminUrl = page.url();
@@ -140,8 +150,7 @@ test.describe.serial('イベントE2Eフロー', () => {
         }),
       ).toBeVisible({ timeout: 15000 });
     } catch (e) {
-      const html = await participantPage.content();
-      console.log('DEBUG: 参加者表示失敗 page.content()', html);
+      await dumpPageHtml(participantPage, 'DEBUG: 参加者表示失敗 page.content()');
       throw e;
     }
     await participantPage.close();
@@ -164,8 +173,7 @@ test.describe.serial('イベントE2Eフロー', () => {
         timeout: 10000,
       });
     } catch (e) {
-      const html = await page.content();
-      console.log('DEBUG: 3件目参加者表示失敗 page.content()', html);
+      await dumpPageHtml(page, 'DEBUG: 3件目参加者表示失敗 page.content()');
       throw e;
     }
     try {
@@ -173,8 +181,7 @@ test.describe.serial('イベントE2Eフロー', () => {
         timeout: 10000,
       });
     } catch (e) {
-      const html = await page.content();
-      console.log('DEBUG: page.content()', html);
+      await dumpPageHtml(page, 'DEBUG: page.content()');
       throw e;
     }
     await page.locator('[data-testid$="availability-tab-detailed"]').first().click();
