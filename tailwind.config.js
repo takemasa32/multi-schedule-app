@@ -11,8 +11,6 @@ module.exports = {
     { pattern: /^bg-primary-500\/\d{2,3}$/ },
     // 確定セルの枠線用
     'border-success',
-    // heatmap-X クラスも残す場合
-    { pattern: /^heatmap-(?:[0-9]|10)$/ },
   ],
   theme: {
     extend: {
