@@ -117,8 +117,6 @@ export default function AvailabilityForm({
     [selectedDates],
   );
 
-  const orderedDateIds = useMemo(() => eventDates.map((date) => date.id), [eventDates]);
-
   const applyDateSelection = useCallback((keys: string[], value: boolean) => {
     setSelectedDates((prev) => {
       let changed = false;
@@ -140,19 +138,7 @@ export default function AvailabilityForm({
   const dateSelectionController = useSelectionDragController({
     isSelected: (key) => Boolean(selectedDates[key]),
     applySelection: applyDateSelection,
-    rangeResolver: ({ startKey, targetKey }) => {
-      if (!startKey || !targetKey) {
-        return targetKey ? [targetKey] : [];
-      }
-      const startIndex = orderedDateIds.indexOf(startKey);
-      const targetIndex = orderedDateIds.indexOf(targetKey);
-      if (startIndex === -1 || targetIndex === -1) {
-        return [targetKey];
-      }
-      const [from, to] =
-        startIndex <= targetIndex ? [startIndex, targetIndex] : [targetIndex, startIndex];
-      return orderedDateIds.slice(from, to + 1);
-    },
+    rangeResolver: ({ targetKey }) => (targetKey ? [targetKey] : []),
     shouldIgnorePointerDown: (_event, _key) => isWeekdayModeActive,
     shouldIgnorePointerEnter: (_event, _key) => isWeekdayModeActive,
     disableBodyScroll: true,
@@ -691,7 +677,7 @@ export default function AvailabilityForm({
   }, [weekdaySelections, eventDates, selectedDates, getTimeKey]);
 
   return (
-    <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-6 shadow-sm transition-all">
+    <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
       {feedback && !isEditing ? (
         <>
           <h2 className="mb-4 text-xl font-bold">回答が送信されました</h2>
@@ -1019,7 +1005,7 @@ export default function AvailabilityForm({
                                           return (
                                             <td
                                               key={`${day}-${timeSlot}`}
-                                              className="border-base-300 cursor-pointer border p-0 text-center w-16 sm:w-auto"
+                                              className="border-base-300 w-16 cursor-pointer border p-0 text-center sm:w-auto"
                                               data-day={day}
                                               data-time-slot={timeSlot}
                                               data-selection-key={matrixKey}
@@ -1298,7 +1284,7 @@ export default function AvailabilityForm({
                                       </td>
                                     )}
                                     <td className="border-base-300 border">{timeStr}</td>
-                                    <td className="border-base-300 border text-center w-20 sm:w-auto">
+                                    <td className="border-base-300 w-20 border text-center sm:w-auto">
                                       <div
                                         className={`flex h-10 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-200 ease-in-out sm:rounded-md ${className}`}
                                         data-selection-key={date.id}
@@ -1379,7 +1365,7 @@ export default function AvailabilityForm({
                                   return (
                                     <td
                                       key={`${date.dateKey}-${timeSlot}`}
-                                      className="border-base-300 border p-0 text-center w-16 sm:w-auto"
+                                      className="border-base-300 w-16 border p-0 text-center sm:w-auto"
                                       data-date-id={dateId}
                                     >
                                       {dateId ? (

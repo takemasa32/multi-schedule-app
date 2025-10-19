@@ -122,4 +122,51 @@ describe('AvailabilityForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /回答を送信/ }));
     expect(await screen.findByText(/サーバーエラー/)).toBeInTheDocument();
   });
+
+  it('ドラッグで通過していないセルは変更されない', async () => {
+    const extendedDates = [
+      {
+        id: 'date1',
+        start_time: '2025-06-10T10:00:00.000Z',
+        end_time: '2025-06-10T11:00:00.000Z',
+        label: '午前枠1',
+      },
+      {
+        id: 'date2',
+        start_time: '2025-06-11T10:00:00.000Z',
+        end_time: '2025-06-11T11:00:00.000Z',
+        label: '午前枠2',
+      },
+      {
+        id: 'date3',
+        start_time: '2025-06-12T10:00:00.000Z',
+        end_time: '2025-06-12T11:00:00.000Z',
+        label: '午前枠3',
+      },
+    ];
+
+    const { container } = render(<AvailabilityForm {...defaultProps} eventDates={extendedDates} />);
+
+    const cell1 = container.querySelector<HTMLElement>('[data-selection-key="date1"]');
+    const cell2 = container.querySelector<HTMLElement>('[data-selection-key="date2"]');
+    const cell3 = container.querySelector<HTMLElement>('[data-selection-key="date3"]');
+
+    if (!cell1 || !cell2 || !cell3) {
+      throw new Error('対象セルが見つかりません');
+    }
+
+    expect(cell1.textContent).toBe('×');
+    expect(cell2.textContent).toBe('×');
+    expect(cell3.textContent).toBe('×');
+
+    fireEvent.pointerDown(cell1, { pointerId: 5, pointerType: 'mouse' });
+    fireEvent.pointerEnter(cell3, { pointerId: 5, pointerType: 'mouse', buttons: 1 });
+    fireEvent.pointerUp(cell3, { pointerId: 5, pointerType: 'mouse' });
+
+    await waitFor(() => {
+      expect(cell1.textContent).toBe('○');
+      expect(cell2.textContent).toBe('×');
+      expect(cell3.textContent).toBe('○');
+    });
+  });
 });
