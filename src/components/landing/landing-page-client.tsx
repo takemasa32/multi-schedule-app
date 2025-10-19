@@ -67,38 +67,38 @@ export default function LandingPageClient() {
     {
       feature: 'ログイン不要',
       daysynth: '○',
-      tappy: '△',
-      chouseisan: '○',
+      service_a: '△',
+      service_b: '○',
     },
     {
       feature: 'ヒートマップ表示',
       daysynth: '○',
-      tappy: '○',
-      chouseisan: '×',
+      service_a: '○',
+      service_b: '×',
     },
     {
       feature: '複数予定管理',
       daysynth: '○',
-      tappy: '○',
-      chouseisan: '△',
+      service_a: '○',
+      service_b: '△',
     },
     {
       feature: 'カレンダー連携',
       daysynth: '○',
-      tappy: '×',
-      chouseisan: '×',
+      service_a: '×',
+      service_b: '×',
     },
     {
       feature: 'モバイル最適化',
       daysynth: '○',
-      tappy: '○',
-      chouseisan: '○',
+      service_a: '○',
+      service_b: '○',
     },
     {
       feature: 'シンプルUI/UX',
       daysynth: '○',
-      tappy: '△',
-      chouseisan: '△',
+      service_a: '△',
+      service_b: '△',
     },
   ];
 
@@ -325,19 +325,15 @@ export default function LandingPageClient() {
             viewport={{ once: true, amount: 0.4 }}
             variants={fadeUp}
             custom={1}
-          >
-            他の日程調整サービスと比較すると、
-            <span className="text-primary font-bold">DaySynth</span>
-            の優位性が明確です。
-          </motion.p>
+          ></motion.p>
           <div className="mb-8 overflow-x-auto rounded-lg shadow-lg">
             <table className="table-zebra table w-full">
               <thead className="bg-primary text-primary-content">
                 <tr>
                   <th className="text-base">機能</th>
                   <th className="text-base font-bold">DaySynth</th>
-                  <th className="text-base opacity-70">サービスT</th>
-                  <th className="text-base opacity-70">サービスC</th>
+                  <th className="text-base opacity-70">サービスA</th>
+                  <th className="text-base opacity-70">サービスB</th>
                 </tr>
               </thead>
               <tbody>
@@ -345,8 +341,8 @@ export default function LandingPageClient() {
                   <tr key={cmp.feature}>
                     <td className="font-medium">{cmp.feature}</td>
                     <td className="text-primary font-bold">{cmp.daysynth}</td>
-                    <td>{cmp.tappy}</td>
-                    <td>{cmp.chouseisan}</td>
+                    <td>{cmp.service_a}</td>
+                    <td>{cmp.service_b}</td>
                   </tr>
                 ))}
               </tbody>
