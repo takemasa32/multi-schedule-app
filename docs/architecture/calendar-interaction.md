@@ -26,6 +26,7 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
   - `rangeResolver` による連続セルの算出（回答ページでは日付 ID の配列に沿った範囲適用）
   - ボディスクロール抑止（overflow/touchAction を退避・復元）
   - キーボード操作（Space/Enter）でのトグル（必要時のみ `focusable` を付与）
+  - セル以外から押下されたまま移動してきたポインタでも `pointermove` でセル上に侵入したタイミングでドラッグを開始し、ドラッグ中のポインタ ID を記録してスムーズに範囲更新を継続
 - **拡張ポイント**
   - `shouldIgnorePointerDown/Enter`: スクロール検知やページ固有モードの無効化に利用
   - `resolveInitialIntent`: トグル以外の初期状態（例: 強制 ON/OFF）を注入可能
@@ -73,6 +74,7 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 - `src/components/__tests__/manual-time-slot-picker.test.tsx`
 - `src/components/__tests__/availability-form.test.tsx`
   - PointerEvent ポリフィルを `jest.setup.js` に追加し、JSDOM 環境でも共通ロジックを実行可能にした
+  - グローバル `pointermove` でセル上に侵入した際にドラッグが開始されるパスをモックし、セル外からのドラッグ開始も回帰テストで担保
 
 ## 今後の拡張余地
 

@@ -169,4 +169,70 @@ describe('AvailabilityForm', () => {
       expect(cell3.textContent).toBe('○');
     });
   });
+
+  it('判定外からドラッグしても通過セルが反転する', async () => {
+    const extendedDates = [
+      {
+        id: 'date1',
+        start_time: '2025-07-01T10:00:00.000Z',
+        end_time: '2025-07-01T11:00:00.000Z',
+        label: '午前枠1',
+      },
+      {
+        id: 'date2',
+        start_time: '2025-07-02T10:00:00.000Z',
+        end_time: '2025-07-02T11:00:00.000Z',
+        label: '午前枠2',
+      },
+    ];
+
+    const { container } = render(
+      <AvailabilityForm {...defaultProps} eventDates={extendedDates} />,
+    );
+
+    const cell1 = container.querySelector<HTMLElement>('[data-selection-key="date1"]');
+    const cell2 = container.querySelector<HTMLElement>('[data-selection-key="date2"]');
+
+    if (!cell1 || !cell2) {
+      throw new Error('対象セルが見つかりません');
+    }
+
+    expect(cell1.textContent).toBe('×');
+    expect(cell2.textContent).toBe('×');
+
+    const createPointerEvent = (type: string, options: MouseEventInit & { pointerId?: number }) => {
+      const event = new MouseEvent(type, { bubbles: true, cancelable: true, ...options });
+      if (options.pointerId !== undefined) {
+        Object.defineProperty(event, 'pointerId', { value: options.pointerId });
+      }
+      return event;
+    };
+
+    const originalElementFromPoint = document.elementFromPoint;
+    const elementFromPointMock = jest.fn(() => cell1 as unknown as Element);
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: elementFromPointMock,
+    });
+
+    try {
+      window.dispatchEvent(createPointerEvent('pointermove', { buttons: 1, pointerId: 21 }));
+      await waitFor(() => {
+        expect(cell1.textContent).toBe('○');
+      });
+
+      elementFromPointMock.mockReturnValue(cell2 as unknown as Element);
+      window.dispatchEvent(createPointerEvent('pointermove', { buttons: 1, pointerId: 21 }));
+      await waitFor(() => {
+        expect(cell2.textContent).toBe('○');
+      });
+
+      window.dispatchEvent(createPointerEvent('pointerup', { pointerId: 21 }));
+    } finally {
+      Object.defineProperty(document, 'elementFromPoint', {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+  });
 });

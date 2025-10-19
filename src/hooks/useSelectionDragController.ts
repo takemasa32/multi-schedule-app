@@ -112,6 +112,18 @@ const defaultGetKeyFromElement = (element: Element | null): SelectionKey | null 
   return key ?? null;
 };
 
+const resolveButtonsState = (event: ReactPointerEvent<HTMLElement> | PointerEvent): number => {
+  const pointerEvent = event as PointerEvent;
+  if (typeof pointerEvent.buttons === 'number') {
+    return pointerEvent.buttons;
+  }
+  const reactEvent = event as ReactPointerEvent<HTMLElement>;
+  if (reactEvent.nativeEvent && typeof reactEvent.nativeEvent.buttons === 'number') {
+    return reactEvent.nativeEvent.buttons;
+  }
+  return 0;
+};
+
 /**
  * カレンダー系 UI のドラッグ選択ロジックを共通化するカスタムフック
  */
@@ -213,6 +225,23 @@ export default function useSelectionDragController(
     [applySelection, rangeResolver],
   );
 
+  const startDragAtKey = useCallback(
+    (key: SelectionKey, pointerId: number | null) => {
+      const nextState = resolveInitialIntent?.(key) ?? !isSelected(key);
+      dragInfoRef.current = {
+        isDragging: true,
+        anchorKey: key,
+        intent: nextState,
+        pointerId,
+      };
+      setIsDraggingState(true);
+      lockBodyScroll();
+      onDragStart?.();
+      applyRangeSelection(key);
+    },
+    [applyRangeSelection, isSelected, lockBodyScroll, onDragStart, resolveInitialIntent],
+  );
+
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLElement>, key: SelectionKey) => {
       if (event.button !== undefined && event.button !== 0) {
@@ -225,43 +254,39 @@ export default function useSelectionDragController(
       event.preventDefault();
       event.stopPropagation();
 
-      const nextState = resolveInitialIntent?.(key) ?? !isSelected(key);
-      dragInfoRef.current = {
-        isDragging: true,
-        anchorKey: key,
-        intent: nextState,
-        pointerId: event.pointerId ?? null,
-      };
-      setIsDraggingState(true);
-      lockBodyScroll();
-      onDragStart?.();
-
-      applyRangeSelection(key);
+      startDragAtKey(key, event.pointerId ?? null);
       try {
         event.currentTarget.setPointerCapture?.(event.pointerId);
       } catch {
         // pointer capture が利用できない環境では無視
       }
     },
-    [
-      applyRangeSelection,
-      isSelected,
-      lockBodyScroll,
-      onDragStart,
-      resolveInitialIntent,
-      shouldIgnorePointerDown,
-    ],
+    [shouldIgnorePointerDown, startDragAtKey],
   );
 
   const handlePointerEnter = useCallback(
     (event: ReactPointerEvent<HTMLElement>, key: SelectionKey) => {
-      if (shouldIgnorePointerEnter?.(event, key) || !dragInfoRef.current.isDragging) {
+      if (shouldIgnorePointerEnter?.(event, key)) {
+        return;
+      }
+      const isPointerActive = resolveButtonsState(event) > 0;
+      if (!dragInfoRef.current.isDragging) {
+        if (!isPointerActive) {
+          return;
+        }
+        startDragAtKey(key, event.pointerId ?? null);
+        try {
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+        } catch {
+          // pointer capture が利用できない環境では無視
+        }
+        event.preventDefault();
         return;
       }
       event.preventDefault();
       applyRangeSelection(key);
     },
-    [applyRangeSelection, shouldIgnorePointerEnter],
+    [applyRangeSelection, shouldIgnorePointerEnter, startDragAtKey],
   );
 
   const finishDrag = useCallback(
@@ -292,7 +317,6 @@ export default function useSelectionDragController(
   );
 
   useEffect(() => {
-    if (!dragInfoRef.current.isDragging) return;
     const handlePointerMove = (event: PointerEvent) => {
       if (
         dragInfoRef.current.pointerId !== null &&
@@ -306,6 +330,13 @@ export default function useSelectionDragController(
         return;
       }
       if (shouldIgnorePointerEnter?.(event, key)) {
+        return;
+      }
+      if (!dragInfoRef.current.isDragging) {
+        if (resolveButtonsState(event) === 0) {
+          return;
+        }
+        startDragAtKey(key, event.pointerId ?? null);
         return;
       }
       applyRangeSelection(key);
@@ -328,7 +359,13 @@ export default function useSelectionDragController(
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, [applyRangeSelection, finishDrag, getKeyFromElement, shouldIgnorePointerEnter]);
+  }, [
+    applyRangeSelection,
+    finishDrag,
+    getKeyFromElement,
+    shouldIgnorePointerEnter,
+    startDragAtKey,
+  ]);
 
   useEffect(() => {
     return () => {
