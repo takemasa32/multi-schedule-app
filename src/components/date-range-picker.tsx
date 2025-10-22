@@ -45,6 +45,20 @@ export default function DateRangePicker({
   const [intervalUnit, setIntervalUnit] = useState<string>(
     forcedIntervalUnit ?? initialIntervalUnit,
   ); // 時間帯の単位（分）
+  const isIntervalLocked = forcedIntervalUnit != null;
+  const intervalOptions = [
+    { value: '10', label: '10分' },
+    { value: '30', label: '30分' },
+    { value: '60', label: '1時間' },
+    { value: '120', label: '2時間' },
+    { value: '180', label: '3時間' },
+    { value: '360', label: '6時間' },
+  ];
+  const selectableIntervalOptions =
+    isIntervalLocked && forcedIntervalUnit &&
+    !intervalOptions.some((option) => option.value === forcedIntervalUnit)
+      ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
+      : intervalOptions;
 
   // デフォルトの開始時間と終了時間を0時から24時に設定
   const [defaultStartTime, setDefaultStartTime] = useState<string>(initialDefaultStartTime);
@@ -165,6 +179,13 @@ export default function DateRangePicker({
       setIntervalUnit(forcedIntervalUnit);
     }
   }, [forcedIntervalUnit]);
+
+  /**
+   * 時間枠の長さ（分）を切り替えるハンドラ
+   */
+  const handleIntervalUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setIntervalUnit(e.target.value);
+  };
 
   // 日付文字列を安全にDate型に変換
   const parseDateSafely = (dateString: string): Date | null => {
@@ -392,7 +413,7 @@ export default function DateRangePicker({
       <div className="card bg-base-100 border-base-200 border shadow">
         <div className="card-body p-3 sm:p-4">
           <h3 className="card-title mb-2 text-base font-bold">時間枠の設定</h3>
-          <div className="mb-4 grid gap-4 md:grid-cols-2">
+          <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-start-time" className="label-text">
@@ -457,6 +478,53 @@ export default function DateRangePicker({
                 aria-label="終了時間"
               />
               <span className="label-text-alt text-info mt-1">00:00は翌日0:00として扱われます</span>
+            </div>
+            <div className="form-control w-full">
+              <div className="flex items-center gap-1">
+                <label htmlFor="drp-interval-unit" className="label-text">
+                  時間枠の長さ
+                </label>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
+                  aria-label="時間枠の長さヘルプ"
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const detail = {
+                      x: rect.left,
+                      y: rect.bottom,
+                      text: '各枠の長さを分単位で設定します',
+                    } as const;
+                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
+                  }}
+                >
+                  ?
+                </button>
+              </div>
+              <select
+                id="drp-interval-unit"
+                className="select select-bordered mt-1 w-full"
+                value={intervalUnit}
+                onChange={handleIntervalUnitChange}
+                aria-label="時間枠の長さ"
+                disabled={isIntervalLocked}
+              >
+                {selectableIntervalOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {isIntervalLocked ? (
+                <span className="label-text-alt text-gray-500 mt-1">
+                  既存イベントの設定に合わせて固定されています
+                </span>
+              ) : (
+                <span className="label-text-alt text-gray-500 mt-1">
+                  例）60分を選ぶと1時間ごとの候補枠が作成されます
+                </span>
+              )}
             </div>
           </div>
         </div>
