@@ -65,7 +65,7 @@ describe('EventFormClient', () => {
       success: true,
       publicToken: 'testtoken',
       adminToken: '123e4567-e89b-12d3-a456-426614174001',
-      redirectUrl: '/event/testtoken?admin=123e4567-e89b-12d3-a456-426614174001',
+      redirectUrl: '/event/testtoken',
     });
     render(<EventFormClient />);
     fireEvent.change(screen.getByLabelText(/イベントタイトル/), {
