@@ -13,9 +13,9 @@ interface DateRangePickerProps {
   initialStartDate?: Date | null;
   /** 初期終了日（未指定時はnull） */
   initialEndDate?: Date | null;
-  /** 初期デフォルト開始時間（例: "09:00"、未指定時は"00:00"） */
+  /** 初期の各日の開始時刻（例: "09:00"、未指定時は"08:00"） */
   initialDefaultStartTime?: string;
-  /** 初期デフォルト終了時間（例: "18:00"、未指定時は"24:00"） */
+  /** 初期の各日の終了時刻（例: "18:00"、未指定時は"18:00"） */
   initialDefaultEndTime?: string;
   /** 初期時間間隔（分、文字列。例: "60"。未指定時は"120"） */
   initialIntervalUnit?: string;
@@ -30,8 +30,8 @@ export default function DateRangePicker({
   onTimeSlotsChange,
   initialStartDate = null,
   initialEndDate = null,
-  initialDefaultStartTime = '00:00',
-  initialDefaultEndTime = '24:00',
+  initialDefaultStartTime = '08:00',
+  initialDefaultEndTime = '18:00',
   initialIntervalUnit = '120',
   allowPastDates = false,
   forcedIntervalMinutes = null,
@@ -45,8 +45,23 @@ export default function DateRangePicker({
   const [intervalUnit, setIntervalUnit] = useState<string>(
     forcedIntervalUnit ?? initialIntervalUnit,
   ); // 時間帯の単位（分）
+  const isIntervalLocked = forcedIntervalUnit != null;
+  const intervalOptions = [
+    { value: '10', label: '10分' },
+    { value: '30', label: '30分' },
+    { value: '60', label: '1時間' },
+    { value: '120', label: '2時間' },
+    { value: '180', label: '3時間' },
+    { value: '360', label: '6時間' },
+  ];
+  const shouldAddForcedIntervalOption =
+    isIntervalLocked &&
+    !intervalOptions.some((option) => option.value === forcedIntervalUnit);
+  const selectableIntervalOptions = shouldAddForcedIntervalOption
+    ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
+    : intervalOptions;
 
-  // デフォルトの開始時間と終了時間を0時から24時に設定
+  // 候補枠生成の基準となる開始・終了時刻の初期値を 8:00 〜 18:00 に設定
   const [defaultStartTime, setDefaultStartTime] = useState<string>(initialDefaultStartTime);
   const [defaultEndTime, setDefaultEndTime] = useState<string>(initialDefaultEndTime);
 
@@ -103,7 +118,7 @@ export default function DateRangePicker({
     const newTimeSlots: TimeSlot[] = [];
 
     targetDates.forEach((date) => {
-      // デフォルト開始時間を設定
+      // 各日の開始時刻を基準に初期化
       const [startHour, startMinute] = defaultStartTime.split(':').map(Number);
       let currentTime = setHours(setMinutes(date, startMinute || 0), startHour || 0);
 
@@ -166,6 +181,13 @@ export default function DateRangePicker({
     }
   }, [forcedIntervalUnit]);
 
+  /**
+   * 時間枠の長さ（分）を切り替えるハンドラ
+   */
+  const handleIntervalUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setIntervalUnit(e.target.value);
+  };
+
   // 日付文字列を安全にDate型に変換
   const parseDateSafely = (dateString: string): Date | null => {
     try {
@@ -178,7 +200,7 @@ export default function DateRangePicker({
     }
   };
 
-  // 開始日、終了日、除外日が変更されたとき、または時間間隔・デフォルト時間が変更されたときに時間枠を自動生成
+  // 開始日、終了日、除外日が変更されたとき、または時間間隔・各日の開始/終了時刻が変更されたときに時間枠を自動生成
   useEffect(() => {
     if (startDate && endDate) {
       try {
@@ -279,7 +301,7 @@ export default function DateRangePicker({
     }
   }, [timeSlots]);
 
-  // デフォルト開始時間変更ハンドラ
+  // 各日の開始時刻変更ハンドラ
   const handleDefaultStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDefaultStartTime(e.target.value);
     // 時間が変更されたら時間枠を再生成
@@ -288,7 +310,7 @@ export default function DateRangePicker({
     }
   };
 
-  // デフォルト終了時間変更ハンドラ
+  // 各日の終了時刻変更ハンドラ
   const handleDefaultEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // 「24:00」の特殊ケースを処理
     const value = e.target.value === '00:00' ? '24:00' : e.target.value;
@@ -392,23 +414,24 @@ export default function DateRangePicker({
       <div className="card bg-base-100 border-base-200 border shadow">
         <div className="card-body p-3 sm:p-4">
           <h3 className="card-title mb-2 text-base font-bold">時間枠の設定</h3>
-          <div className="mb-4 grid gap-4 md:grid-cols-2">
+          <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-start-time" className="label-text">
-                  デフォルト開始時間
+                  各日の開始時刻
                 </label>
                 <button
                   type="button"
                   tabIndex={-1}
                   className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="開始時間ヘルプ"
+                  aria-label="各日の開始時刻ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
-                      text: '各日の開始範囲時間を設定します',
+                      text:
+                        '候補枠を自動生成するときの各日の開始時刻として扱います。指定した時刻から時間枠を作成します。',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -422,25 +445,26 @@ export default function DateRangePicker({
                 className="input input-bordered mt-1 w-full"
                 value={defaultStartTime}
                 onChange={handleDefaultStartTimeChange}
-                aria-label="開始時間"
+                aria-label="各日の開始時刻"
               />
             </div>
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-end-time" className="label-text">
-                  デフォルト終了時間
+                  各日の終了時刻
                 </label>
                 <button
                   type="button"
                   tabIndex={-1}
                   className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="終了時間ヘルプ"
+                  aria-label="各日の終了時刻ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
-                      text: '各日の終了範囲時間を設定します',
+                      text:
+                        '候補枠を自動生成するときの各日の終了時刻として扱います。開始時刻より早い場合は翌日扱いになります。',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -454,9 +478,56 @@ export default function DateRangePicker({
                 className="input input-bordered mt-1 w-full"
                 value={defaultEndTime === '24:00' ? '00:00' : defaultEndTime}
                 onChange={handleDefaultEndTimeChange}
-                aria-label="終了時間"
+                aria-label="各日の終了時刻"
               />
               <span className="label-text-alt text-info mt-1">00:00は翌日0:00として扱われます</span>
+            </div>
+            <div className="form-control w-full">
+              <div className="flex items-center gap-1">
+                <label htmlFor="drp-interval-unit" className="label-text">
+                  時間枠の長さ
+                </label>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
+                  aria-label="時間枠の長さヘルプ"
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const detail = {
+                      x: rect.left,
+                      y: rect.bottom,
+                      text: '各枠の長さを分単位で設定します',
+                    } as const;
+                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
+                  }}
+                >
+                  ?
+                </button>
+              </div>
+              <select
+                id="drp-interval-unit"
+                className="select select-bordered mt-1 w-full"
+                value={intervalUnit}
+                onChange={handleIntervalUnitChange}
+                aria-label="時間枠の長さ"
+                disabled={isIntervalLocked}
+              >
+                {selectableIntervalOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {isIntervalLocked ? (
+                <span className="label-text-alt text-gray-500 mt-1">
+                  既存イベントの設定に合わせて固定されています
+                </span>
+              ) : (
+                <span className="label-text-alt text-gray-500 mt-1">
+                  例）60分を選ぶと1時間ごとの候補枠が作成されます
+                </span>
+              )}
             </div>
           </div>
         </div>

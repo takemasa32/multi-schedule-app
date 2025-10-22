@@ -107,7 +107,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
 
   const baseTimeDefaults = useMemo(() => {
     if (eventDates.length === 0) {
-      return { start: '09:00', end: '18:00' } as const;
+      return { start: '08:00', end: '18:00' } as const;
     }
 
     const dailyPattern = extractDailyPatterns(eventDates);
@@ -147,7 +147,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
     });
 
     if (!Number.isFinite(minStart) || !Number.isFinite(maxEnd)) {
-      return { start: '09:00', end: '18:00' } as const;
+      return { start: '08:00', end: '18:00' } as const;
     }
 
     return {
