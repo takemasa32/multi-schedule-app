@@ -83,8 +83,8 @@ describe('EventFormClient', () => {
     fireEvent.change(startDateInput!, { target: { value: '2099-01-01' } });
     fireEvent.change(endDateInput!, { target: { value: '2099-01-01' } });
     // 時間帯（開始・終了）もデフォルトでOKだが、念のため明示的に設定
-    const startTimeInput = screen.getAllByLabelText(/候補枠の開始基準時刻/)[0] as HTMLInputElement;
-    const endTimeInput = screen.getAllByLabelText(/候補枠の終了基準時刻/)[0] as HTMLInputElement;
+    const startTimeInput = screen.getAllByLabelText(/各日の開始時刻/)[0] as HTMLInputElement;
+    const endTimeInput = screen.getAllByLabelText(/各日の終了時刻/)[0] as HTMLInputElement;
     expect(startTimeInput.value).toBe('08:00');
     expect(endTimeInput.value).toBe('18:00');
     fireEvent.change(startTimeInput, { target: { value: '09:00' } });
@@ -110,8 +110,8 @@ describe('EventFormClient', () => {
     const endDateInput = screen.getByLabelText(/終了日/);
     fireEvent.change(startDateInput, { target: { value: '2099-01-01' } });
     fireEvent.change(endDateInput, { target: { value: '2099-01-01' } });
-    const startTimeInput = screen.getAllByLabelText(/候補枠の開始基準時刻/)[0] as HTMLInputElement;
-    const endTimeInput = screen.getAllByLabelText(/候補枠の終了基準時刻/)[0] as HTMLInputElement;
+    const startTimeInput = screen.getAllByLabelText(/各日の開始時刻/)[0] as HTMLInputElement;
+    const endTimeInput = screen.getAllByLabelText(/各日の終了時刻/)[0] as HTMLInputElement;
     expect(startTimeInput.value).toBe('08:00');
     expect(endTimeInput.value).toBe('18:00');
     fireEvent.change(startTimeInput, { target: { value: '09:00' } });

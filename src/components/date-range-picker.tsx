@@ -396,20 +396,20 @@ export default function DateRangePicker({
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-start-time" className="label-text">
-                  候補枠の開始基準時刻
+                  各日の開始時刻
                 </label>
                 <button
                   type="button"
                   tabIndex={-1}
                   className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="候補枠の開始基準時刻ヘルプ"
+                  aria-label="各日の開始時刻ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
                       text:
-                        '候補枠を自動生成するときの開始基準です。指定した時刻から時間枠を作成します。',
+                        '候補枠を自動生成するときの各日の開始時刻として扱います。指定した時刻から時間枠を作成します。',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -423,26 +423,26 @@ export default function DateRangePicker({
                 className="input input-bordered mt-1 w-full"
                 value={defaultStartTime}
                 onChange={handleDefaultStartTimeChange}
-                aria-label="候補枠の開始基準時刻"
+                aria-label="各日の開始時刻"
               />
             </div>
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-end-time" className="label-text">
-                  候補枠の終了基準時刻
+                  各日の終了時刻
                 </label>
                 <button
                   type="button"
                   tabIndex={-1}
                   className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="候補枠の終了基準時刻ヘルプ"
+                  aria-label="各日の終了時刻ヘルプ"
                   onClick={(e) => {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
                       text:
-                        '候補枠を自動生成するときの終了基準です。開始基準より早い場合は翌日扱いになります。',
+                        '候補枠を自動生成するときの各日の終了時刻として扱います。開始時刻より早い場合は翌日扱いになります。',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -456,7 +456,7 @@ export default function DateRangePicker({
                 className="input input-bordered mt-1 w-full"
                 value={defaultEndTime === '24:00' ? '00:00' : defaultEndTime}
                 onChange={handleDefaultEndTimeChange}
-                aria-label="候補枠の終了基準時刻"
+                aria-label="各日の終了時刻"
               />
               <span className="label-text-alt text-info mt-1">00:00は翌日0:00として扱われます</span>
             </div>
