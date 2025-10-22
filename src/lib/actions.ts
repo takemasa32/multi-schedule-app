@@ -135,12 +135,12 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     const event = created[0];
 
     // イベント作成が成功した場合、イベントページにリダイレクト
-    // クライアントでの履歴保存や管理画面遷移に利用するため公開・管理トークンを返す
+    // 管理ページURLは利用しなくなったため公開用URLのみを返す
     return {
       success: true,
       publicToken: event.public_token,
       adminToken: event.admin_token,
-      redirectUrl: `/event/${event.public_token}?admin=${event.admin_token}`,
+      redirectUrl: `/event/${event.public_token}`,
     };
   } catch (error) {
     console.error('イベント作成処理エラー:', error);
