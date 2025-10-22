@@ -13,9 +13,9 @@ interface DateRangePickerProps {
   initialStartDate?: Date | null;
   /** 初期終了日（未指定時はnull） */
   initialEndDate?: Date | null;
-  /** 初期の基本開始時刻（例: "09:00"、未指定時は"08:00"） */
+  /** 初期の各日の開始時刻（例: "09:00"、未指定時は"08:00"） */
   initialDefaultStartTime?: string;
-  /** 初期の基本終了時刻（例: "18:00"、未指定時は"18:00"） */
+  /** 初期の各日の終了時刻（例: "18:00"、未指定時は"18:00"） */
   initialDefaultEndTime?: string;
   /** 初期時間間隔（分、文字列。例: "60"。未指定時は"120"） */
   initialIntervalUnit?: string;
@@ -103,7 +103,7 @@ export default function DateRangePicker({
     const newTimeSlots: TimeSlot[] = [];
 
     targetDates.forEach((date) => {
-      // デフォルト開始時間を設定
+      // 各日の開始時刻を基準に初期化
       const [startHour, startMinute] = defaultStartTime.split(':').map(Number);
       let currentTime = setHours(setMinutes(date, startMinute || 0), startHour || 0);
 
@@ -178,7 +178,7 @@ export default function DateRangePicker({
     }
   };
 
-  // 開始日、終了日、除外日が変更されたとき、または時間間隔・デフォルト時間が変更されたときに時間枠を自動生成
+  // 開始日、終了日、除外日が変更されたとき、または時間間隔・各日の開始/終了時刻が変更されたときに時間枠を自動生成
   useEffect(() => {
     if (startDate && endDate) {
       try {
@@ -279,7 +279,7 @@ export default function DateRangePicker({
     }
   }, [timeSlots]);
 
-  // デフォルト開始時間変更ハンドラ
+  // 各日の開始時刻変更ハンドラ
   const handleDefaultStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDefaultStartTime(e.target.value);
     // 時間が変更されたら時間枠を再生成
@@ -288,7 +288,7 @@ export default function DateRangePicker({
     }
   };
 
-  // デフォルト終了時間変更ハンドラ
+  // 各日の終了時刻変更ハンドラ
   const handleDefaultEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // 「24:00」の特殊ケースを処理
     const value = e.target.value === '00:00' ? '24:00' : e.target.value;
