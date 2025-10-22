@@ -54,11 +54,12 @@ export default function DateRangePicker({
     { value: '180', label: '3時間' },
     { value: '360', label: '6時間' },
   ];
-  const selectableIntervalOptions =
-    isIntervalLocked && forcedIntervalUnit &&
-    !intervalOptions.some((option) => option.value === forcedIntervalUnit)
-      ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
-      : intervalOptions;
+  const shouldAddForcedIntervalOption =
+    isIntervalLocked &&
+    !intervalOptions.some((option) => option.value === forcedIntervalUnit);
+  const selectableIntervalOptions = shouldAddForcedIntervalOption
+    ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
+    : intervalOptions;
 
   // 候補枠生成の基準となる開始・終了時刻の初期値を 8:00 〜 18:00 に設定
   const [defaultStartTime, setDefaultStartTime] = useState<string>(initialDefaultStartTime);
