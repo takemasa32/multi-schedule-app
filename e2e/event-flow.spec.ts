@@ -493,8 +493,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     const visibleEndInput = details.locator('input[aria-label="終了日"]:visible');
     await visibleStartInput.fill(dateStr);
     await visibleEndInput.fill(dateStr);
-    const visibleStartTimeInput = details.locator('input[aria-label="開始時間"]:visible');
-    const visibleEndTimeInput = details.locator('input[aria-label="終了時間"]:visible');
+    // aria-labelはUI上のラベルと一致させており、柔軟な文言変更にも追従できるようにしている
+    const visibleStartTimeInput = details.locator('input[aria-label="各日の開始時刻"]:visible');
+    const visibleEndTimeInput = details.locator('input[aria-label="各日の終了時刻"]:visible');
     await visibleStartTimeInput.fill('09:00');
     await visibleEndTimeInput.fill('10:00');
     // 追加ボタン押下
@@ -505,8 +506,8 @@ test.describe.serial('イベントE2Eフロー', () => {
     // 同じ日程を再度追加し、重複エラーを検証
     await page.getByLabel('開始日', { exact: true }).fill(dateStr);
     await page.getByLabel('終了日', { exact: true }).fill(dateStr);
-    await page.getByLabel('開始時間', { exact: true }).fill('09:00');
-    await page.getByLabel('終了時間', { exact: true }).fill('10:00');
+    await page.getByLabel('各日の開始時刻', { exact: true }).fill('09:00');
+    await page.getByLabel('各日の終了時刻', { exact: true }).fill('10:00');
     await page.getByRole('button', { name: /日程を追加/ }).click();
     await page.getByRole('button', { name: /^追加する$/ }).click();
     const duplicateAlert = page.getByTestId('event-date-add-error');
