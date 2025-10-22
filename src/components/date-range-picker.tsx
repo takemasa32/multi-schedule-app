@@ -47,13 +47,12 @@ export default function DateRangePicker({
   ); // 時間帯の単位（分）
   const isIntervalLocked = forcedIntervalUnit != null;
   const intervalOptions = [
-    { value: '15', label: '15分' },
+    { value: '10', label: '10分' },
     { value: '30', label: '30分' },
-    { value: '45', label: '45分' },
-    { value: '60', label: '60分' },
-    { value: '90', label: '90分' },
-    { value: '120', label: '120分' },
-    { value: '180', label: '180分' },
+    { value: '60', label: '1時間' },
+    { value: '120', label: '2時間' },
+    { value: '180', label: '3時間' },
+    { value: '360', label: '6時間' },
   ];
   const selectableIntervalOptions =
     isIntervalLocked && forcedIntervalUnit &&

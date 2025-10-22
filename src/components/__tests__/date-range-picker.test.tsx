@@ -3,6 +3,15 @@ import '@testing-library/jest-dom';
 import DateRangePicker from '../date-range-picker';
 
 describe('DateRangePicker', () => {
+  test('時間枠候補が10分〜6時間の選択肢に限定されている', () => {
+    render(<DateRangePicker onTimeSlotsChange={jest.fn()} allowPastDates />);
+
+    const intervalSelect = screen.getByRole('combobox', { name: '時間枠の長さ' }) as HTMLSelectElement;
+    const optionLabels = Array.from(intervalSelect.options).map((option) => option.textContent);
+
+    expect(optionLabels).toEqual(['10分', '30分', '1時間', '2時間', '3時間', '6時間']);
+  });
+
   test('時間枠の長さを変更すると生成される枠数が更新される', async () => {
     const handleChange = jest.fn();
     render(<DateRangePicker onTimeSlotsChange={handleChange} allowPastDates />);
