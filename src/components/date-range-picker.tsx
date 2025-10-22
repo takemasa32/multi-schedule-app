@@ -13,9 +13,9 @@ interface DateRangePickerProps {
   initialStartDate?: Date | null;
   /** 初期終了日（未指定時はnull） */
   initialEndDate?: Date | null;
-  /** 初期デフォルト開始時間（例: "09:00"、未指定時は"00:00"） */
+  /** 初期の基本開始時刻（例: "09:00"、未指定時は"08:00"） */
   initialDefaultStartTime?: string;
-  /** 初期デフォルト終了時間（例: "18:00"、未指定時は"24:00"） */
+  /** 初期の基本終了時刻（例: "18:00"、未指定時は"18:00"） */
   initialDefaultEndTime?: string;
   /** 初期時間間隔（分、文字列。例: "60"。未指定時は"120"） */
   initialIntervalUnit?: string;
@@ -30,8 +30,8 @@ export default function DateRangePicker({
   onTimeSlotsChange,
   initialStartDate = null,
   initialEndDate = null,
-  initialDefaultStartTime = '00:00',
-  initialDefaultEndTime = '24:00',
+  initialDefaultStartTime = '08:00',
+  initialDefaultEndTime = '18:00',
   initialIntervalUnit = '120',
   allowPastDates = false,
   forcedIntervalMinutes = null,
@@ -46,7 +46,7 @@ export default function DateRangePicker({
     forcedIntervalUnit ?? initialIntervalUnit,
   ); // 時間帯の単位（分）
 
-  // デフォルトの開始時間と終了時間を0時から24時に設定
+  // 基本の開始時刻と終了時刻を 8:00 〜 18:00 に設定
   const [defaultStartTime, setDefaultStartTime] = useState<string>(initialDefaultStartTime);
   const [defaultEndTime, setDefaultEndTime] = useState<string>(initialDefaultEndTime);
 
@@ -396,7 +396,7 @@ export default function DateRangePicker({
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-start-time" className="label-text">
-                  デフォルト開始時間
+                  基本の開始時刻
                 </label>
                 <button
                   type="button"
@@ -408,7 +408,7 @@ export default function DateRangePicker({
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
-                      text: '各日の開始範囲時間を設定します',
+                      text: '候補枠を自動生成する際の開始時刻（基準値）を設定します',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -428,7 +428,7 @@ export default function DateRangePicker({
             <div className="form-control w-full">
               <div className="flex items-center gap-1">
                 <label htmlFor="drp-default-end-time" className="label-text">
-                  デフォルト終了時間
+                  基本の終了時刻
                 </label>
                 <button
                   type="button"
@@ -440,7 +440,7 @@ export default function DateRangePicker({
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
-                      text: '各日の終了範囲時間を設定します',
+                      text: '候補枠を自動生成する際の終了時刻（基準値）を設定します',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}

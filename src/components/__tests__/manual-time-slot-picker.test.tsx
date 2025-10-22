@@ -17,10 +17,10 @@ describe('ManualTimeSlotPicker', () => {
     const endInput = screen.getAllByLabelText(/終了日/)[0];
     fireEvent.change(startInput, { target: { value: '2099-01-01' } });
     fireEvent.change(endInput, { target: { value: '2099-01-01' } });
-    fireEvent.change(screen.getByLabelText(/デフォルト開始時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の開始時刻/), {
       target: { value: '09:00' },
     });
-    fireEvent.change(screen.getByLabelText(/デフォルト終了時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の終了時刻/), {
       target: { value: '10:00' },
     });
 
@@ -46,10 +46,10 @@ describe('ManualTimeSlotPicker', () => {
     const endInput = screen.getAllByLabelText(/終了日/)[0];
     fireEvent.change(startInput, { target: { value: '2099-01-01' } });
     fireEvent.change(endInput, { target: { value: '2099-01-01' } });
-    fireEvent.change(screen.getByLabelText(/デフォルト開始時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の開始時刻/), {
       target: { value: '09:00' },
     });
-    fireEvent.change(screen.getByLabelText(/デフォルト終了時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の終了時刻/), {
       target: { value: '10:00' },
     });
 
@@ -94,10 +94,10 @@ describe('ManualTimeSlotPicker', () => {
     const endInput = screen.getAllByLabelText(/終了日/)[0];
     fireEvent.change(startInput, { target: { value: '2099-01-01' } });
     fireEvent.change(endInput, { target: { value: '2099-01-01' } });
-    fireEvent.change(screen.getByLabelText(/デフォルト開始時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の開始時刻/), {
       target: { value: '09:00' },
     });
-    fireEvent.change(screen.getByLabelText(/デフォルト終了時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の終了時刻/), {
       target: { value: '10:00' },
     });
 
@@ -135,10 +135,10 @@ describe('ManualTimeSlotPicker', () => {
     const endInput = screen.getAllByLabelText(/終了日/)[0];
     fireEvent.change(startInput, { target: { value: '2099-12-31' } });
     fireEvent.change(endInput, { target: { value: '2100-01-02' } });
-    fireEvent.change(screen.getByLabelText(/デフォルト開始時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の開始時刻/), {
       target: { value: '09:00' },
     });
-    fireEvent.change(screen.getByLabelText(/デフォルト終了時間/), {
+    fireEvent.change(screen.getByLabelText(/基本の終了時刻/), {
       target: { value: '10:00' },
     });
 
@@ -176,8 +176,8 @@ describe('ManualTimeSlotPicker', () => {
 
     const startInput = screen.getAllByLabelText(/開始日/)[0] as HTMLInputElement;
     const endInput = screen.getAllByLabelText(/終了日/)[0] as HTMLInputElement;
-    const defaultStartTimeInput = screen.getByLabelText(/デフォルト開始時間/) as HTMLInputElement;
-    const defaultEndTimeInput = screen.getByLabelText(/デフォルト終了時間/) as HTMLInputElement;
+    const defaultStartTimeInput = screen.getByLabelText(/基本の開始時刻/) as HTMLInputElement;
+    const defaultEndTimeInput = screen.getByLabelText(/基本の終了時刻/) as HTMLInputElement;
 
     expect(startInput.value).toBe('2099-01-05');
     expect(endInput.value).toBe('2099-01-05');

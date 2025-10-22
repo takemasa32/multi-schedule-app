@@ -24,9 +24,9 @@ interface ManualTimeSlotPickerProps {
   initialStartDate?: Date | null;
   /** DateRangePicker の初期終了日 */
   initialEndDate?: Date | null;
-  /** 初期デフォルト開始時間 */
+  /** 初期の基本開始時刻 */
   initialDefaultStartTime?: string;
-  /** 初期デフォルト終了時間 */
+  /** 初期の基本終了時刻 */
   initialDefaultEndTime?: string;
   /** 初期の時間間隔（分） */
   initialIntervalUnit?: string;
@@ -232,7 +232,8 @@ export default function ManualTimeSlotPicker({
     if (initialDefaultStartTime !== undefined) {
       props.initialDefaultStartTime = initialDefaultStartTime;
     } else if (!isTest) {
-      props.initialDefaultStartTime = '09:00';
+      // ユーザーが候補枠を作成しやすい 8:00 を初期値とする
+      props.initialDefaultStartTime = '08:00';
     }
 
     if (initialDefaultEndTime !== undefined) {
