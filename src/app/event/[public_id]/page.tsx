@@ -12,7 +12,12 @@ import { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import EventFormSection from '@/components/event-client/event-form-section';
 import EventDetailsSection from '@/components/event-client/event-details-section';
-import type { EventDate } from '@/components/event-client/event-details-section';
+import type {
+  EventDate,
+  Participant,
+  Availability,
+} from '@/components/event-client/event-details-section';
+import EventDetailsSectionSkeleton from '@/components/event-client/event-details-section-skeleton';
 
 interface EventPageProps {
   params: Promise<{
@@ -94,8 +99,20 @@ export default async function EventPage({ params }: EventPageProps) {
     console.error('イベント取得エラー:', err);
     throw err;
   }
+  // 同時に走らせるデータ取得処理をここで起動しておく
   const eventDatesPromise = getEventDates(event.id);
   const participantsPromise = getParticipants(event.id);
+  const availabilitiesPromise = getAvailabilities(event.id);
+  const finalizedDateIdsPromise = event.is_finalized
+    ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
+    : Promise.resolve<string[]>([]);
+
+  // フォーム表示に必須となるデータは全て揃ってから描画する
+  const [eventDates, participants, finalizedDateIds] = await Promise.all([
+    eventDatesPromise,
+    participantsPromise,
+    finalizedDateIdsPromise,
+  ]);
 
   return (
     <>
@@ -106,35 +123,21 @@ export default async function EventPage({ params }: EventPageProps) {
       </div>
       <div className="fade-in pb-12">
         <SectionDivider title="イベント情報" />
-        {/* フォーム・日程追加など主要UIもストリーミング表示 */}
-        <Suspense
-          fallback={
-            <div className="my-8">
-              <div className="flex flex-col gap-4">
-                <div className="skeleton h-8 w-1/2" />
-                <div className="skeleton h-6 w-full" />
-                <div className="skeleton h-12 w-3/4" />
-              </div>
-            </div>
-          }
-        >
-          <EventFormSectionLoader
+        {/* 確実に揃っている情報は即時表示し、不要なスケルトンを避ける */}
+        <div className="my-8">
+          <EventFormSection
             event={event}
-            eventDates={eventDatesPromise}
-            participants={participantsPromise}
+            eventDates={eventDates}
+            participants={participants}
+            finalizedDateIds={finalizedDateIds}
           />
-        </Suspense>
+        </div>
 
         {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
         <Suspense
           fallback={
             <div className="my-8">
-              <div className="flex flex-col gap-4">
-                <div className="skeleton h-8 w-1/2" />
-                <div className="skeleton h-6 w-full" />
-                <div className="skeleton h-6 w-5/6" />
-                <div className="skeleton h-6 w-2/3" />
-              </div>
+              <EventDetailsSectionSkeleton />
             </div>
           }
         >
@@ -146,8 +149,10 @@ export default async function EventPage({ params }: EventPageProps) {
               is_finalized: event.is_finalized,
               final_date_id: event.final_date_id,
             }}
-            eventDates={eventDatesPromise}
-            participants={participantsPromise}
+            eventDates={eventDates}
+            participants={participants}
+            availabilities={availabilitiesPromise}
+            finalizedDateIds={finalizedDateIds}
           />
         </Suspense>
       </div>
@@ -164,62 +169,38 @@ type EventDetailsSectionEvent = {
   final_date_id?: string | null;
 };
 
-async function EventFormSectionLoader({
-  event,
-  eventDates,
-  participants,
-}: {
-  event: {
-    id: string;
-    title: string;
-    description: string | null;
-    public_token: string;
-    is_finalized: boolean;
-    final_date_id?: string | null;
-  };
-  eventDates: Promise<EventDate[]>;
-  participants: Promise<{ id: string; name: string }[]>;
-}) {
-  const [dates, participantList, finalizedDateIds] = await Promise.all([
-    eventDates,
-    participants,
-    event.is_finalized
-      ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
-      : Promise.resolve([]),
-  ]);
-  return (
-    <EventFormSection
-      event={event}
-      eventDates={dates}
-      participants={participantList}
-      finalizedDateIds={finalizedDateIds}
-    />
-  );
-}
-
+/**
+ * イベント詳細セクションのローダーコンポーネント
+ * サーバー側で非同期データ（availabilities）を待機してからEventDetailsSectionコンポーネントをレンダリングする
+ *
+ * @param {Object} props - コンポーネントのプロパティ
+ * @param {EventDetailsSectionEvent} props.event - イベント情報
+ * @param {EventDate[]} props.eventDates - イベント候補日時一覧
+ * @param {Participant[]} props.participants - 参加者一覧
+ * @param {Promise<Availability[]>} props.availabilities - 出欠情報一覧（非同期）
+ * @param {string[]} props.finalizedDateIds - 確定済み日時ID一覧
+ * @returns {Promise<JSX.Element>} EventDetailsSectionコンポーネント
+ */
 async function EventDetailsSectionLoader({
   event,
   eventDates,
   participants,
+  availabilities,
+  finalizedDateIds,
 }: {
   event: EventDetailsSectionEvent;
-  eventDates: Promise<EventDate[]>;
-  participants: Promise<{ id: string; name: string }[]>;
+  eventDates: EventDate[];
+  participants: Participant[];
+  availabilities: Promise<Availability[]>;
+  finalizedDateIds: string[];
 }) {
-  const [dates, participantList, availabilities, finalizedDateIds] = await Promise.all([
-    eventDates,
-    participants,
-    getAvailabilities(event.id),
-    event.is_finalized
-      ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
-      : Promise.resolve([]),
-  ]);
+  const availabilityList = await availabilities;
   return (
     <EventDetailsSection
       event={event}
-      eventDates={dates}
-      participants={participantList || []}
-      availabilities={availabilities || []}
+      eventDates={eventDates}
+      participants={participants || []}
+      availabilities={availabilityList || []}
       finalizedDateIds={finalizedDateIds}
     />
   );
