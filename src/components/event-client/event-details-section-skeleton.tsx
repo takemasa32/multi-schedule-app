@@ -1,4 +1,8 @@
-// イベント詳細・集計表示のスケルトンコンポーネント
+/**
+ * イベント詳細セクションのローディング中に表示するスケルトンコンポーネント
+ *
+ * @module EventDetailsSectionSkeleton
+ */
 export default function EventDetailsSectionSkeleton() {
   return (
     <div className="space-y-8">
