@@ -169,6 +169,18 @@ type EventDetailsSectionEvent = {
   final_date_id?: string | null;
 };
 
+/**
+ * イベント詳細セクションのローダーコンポーネント
+ * サーバー側で非同期データ（availabilities）を待機してからEventDetailsSectionコンポーネントをレンダリングする
+ *
+ * @param {Object} props - コンポーネントのプロパティ
+ * @param {EventDetailsSectionEvent} props.event - イベント情報
+ * @param {EventDate[]} props.eventDates - イベント候補日時一覧
+ * @param {Participant[]} props.participants - 参加者一覧
+ * @param {Promise<Availability[]>} props.availabilities - 出欠情報一覧（非同期）
+ * @param {string[]} props.finalizedDateIds - 確定済み日時ID一覧
+ * @returns {Promise<JSX.Element>} EventDetailsSectionコンポーネント
+ */
 async function EventDetailsSectionLoader({
   event,
   eventDates,
