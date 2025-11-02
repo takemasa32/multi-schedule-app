@@ -1,7 +1,6 @@
 // src/app/event/[public_id]/page.tsx
 import { getEvent, getEventDates, getParticipantById } from '@/lib/actions';
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
 import AvailabilityForm from '@/components/availability-form';
 import siteConfig from '@/lib/site-config';
 import { Metadata } from 'next';
@@ -43,54 +42,6 @@ export async function generateMetadata({
   };
 }
 
-async function AvailabilityFormSectionLoader({
-  eventId,
-  publicToken,
-  eventDates,
-  participantPromise,
-}: {
-  eventId: string;
-  publicToken: string;
-  eventDates: Promise<{ id: string; start_time: string; end_time: string }[]>;
-  participantPromise: Promise<{
-    participant: { id: string; name: string };
-    availabilityMap: Record<string, boolean>;
-  } | null>;
-}) {
-  const [dates, participantResult] = await Promise.all([eventDates, participantPromise]);
-
-  const existingParticipant = participantResult?.participant || null;
-  const existingAvailabilities = participantResult?.availabilityMap || null;
-  const isEditMode = !!existingParticipant;
-  const pageTitle = isEditMode ? '回答を編集する' : '新しく回答する';
-
-  return (
-    <>
-      <div className="mb-8">
-        <h2 className="mb-4 text-2xl font-bold">{pageTitle}</h2>
-        {isEditMode ? (
-          <p className="mb-4 text-gray-600">
-            「{existingParticipant?.name}」さんの回答を編集しています。
-          </p>
-        ) : (
-          <p className="mb-4 text-gray-600">あなたの名前と参加可能な日程を入力してください。</p>
-        )}
-      </div>
-
-      <div className="bg-base rounded-lg shadow-md md:p-6">
-        <AvailabilityForm
-          eventId={eventId}
-          publicToken={publicToken}
-          eventDates={dates}
-          initialParticipant={existingParticipant}
-          initialAvailabilities={existingAvailabilities || undefined}
-          mode={isEditMode ? 'edit' : 'new'}
-        />
-      </div>
-    </>
-  );
-}
-
 type EventPageProps = {
   params: Promise<{ public_id: string }>;
   searchParams: Promise<{ participant_id?: string }>;
@@ -116,26 +67,37 @@ export default async function EventPage({ params, searchParams }: EventPageProps
     ? getParticipantById(participantId, event.id)
     : Promise.resolve(null);
 
+  // フォーム表示に必要な情報が揃うまで待機し、不要なスケルトンを避ける
+  const [eventDates, participantResult] = await Promise.all([eventDatesPromise, participantPromise]);
+
+  const existingParticipant = participantResult?.participant || null;
+  const existingAvailabilities = participantResult?.availabilityMap || null;
+  const isEditMode = Boolean(existingParticipant);
+  const pageTitle = isEditMode ? '回答を編集する' : '新しく回答する';
+
   return (
     <div className="container mx-auto py-8 md:px-4">
-      <Suspense
-        fallback={
-          <div className="my-8">
-            <div className="flex flex-col gap-4">
-              <div className="skeleton h-8 w-1/2" />
-              <div className="skeleton h-6 w-full" />
-              <div className="skeleton h-6 w-5/6" />
-            </div>
-          </div>
-        }
-      >
-        <AvailabilityFormSectionLoader
+      <div className="mb-8">
+        <h2 className="mb-4 text-2xl font-bold">{pageTitle}</h2>
+        {isEditMode ? (
+          <p className="mb-4 text-gray-600">
+            「{existingParticipant?.name}」さんの回答を編集しています。
+          </p>
+        ) : (
+          <p className="mb-4 text-gray-600">あなたの名前と参加可能な日程を入力してください。</p>
+        )}
+      </div>
+
+      <div className="bg-base rounded-lg shadow-md md:p-6">
+        <AvailabilityForm
           eventId={event.id}
           publicToken={public_id}
-          eventDates={eventDatesPromise}
-          participantPromise={participantPromise}
+          eventDates={eventDates}
+          initialParticipant={existingParticipant}
+          initialAvailabilities={existingAvailabilities || undefined}
+          mode={isEditMode ? 'edit' : 'new'}
         />
-      </Suspense>
+      </div>
 
       <div className="mt-6">
         <a
