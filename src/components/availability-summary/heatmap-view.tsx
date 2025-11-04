@@ -23,10 +23,20 @@ const DARK_THEME_KEYWORDS = [
  * @returns 過去日程用の配色設定
  */
 const createPastColumnPalette = (isDarkTheme: boolean) => ({
-  headerBackground: isDarkTheme ? 'rgba(30, 41, 59, 0.85)' : 'rgba(236, 242, 247, 0.9)',
-  headerBorderAccent: isDarkTheme ? 'rgba(71, 85, 105, 0.65)' : 'rgba(148, 163, 184, 0.45)',
-  baseOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.18)' : 'rgba(148, 163, 184, 0.1)',
-  emphasizedOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.3)' : 'rgba(148, 163, 184, 0.16)',
+  headerBaseColor: isDarkTheme ? 'rgba(17, 24, 39, 0.82)' : 'rgba(236, 242, 247, 0.9)',
+  headerGradientTop: isDarkTheme ? 'rgba(17, 24, 39, 0.9)' : 'rgba(236, 242, 247, 0.95)',
+  headerGradientBottom: isDarkTheme ? 'rgba(17, 24, 39, 0.78)' : 'rgba(226, 232, 240, 0.82)',
+  headerBorderAccent: isDarkTheme ? 'rgba(71, 85, 105, 0.55)' : 'rgba(148, 163, 184, 0.55)',
+  headerTextColor: isDarkTheme ? 'rgba(226, 232, 240, 0.85)' : 'rgba(71, 85, 105, 0.85)',
+  columnBaseLayer: isDarkTheme
+    ? 'linear-gradient(0deg, rgba(30, 41, 59, 0.32), rgba(30, 41, 59, 0.32))'
+    : 'linear-gradient(0deg, rgba(226, 232, 240, 0.6), rgba(226, 232, 240, 0.6))',
+  columnBaseLayerMuted: isDarkTheme
+    ? 'linear-gradient(0deg, rgba(30, 41, 59, 0.38), rgba(30, 41, 59, 0.38))'
+    : 'linear-gradient(0deg, rgba(203, 213, 225, 0.52), rgba(203, 213, 225, 0.52))',
+  columnDivider: isDarkTheme ? 'rgba(71, 85, 105, 0.42)' : 'rgba(148, 163, 184, 0.45)',
+  baseOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.24)' : 'rgba(148, 163, 184, 0.14)',
+  emphasizedOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.34)' : 'rgba(148, 163, 184, 0.2)',
 });
 
 interface HeatmapViewProps {
@@ -271,6 +281,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 const dateOnly = new Date(dateInfo.dateObj);
                 dateOnly.setHours(0, 0, 0, 0);
                 const isPastDate = dateOnly.getTime() < startOfToday.getTime();
+                const headerStyle = isPastDate
+                  ? {
+                      backgroundColor: pastColumnPalette.headerBaseColor,
+                      backgroundImage: `linear-gradient(180deg, ${pastColumnPalette.headerGradientTop} 0%, ${pastColumnPalette.headerGradientBottom} 100%)`,
+                      color: pastColumnPalette.headerTextColor,
+                      boxShadow: `inset 1px 0 0 ${pastColumnPalette.headerBorderAccent}, inset -1px 0 0 ${pastColumnPalette.headerBorderAccent}, inset 0 -1px 0 ${pastColumnPalette.headerBorderAccent}`,
+                    }
+                  : undefined;
                 return (
                   <th
                     key={dateInfo.date}
@@ -278,14 +296,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     className={`bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm ${
                       isPastDate ? 'text-base-content/70' : 'text-base-content'
                     }`}
-                    style={
-                      isPastDate
-                        ? {
-                            backgroundColor: pastColumnPalette.headerBackground,
-                            boxShadow: `inset 0 -1px 0 ${pastColumnPalette.headerBorderAccent}`,
-                          }
-                        : undefined
-                    }
+                    style={headerStyle}
                   >
                     {optimizedDisplay.yearMonth && (
                       <>
@@ -380,10 +391,28 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         ? pastColumnPalette.emphasizedOverlay
                         : pastColumnPalette.baseOverlay
                       : null;
+                    // 過去列用の淡い下地レイヤーを合成（メイン色の邪魔をしないようlinear-gradientを使用）
+                    const backgroundLayers: string[] = [];
+                    if (shouldDimPastColumn) {
+                      backgroundLayers.push(
+                        shouldApplyPastGrayscale
+                          ? pastColumnPalette.columnBaseLayerMuted
+                          : pastColumnPalette.columnBaseLayer,
+                      );
+                    }
+                    const boxShadowLayers: string[] = [];
+                    if (overlayColor) {
+                      boxShadowLayers.push(`inset 0 0 0 9999px ${overlayColor}`);
+                    }
+                    if (shouldDimPastColumn) {
+                      boxShadowLayers.push(`inset 1px 0 0 ${pastColumnPalette.columnDivider}`);
+                      boxShadowLayers.push(`inset -1px 0 0 ${pastColumnPalette.columnDivider}`);
+                    }
                     const cellStyle = {
                       backgroundColor,
+                      backgroundImage: backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined,
                       filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
-                      boxShadow: overlayColor ? `inset 0 0 0 9999px ${overlayColor}` : undefined,
+                      boxShadow: boxShadowLayers.length > 0 ? boxShadowLayers.join(', ') : undefined,
                     } as React.CSSProperties;
 
                     const countTextBaseClass = 'text-xs font-bold sm:text-base';
