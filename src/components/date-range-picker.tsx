@@ -55,8 +55,7 @@ export default function DateRangePicker({
     { value: '360', label: '6時間' },
   ];
   const shouldAddForcedIntervalOption =
-    isIntervalLocked &&
-    !intervalOptions.some((option) => option.value === forcedIntervalUnit);
+    isIntervalLocked && !intervalOptions.some((option) => option.value === forcedIntervalUnit);
   const selectableIntervalOptions = shouldAddForcedIntervalOption
     ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
     : intervalOptions;
@@ -430,8 +429,7 @@ export default function DateRangePicker({
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
-                      text:
-                        '候補枠を自動生成するときの各日の開始時刻として扱います。指定した時刻から時間枠を作成します。',
+                      text: '候補枠を自動生成するときの各日の開始時刻として扱います。指定した時刻から時間枠を作成します。',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -463,8 +461,7 @@ export default function DateRangePicker({
                     const detail = {
                       x: rect.left,
                       y: rect.bottom,
-                      text:
-                        '候補枠を自動生成するときの各日の終了時刻として扱います。開始時刻より早い場合は翌日扱いになります。',
+                      text: '候補枠を自動生成するときの各日の終了時刻として扱います。開始時刻より早い場合は翌日扱いになります。',
                     } as const;
                     window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
                   }}
@@ -520,11 +517,11 @@ export default function DateRangePicker({
                 ))}
               </select>
               {isIntervalLocked ? (
-                <span className="label-text-alt text-gray-500 mt-1">
+                <span className="label-text-alt mt-1 text-gray-500">
                   既存イベントの設定に合わせて固定されています
                 </span>
               ) : (
-                <span className="label-text-alt text-gray-500 mt-1">
+                <span className="label-text-alt mt-1 text-gray-500">
                   例）60分を選ぶと1時間ごとの候補枠が作成されます
                 </span>
               )}
