@@ -272,7 +272,7 @@ describe('HeatmapView', () => {
         totalResponses: 3,
       });
 
-      const { container } = render(
+      render(
         <HeatmapView
           {...baseProps}
           uniqueDates={[{ date: '2000-01-01', dateObj: new Date('2000-01-01T00:00:00.000Z') }]}
@@ -281,18 +281,14 @@ describe('HeatmapView', () => {
           isPastEventGrayscaleEnabled
         />,
       );
-
       // useEffectの実行を待つ
       await new Promise((resolve) => setTimeout(resolve, 100));
-
       const targetCell = screen
         .getAllByRole('cell')
         .find((cell) => cell.textContent?.trim() === '3');
-
       expect(targetCell).toBeDefined();
       const cellElement = targetCell as HTMLTableCellElement;
       const styleAttribute = cellElement.getAttribute('style') ?? '';
-
       // ライトモードではグレー系（148, 163, 184）の色が使用される
       expect(styleAttribute).toContain('148, 163, 184');
       // ダーク系（80, 88, 104）は使用されない
