@@ -366,4 +366,59 @@ describe('AvailabilitySummary', () => {
       expect(screen.getByText('1')).toBeInTheDocument(); // date2の参加可能者数
     });
   });
+
+  describe('過去日程グレースケール機能', () => {
+    it('ヒートマップ表示時、過去日程グレースケール設定が初期値でオンになっている', () => {
+      render(<AvailabilitySummary {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('ヒートマップ'));
+
+      // フィルター設定を開く
+      const filterSection = screen.getByText('フィルター設定');
+      fireEvent.click(filterSection);
+
+      // 過去日程グレースケール切替ボタンを確認
+      const toggle = screen.getByRole('checkbox', { name: /過去日程のグレー表示切り替え/i });
+      expect(toggle).toBeInTheDocument();
+      expect(toggle).toBeChecked(); // 初期値はオン
+    });
+
+    it('過去日程グレースケール設定を切り替えられる', () => {
+      render(<AvailabilitySummary {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('ヒートマップ'));
+
+      // フィルター設定を開く
+      const filterSection = screen.getByText('フィルター設定');
+      fireEvent.click(filterSection);
+
+      // 過去日程グレースケール切替ボタンを確認
+      const toggle = screen.getByRole('checkbox', { name: /過去日程のグレー表示切り替え/i });
+      expect(toggle).toBeChecked();
+
+      // クリックしてオフにする
+      fireEvent.click(toggle);
+      expect(toggle).not.toBeChecked();
+
+      // もう一度クリックしてオンにする
+      fireEvent.click(toggle);
+      expect(toggle).toBeChecked();
+    });
+
+    it('リスト表示や個別表示では過去日程グレースケール設定が表示されない', () => {
+      render(<AvailabilitySummary {...defaultProps} />);
+
+      // リスト表示
+      fireEvent.click(screen.getByText('リスト'));
+      expect(
+        screen.queryByRole('checkbox', { name: /過去日程のグレー表示切り替え/i }),
+      ).not.toBeInTheDocument();
+
+      // 個別表示
+      fireEvent.click(screen.getByText('個別'));
+      expect(
+        screen.queryByRole('checkbox', { name: /過去日程のグレー表示切り替え/i }),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

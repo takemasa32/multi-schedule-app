@@ -65,7 +65,7 @@ export default function EventDetailsSectionSkeleton() {
       </div>
 
       {/* 閲覧履歴カードのプレースホルダー */}
-      <div className="rounded-lg bg-base-200 p-4">
+      <div className="bg-base-200 rounded-lg p-4">
         <div className="mb-3 flex items-center justify-between">
           <span className="skeleton block h-5 w-40" />
           <span className="skeleton block h-4 w-24" />

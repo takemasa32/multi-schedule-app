@@ -79,6 +79,8 @@ export default function AvailabilitySummary({
   const [viewMode, setViewMode] = useState<'list' | 'heatmap' | 'detailed'>('heatmap');
   // 色付けの最小人数を保持
   const [minColored, setMinColored] = useState<number>(minColoredCount);
+  // 過去日程をグレースケール表示するかの設定（初期値はオン）
+  const [isPastEventGrayscale, setIsPastEventGrayscale] = useState<boolean>(true);
   // useDeviceDetectは必ずトップレベルで呼び出す
   const { isMobile } = useDeviceDetect();
   // ツールチップの状態
@@ -662,6 +664,8 @@ export default function AvailabilitySummary({
             isDragging={isDragging}
             minColoredCount={minColored}
             onMinColoredCountChange={setMinColored}
+            isPastEventGrayscaleEnabled={isPastEventGrayscale}
+            onPastEventGrayscaleToggle={setIsPastEventGrayscale}
           />
         )}
 

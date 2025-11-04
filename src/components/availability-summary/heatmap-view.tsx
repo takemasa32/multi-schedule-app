@@ -1,5 +1,90 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { getOptimizedDateDisplay } from './date-utils';
+
+// ダークテーマと判定する候補名一覧（next-themesのresolvedThemeを想定）
+const DARK_THEME_NAMES = new Set([
+  'dark',
+  'night',
+  'dracula',
+  'dim',
+  'business',
+  'forest',
+  'coffee',
+  'black',
+  'sunset',
+  'halloween',
+  'luxury',
+  'lofi',
+]);
+
+/**
+ * テーマ名からダークテーマかどうかを判定する
+ * @param themeName テーマ名（null/undefined許容）
+ * @returns true: ダーク、false: ライト、null: 判定不能
+ */
+const evaluateDarkThemeByName = (themeName: string | null | undefined): boolean | null => {
+  if (!themeName) {
+    return null;
+  }
+
+  const normalized = themeName.toLowerCase().trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  if (tokens.some((token) => token === 'system')) {
+    return null;
+  }
+
+  if (tokens.some((token) => DARK_THEME_NAMES.has(token))) {
+    return true;
+  }
+
+  if (tokens.some((token) => token === 'light' || token === 'cupcake' || token === 'daysynth')) {
+    return false;
+  }
+
+  return null;
+};
+
+/**
+ * OSのカラースキーム設定からダークテーマかどうかを取得する
+ * @returns ダークテーマならtrue
+ */
+const prefersDarkColorScheme = (): boolean => {
+  if (typeof window === 'undefined' || !('matchMedia' in window)) {
+    return false;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+};
+
+/**
+ * 過去日程の列に適用するビジュアルパレットを取得する
+ * @param isDarkTheme ダークテーマかどうか
+ * @returns 過去日程用の配色設定
+ */
+const createPastColumnPalette = (isDarkTheme: boolean) => ({
+  // ダークは従来通り、ライトはグレー系に変更
+  headerBaseColor: isDarkTheme ? 'rgba(17, 24, 39, 0.82)' : 'rgba(220, 220, 220, 0.9)',
+  headerGradientTop: isDarkTheme ? 'rgba(17, 24, 39, 0.9)' : 'rgba(220, 220, 220, 0.95)',
+  headerGradientBottom: isDarkTheme ? 'rgba(17, 24, 39, 0.78)' : 'rgba(200, 200, 200, 0.82)',
+  headerTextColor: isDarkTheme ? 'rgba(226, 232, 240, 0.85)' : 'rgba(100, 100, 100, 0.85)',
+  columnBaseLayer: isDarkTheme
+    ? 'linear-gradient(0deg, rgba(30, 41, 59, 0.32), rgba(30, 41, 59, 0.32))'
+    : 'linear-gradient(0deg, rgba(220, 220, 220, 0.6), rgba(220, 220, 220, 0.6))',
+  columnBaseLayerMuted: isDarkTheme
+    ? 'linear-gradient(0deg, rgba(30, 41, 59, 0.38), rgba(30, 41, 59, 0.38))'
+    : 'linear-gradient(0deg, rgba(180, 180, 180, 0.52), rgba(180, 180, 180, 0.52))',
+  baseOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.24)' : 'rgba(160, 160, 160, 0.14)',
+  emphasizedOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.34)' : 'rgba(160, 160, 160, 0.2)',
+});
 
 interface HeatmapViewProps {
   uniqueDates: Array<{
@@ -33,6 +118,10 @@ interface HeatmapViewProps {
   minColoredCount: number;
   /** スライダー変更時のハンドラ */
   onMinColoredCountChange?: (count: number) => void;
+  /** 過去日程をグレースケールで表示するか */
+  isPastEventGrayscaleEnabled: boolean;
+  /** 過去日程のグレースケール設定変更時のハンドラ */
+  onPastEventGrayscaleToggle?: (enabled: boolean) => void;
 }
 
 /**
@@ -49,12 +138,83 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   isDragging,
   minColoredCount,
   onMinColoredCountChange,
+  isPastEventGrayscaleEnabled,
+  onPastEventGrayscaleToggle,
 }) => {
+  const { resolvedTheme } = useTheme();
+
+  /**
+   * テーマ判定（クライアント側のみ）
+   * SSR時はnull、クライアント側で実際のテーマを判定
+   */
+  const getTheme = useCallback((): boolean | null => {
+    if (typeof window === 'undefined') {
+      return null; // SSR時はnull（未判定）
+    }
+
+    // next-themesのresolvedThemeを優先
+    if (resolvedTheme) {
+      const evalTheme = evaluateDarkThemeByName(resolvedTheme);
+      if (evalTheme !== null) return evalTheme;
+    }
+
+    // data-theme属性
+    const attrTheme = document.documentElement.getAttribute('data-theme');
+    const evalTheme = evaluateDarkThemeByName(attrTheme);
+    if (evalTheme !== null) return evalTheme;
+
+    // OS設定
+    return prefersDarkColorScheme();
+  }, [resolvedTheme]);
+
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean | null>(getTheme);
+
+  // テーマ変更を監視
+  useEffect(() => {
+    setIsDarkTheme(getTheme());
+  }, [getTheme]);
+
+  // isDarkThemeがnullの場合はfalseをデフォルトとして使用（パレット生成用）
+  const pastColumnPalette = useMemo(
+    () => createPastColumnPalette(isDarkTheme ?? false),
+    [isDarkTheme],
+  );
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  // 初回描画時に「今日」の列へスクロールしたかどうか
+  const scrolledToTodayRef = useRef(false);
+
+  // SSR/CSR不一致防止: 今日の日付（0時）をuseState+useEffectで管理
+  const [startOfToday, setStartOfToday] = useState<Date | null>(null);
+  useEffect(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    setStartOfToday(d);
+  }, []);
+
+  // 初期スクロール: 今日が範囲内なら左端に
+  useEffect(() => {
+    if (scrolledToTodayRef.current || !tableRef.current || !startOfToday) return;
+    const todayIndex = uniqueDates.findIndex((dateInfo) => {
+      const dateOnly = new Date(dateInfo.dateObj);
+      dateOnly.setHours(0, 0, 0, 0);
+      return dateOnly.getTime() === startOfToday.getTime();
+    });
+    if (todayIndex === -1) return;
+    // th要素のdata-date-index属性で取得
+    const headerCells = tableRef.current.querySelectorAll('th[data-date-index]');
+    if (!headerCells || headerCells.length === 0) return;
+    const targetCell = headerCells[todayIndex] as HTMLTableCellElement;
+    const firstCell = headerCells[0] as HTMLTableCellElement;
+    if (!targetCell || !firstCell) return;
+    // スクロール位置計算（レスポンシブ考慮）
+    const scrollLeft = targetCell.offsetLeft - firstCell.offsetLeft;
+    tableRef.current.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    scrolledToTodayRef.current = true;
+  }, [startOfToday, uniqueDates]);
 
   // タッチ開始位置を記録
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -121,10 +281,28 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                   index,
                   arr.map((d) => d.dateObj.toISOString()),
                 );
+                // 列ヘッダーでも過去日程かどうかを判定し、視覚的な強調を行う
+                // SSR時（startOfToday === null or isDarkTheme === null）はスタイルを適用しない
+                const dateOnly = new Date(dateInfo.dateObj);
+                dateOnly.setHours(0, 0, 0, 0);
+                const isPastDate =
+                  startOfToday !== null ? dateOnly.getTime() < startOfToday.getTime() : false;
+                const headerStyle =
+                  isPastDate && isDarkTheme !== null && startOfToday !== null
+                    ? {
+                        backgroundColor: pastColumnPalette.headerBaseColor,
+                        backgroundImage: `linear-gradient(180deg, ${pastColumnPalette.headerGradientTop} 0%, ${pastColumnPalette.headerGradientBottom} 100%)`,
+                        color: pastColumnPalette.headerTextColor,
+                      }
+                    : undefined;
                 return (
                   <th
                     key={dateInfo.date}
-                    className="bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm"
+                    data-date-index={index}
+                    className={`bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm ${
+                      isPastDate ? 'text-base-content/70' : 'text-base-content'
+                    }`}
+                    style={headerStyle}
                   >
                     {optimizedDisplay.yearMonth && (
                       <>
@@ -178,6 +356,11 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     const totalResponses = cellData?.totalResponses ?? 0;
                     const hasData = cellData !== undefined;
                     const hasResponses = totalResponses > 0;
+                    const dateOnly = new Date(dateInfo.dateObj);
+                    dateOnly.setHours(0, 0, 0, 0);
+                    // SSR時（startOfToday === null）は過去判定しない
+                    const isPastDate =
+                      startOfToday !== null ? dateOnly.getTime() < startOfToday.getTime() : false;
 
                     // テーマカラー単色スケール：最大参加者数に応じた不透明度
                     const ratio = maxAvailable > 0 ? availableCount / maxAvailable : 0;
@@ -187,17 +370,69 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     const opacity5 = Math.round(raw / 5) * 5; // 5 の倍数へ丸め
                     const opacityValue = Math.min(Math.max(opacity5, 20), 100) / 100; // 0.2〜1.0に変換
 
-                    // セルの背景色と境界線のスタイル（動的な部分のみインラインスタイル）
+                    // 過去日程グレースケール・色表示ロジック最適化
+                    const shouldApplyPastGrayscale =
+                      hasData && isPastEventGrayscaleEnabled && isPastDate;
+                    const shouldDimPastColumn = isPastDate;
+                    // グレースケール条件: minColoredCount未満 or 過去日程グレースケール
+                    const filterValues: string[] = [];
+                    if (
+                      hasData &&
+                      hasResponses &&
+                      (availableCount < minColoredCount || shouldApplyPastGrayscale)
+                    ) {
+                      filterValues.push('grayscale(1)');
+                    }
+                    // 過去日程はダーク/ライトで色・不透明度を調整
+                    const adjustedOpacity = shouldApplyPastGrayscale
+                      ? (isDarkTheme ?? false)
+                        ? Math.max(Math.min(opacityValue * 0.45, 0.32), 0.08)
+                        : Math.max(Math.min(opacityValue * 0.55, 0.45), 0.18)
+                      : opacityValue;
+                    const pastBaseRgb = (isDarkTheme ?? false) ? '80, 88, 104' : '148, 163, 184';
+                    const backgroundColor =
+                      hasData && hasResponses
+                        ? shouldApplyPastGrayscale
+                          ? `rgba(${pastBaseRgb}, ${adjustedOpacity})`
+                          : `rgba(var(--p-rgb, 87, 13, 248), ${adjustedOpacity})`
+                        : 'transparent';
+                    // 過去日程の列に控えめなオーバーレイを被せ、背景が途切れないようにする
+                    const overlayColor = shouldDimPastColumn
+                      ? shouldApplyPastGrayscale
+                        ? pastColumnPalette.emphasizedOverlay
+                        : pastColumnPalette.baseOverlay
+                      : null;
+                    // 過去列用の淡い下地レイヤーを合成
+                    const backgroundLayers: string[] = [];
+                    if (overlayColor) {
+                      backgroundLayers.push(
+                        `linear-gradient(0deg, ${overlayColor}, ${overlayColor})`,
+                      );
+                    }
+                    if (shouldDimPastColumn) {
+                      backgroundLayers.push(
+                        shouldApplyPastGrayscale
+                          ? pastColumnPalette.columnBaseLayerMuted
+                          : pastColumnPalette.columnBaseLayer,
+                      );
+                    }
                     const cellStyle = {
-                      backgroundColor:
-                        hasData && hasResponses
-                          ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
-                          : 'transparent',
-                      filter:
-                        hasData && hasResponses && availableCount < minColoredCount
-                          ? 'grayscale(1)'
-                          : 'none',
+                      backgroundColor,
+                      backgroundImage:
+                        backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined,
+                      filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
                     } as React.CSSProperties;
+
+                    // テキスト色: グレースケール時はコントラスト重視
+                    const countTextBaseClass = 'text-xs font-bold sm:text-base';
+                    const countTextClass = shouldApplyPastGrayscale
+                      ? `${countTextBaseClass} ${(isDarkTheme ?? false) ? 'text-base-content/80' : 'text-base-content/60'}`
+                      : `${countTextBaseClass}${opacityValue >= 0.6 ? ' text-white' : ' text-base-content'}`;
+                    const unavailableTextClass = shouldApplyPastGrayscale
+                      ? (isDarkTheme ?? false)
+                        ? 'text-[10px] text-base-content/50 sm:text-xs'
+                        : 'text-[10px] text-base-content/60 sm:text-xs'
+                      : 'text-[10px] text-base-content/70 sm:text-xs';
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
                     return (
@@ -227,18 +462,9 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           <div className="flex h-full flex-col items-center justify-center">
                             {hasResponses ? (
                               <>
-                                <span
-                                  className={
-                                    `text-xs font-bold sm:text-base` +
-                                    (opacityValue >= 0.6 ? ' text-white' : '')
-                                  }
-                                >
-                                  {availableCount}
-                                </span>
+                                <span className={countTextClass}>{availableCount}</span>
                                 {unavailableCount > 0 && (
-                                  <span className="text-[10px] text-gray-500 sm:text-xs">
-                                    ({unavailableCount})
-                                  </span>
+                                  <span className={unavailableTextClass}>({unavailableCount})</span>
                                 )}
                               </>
                             ) : (
@@ -367,6 +593,20 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     <p className="text-base-content/70 text-xs">
                       {minColoredCount}人未満の時間帯をグレー表示
                     </p>
+                  </div>
+
+                  <div className="bg-base-200/60 flex items-center justify-between rounded-md px-3 py-2">
+                    <div className="text-left text-xs">
+                      <p className="text-base-content font-semibold">過去日程のグレー表示</p>
+                      <p className="text-base-content/70">オフにすると過去日程にも色が付きます</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary toggle-sm"
+                      checked={isPastEventGrayscaleEnabled}
+                      onChange={(event) => onPastEventGrayscaleToggle?.(event.target.checked)}
+                      aria-label="過去日程のグレー表示切り替え"
+                    />
                   </div>
 
                   <div className="relative px-2">
