@@ -1,5 +1,21 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getOptimizedDateDisplay } from './date-utils';
+
+// ダークテーマとみなすキーワード（data-theme属性に含まれる値を想定）
+const DARK_THEME_KEYWORDS = [
+  'dark',
+  'night',
+  'dracula',
+  'dim',
+  'business',
+  'forest',
+  'coffee',
+  'black',
+  'sunset',
+  'halloween',
+  'luxury',
+  'lofi',
+];
 
 interface HeatmapViewProps {
   uniqueDates: Array<{
@@ -56,6 +72,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   isPastEventGrayscaleEnabled,
   onPastEventGrayscaleToggle,
 }) => {
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
   const touchStartXRef = useRef<number | null>(null);
@@ -69,6 +86,71 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const rootElement = document.documentElement;
+
+    /**
+     * data-theme属性やOS設定から現在のテーマを判定する
+     */
+    const evaluateTheme = () => {
+      const themeAttr = rootElement.getAttribute('data-theme')?.toLowerCase() ?? '';
+      if (themeAttr) {
+        setIsDarkTheme(DARK_THEME_KEYWORDS.some((keyword) => themeAttr.includes(keyword)));
+        return;
+      }
+
+      if (typeof window !== 'undefined' && 'matchMedia' in window) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        setIsDarkTheme(mediaQuery.matches);
+        return;
+      }
+
+      setIsDarkTheme(false);
+    };
+
+    evaluateTheme();
+
+    const mutationObserver = new MutationObserver(() => {
+      evaluateTheme();
+    });
+    mutationObserver.observe(rootElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'class'],
+    });
+
+    let mediaQuery: MediaQueryList | null = null;
+    let mediaQueryListener: ((event: MediaQueryListEvent) => void) | null = null;
+    if (typeof window !== 'undefined' && 'matchMedia' in window) {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQueryListener = () => {
+        evaluateTheme();
+      };
+
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', mediaQueryListener);
+      } else if (mediaQuery.addListener) {
+        mediaQuery.addListener(mediaQueryListener);
+      }
+    }
+
+    return () => {
+      mutationObserver.disconnect();
+      if (mediaQuery) {
+        if (mediaQueryListener) {
+          if (mediaQuery.removeEventListener) {
+            mediaQuery.removeEventListener('change', mediaQueryListener);
+          } else if (mediaQuery.removeListener) {
+            mediaQuery.removeListener(mediaQueryListener);
+          }
+        }
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -253,11 +335,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
                     // 過去日程は注目度を下げるため、不透明度を抑えたグレースケール色を使用する
                     const adjustedOpacity = shouldApplyPastGrayscale
-                      ? Math.max(Math.min(opacityValue * 0.55, 0.45), 0.2)
+                      ? isDarkTheme
+                        ? Math.max(Math.min(opacityValue * 0.45, 0.32), 0.08)
+                        : Math.max(Math.min(opacityValue * 0.55, 0.45), 0.18)
                       : opacityValue;
+                    const pastBaseRgb = isDarkTheme ? '80, 88, 104' : '148, 163, 184';
                     const backgroundColor = hasData && hasResponses
                       ? shouldApplyPastGrayscale
-                        ? `rgba(148, 163, 184, ${adjustedOpacity})`
+                        ? `rgba(${pastBaseRgb}, ${adjustedOpacity})`
                         : `rgba(var(--p-rgb, 87, 13, 248), ${adjustedOpacity})`
                       : 'transparent';
                     const cellStyle = {
@@ -267,11 +352,15 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
                     const countTextBaseClass = 'text-xs font-bold sm:text-base';
                     const countTextClass = shouldApplyPastGrayscale
-                      ? `${countTextBaseClass} text-gray-600`
-                      : `${countTextBaseClass}${opacityValue >= 0.6 ? ' text-white' : ''}`;
+                      ? `${countTextBaseClass} ${isDarkTheme ? 'text-base-content/80' : 'text-base-content/60'}`
+                      : `${countTextBaseClass}${
+                          opacityValue >= 0.6 ? ' text-white' : ' text-base-content'
+                        }`;
                     const unavailableTextClass = shouldApplyPastGrayscale
-                      ? 'text-[10px] text-gray-400 sm:text-xs'
-                      : 'text-[10px] text-gray-500 sm:text-xs';
+                      ? isDarkTheme
+                        ? 'text-[10px] text-base-content/50 sm:text-xs'
+                        : 'text-[10px] text-base-content/60 sm:text-xs'
+                      : 'text-[10px] text-base-content/70 sm:text-xs';
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
                     return (
