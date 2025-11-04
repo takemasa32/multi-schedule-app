@@ -242,21 +242,36 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     const opacity5 = Math.round(raw / 5) * 5; // 5 の倍数へ丸め
                     const opacityValue = Math.min(Math.max(opacity5, 20), 100) / 100; // 0.2〜1.0に変換
 
+                    const shouldApplyPastGrayscale =
+                      hasData && isPastEventGrayscaleEnabled && isPastDate;
+
                     // セルの背景色と境界線のスタイル（動的な部分のみインラインスタイル）
                     const filterValues: string[] = [];
                     if (hasData && hasResponses && availableCount < minColoredCount) {
                       filterValues.push('grayscale(1)');
                     }
-                    if (hasData && isPastEventGrayscaleEnabled && isPastDate) {
-                      filterValues.push('grayscale(1)');
-                    }
+
+                    // 過去日程は注目度を下げるため、不透明度を抑えたグレースケール色を使用する
+                    const adjustedOpacity = shouldApplyPastGrayscale
+                      ? Math.max(Math.min(opacityValue * 0.55, 0.45), 0.2)
+                      : opacityValue;
+                    const backgroundColor = hasData && hasResponses
+                      ? shouldApplyPastGrayscale
+                        ? `rgba(148, 163, 184, ${adjustedOpacity})`
+                        : `rgba(var(--p-rgb, 87, 13, 248), ${adjustedOpacity})`
+                      : 'transparent';
                     const cellStyle = {
-                      backgroundColor:
-                        hasData && hasResponses
-                          ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
-                          : 'transparent',
+                      backgroundColor,
                       filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
                     } as React.CSSProperties;
+
+                    const countTextBaseClass = 'text-xs font-bold sm:text-base';
+                    const countTextClass = shouldApplyPastGrayscale
+                      ? `${countTextBaseClass} text-gray-600`
+                      : `${countTextBaseClass}${opacityValue >= 0.6 ? ' text-white' : ''}`;
+                    const unavailableTextClass = shouldApplyPastGrayscale
+                      ? 'text-[10px] text-gray-400 sm:text-xs'
+                      : 'text-[10px] text-gray-500 sm:text-xs';
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
                     return (
@@ -286,16 +301,11 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           <div className="flex h-full flex-col items-center justify-center">
                             {hasResponses ? (
                               <>
-                                <span
-                                  className={
-                                    `text-xs font-bold sm:text-base` +
-                                    (opacityValue >= 0.6 ? ' text-white' : '')
-                                  }
-                                >
+                                <span className={countTextClass}>
                                   {availableCount}
                                 </span>
                                 {unavailableCount > 0 && (
-                                  <span className="text-[10px] text-gray-500 sm:text-xs">
+                                  <span className={unavailableTextClass}>
                                     ({unavailableCount})
                                   </span>
                                 )}
