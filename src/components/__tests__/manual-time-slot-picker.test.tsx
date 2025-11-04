@@ -176,9 +176,7 @@ describe('ManualTimeSlotPicker', () => {
 
     const startInput = screen.getAllByLabelText(/開始日/)[0] as HTMLInputElement;
     const endInput = screen.getAllByLabelText(/終了日/)[0] as HTMLInputElement;
-    const defaultStartTimeInput = screen.getAllByLabelText(
-      /各日の開始時刻/,
-    )[0] as HTMLInputElement;
+    const defaultStartTimeInput = screen.getAllByLabelText(/各日の開始時刻/)[0] as HTMLInputElement;
     const defaultEndTimeInput = screen.getAllByLabelText(/各日の終了時刻/)[0] as HTMLInputElement;
 
     expect(startInput.value).toBe('2099-01-05');
