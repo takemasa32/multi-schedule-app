@@ -148,7 +148,11 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                           ×
                         </div>
                       )}
-                      {isAvailable === null && <span className="text-gray-300">-</span>}
+                      {isAvailable === null && (
+                        <div className="mx-auto flex h-6 w-6 items-center justify-center text-gray-300">
+                          {/* 未回答セルも中央揃えで表示 */}-
+                        </div>
+                      )}
                     </td>
                   );
                 })}

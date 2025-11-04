@@ -483,12 +483,13 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                             )}
                           </div>
                         ) : (
-                          <>
+                          <div className="flex h-full w-full items-center justify-center">
+                            {/* イベント未設定セルも中央揃えで視認性を統一 */}
                             <span className="sr-only">イベント未設定</span>
                             <span aria-hidden="true" className="text-xs text-gray-300 sm:text-sm">
                               -
                             </span>
-                          </>
+                          </div>
                         )}
                       </td>
                     );
