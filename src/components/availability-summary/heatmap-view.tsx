@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { getOptimizedDateDisplay } from './date-utils';
 
 interface HeatmapViewProps {
@@ -33,6 +33,10 @@ interface HeatmapViewProps {
   minColoredCount: number;
   /** スライダー変更時のハンドラ */
   onMinColoredCountChange?: (count: number) => void;
+  /** 過去日程をグレースケールで表示するか */
+  isPastEventGrayscaleEnabled: boolean;
+  /** 過去日程のグレースケール設定変更時のハンドラ */
+  onPastEventGrayscaleToggle?: (enabled: boolean) => void;
 }
 
 /**
@@ -49,12 +53,59 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   isDragging,
   minColoredCount,
   onMinColoredCountChange,
+  isPastEventGrayscaleEnabled,
+  onPastEventGrayscaleToggle,
 }) => {
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  // 初回描画時に「今日」の列へスクロールしたかどうか
+  const scrolledToTodayRef = useRef(false);
+
+  // 「今日」の0時基準の日付オブジェクトを算出
+  const startOfToday = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  }, []);
+
+  useEffect(() => {
+    // 既にスクロール済み、または要素が取得できない場合は何もしない
+    if (scrolledToTodayRef.current || !tableRef.current) {
+      return;
+    }
+
+    // イベント日程の中に「今日」が含まれているかを確認
+    const todayIndex = uniqueDates.findIndex((dateInfo) => {
+      const dateOnly = new Date(dateInfo.dateObj);
+      dateOnly.setHours(0, 0, 0, 0);
+      return dateOnly.getTime() === startOfToday.getTime();
+    });
+
+    if (todayIndex === -1) {
+      return;
+    }
+
+    const headerRow = tableRef.current.querySelector('thead tr');
+    const headerCells = headerRow?.querySelectorAll<HTMLTableCellElement>('th[data-date-index]');
+
+    if (!headerCells || headerCells.length === 0) {
+      return;
+    }
+
+    const targetCell = headerCells[todayIndex];
+    const firstCell = headerCells[0];
+    if (!targetCell || !firstCell) {
+      return;
+    }
+
+    // 左端に今日の列が来るようスクロール位置を調整
+    const scrollLeft = targetCell.offsetLeft - firstCell.offsetLeft;
+    tableRef.current.scrollTo({ left: scrollLeft });
+    scrolledToTodayRef.current = true;
+  }, [startOfToday, uniqueDates]);
 
   // タッチ開始位置を記録
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -124,6 +175,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 return (
                   <th
                     key={dateInfo.date}
+                    data-date-index={index}
                     className="bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm"
                   >
                     {optimizedDisplay.yearMonth && (
@@ -178,6 +230,9 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     const totalResponses = cellData?.totalResponses ?? 0;
                     const hasData = cellData !== undefined;
                     const hasResponses = totalResponses > 0;
+                    const dateOnly = new Date(dateInfo.dateObj);
+                    dateOnly.setHours(0, 0, 0, 0);
+                    const isPastDate = dateOnly.getTime() < startOfToday.getTime();
 
                     // テーマカラー単色スケール：最大参加者数に応じた不透明度
                     const ratio = maxAvailable > 0 ? availableCount / maxAvailable : 0;
@@ -188,15 +243,19 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     const opacityValue = Math.min(Math.max(opacity5, 20), 100) / 100; // 0.2〜1.0に変換
 
                     // セルの背景色と境界線のスタイル（動的な部分のみインラインスタイル）
+                    const filterValues: string[] = [];
+                    if (hasData && hasResponses && availableCount < minColoredCount) {
+                      filterValues.push('grayscale(1)');
+                    }
+                    if (hasData && isPastEventGrayscaleEnabled && isPastDate) {
+                      filterValues.push('grayscale(1)');
+                    }
                     const cellStyle = {
                       backgroundColor:
                         hasData && hasResponses
                           ? `rgba(var(--p-rgb, 87, 13, 248), ${opacityValue})`
                           : 'transparent',
-                      filter:
-                        hasData && hasResponses && availableCount < minColoredCount
-                          ? 'grayscale(1)'
-                          : 'none',
+                      filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
                     } as React.CSSProperties;
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
@@ -367,6 +426,22 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     <p className="text-base-content/70 text-xs">
                       {minColoredCount}人未満の時間帯をグレー表示
                     </p>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-md bg-base-200/60 px-3 py-2">
+                    <div className="text-left text-xs">
+                      <p className="font-semibold text-base-content">過去日程のグレー表示</p>
+                      <p className="text-base-content/70">オフにすると過去日程にも色が付きます</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary toggle-sm"
+                      checked={isPastEventGrayscaleEnabled}
+                      onChange={(event) =>
+                        onPastEventGrayscaleToggle?.(event.target.checked)
+                      }
+                      aria-label="過去日程のグレー表示切り替え"
+                    />
                   </div>
 
                   <div className="relative px-2">
