@@ -26,7 +26,6 @@ const createPastColumnPalette = (isDarkTheme: boolean) => ({
   headerBaseColor: isDarkTheme ? 'rgba(17, 24, 39, 0.82)' : 'rgba(236, 242, 247, 0.9)',
   headerGradientTop: isDarkTheme ? 'rgba(17, 24, 39, 0.9)' : 'rgba(236, 242, 247, 0.95)',
   headerGradientBottom: isDarkTheme ? 'rgba(17, 24, 39, 0.78)' : 'rgba(226, 232, 240, 0.82)',
-  headerBorderAccent: isDarkTheme ? 'rgba(71, 85, 105, 0.55)' : 'rgba(148, 163, 184, 0.55)',
   headerTextColor: isDarkTheme ? 'rgba(226, 232, 240, 0.85)' : 'rgba(71, 85, 105, 0.85)',
   columnBaseLayer: isDarkTheme
     ? 'linear-gradient(0deg, rgba(30, 41, 59, 0.32), rgba(30, 41, 59, 0.32))'
@@ -34,7 +33,6 @@ const createPastColumnPalette = (isDarkTheme: boolean) => ({
   columnBaseLayerMuted: isDarkTheme
     ? 'linear-gradient(0deg, rgba(30, 41, 59, 0.38), rgba(30, 41, 59, 0.38))'
     : 'linear-gradient(0deg, rgba(203, 213, 225, 0.52), rgba(203, 213, 225, 0.52))',
-  columnDivider: isDarkTheme ? 'rgba(71, 85, 105, 0.42)' : 'rgba(148, 163, 184, 0.45)',
   baseOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.24)' : 'rgba(148, 163, 184, 0.14)',
   emphasizedOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.34)' : 'rgba(148, 163, 184, 0.2)',
 });
@@ -286,7 +284,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       backgroundColor: pastColumnPalette.headerBaseColor,
                       backgroundImage: `linear-gradient(180deg, ${pastColumnPalette.headerGradientTop} 0%, ${pastColumnPalette.headerGradientBottom} 100%)`,
                       color: pastColumnPalette.headerTextColor,
-                      boxShadow: `inset 1px 0 0 ${pastColumnPalette.headerBorderAccent}, inset -1px 0 0 ${pastColumnPalette.headerBorderAccent}, inset 0 -1px 0 ${pastColumnPalette.headerBorderAccent}`,
                     }
                   : undefined;
                 return (
@@ -394,7 +391,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     // 過去列用の淡い下地レイヤーを合成（メイン色の邪魔をしないようlinear-gradientを使用）
                     const backgroundLayers: string[] = [];
                     if (overlayColor) {
-                      // ボーダーの色味を保持するため、オーバーレイも背景レイヤーとして合成する
+                      // 過去列全体に穏やかなトーンを乗せるため、オーバーレイも背景レイヤーとして合成する
                       backgroundLayers.push(`linear-gradient(0deg, ${overlayColor}, ${overlayColor})`);
                     }
                     if (shouldDimPastColumn) {
@@ -404,16 +401,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           : pastColumnPalette.columnBaseLayer,
                       );
                     }
-                    const boxShadowLayers: string[] = [];
-                    if (shouldDimPastColumn) {
-                      boxShadowLayers.push(`inset 1px 0 0 ${pastColumnPalette.columnDivider}`);
-                      boxShadowLayers.push(`inset -1px 0 0 ${pastColumnPalette.columnDivider}`);
-                    }
                     const cellStyle = {
                       backgroundColor,
                       backgroundImage: backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined,
                       filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
-                      boxShadow: boxShadowLayers.length > 0 ? boxShadowLayers.join(', ') : undefined,
                     } as React.CSSProperties;
 
                     const countTextBaseClass = 'text-xs font-bold sm:text-base';

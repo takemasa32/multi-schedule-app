@@ -74,7 +74,7 @@ describe('HeatmapView', () => {
     expect(zero.closest('td')).toBeTruthy();
   });
 
-  it('過去日程をグレースケール表示してもボーダー色を維持する', () => {
+  it('過去日程をグレースケール表示してもボーダー装飾を追加しない', () => {
     const heatmapData = new Map<
       string,
       {
@@ -113,7 +113,6 @@ describe('HeatmapView', () => {
     const cellElement = targetCell as HTMLTableCellElement;
     const styleAttribute = cellElement.getAttribute('style') ?? '';
     expect(styleAttribute).toContain('background-color: rgba(148, 163, 184, 0.45)');
-    expect(styleAttribute).toContain('inset 1px 0 0');
-    expect(styleAttribute).not.toContain('9999px');
+    expect(styleAttribute).not.toContain('box-shadow');
   });
 });
