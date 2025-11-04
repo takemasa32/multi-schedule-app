@@ -18,6 +18,25 @@ const DARK_THEME_KEYWORDS = [
 ];
 
 /**
+ * ブラウザ環境からダークテーマかどうかを判定する
+ * @returns ダークテーマならtrue
+ */
+const detectDarkThemeFromEnvironment = (): boolean => {
+  if (typeof document !== 'undefined') {
+    const themeAttr = document.documentElement.getAttribute('data-theme')?.toLowerCase() ?? '';
+    if (themeAttr) {
+      return DARK_THEME_KEYWORDS.some((keyword) => themeAttr.includes(keyword));
+    }
+  }
+
+  if (typeof window !== 'undefined' && 'matchMedia' in window) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  return false;
+};
+
+/**
  * 過去日程の列に適用するビジュアルパレットを取得する
  * @param isDarkTheme ダークテーマかどうか
  * @returns 過去日程用の配色設定
@@ -92,7 +111,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   isPastEventGrayscaleEnabled,
   onPastEventGrayscaleToggle,
 }) => {
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  // 初期描画からテーマ判定を反映させ、点滅を防ぐ
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => detectDarkThemeFromEnvironment());
   const pastColumnPalette = useMemo(() => createPastColumnPalette(isDarkTheme), [isDarkTheme]);
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
@@ -119,26 +139,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     /**
      * data-theme属性やOS設定から現在のテーマを判定する
      */
-    const evaluateTheme = () => {
-      const themeAttr = rootElement.getAttribute('data-theme')?.toLowerCase() ?? '';
-      if (themeAttr) {
-        setIsDarkTheme(DARK_THEME_KEYWORDS.some((keyword) => themeAttr.includes(keyword)));
-        return;
-      }
-
-      if (typeof window !== 'undefined' && 'matchMedia' in window) {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        setIsDarkTheme(mediaQuery.matches);
-        return;
-      }
-
-      setIsDarkTheme(false);
+    const applyThemeEvaluation = () => {
+      setIsDarkTheme(detectDarkThemeFromEnvironment());
     };
 
-    evaluateTheme();
+    applyThemeEvaluation();
 
     const mutationObserver = new MutationObserver(() => {
-      evaluateTheme();
+      applyThemeEvaluation();
     });
     mutationObserver.observe(rootElement, {
       attributes: true,
@@ -150,7 +158,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     if (typeof window !== 'undefined' && 'matchMedia' in window) {
       mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       mediaQueryListener = () => {
-        evaluateTheme();
+        applyThemeEvaluation();
       };
 
       if (mediaQuery.addEventListener) {

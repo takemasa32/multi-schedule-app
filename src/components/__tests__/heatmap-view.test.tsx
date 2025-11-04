@@ -115,4 +115,56 @@ describe('HeatmapView', () => {
     expect(styleAttribute).toContain('background-color: rgba(148, 163, 184, 0.45)');
     expect(styleAttribute).not.toContain('box-shadow');
   });
+
+  it('data-theme属性がダークテーマの場合でも初期描画から暗い配色を適用する', () => {
+    document.documentElement.setAttribute('data-theme', 'night');
+
+    const heatmapData = new Map<
+      string,
+      {
+        dateId: string;
+        availableCount: number;
+        unavailableCount: number;
+        heatmapLevel: number;
+        isSelected: boolean;
+        totalResponses: number;
+      }
+    >();
+    heatmapData.set('2000-01-01_slot-10', {
+      dateId: '2000-01-01',
+      availableCount: 3,
+      unavailableCount: 1,
+      heatmapLevel: 0,
+      isSelected: false,
+      totalResponses: 4,
+    });
+
+    let cleanup: (() => void) | null = null;
+    try {
+      const rendered = render(
+        <HeatmapView
+          {...baseProps}
+          uniqueDates={[{ date: '2000-01-01', dateObj: new Date('2000-01-01T00:00:00.000Z') }]}
+          heatmapData={heatmapData}
+          maxAvailable={5}
+          isPastEventGrayscaleEnabled
+        />,
+      );
+      cleanup = rendered.unmount;
+
+      const targetCell = screen
+        .getAllByRole('cell')
+        .find((cell) => cell.textContent?.trim().startsWith('3'));
+
+      expect(targetCell).toBeDefined();
+      const cellElement = targetCell as HTMLTableCellElement;
+      const backgroundColor = cellElement.style.backgroundColor;
+
+      expect(backgroundColor).toContain('80, 88, 104');
+      expect(backgroundColor).not.toContain('148, 163, 184');
+    } finally {
+      cleanup?.();
+      document.documentElement.removeAttribute('data-theme');
+    }
+  });
 });
