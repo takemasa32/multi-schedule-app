@@ -393,6 +393,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       : null;
                     // 過去列用の淡い下地レイヤーを合成（メイン色の邪魔をしないようlinear-gradientを使用）
                     const backgroundLayers: string[] = [];
+                    if (overlayColor) {
+                      // ボーダーの色味を保持するため、オーバーレイも背景レイヤーとして合成する
+                      backgroundLayers.push(`linear-gradient(0deg, ${overlayColor}, ${overlayColor})`);
+                    }
                     if (shouldDimPastColumn) {
                       backgroundLayers.push(
                         shouldApplyPastGrayscale
@@ -401,9 +405,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       );
                     }
                     const boxShadowLayers: string[] = [];
-                    if (overlayColor) {
-                      boxShadowLayers.push(`inset 0 0 0 9999px ${overlayColor}`);
-                    }
                     if (shouldDimPastColumn) {
                       boxShadowLayers.push(`inset 1px 0 0 ${pastColumnPalette.columnDivider}`);
                       boxShadowLayers.push(`inset -1px 0 0 ${pastColumnPalette.columnDivider}`);
