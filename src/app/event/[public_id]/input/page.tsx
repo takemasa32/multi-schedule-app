@@ -68,7 +68,10 @@ export default async function EventPage({ params, searchParams }: EventPageProps
     : Promise.resolve(null);
 
   // フォーム表示に必要な情報が揃うまで待機し、不要なスケルトンを避ける
-  const [eventDates, participantResult] = await Promise.all([eventDatesPromise, participantPromise]);
+  const [eventDates, participantResult] = await Promise.all([
+    eventDatesPromise,
+    participantPromise,
+  ]);
 
   const existingParticipant = participantResult?.participant || null;
   const existingAvailabilities = participantResult?.availabilityMap || null;
