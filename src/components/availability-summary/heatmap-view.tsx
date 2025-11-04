@@ -1,8 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useTheme } from 'next-themes';
 import { getOptimizedDateDisplay } from './date-utils';
 
-// ダークテーマとみなすキーワード（data-theme属性に含まれる値を想定）
-const DARK_THEME_KEYWORDS = [
+// ダークテーマと判定する候補名一覧（next-themesのresolvedThemeを想定）
+const DARK_THEME_NAMES = new Set([
   'dark',
   'night',
   'dracula',
@@ -15,25 +23,55 @@ const DARK_THEME_KEYWORDS = [
   'halloween',
   'luxury',
   'lofi',
-];
+]);
+
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 /**
- * ブラウザ環境からダークテーマかどうかを判定する
+ * テーマ名からダークテーマかどうかを判定する
+ * @param themeName テーマ名（null/undefined許容）
+ * @returns true: ダーク、false: ライト、null: 判定不能
+ */
+const evaluateDarkThemeByName = (themeName: string | null | undefined): boolean | null => {
+  if (!themeName) {
+    return null;
+  }
+
+  const normalized = themeName.toLowerCase().trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  if (tokens.some((token) => token === 'system')) {
+    return null;
+  }
+
+  if (tokens.some((token) => DARK_THEME_NAMES.has(token))) {
+    return true;
+  }
+
+  if (tokens.some((token) => token === 'light' || token === 'cupcake' || token === 'daysynth')) {
+    return false;
+  }
+
+  return null;
+};
+
+/**
+ * OSのカラースキーム設定からダークテーマかどうかを取得する
  * @returns ダークテーマならtrue
  */
-const detectDarkThemeFromEnvironment = (): boolean => {
-  if (typeof document !== 'undefined') {
-    const themeAttr = document.documentElement.getAttribute('data-theme')?.toLowerCase() ?? '';
-    if (themeAttr) {
-      return DARK_THEME_KEYWORDS.some((keyword) => themeAttr.includes(keyword));
-    }
+const prefersDarkColorScheme = (): boolean => {
+  if (typeof window === 'undefined' || !('matchMedia' in window)) {
+    return false;
   }
 
-  if (typeof window !== 'undefined' && 'matchMedia' in window) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-
-  return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
 /**
@@ -111,8 +149,109 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   isPastEventGrayscaleEnabled,
   onPastEventGrayscaleToggle,
 }) => {
-  // 初期描画からテーマ判定を反映させ、点滅を防ぐ
-  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => detectDarkThemeFromEnvironment());
+  const { resolvedTheme, theme, systemTheme } = useTheme();
+  // 初期描画時から可能な限り正しいテーマを反映する
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => {
+    if (typeof document !== 'undefined') {
+      const attributeTheme = document.documentElement.getAttribute('data-theme');
+      const evaluation = evaluateDarkThemeByName(attributeTheme);
+      if (evaluation !== null) {
+        return evaluation;
+      }
+    }
+
+    return prefersDarkColorScheme();
+  });
+
+  /**
+   * data-themeおよびnext-themesの状態からダークテーマかどうかを再評価する
+   */
+  const reevaluateTheme = useCallback(() => {
+    const candidates = [
+      resolvedTheme,
+      theme,
+      typeof document !== 'undefined'
+        ? document.documentElement.getAttribute('data-theme')
+        : null,
+    ];
+
+    for (const candidate of candidates) {
+      const evaluation = evaluateDarkThemeByName(candidate);
+      if (evaluation !== null) {
+        if (evaluation !== isDarkTheme) {
+          setIsDarkTheme(evaluation);
+        }
+        return;
+      }
+    }
+
+    const systemResolved = systemTheme
+      ? systemTheme === 'dark'
+      : prefersDarkColorScheme();
+    if (systemResolved !== isDarkTheme) {
+      setIsDarkTheme(systemResolved);
+    }
+  }, [isDarkTheme, resolvedTheme, systemTheme, theme]);
+
+  useIsomorphicLayoutEffect(() => {
+    reevaluateTheme();
+  }, [reevaluateTheme]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const rootElement = document.documentElement;
+    const observer = new MutationObserver(() => {
+      reevaluateTheme();
+    });
+    observer.observe(rootElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [reevaluateTheme]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('matchMedia' in window)) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      const attributeTheme = typeof document !== 'undefined'
+        ? document.documentElement.getAttribute('data-theme')
+        : null;
+      const attributeEvaluation = evaluateDarkThemeByName(attributeTheme);
+      const themeEvaluation = evaluateDarkThemeByName(resolvedTheme ?? theme);
+      if (attributeEvaluation !== null || themeEvaluation !== null) {
+        return;
+      }
+      const matches = mediaQuery.matches;
+      if (matches !== isDarkTheme) {
+        setIsDarkTheme(matches);
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else if (mediaQuery.addListener) {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else if (mediaQuery.removeListener) {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, [isDarkTheme, resolvedTheme, theme]);
+
   const pastColumnPalette = useMemo(() => createPastColumnPalette(isDarkTheme), [isDarkTheme]);
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
@@ -127,59 +266,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return undefined;
-    }
-
-    const rootElement = document.documentElement;
-
-    /**
-     * data-theme属性やOS設定から現在のテーマを判定する
-     */
-    const applyThemeEvaluation = () => {
-      setIsDarkTheme(detectDarkThemeFromEnvironment());
-    };
-
-    applyThemeEvaluation();
-
-    const mutationObserver = new MutationObserver(() => {
-      applyThemeEvaluation();
-    });
-    mutationObserver.observe(rootElement, {
-      attributes: true,
-      attributeFilter: ['data-theme', 'class'],
-    });
-
-    let mediaQuery: MediaQueryList | null = null;
-    let mediaQueryListener: ((event: MediaQueryListEvent) => void) | null = null;
-    if (typeof window !== 'undefined' && 'matchMedia' in window) {
-      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      mediaQueryListener = () => {
-        applyThemeEvaluation();
-      };
-
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', mediaQueryListener);
-      } else if (mediaQuery.addListener) {
-        mediaQuery.addListener(mediaQueryListener);
-      }
-    }
-
-    return () => {
-      mutationObserver.disconnect();
-      if (mediaQuery) {
-        if (mediaQueryListener) {
-          if (mediaQuery.removeEventListener) {
-            mediaQuery.removeEventListener('change', mediaQueryListener);
-          } else if (mediaQuery.removeListener) {
-            mediaQuery.removeListener(mediaQueryListener);
-          }
-        }
-      }
-    };
   }, []);
 
   useEffect(() => {

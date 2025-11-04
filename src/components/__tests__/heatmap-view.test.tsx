@@ -2,6 +2,21 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import HeatmapView from '../availability-summary/heatmap-view';
 
+jest.mock('next-themes', () => {
+  return {
+    useTheme: () => {
+      const themeAttr = document.documentElement.getAttribute('data-theme');
+      const resolved = themeAttr ?? 'daysynth';
+      return {
+        theme: resolved,
+        resolvedTheme: resolved,
+        setTheme: jest.fn(),
+        systemTheme: undefined,
+      };
+    },
+  };
+});
+
 describe('HeatmapView', () => {
   const uniqueDates = [
     {
