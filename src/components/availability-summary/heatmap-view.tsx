@@ -17,6 +17,18 @@ const DARK_THEME_KEYWORDS = [
   'lofi',
 ];
 
+/**
+ * 過去日程の列に適用するビジュアルパレットを取得する
+ * @param isDarkTheme ダークテーマかどうか
+ * @returns 過去日程用の配色設定
+ */
+const createPastColumnPalette = (isDarkTheme: boolean) => ({
+  headerBackground: isDarkTheme ? 'rgba(30, 41, 59, 0.85)' : 'rgba(236, 242, 247, 0.9)',
+  headerBorderAccent: isDarkTheme ? 'rgba(71, 85, 105, 0.65)' : 'rgba(148, 163, 184, 0.45)',
+  baseOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.18)' : 'rgba(148, 163, 184, 0.1)',
+  emphasizedOverlay: isDarkTheme ? 'rgba(15, 23, 42, 0.3)' : 'rgba(148, 163, 184, 0.16)',
+});
+
 interface HeatmapViewProps {
   uniqueDates: Array<{
     date: string;
@@ -73,6 +85,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
   onPastEventGrayscaleToggle,
 }) => {
   const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const pastColumnPalette = useMemo(() => createPastColumnPalette(isDarkTheme), [isDarkTheme]);
   // タッチ操作の状態をuseRefで管理
   const isDraggingRef = useRef(false);
   const touchStartXRef = useRef<number | null>(null);
@@ -254,11 +267,25 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                   index,
                   arr.map((d) => d.dateObj.toISOString()),
                 );
+                // 列ヘッダーでも過去日程かどうかを判定し、視覚的な強調を行う
+                const dateOnly = new Date(dateInfo.dateObj);
+                dateOnly.setHours(0, 0, 0, 0);
+                const isPastDate = dateOnly.getTime() < startOfToday.getTime();
                 return (
                   <th
                     key={dateInfo.date}
                     data-date-index={index}
-                    className="bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm"
+                    className={`bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm ${
+                      isPastDate ? 'text-base-content/70' : 'text-base-content'
+                    }`}
+                    style={
+                      isPastDate
+                        ? {
+                            backgroundColor: pastColumnPalette.headerBackground,
+                            boxShadow: `inset 0 -1px 0 ${pastColumnPalette.headerBorderAccent}`,
+                          }
+                        : undefined
+                    }
                   >
                     {optimizedDisplay.yearMonth && (
                       <>
@@ -326,6 +353,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
                     const shouldApplyPastGrayscale =
                       hasData && isPastEventGrayscaleEnabled && isPastDate;
+                    // カラーモードに関わらず「過去」の範囲であることを示すためのフラグ
+                    const shouldDimPastColumn = isPastDate;
 
                     // セルの背景色と境界線のスタイル（動的な部分のみインラインスタイル）
                     const filterValues: string[] = [];
@@ -345,9 +374,16 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         ? `rgba(${pastBaseRgb}, ${adjustedOpacity})`
                         : `rgba(var(--p-rgb, 87, 13, 248), ${adjustedOpacity})`
                       : 'transparent';
+                    // 過去日程の列に控えめなオーバーレイを被せ、背景が途切れないようにする
+                    const overlayColor = shouldDimPastColumn
+                      ? shouldApplyPastGrayscale
+                        ? pastColumnPalette.emphasizedOverlay
+                        : pastColumnPalette.baseOverlay
+                      : null;
                     const cellStyle = {
                       backgroundColor,
                       filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
+                      boxShadow: overlayColor ? `inset 0 0 0 9999px ${overlayColor}` : undefined,
                     } as React.CSSProperties;
 
                     const countTextBaseClass = 'text-xs font-bold sm:text-base';
