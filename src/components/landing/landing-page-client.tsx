@@ -57,6 +57,24 @@ export default function LandingPageClient() {
     },
   ];
 
+  const motionHighlights = [
+    {
+      title: 'スクロール連動の3Dコンセプト',
+      body: 'LP限定の3Dデモで「候補日を重ねる」体験を視覚化。実際のプロダクトはヒートマップ/リストUIで同じ情報構造を提供します。',
+      tone: 'from-sky-500/20 via-transparent to-transparent',
+    },
+    {
+      title: '状態別の色分けアニメーション',
+      body: '「最適日」「参加可」「保留」の3状態をカラーリング。LP上のアニメーションも、プロダクトの色分けルールに揃えています。',
+      tone: 'from-purple-500/20 via-transparent to-transparent',
+    },
+    {
+      title: '軽量・高速なGPU描画',
+      body: 'OrbitControlsとライト構成を最小限にし、モバイルでも滑らかな操作感を維持。LPの演出が本番UIのサクサク感を損なわないよう配慮しています。',
+      tone: 'from-amber-400/20 via-transparent to-transparent',
+    },
+  ];
+
   const useCases = [
     {
       icon: Music,
@@ -95,7 +113,7 @@ export default function LandingPageClient() {
     {
       title: '日程確定',
       description:
-        '回答状況をリアルタイムで集計。最適枠を選ぶと全員のカレンダーにも同期が可能です。',
+        '回答状況を自動で集計。最適枠を選んだら、Google/ICSリンクを使って全員へ共有できます。',
       icon: CheckCircle2,
       accent: 'accent',
       highlight: '確定後はGoogle/ICSリンクで簡単に共有可能',
@@ -233,6 +251,56 @@ export default function LandingPageClient() {
                 各参加者の予定や時間帯のレイヤーを重ね、全体像を可視化
               </div>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* MOTION SHOWCASE */}
+      <section className="from-base-100 to-base-200 bg-gradient-to-b px-4 py-16">
+        <div className="container mx-auto max-w-6xl">
+          <motion.h2
+            className="mb-4 text-center text-3xl font-bold sm:text-4xl"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={0}
+          >
+            モダンな動きと3D体験
+          </motion.h2>
+          <motion.p
+            className="text-base-content/70 mx-auto mb-10 max-w-3xl text-center"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={fadeUp}
+            custom={1}
+          >
+            ヒーローで表示している3Dカードは、スクロール量に応じて視点が変化。React Three FiberとFramer Motionを組み合わせ、
+            LP全体で立体感とスピード感を演出します。
+          </motion.p>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {motionHighlights.map((item, index) => (
+              <motion.div
+                key={item.title}
+                className="relative overflow-hidden rounded-2xl border border-base-200 bg-base-100 p-6 shadow-sm"
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.4 }}
+                variants={fadeUp}
+                custom={index}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${item.tone}`} aria-hidden />
+                <div className="relative flex h-full flex-col gap-3">
+                  <span className="text-primary text-sm font-semibold">SCROLL × 3D</span>
+                  <h3 className="text-xl font-bold leading-tight">{item.title}</h3>
+                  <p className="text-base-content/70 text-sm leading-relaxed">{item.body}</p>
+                  <div className="mt-auto text-xs text-base-content/60">
+                    ハードウェアアクセラレーションを活用し、LPから製品UIまでシームレスに表現。
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>

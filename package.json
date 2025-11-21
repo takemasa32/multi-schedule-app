@@ -25,6 +25,8 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.4.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
     "@types/bcryptjs": "^2.4.6",
@@ -43,6 +45,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "three": "^0.181.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
