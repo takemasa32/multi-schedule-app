@@ -40,6 +40,11 @@ export default function Footer() {
                   利用規約
                 </Link>
               </li>
+              <li>
+                <Link href="/privacy" className="hover:text-primary transition">
+                  プライバシーポリシー
+                </Link>
+              </li>
             </ul>
           </div>
 

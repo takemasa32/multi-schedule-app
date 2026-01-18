@@ -11,8 +11,6 @@ const nextPwaConfig = {
   },
 };
 
-const nextConfig: NextConfig = {
-  // ...既存のNext.js設定をここに記述
-};
+const nextConfig: NextConfig = {};
 
 export default withPWA(nextPwaConfig)(nextConfig);
