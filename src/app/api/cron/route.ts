@@ -5,7 +5,11 @@ export async function GET(req: NextRequest) {
   // セキュリティ: Authorization ヘッダーで CRON_SECRET を検証
   const auth = req.headers.get('authorization');
   const secret = process.env.CRON_SECRET;
-  if (!secret || auth !== `Bearer ${secret}`) {
+  const isAuthorizedBySecret = Boolean(secret) && auth === `Bearer ${secret}`;
+  // Vercel Cron の呼び出しには専用ヘッダーが付与されるため、同環境ではこれを許可する
+  const isAuthorizedByVercelCron =
+    process.env.VERCEL === '1' && req.headers.get('x-vercel-cron') === '1';
+  if (!isAuthorizedBySecret && !isAuthorizedByVercelCron) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 

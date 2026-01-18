@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseClient } from '@/lib/supabase';
+import { createSupabaseAdmin } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
 
 // ルートハンドラーでは動的パラメータを使わないので、第2引数は削除
@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     return new Response('イベントIDが指定されていません', { status: 400 });
   }
 
-  // Supabaseクライアントの初期化
-  const supabase = createSupabaseClient();
+  // Supabase管理クライアントの初期化
+  const supabase = createSupabaseAdmin();
 
   try {
     // イベント情報の取得
@@ -26,6 +26,15 @@ export async function GET(request: NextRequest) {
     if (eventError || !event) {
       console.error('イベント取得エラー:', eventError);
       return new Response('イベントが見つかりません', { status: 404 });
+    }
+
+    // アクセスされたイベントとして最終閲覧時刻を更新（失敗してもレスポンスは継続）
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('id', event.id);
+    if (updateError) {
+      console.error('最終閲覧時刻更新エラー:', updateError);
     }
 
     if (!event.is_finalized || !event.final_date_id) {

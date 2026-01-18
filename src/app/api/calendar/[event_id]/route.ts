@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseClient } from '@/lib/supabase';
+import { createSupabaseAdmin } from '@/lib/supabase';
 import { formatIcsDate } from '@/lib/utils';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -20,8 +20,8 @@ export async function GET(
     const isGoogleCalendar = url.searchParams.get('googleCalendar') === 'true';
     const requestedDateId = url.searchParams.get('dateId');
 
-    // サーバーサイド用のSupabaseクライアントを初期化
-    const supabase = createSupabaseClient();
+    // サーバーサイド用のSupabase管理クライアントを初期化
+    const supabase = createSupabaseAdmin();
 
     // イベント情報を取得
     const { data: event, error: eventError } = await supabase
@@ -34,6 +34,15 @@ export async function GET(
       return new NextResponse('イベントが見つからないか、まだ確定されていません', {
         status: 404,
       });
+    }
+
+    // アクセスされたイベントとして最終閲覧時刻を更新（失敗してもレスポンスは継続）
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('id', event.id);
+    if (updateError) {
+      console.error('最終閲覧時刻更新エラー:', updateError);
     }
 
     // 確定した日程の情報を取得（複数日程対応）
