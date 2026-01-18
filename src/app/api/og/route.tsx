@@ -218,7 +218,7 @@ export async function GET(req: NextRequest) {
               overflowWrap: 'break-word',
               overflow: 'hidden',
               display: '-webkit-box',
-              WebkitLineClamp: `${lineClamp}`,
+              WebkitLineClamp: lineClamp,
               WebkitBoxOrient: 'vertical',
               textOverflow: 'ellipsis',
             }}
