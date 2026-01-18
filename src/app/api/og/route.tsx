@@ -135,16 +135,31 @@ export async function GET(req: NextRequest) {
 
   if (type === 'event') {
     const title = searchParams.get('title') || 'イベント';
-    // タイトルの長さに応じてフォントサイズを調整（短文はより大きく）
-    let fontSize = 54;
-    if (title.length <= 12) fontSize = 72;
-    else if (title.length <= 24) fontSize = 62;
-    else if (title.length > 32) fontSize = 44;
-    else if (title.length > 60) fontSize = 36;
+    /**
+     * タイトルの長さに応じてフォントサイズと行数を制御し、
+     * スマホでの縮小表示でも視認性が担保されるようにする。
+     */
+    const calcTitleTypography = (text: string) => {
+      const length = text.length;
+      if (length <= 12) {
+        return { fontSize: 88, lineClamp: 2, lineHeight: 1.05 } as const;
+      }
+      if (length <= 24) {
+        return { fontSize: 76, lineClamp: 2, lineHeight: 1.1 } as const;
+      }
+      if (length <= 36) {
+        return { fontSize: 64, lineClamp: 3, lineHeight: 1.15 } as const;
+      }
+      if (length <= 60) {
+        return { fontSize: 52, lineClamp: 3, lineHeight: 1.2 } as const;
+      }
+      return { fontSize: 44, lineClamp: 4, lineHeight: 1.25 } as const;
+    };
+    const { fontSize, lineClamp, lineHeight } = calcTitleTypography(title);
     // サブテキスト（キャッチコピーや説明）
     const subText = siteConfig.name.tagline || 'みんなの予定を簡単調整';
-    // サービス特徴
-    const features = ['ログイン不要', '無料', 'スマホ・PC対応', 'カレンダー連携', 'シンプルUI'];
+    // サービス特徴（短縮表現にして画面密度を下げる）
+    const features = ['ログイン不要', '無料', 'スマホ対応', 'カレンダー連携', 'シンプルUI'];
     return new ImageResponse(
       (
         <div style={{ ...baseStyle, ...gradientBg }}>
@@ -176,12 +191,12 @@ export async function GET(req: NextRequest) {
           {/* サブタイトル */}
           <div
             style={{
-              fontSize: 26,
-              color: '#e0e7ef',
-              fontWeight: 500,
-              marginBottom: 8,
-              letterSpacing: '0.04em',
-              textShadow: '0 1px 6px rgba(0,0,0,0.10)',
+              fontSize: 32,
+              color: '#e0f2ff',
+              fontWeight: 600,
+              marginBottom: 16,
+              letterSpacing: '0.05em',
+              textShadow: '0 2px 8px rgba(0,0,0,0.12)',
             }}
           >
             {subText}
@@ -193,10 +208,9 @@ export async function GET(req: NextRequest) {
               fontWeight: 800,
               margin: 0,
               textAlign: 'center',
-              lineHeight: 1.2,
+              lineHeight,
               textShadow: '0 2px 12px rgba(0,0,0,0.16)',
               maxWidth: 900,
-              minHeight: 80,
               marginLeft: 'auto',
               marginRight: 'auto',
               padding: '0 32px',
@@ -204,7 +218,7 @@ export async function GET(req: NextRequest) {
               overflowWrap: 'break-word',
               overflow: 'hidden',
               display: '-webkit-box',
-              WebkitLineClamp: 3,
+              WebkitLineClamp: `${lineClamp}`,
               WebkitBoxOrient: 'vertical',
               textOverflow: 'ellipsis',
             }}
@@ -214,9 +228,9 @@ export async function GET(req: NextRequest) {
           {/* サービス特徴リスト */}
           <div
             style={{
-              marginTop: 28,
+              marginTop: 32,
               display: 'flex',
-              gap: 18,
+              gap: 16,
               flexWrap: 'wrap',
               justifyContent: 'center',
             }}
@@ -227,12 +241,12 @@ export async function GET(req: NextRequest) {
                 style={{
                   background: 'rgba(255,255,255,0.18)',
                   color: '#fff',
-                  fontSize: 22,
-                  fontWeight: 600,
-                  borderRadius: 16,
-                  padding: '6px 22px',
-                  letterSpacing: '0.03em',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                  fontSize: 24,
+                  fontWeight: 700,
+                  borderRadius: 18,
+                  padding: '10px 26px',
+                  letterSpacing: '0.04em',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
                   border: '1.5px solid rgba(255,255,255,0.22)',
                 }}
               >
@@ -243,12 +257,12 @@ export async function GET(req: NextRequest) {
           {/* サービス名 */}
           <div
             style={{
-              marginTop: 32,
-              fontSize: 30,
-              color: 'rgba(255,255,255,0.92)',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              textShadow: '0 2px 8px rgba(0,0,0,0.10)',
+              marginTop: 40,
+              fontSize: 36,
+              color: 'rgba(255,255,255,0.95)',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textShadow: '0 3px 12px rgba(0,0,0,0.14)',
             }}
           >
             {siteConfig.name.full}
@@ -259,10 +273,10 @@ export async function GET(req: NextRequest) {
               position: 'absolute',
               bottom: 36,
               right: 48,
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: 22,
-              fontWeight: 400,
-              letterSpacing: '0.05em',
+              color: 'rgba(255,255,255,0.78)',
+              fontSize: 24,
+              fontWeight: 500,
+              letterSpacing: '0.06em',
             }}
           >
             {serviceDomain}
