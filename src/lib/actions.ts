@@ -642,7 +642,7 @@ export async function getEventInfoFromUrl(eventUrl: string) {
       return { success: false, message: '無効なイベントURLまたはトークンです' };
     }
 
-    const supabase = createSupabaseClient();
+    const supabase = createSupabaseAdmin();
 
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -653,6 +653,15 @@ export async function getEventInfoFromUrl(eventUrl: string) {
     if (eventError || !event) {
       console.error('Event retrieval error:', eventError);
       return { success: false, message: 'イベントが見つかりません' };
+    }
+
+    // コピー元イベントの利用として最終閲覧時刻を更新（失敗しても処理は継続）
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('id', event.id);
+    if (updateError) {
+      console.error('最終閲覧時刻更新エラー:', updateError);
     }
 
     const { data: eventDates, error: datesError } = await supabase
