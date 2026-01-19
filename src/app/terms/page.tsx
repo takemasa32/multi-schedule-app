@@ -23,11 +23,20 @@ export default function TermsPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="mb-6 text-3xl font-bold">利用規約</h1>
 
-      <p className="mb-4">最終更新日：2025年4月29日</p>
+      {/* 利用規約の最終更新日を明示 */}
+      <p className="mb-4">最終更新日：2026年1月19日</p>
 
       <p className="mb-6">
         この利用規約（以下「本規約」といいます。）は、当サービスの運営者（以下「運営者」といいます。）が提供するウェブサービス（以下「本サービス」といいます。）の利用条件を定めるものです。本サービスをご利用になる前に、本規約を必ずお読みいただき、内容に同意のうえご利用ください。
       </p>
+      <h2 className="mb-4 mt-8 text-2xl font-semibold">改定履歴</h2>
+      {/* 規約の更新履歴を時系列で掲載 */}
+      <ul className="mb-6 list-disc pl-6">
+        <li className="mb-2">
+          2026年1月19日：最終更新日・改定履歴・お問い合わせ窓口の記載を更新。
+        </li>
+        <li className="mb-2">2025年4月29日：初版を制定。</li>
+      </ul>
 
       <h2 className="mb-4 mt-8 text-2xl font-semibold">第1条（定義）</h2>
       <ol className="mb-6 list-decimal pl-6">
@@ -187,7 +196,17 @@ export default function TermsPage() {
 
       <h2 className="mb-4 mt-8 text-2xl font-semibold">第16条（お問い合わせ窓口）</h2>
       <p className="mb-6">
-        現在、本サービスでは専用のお問い合わせ窓口を設けておりません。ご不明点がある場合は、本サービスの更新情報をご確認ください。
+        {/* 安全性を担保するため、連絡先と注意事項を明記 */}
+        本サービスに関するお問い合わせは、下記メールアドレスにて受け付けます。
+        <br />
+        お問い合わせ先：
+        <a className="text-primary hover:underline" href="mailto:contact@k-tkms.com">
+          contact@k-tkms.com
+        </a>
+        <br />
+        なお、内容により回答できない場合があります。また、回答までにお時間をいただく場合があります。
+        <br />
+        ユーザーは、お問い合わせの際に必要以上の個人情報（氏名、住所、電話番号、メールアドレス等）を本文に記載しないようご注意ください。
       </p>
     </div>
   );

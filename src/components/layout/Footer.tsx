@@ -40,16 +40,27 @@ export default function Footer() {
                   利用規約
                 </Link>
               </li>
+              <li>
+                <Link href="/privacy" className="hover:text-primary transition">
+                  プライバシーポリシー
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* 連絡先・著作権 */}
-          {/* <div>
-            <h3 className="font-bold mb-4">お問い合わせ</h3>
-            <p className="text-base-content/70 text-sm mb-4">
-              ご質問やフィードバックがございましたら、お気軽にご連絡ください。
+          <div>
+            <h3 className="mb-4 font-bold">お問い合わせ</h3>
+            <p className="text-base-content/70 mb-2 text-sm">
+              ご質問やフィードバックがございましたら、以下のメールアドレスまでご連絡ください。
             </p>
-          </div> */}
+            <a
+              className="text-primary text-sm underline-offset-4 hover:underline"
+              href="mailto:contact@k-tkms.com"
+            >
+              contact@k-tkms.com
+            </a>
+          </div>
         </div>
 
         {/* コピーライト */}

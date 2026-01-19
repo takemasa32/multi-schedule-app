@@ -5,6 +5,7 @@
 ## ドキュメント
 
 - [カレンダー操作UI共通ロジック](docs/architecture/calendar-interaction.md)
+- [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
 
 ### イベント作成機能
 
