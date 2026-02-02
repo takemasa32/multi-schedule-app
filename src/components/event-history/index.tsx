@@ -2,20 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { EventHistoryItem, getEventHistory, clearEventHistory } from '@/lib/utils';
+import {
+  EventHistoryItem,
+  getEventHistory,
+  clearEventHistory,
+} from '@/lib/utils';
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
+import { signIn, useSession } from 'next-auth/react';
+import { clearServerEventHistory, syncEventHistory } from '@/lib/event-history-actions';
 
 interface EventHistoryProps {
   maxDisplay?: number;
   showClearButton?: boolean;
   title?: string;
+  withProvider?: boolean;
 }
 
 export default function EventHistory({
   maxDisplay = 5,
   showClearButton = true,
   title = 'イベント閲覧履歴',
+  withProvider = true,
 }: EventHistoryProps) {
+  if (!withProvider) {
+    return <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />;
+  }
+
   return (
     <FavoriteEventsProvider>
       <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />
@@ -30,10 +42,12 @@ function EventHistoryInner({
 }: EventHistoryProps) {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
   const { favorites, addFavorite, removeFavorite } = useFavoriteEvents();
+  const { status } = useSession();
 
   useEffect(() => {
     // クライアント側でのみ実行
-    setHistory(getEventHistory());
+    const localHistory = getEventHistory();
+    setHistory(localHistory);
 
     // ストレージの変更を監視する
     const handleStorageChange = () => {
@@ -44,6 +58,22 @@ function EventHistoryInner({
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setHistory(getEventHistory());
+      return;
+    }
+    if (status !== 'authenticated') return;
+
+    const syncHistory = async () => {
+      const localHistory = getEventHistory();
+      const synced = await syncEventHistory(localHistory);
+      setHistory(synced);
+    };
+
+    void syncHistory();
+  }, [status]);
+
   // 履歴が空の場合は何も表示しない
   if (history.length === 0) return null;
 
@@ -51,7 +81,11 @@ function EventHistoryInner({
   const displayHistory = history.slice(0, maxDisplay);
 
   const handleClearHistory = () => {
+    if (!confirm('すべての履歴を削除してもよろしいですか？')) return;
     clearEventHistory();
+    if (status === 'authenticated') {
+      void clearServerEventHistory();
+    }
     setHistory([]);
   };
 
@@ -86,6 +120,18 @@ function EventHistoryInner({
           </button>
         )}
       </div>
+
+      {status !== 'authenticated' && (
+        <div className="mb-2 text-xs text-gray-500">
+          <span>ログインすると履歴を同期できます。</span>
+          <button
+            onClick={() => void signIn('google')}
+            className="text-primary ml-2 underline underline-offset-2"
+          >
+            ログイン
+          </button>
+        </div>
+      )}
 
       <div className="bg-base-200 rounded-lg p-3">
         <ul className="divide-base-300 divide-y">

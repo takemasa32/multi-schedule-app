@@ -5,13 +5,21 @@
 ## ドキュメント
 
 - [カレンダー操作UI共通ロジック](docs/architecture/calendar-interaction.md)
+- [アクセス権限・閲覧方針](docs/architecture/access-policy.md)
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
+- [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
 
 - 期間から候補日程を自動生成
 - カレンダーで手動選択で候補日程を設定
   - 期間を設定後、カレンダー上でクリック（ドラッグ）して必要な枠だけを選択
+
+### ログイン（任意）/アカウント機能
+
+- **ログイン不要で利用可能**（ゲスト利用を優先）
+- Google ログインを行うと **履歴の同期** が可能
+- アカウントページで **履歴・お気に入りの確認** と **ログアウト / 連携削除** が可能
 
 ## Supabase ローカル開発環境
 
@@ -112,6 +120,11 @@ npx supabase [コマンド] -h
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=[表示されたanonキー]
 SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
+SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:54322/postgres
+NEXTAUTH_SECRET=[ランダムなシークレット]
+NEXTAUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=[Google OAuth クライアントID]
+GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 ```
 
 ## 開発フロー
@@ -152,7 +165,7 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 
 - サーバーアクション（イベント作成・回答送信・日程確定など）の正常系・異常系
 - カレンダー連携（.ics 生成・Google カレンダーリンク生成）
-- PWA ホーム画面・お気に入り・履歴機能の UI/ロジック
+- お気に入り・履歴機能の UI/ロジック
 - バリデーション・エラーハンドリング
 - 型安全性・エラー時の挙動
 
@@ -168,10 +181,6 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 - Jest のグローバルモックや`@ts-expect-error`には必ず理由コメントを添えてください。
 - テストの実装・修正内容は必ずコミットメッセージや PR 本文に明記してください。
 
-## PWA/Workbox 生成ファイルについて
-
-`public/sw.js`や`public/workbox-*.js`、`public/fallback-*.js`などの PWA/Workbox 生成ファイルは`.gitignore`に追加済みです。これらはビルド時に自動生成されるため、Git の差分に出ないようになっています（不要になった生成物はリポジトリから削除済み）。
-
 ## カレンダー連携（Google / ICS）
 
 本プロジェクトでは、複数確定日程に対応したカレンダー連携APIを提供します。いずれもローカル時間をそのまま扱い、Google には `ctz` を明示、ICSはZ無しで書き出します。
@@ -186,7 +195,6 @@ SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
 e2e テストは Playwright を使用しており、以下のようなテストケースをカバーしています：
 
 - イベント作成 → リンク共有 → 参加者回答 → 主催者確定 → カレンダー連携
-- PWA インストール・オフライン・お気に入り・履歴・URL 直遷移
 - サーバー・Supabase 同時起動、ヘッドレス実行、HTML レポート出力
 
 ### 使用方法

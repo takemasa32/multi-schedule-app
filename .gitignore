@@ -51,18 +51,6 @@ next-env.d.ts
 .env.development.local
 
 
-# PWA: 自動生成される Service Worker／Workbox ファイル
-/public/sw.js
-/public/sw.js.map
-/public/workbox-*.js.map
-/public/worker-*.js
-/public/worker-*.js.map
-
-# --- Next.js/PWA/Workbox build artifacts ---
-public/sw.js
-public/workbox-*.js
-public/fallback-*.js
-
 # --- Supabase local artifacts ---
 .supabase/
 

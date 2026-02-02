@@ -6,6 +6,7 @@ import type { Database } from './database.types';
 import { v4 as uuidv4 } from 'uuid';
 import { generatePublicToken } from './token';
 import { revalidatePath } from 'next/cache';
+import { getAuthSession } from '@/lib/auth';
 
 export type CreateEventSuccessResult = {
   success: true;
@@ -133,6 +134,22 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     }
 
     const event = created[0];
+
+    // ログイン済みの場合はサーバー側で履歴を同期する
+    const session = await getAuthSession();
+    if (session?.user?.id) {
+      const { error: historyError } = await supabaseAdmin.rpc('upsert_event_access_history', {
+        p_user_id: session.user.id,
+        p_event_public_token: publicToken,
+        p_event_title: title,
+        p_is_created_by_me: true,
+        p_accessed_at: new Date().toISOString(),
+      });
+
+      if (historyError) {
+        console.error('イベント履歴の更新に失敗しました:', historyError);
+      }
+    }
 
     // イベント作成が成功した場合、イベントページにリダイレクト
     // 管理ページURLは利用しなくなったため公開用URLのみを返す

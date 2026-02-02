@@ -2,41 +2,6 @@
  * 日付フォーマット用ユーティリティ関数およびその他のユーティリティ
  */
 
-/**
- * デバイス検出用のユーティリティ関数
- */
-export function isMobileDevice(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-export function isIOS(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-export function isAndroid(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return /Android/i.test(navigator.userAgent);
-}
-
-// Define an interface for iOS Navigator with standalone property
-interface NavigatorWithStandalone extends Navigator {
-  standalone?: boolean;
-}
-
-export function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as NavigatorWithStandalone).standalone === true
-  );
-}
-
 // Supabase クエリに関するインターフェース
 export interface SupabaseQueryInterface {
   range(from: number, to: number): SupabaseQueryInterface;
@@ -290,6 +255,8 @@ type StoredEventHistoryItem = EventHistoryItem & { adminToken?: string };
 
 // ローカルストレージのキー
 const EVENT_HISTORY_KEY = 'multi_schedule_event_history';
+export const EVENT_HISTORY_DEFAULT_MAX_ITEMS = 10;
+export const EVENT_HISTORY_SYNC_MAX_ITEMS = 30;
 
 /**
  * 過去のイベント履歴をローカルストレージから取得する
@@ -319,7 +286,7 @@ export function getEventHistory(): EventHistoryItem[] {
  * @param event 追加するイベント情報
  * @param maxItems 履歴の最大保持数
  */
-export function addEventToHistory(event: EventHistoryItem, maxItems = 10): void {
+export function addEventToHistory(event: EventHistoryItem, maxItems = EVENT_HISTORY_DEFAULT_MAX_ITEMS): void {
   if (typeof window === 'undefined') return;
 
   try {
@@ -340,6 +307,20 @@ export function addEventToHistory(event: EventHistoryItem, maxItems = 10): void 
     localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
   } catch (error) {
     console.error('イベント履歴の保存に失敗しました:', error);
+  }
+}
+
+/**
+ * イベント履歴を指定した配列で上書きする
+ * @param history 保存する履歴配列
+ */
+export function setEventHistory(history: EventHistoryItem[]): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error('イベント履歴の上書きに失敗しました:', error);
   }
 }
 

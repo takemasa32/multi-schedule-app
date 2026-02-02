@@ -43,7 +43,7 @@ export default function LandingPageClient() {
     {
       icon: Users,
       title: 'ログイン不要',
-      desc: 'アカウント登録なし。リンクを共有するだけ。',
+      desc: 'アカウント登録不要。リンクを共有するだけ。',
     },
     {
       icon: BarChart2,
@@ -132,7 +132,7 @@ export default function LandingPageClient() {
   // Comparison data
   const comparisons = [
     {
-      feature: 'ログイン不要',
+      feature: 'ログイン不要（履歴同期は任意）',
       daysynth: '○',
       service_a: '△',
       service_b: '○',
@@ -173,6 +173,10 @@ export default function LandingPageClient() {
     {
       q: '本当に無料で使えますか？',
       a: 'はい、現在すべての機能を無料でご利用いただけます。',
+    },
+    {
+      q: 'ログインは必要ですか？',
+      a: '不要です。必要な場合のみGoogleログインで履歴同期などの機能が使えます。',
     },
     {
       q: '広告は表示されますか？',
@@ -540,7 +544,7 @@ export default function LandingPageClient() {
             custom={0}
           >
             <History className="text-primary h-6 w-6" />
-            <h2 className="text-center text-3xl font-bold">履歴</h2>
+            <h2 className="text-center text-3xl font-bold">履歴・お気に入り</h2>
           </motion.div>
           <motion.div
             initial="hidden"
@@ -576,7 +580,7 @@ export default function LandingPageClient() {
         >
           <h2 className="mb-4 text-3xl font-bold sm:text-4xl">今すぐ日程調整をスマートに</h2>
           <p className="text-base-content/80 mb-10 text-lg">
-            面倒なやり取りはもう不要。ログインなし・無料で始められます。
+            面倒なやり取りはもう不要。ログイン不要・無料で始められます。
           </p>
           <Link href="/create" className="btn btn-primary btn-lg shadow-lg">
             無料でイベントを作成

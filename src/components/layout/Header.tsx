@@ -4,29 +4,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import siteConfig from '@/lib/site-config';
 import ThemeSwitcher from './ThemeSwitcher';
-import { useEffect, useState } from 'react';
-
-function isPwaOrTwa(): boolean {
-  if (typeof window === 'undefined') return false;
-  const isStandalone = window.matchMedia?.('(display-mode: standalone)')?.matches;
-  const isIosStandalone = 'standalone' in window.navigator && window.navigator.standalone === true;
-  const isTwa = document.referrer?.startsWith('android-app://');
-  return Boolean(isStandalone || isIosStandalone || isTwa);
-}
+import AuthButton from '@/components/auth/auth-button';
 
 export default function Header() {
-  const [homeHref, setHomeHref] = useState('/');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setHomeHref(isPwaOrTwa() ? '/home' : '/');
-    }
-  }, []);
-
   return (
     <header className="bg-base-100 border-base-300 fixed left-0 right-0 top-0 z-[100] w-full border-b shadow-sm">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <Link href={homeHref} className="text-primary flex items-center space-x-2">
+        <Link href="/" className="text-primary flex items-center space-x-2">
           <div className="relative h-8 w-8">
             <Image
               src={siteConfig.logo.svg}
@@ -48,11 +32,7 @@ export default function Header() {
             作成
           </Link>
 
-          <Link href={homeHref} className="text-base-content hover:text-primary text-sm transition">
-            ホーム
-          </Link>
-
-          {/* テーマ切り替えボタン */}
+          <AuthButton />
           <ThemeSwitcher />
         </nav>
       </div>

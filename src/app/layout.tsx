@@ -7,6 +7,7 @@ import siteConfig from '@/lib/site-config';
 import { ThemeProvider } from '@/components/theme-provider';
 import ExternalBrowserBanner from '@/components/browser-banner';
 import GoogleAnalytics from '@/components/analytics/google-analytics';
+import AuthSessionProvider from '@/components/auth/session-provider';
 // import AddToHomeScreenBanner from "@/components/add-to-home-screen";
 
 export const viewport = {
@@ -16,6 +17,7 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: siteConfig.meta.title,
   description: siteConfig.meta.description,
   icons: {
@@ -32,22 +34,22 @@ export const metadata: Metadata = {
       },
     ],
   },
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" suppressHydrationWarning>
       <body className="bg-base-100 flex min-h-screen flex-col">
-        <ThemeProvider attribute="data-theme" defaultTheme="daysynth" enableSystem={false}>
-          <Header />
-          <GoogleAnalytics />
-          <ExternalBrowserBanner />
-          {/* <AddToHomeScreenBanner /> */}
-          <main className="container mx-auto flex-grow px-4 py-6 pt-16">{children}</main>
-          <Footer />
-          <Toaster position="top-right" />
-        </ThemeProvider>
+        <AuthSessionProvider>
+          <ThemeProvider attribute="data-theme" defaultTheme="daysynth" enableSystem={false}>
+            <Header />
+            <GoogleAnalytics />
+            <ExternalBrowserBanner />
+            <main className="container mx-auto flex-grow px-4 py-6 pt-16">{children}</main>
+            <Footer />
+            <Toaster position="top-right" />
+          </ThemeProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

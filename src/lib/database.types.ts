@@ -162,6 +162,47 @@ export type Database = {
           },
         ];
       };
+      event_access_histories: {
+        Row: {
+          access_count: number;
+          event_public_token: string;
+          event_title: string;
+          first_accessed_at: string;
+          id: string;
+          is_created_by_me: boolean;
+          last_accessed_at: string;
+          user_id: string;
+        };
+        Insert: {
+          access_count?: number;
+          event_public_token: string;
+          event_title: string;
+          first_accessed_at?: string;
+          id?: string;
+          is_created_by_me?: boolean;
+          last_accessed_at?: string;
+          user_id: string;
+        };
+        Update: {
+          access_count?: number;
+          event_public_token?: string;
+          event_title?: string;
+          first_accessed_at?: string;
+          id?: string;
+          is_created_by_me?: boolean;
+          last_accessed_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'event_access_histories_event_public_token_fkey';
+            columns: ['event_public_token'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['public_token'];
+          },
+        ];
+      };
       finalized_dates: {
         Row: {
           created_at: string;
@@ -273,6 +314,25 @@ export type Database = {
           p_availabilities: Json;
         };
         Returns: boolean;
+      };
+      upsert_event_access_history: {
+        Args: {
+          p_user_id: string;
+          p_event_public_token: string;
+          p_event_title: string;
+          p_is_created_by_me: boolean;
+          p_accessed_at: string;
+        };
+        Returns: {
+          access_count: number;
+          event_public_token: string;
+          event_title: string;
+          first_accessed_at: string;
+          id: string;
+          is_created_by_me: boolean;
+          last_accessed_at: string;
+          user_id: string;
+        };
       };
     };
     Enums: {
