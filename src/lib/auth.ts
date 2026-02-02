@@ -15,12 +15,6 @@ const createAuthPool = () => {
   return new Pool({ connectionString: databaseUrl, options: '-c search_path=authjs' });
 };
 
-export const authPool = createAuthPool();
-
-export const authOptions: NextAuthOptions = {
-  adapter: PostgresAdapter(authPool),
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: {
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -32,9 +26,15 @@ if (!googleClientSecret) {
   throw new Error('GOOGLE_CLIENT_SECRET が未設定です。');
 }
 
+export const authPool = createAuthPool();
+
 export const authOptions: NextAuthOptions = {
   adapter: PostgresAdapter(authPool),
   secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
   providers: [
     GoogleProvider({
       clientId: googleClientId,

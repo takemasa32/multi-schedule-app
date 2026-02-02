@@ -18,6 +18,20 @@ if (typeof global.WritableStream === 'undefined') {
 if (typeof global.TransformStream === 'undefined') {
   global.TransformStream = TransformStream;
 }
+
+// テスト環境向けの必須環境変数（未設定時のみ）
+if (!process.env.SUPABASE_DB_URL) {
+  process.env.SUPABASE_DB_URL = 'postgresql://postgres:postgres@localhost:5432/postgres';
+}
+if (!process.env.NEXTAUTH_SECRET) {
+  process.env.NEXTAUTH_SECRET = 'test-secret';
+}
+if (!process.env.GOOGLE_CLIENT_ID) {
+  process.env.GOOGLE_CLIENT_ID = 'test-client-id';
+}
+if (!process.env.GOOGLE_CLIENT_SECRET) {
+  process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
+}
 // PointerEvent ポリフィル
 if (typeof global.PointerEvent === 'undefined') {
   class PointerEventPolyfill extends MouseEvent {
