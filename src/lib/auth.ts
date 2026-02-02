@@ -20,6 +20,10 @@ const authPool = createAuthPool();
 export const authOptions: NextAuthOptions = {
   adapter: PostgresAdapter(authPool),
   secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
@@ -35,6 +39,22 @@ export const authOptions: NextAuthOptions = {
         session.user.id = user.id;
       }
       return session;
+    },
+    redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) {
+        return url;
+      }
+
+      try {
+        const targetUrl = new URL(url);
+        if (targetUrl.origin === baseUrl) {
+          return targetUrl.toString();
+        }
+      } catch {
+        // 無効なURLはベースURLへフォールバック
+      }
+
+      return baseUrl;
     },
   },
 };

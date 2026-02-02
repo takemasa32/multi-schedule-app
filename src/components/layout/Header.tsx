@@ -35,9 +35,6 @@ export default function Header() {
           <Link href="/" className="text-base-content hover:text-primary text-sm transition">
             ホーム
           </Link>
-          <Link href="/history" className="text-base-content hover:text-primary text-sm transition">
-            履歴
-          </Link>
 
           <AuthButton />
 

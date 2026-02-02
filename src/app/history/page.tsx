@@ -88,7 +88,6 @@ export default function HistoryPage() {
       <div className="container mx-auto px-4 py-8">
         <Breadcrumbs
           items={[
-            { label: 'ホーム', href: '/' },
             { label: '閲覧履歴', href: '/history' },
           ]}
         />
