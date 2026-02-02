@@ -32,13 +32,7 @@ export default function Header() {
             作成
           </Link>
 
-          <Link href="/" className="text-base-content hover:text-primary text-sm transition">
-            ホーム
-          </Link>
-
           <AuthButton />
-
-          {/* テーマ切り替えボタン */}
           <ThemeSwitcher />
         </nav>
       </div>
