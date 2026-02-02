@@ -121,7 +121,7 @@ project-root/
 
 ### 5.x ミドルウェア（LINEアプリ内ブラウザ対策）
 
-- `src/middleware.ts` で LINE アプリ内ブラウザを検知し、`openExternalBrowser=1` を付与して再遷移。
+- `src/proxy.ts` で LINE アプリ内ブラウザを検知し、`openExternalBrowser=1` を付与して再遷移。
 - 除外パス: `/_next/*`, `/api/*`, `/logo/*`, `/favicon.ico` 等。
 - 本番のみ簡易ログ出力。
 

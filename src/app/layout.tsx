@@ -15,6 +15,7 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: siteConfig.meta.title,
   description: siteConfig.meta.description,
   icons: {

@@ -17,12 +17,12 @@ jest.mock('next/server', () => ({
   },
 }));
 
-import { middleware, isLineInAppBrowser, shouldExcludePath } from '../../middleware';
+import { proxy, isLineInAppBrowser, shouldExcludePath } from '../../proxy';
 
 // Next.jsモジュールのモックへの参照を取得
 const { NextResponse } = jest.requireMock('next/server');
 
-describe('middleware', () => {
+describe('proxy', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -58,7 +58,7 @@ describe('middleware', () => {
     });
   });
 
-  describe('middleware function', () => {
+  describe('proxy function', () => {
     const createMockRequest = (
       pathname: string,
       userAgent: string,
@@ -93,21 +93,21 @@ describe('middleware', () => {
 
     it('APIルートではリダイレクトしない', () => {
       const request = createMockRequest('/api/test', 'Line/11.1.0');
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response).toEqual({ type: 'next' });
     });
 
     it('Next.js内部リクエストではリダイレクトしない', () => {
       const request = createMockRequest('/_next/static/test.js', 'Line/11.1.0');
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response).toEqual({ type: 'next' });
     });
 
     it('静的ファイルではリダイレクトしない', () => {
       const request = createMockRequest('/favicon.ico', 'Line/11.1.0');
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response).toEqual({ type: 'next' });
     });
@@ -117,14 +117,14 @@ describe('middleware', () => {
         '/event/test-id',
         'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
       );
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response).toEqual({ type: 'next' });
     });
 
     it('LINEアプリのUser-Agentでリダイレクトする', () => {
       const request = createMockRequest('/event/test-id', 'Line/11.1.0');
-      middleware(request);
+      proxy(request);
 
       expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
@@ -138,14 +138,14 @@ describe('middleware', () => {
       const request = createMockRequest('/event/test-id', 'Line/11.1.0', {
         openExternalBrowser: '1',
       });
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response).toEqual({ type: 'next' });
     });
 
     it('ルートパスでもリダイレクトする', () => {
       const request = createMockRequest('/', 'Line/11.1.0');
-      middleware(request);
+      proxy(request);
 
       expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
@@ -157,7 +157,7 @@ describe('middleware', () => {
 
     it('履歴ページでもリダイレクトする', () => {
       const request = createMockRequest('/history', 'Line/11.1.0');
-      middleware(request);
+      proxy(request);
 
       expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
@@ -169,7 +169,7 @@ describe('middleware', () => {
 
     it('Line App (デスクトップ版)でもリダイレクトする', () => {
       const request = createMockRequest('/event/test-id', 'Mozilla/5.0 Line App Desktop');
-      middleware(request);
+      proxy(request);
 
       expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
     });

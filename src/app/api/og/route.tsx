@@ -3,7 +3,7 @@ import { ImageResponse } from '@vercel/og';
 import { NextRequest } from 'next/server';
 import siteConfig from '../../../lib/site-config';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 // タイトル等が変更できないため長期間キャッシュ
 export const revalidate = 2592000; // 30日
 
