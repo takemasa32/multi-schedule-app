@@ -21,13 +21,24 @@ export const authOptions: NextAuthOptions = {
   adapter: PostgresAdapter(authPool),
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+if (!googleClientId) {
+  throw new Error('GOOGLE_CLIENT_ID が未設定です。');
+}
+
+if (!googleClientSecret) {
+  throw new Error('GOOGLE_CLIENT_SECRET が未設定です。');
+}
+
+export const authOptions: NextAuthOptions = {
+  adapter: PostgresAdapter(authPool),
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
     }),
   ],
   session: {
