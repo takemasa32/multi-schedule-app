@@ -13,6 +13,7 @@ import {
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import FavoriteEvents from '@/components/favorite-events';
 import { FavoriteEventsProvider } from '@/components/favorite-events-context';
+import EventOpenForm from '@/components/event-open-form';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
@@ -63,6 +64,8 @@ export default function HistoryPage() {
         />
 
         <h1 className="mb-6 text-2xl font-bold">イベント閲覧履歴</h1>
+
+        <EventOpenForm />
 
         <section className="mb-8">
           <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>

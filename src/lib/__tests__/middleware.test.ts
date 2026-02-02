@@ -155,15 +155,15 @@ describe('middleware', () => {
       expect(redirectUrl.searchParams.get('openExternalBrowser')).toBe('1');
     });
 
-    it('PWAホーム画面でもリダイレクトする', () => {
-      const request = createMockRequest('/home', 'Line/11.1.0');
+    it('履歴ページでもリダイレクトする', () => {
+      const request = createMockRequest('/history', 'Line/11.1.0');
       middleware(request);
 
       expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL), 302);
 
       const redirectCall = (NextResponse.redirect as jest.Mock).mock.calls[0];
       const redirectUrl = redirectCall[0] as URL;
-      expect(redirectUrl.pathname).toBe('/home');
+      expect(redirectUrl.pathname).toBe('/history');
       expect(redirectUrl.searchParams.get('openExternalBrowser')).toBe('1');
     });
 
@@ -197,7 +197,7 @@ describe('middleware', () => {
 
     it('通常のページルートは除外しない', () => {
       expect(shouldExcludePath('/')).toBe(false);
-      expect(shouldExcludePath('/home')).toBe(false);
+      expect(shouldExcludePath('/history')).toBe(false);
       expect(shouldExcludePath('/event/test-id')).toBe(false);
       expect(shouldExcludePath('/about')).toBe(false);
     });

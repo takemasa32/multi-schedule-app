@@ -7,7 +7,6 @@ import siteConfig from '@/lib/site-config';
 import { ThemeProvider } from '@/components/theme-provider';
 import ExternalBrowserBanner from '@/components/browser-banner';
 import GoogleAnalytics from '@/components/analytics/google-analytics';
-// import AddToHomeScreenBanner from "@/components/add-to-home-screen";
 
 export const viewport = {
   width: 'device-width',
@@ -32,7 +31,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -43,7 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <GoogleAnalytics />
           <ExternalBrowserBanner />
-          {/* <AddToHomeScreenBanner /> */}
           <main className="container mx-auto flex-grow px-4 py-6 pt-16">{children}</main>
           <Footer />
           <Toaster position="top-right" />
