@@ -1,5 +1,6 @@
 import { CircleUser } from 'lucide-react';
 import AccountActions from '@/components/auth/account-actions';
+import AccountActivity from '@/components/account/account-activity';
 import { getAuthSession } from '@/lib/auth';
 
 export default async function AccountPage() {
@@ -50,6 +51,8 @@ export default async function AccountPage() {
           </div>
         </div>
       </div>
+
+      <AccountActivity />
     </section>
   );
 }

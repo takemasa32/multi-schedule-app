@@ -15,13 +15,19 @@ interface EventHistoryProps {
   maxDisplay?: number;
   showClearButton?: boolean;
   title?: string;
+  withProvider?: boolean;
 }
 
 export default function EventHistory({
   maxDisplay = 5,
   showClearButton = true,
   title = 'イベント閲覧履歴',
+  withProvider = true,
 }: EventHistoryProps) {
+  if (!withProvider) {
+    return <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />;
+  }
+
   return (
     <FavoriteEventsProvider>
       <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />
@@ -75,6 +81,7 @@ function EventHistoryInner({
   const displayHistory = history.slice(0, maxDisplay);
 
   const handleClearHistory = () => {
+    if (!confirm('すべての履歴を削除してもよろしいですか？')) return;
     clearEventHistory();
     if (status === 'authenticated') {
       void clearServerEventHistory();
