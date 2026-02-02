@@ -4,4 +4,4 @@ export const signIn = async () => undefined;
 
 export const signOut = async () => undefined;
 
-export const SessionProvider = ({ children }) => children;
+export const SessionProvider = ({ children }: { children: React.ReactNode }) => children;
