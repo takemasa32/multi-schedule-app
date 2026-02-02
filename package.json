@@ -71,5 +71,8 @@
     "undici": "^7.8.0",
     "wait-on": "^8.0.3",
     "web-streams-polyfill": "^4.1.0"
+  },
+  "overrides": {
+    "tar": "7.5.6"
   }
 }
