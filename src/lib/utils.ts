@@ -2,41 +2,6 @@
  * 日付フォーマット用ユーティリティ関数およびその他のユーティリティ
  */
 
-/**
- * デバイス検出用のユーティリティ関数
- */
-export function isMobileDevice(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-export function isIOS(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-export function isAndroid(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return /Android/i.test(navigator.userAgent);
-}
-
-// Define an interface for iOS Navigator with standalone property
-interface NavigatorWithStandalone extends Navigator {
-  standalone?: boolean;
-}
-
-export function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as NavigatorWithStandalone).standalone === true
-  );
-}
-
 // Supabase クエリに関するインターフェース
 export interface SupabaseQueryInterface {
   range(from: number, to: number): SupabaseQueryInterface;
