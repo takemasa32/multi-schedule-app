@@ -11,8 +11,8 @@ const createAuthPool = () => {
     throw new Error('SUPABASE_DB_URL が未設定です。');
   }
 
-  // Auth.jsのテーブルをauthjsスキーマで扱うためsearch_pathを指定する
-  return new Pool({ connectionString: databaseUrl, options: '-c search_path=authjs' });
+  // Auth.jsのテーブルはDBロールのsearch_pathでauthjsを参照する
+  return new Pool({ connectionString: databaseUrl });
 };
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;

@@ -44,7 +44,7 @@
 - Supabase は PostgreSQL を提供するため、Auth.js の PostgreSQL Adapter と整合する。
 - Adapter が要求する標準テーブル（`users` / `accounts` / `sessions` / `verification_token`）を **専用スキーマ**（`authjs`）に分離して管理する。
 - Adapter で使用する DB 接続は **サーバーサイドの環境変数（DB 接続 URL）**に限定する。
-- Adapter が参照するスキーマは `search_path` で `authjs` を指定して切り替える。
+- Adapter が参照するスキーマは **DBロールの `search_path`** で `authjs` を優先する。
 - Auth.js のアダプタは `userId` や `emailVerified` などのキャメルケース列を参照するため、DB定義も同じ命名に合わせる。
 - クライアントからの DB 操作は禁止し、**認証関連テーブルは RLS を無効化**する（Adapter が直接操作するため）。
   - 代わりに API 経由のアクセス制御を徹底し、**サーバー経由でのみ操作**される前提にする。
@@ -158,3 +158,4 @@ Auth.js が利用するテーブルは Adapter が管理するため、ここで
 - ヘッダーは **ゲスト表示（未ログイン）** と **アカウント導線（ログイン時）** を切り替える。
 - アカウントページで履歴・お気に入りの閲覧、ログアウト、連携削除（確認入力＋モーダル）を提供する。
 - `upsert_event_access_history` は **ON CONFLICT で原子的に更新**し、EXECUTE 権限を限定して公開しない。
+- Auth.js が参照するテーブルは **DBロールの `search_path`** で `authjs` を優先するよう設定する。
