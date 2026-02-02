@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import siteConfig from '@/lib/site-config';
 import ThemeSwitcher from './ThemeSwitcher';
+import AuthButton from '@/components/auth/auth-button';
 
 export default function Header() {
   return (
@@ -31,14 +32,7 @@ export default function Header() {
             作成
           </Link>
 
-          <Link href="/" className="text-base-content hover:text-primary text-sm transition">
-            ホーム
-          </Link>
-          <Link href="/history" className="text-base-content hover:text-primary text-sm transition">
-            履歴
-          </Link>
-
-          {/* テーマ切り替えボタン */}
+          <AuthButton />
           <ThemeSwitcher />
         </nav>
       </div>

@@ -7,12 +7,19 @@
 - [カレンダー操作UI共通ロジック](docs/architecture/calendar-interaction.md)
 - [アクセス権限・閲覧方針](docs/architecture/access-policy.md)
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
+- [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
 
 - 期間から候補日程を自動生成
 - カレンダーで手動選択で候補日程を設定
   - 期間を設定後、カレンダー上でクリック（ドラッグ）して必要な枠だけを選択
+
+### ログイン（任意）/アカウント機能
+
+- **ログイン不要で利用可能**（ゲスト利用を優先）
+- Google ログインを行うと **履歴の同期** が可能
+- アカウントページで **履歴・お気に入りの確認** と **ログアウト / 連携削除** が可能
 
 ## Supabase ローカル開発環境
 
@@ -113,6 +120,11 @@ npx supabase [コマンド] -h
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=[表示されたanonキー]
 SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
+SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:54322/postgres
+NEXTAUTH_SECRET=[ランダムなシークレット]
+NEXTAUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=[Google OAuth クライアントID]
+GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 ```
 
 ## 開発フロー

@@ -13,13 +13,21 @@ import {
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import FavoriteEvents from '@/components/favorite-events';
 import { FavoriteEventsProvider } from '@/components/favorite-events-context';
+import { signIn, useSession } from 'next-auth/react';
+import {
+  clearServerEventHistory,
+  removeEventHistoryItem,
+  syncEventHistory,
+} from '@/lib/event-history-actions';
 import EventOpenForm from '@/components/event-open-form';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
+  const { status } = useSession();
 
   useEffect(() => {
-    setHistory(getEventHistory());
+    const localHistory = getEventHistory();
+    setHistory(localHistory);
 
     // ストレージの変更を監視
     const handleStorageChange = () => {
@@ -30,15 +38,37 @@ export default function HistoryPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setHistory(getEventHistory());
+      return;
+    }
+    if (status !== 'authenticated') return;
+
+    const syncHistory = async () => {
+      const localHistory = getEventHistory();
+      const synced = await syncEventHistory(localHistory);
+      setHistory(synced);
+    };
+
+    void syncHistory();
+  }, [status]);
+
   const handleClearHistory = () => {
     if (confirm('すべての履歴を削除してもよろしいですか？')) {
       clearEventHistory();
+      if (status === 'authenticated') {
+        void clearServerEventHistory();
+      }
       setHistory([]);
     }
   };
 
   const handleRemoveItem = (eventId: string) => {
     removeEventFromHistory(eventId);
+    if (status === 'authenticated') {
+      void removeEventHistoryItem(eventId);
+    }
     setHistory(getEventHistory());
   };
 
@@ -58,12 +88,21 @@ export default function HistoryPage() {
       <div className="container mx-auto px-4 py-8">
         <Breadcrumbs
           items={[
-            { label: 'ホーム', href: '/' },
             { label: '閲覧履歴', href: '/history' },
           ]}
         />
 
         <h1 className="mb-6 text-2xl font-bold">イベント閲覧履歴</h1>
+        {status !== 'authenticated' && (
+          <div className="alert alert-info mb-6">
+            <div>
+              <p className="text-sm">ログインすると履歴がデバイス間で同期されます。</p>
+            </div>
+            <button onClick={() => void signIn('google')} className="btn btn-sm btn-outline">
+              Googleでログイン
+            </button>
+          </div>
+        )}
 
         <EventOpenForm />
 

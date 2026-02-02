@@ -1,9 +1,11 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { CalendarLinks } from '@/components/calendar-links';
 import ShareEventButton from '@/components/share-event-button';
-import { addEventToHistory } from '@/lib/utils';
+import { addEventToHistory, EVENT_HISTORY_SYNC_MAX_ITEMS } from '@/lib/utils';
+import { recordEventHistory } from '@/lib/event-history-actions';
+import { useSession } from 'next-auth/react';
 
 import { EventDate } from './event-details-section';
 
@@ -27,6 +29,13 @@ export default function EventFormSection({
   participants,
   finalizedDateIds = [],
 }: EventFormSectionProps) {
+  const { status } = useSession();
+  const historyItemRef = useRef({
+    id: event.public_token,
+    title: event.title,
+    createdAt: new Date().toISOString(),
+    isCreatedByMe: false,
+  });
   // 確定済み日程のローカル変換（複数対応）
   /**
    * 確定済み日程を取得するローカル関数
@@ -67,15 +76,13 @@ export default function EventFormSection({
   }, [event.public_token]);
 
   // 履歴追加（初回のみ）
-  addEventToHistory(
-    {
-      id: event.public_token,
-      title: event.title,
-      createdAt: new Date().toISOString(),
-      isCreatedByMe: false,
-    },
-    30,
-  );
+  useEffect(() => {
+    const historyItem = historyItemRef.current;
+    addEventToHistory(historyItem, EVENT_HISTORY_SYNC_MAX_ITEMS);
+    if (status === 'authenticated') {
+      void recordEventHistory(historyItem);
+    }
+  }, [status]);
 
   return (
     <>
