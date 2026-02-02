@@ -15,7 +15,7 @@ const createAuthPool = () => {
   return new Pool({ connectionString: databaseUrl, options: '-c search_path=authjs' });
 };
 
-const authPool = createAuthPool();
+export const authPool = createAuthPool();
 
 export const authOptions: NextAuthOptions = {
   adapter: PostgresAdapter(authPool),

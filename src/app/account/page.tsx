@@ -1,6 +1,7 @@
 import { CircleUser } from 'lucide-react';
 import AccountActions from '@/components/auth/account-actions';
 import AccountActivity from '@/components/account/account-activity';
+import AccountDeleteSection from '@/components/account/account-delete-section';
 import { getAuthSession } from '@/lib/auth';
 
 export default async function AccountPage() {
@@ -46,8 +47,9 @@ export default async function AccountPage() {
             </p>
           )}
 
-          <div>
+          <div className="flex flex-wrap items-center gap-2">
             <AccountActions isAuthenticated={Boolean(user)} />
+            <AccountDeleteSection />
           </div>
         </div>
       </div>
