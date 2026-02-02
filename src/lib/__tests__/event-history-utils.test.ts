@@ -3,6 +3,7 @@ import {
   getEventHistory,
   removeEventFromHistory,
   clearEventHistory,
+  setEventHistory,
 } from '../utils';
 
 describe('イベント履歴ユーティリティ', () => {
@@ -98,5 +99,20 @@ describe('イベント履歴ユーティリティ', () => {
     });
     clearEventHistory();
     expect(getEventHistory()).toEqual([]);
+  });
+
+  it('履歴を上書きできる', () => {
+    const now = new Date().toISOString();
+    setEventHistory([
+      {
+        id: '9',
+        title: '上書き',
+        createdAt: now,
+        isCreatedByMe: true,
+      },
+    ]);
+    const history = getEventHistory();
+    expect(history).toHaveLength(1);
+    expect(history[0].id).toBe('9');
   });
 });

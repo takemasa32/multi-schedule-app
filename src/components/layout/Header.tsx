@@ -5,6 +5,7 @@ import Image from 'next/image';
 import siteConfig from '@/lib/site-config';
 import ThemeSwitcher from './ThemeSwitcher';
 import { useEffect, useState } from 'react';
+import AuthButton from '@/components/auth/auth-button';
 
 function isPwaOrTwa(): boolean {
   if (typeof window === 'undefined') return false;
@@ -51,6 +52,8 @@ export default function Header() {
           <Link href={homeHref} className="text-base-content hover:text-primary text-sm transition">
             ホーム
           </Link>
+
+          <AuthButton />
 
           {/* テーマ切り替えボタン */}
           <ThemeSwitcher />

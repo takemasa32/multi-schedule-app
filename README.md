@@ -7,6 +7,7 @@
 - [カレンダー操作UI共通ロジック](docs/architecture/calendar-interaction.md)
 - [アクセス権限・閲覧方針](docs/architecture/access-policy.md)
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
+- [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
 
@@ -113,6 +114,11 @@ npx supabase [コマンド] -h
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=[表示されたanonキー]
 SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
+SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:54322/postgres
+NEXTAUTH_SECRET=[ランダムなシークレット]
+NEXTAUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=[Google OAuth クライアントID]
+GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 ```
 
 ## 開発フロー

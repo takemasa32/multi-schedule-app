@@ -6,7 +6,7 @@ import { createEvent, type CreateEventActionResult } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import DateRangePicker from './date-range-picker';
 import ManualTimeSlotPicker from './manual-time-slot-picker';
-import { TimeSlot, addEventToHistory } from '@/lib/utils';
+import { TimeSlot, addEventToHistory, EVENT_HISTORY_SYNC_MAX_ITEMS } from '@/lib/utils';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import PortalTooltip from './common/portal-tooltip';
@@ -100,12 +100,13 @@ export default function EventFormClient() {
 
         // リダイレクト前に履歴に追加（ローカルストレージ）
         if (typeof window !== 'undefined') {
-          addEventToHistory({
+          const historyItem = {
             id: result.publicToken,
             title,
             createdAt: new Date().toISOString(),
             isCreatedByMe: true,
-          });
+          };
+          addEventToHistory(historyItem, EVENT_HISTORY_SYNC_MAX_ITEMS);
         }
 
         const redirectPath = result.redirectUrl ?? `/event/${result.publicToken}`;

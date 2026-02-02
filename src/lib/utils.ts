@@ -290,6 +290,8 @@ type StoredEventHistoryItem = EventHistoryItem & { adminToken?: string };
 
 // ローカルストレージのキー
 const EVENT_HISTORY_KEY = 'multi_schedule_event_history';
+export const EVENT_HISTORY_DEFAULT_MAX_ITEMS = 10;
+export const EVENT_HISTORY_SYNC_MAX_ITEMS = 30;
 
 /**
  * 過去のイベント履歴をローカルストレージから取得する
@@ -319,7 +321,7 @@ export function getEventHistory(): EventHistoryItem[] {
  * @param event 追加するイベント情報
  * @param maxItems 履歴の最大保持数
  */
-export function addEventToHistory(event: EventHistoryItem, maxItems = 10): void {
+export function addEventToHistory(event: EventHistoryItem, maxItems = EVENT_HISTORY_DEFAULT_MAX_ITEMS): void {
   if (typeof window === 'undefined') return;
 
   try {
@@ -340,6 +342,20 @@ export function addEventToHistory(event: EventHistoryItem, maxItems = 10): void 
     localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
   } catch (error) {
     console.error('イベント履歴の保存に失敗しました:', error);
+  }
+}
+
+/**
+ * イベント履歴を指定した配列で上書きする
+ * @param history 保存する履歴配列
+ */
+export function setEventHistory(history: EventHistoryItem[]): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(EVENT_HISTORY_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error('イベント履歴の上書きに失敗しました:', error);
   }
 }
 

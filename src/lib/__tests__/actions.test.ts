@@ -8,6 +8,9 @@ import {
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase');
+jest.mock('@/lib/auth', () => ({
+  getAuthSession: jest.fn(() => Promise.resolve(null)),
+}));
 const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
 const mockedCreateSupabaseClient = createSupabaseClient as jest.Mock;
 
