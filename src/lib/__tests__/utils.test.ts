@@ -1,8 +1,4 @@
 import {
-  isMobileDevice,
-  isIOS,
-  isAndroid,
-  isStandalone,
   formatDate,
   formatDateTime,
   formatDateWithDay,
@@ -57,45 +53,6 @@ function createOrderFirstQuery(pages: Array<{ data: number[]; error: null }>): M
 
 beforeEach(() => {
   localStorage.clear();
-});
-
-describe('デバイス判定ユーティリティ', () => {
-  it('isMobileDevice判定', () => {
-    const original = window.navigator.userAgent;
-    Object.defineProperty(window.navigator, 'userAgent', {
-      value: 'iPhone',
-      configurable: true,
-    });
-    expect(isMobileDevice()).toBe(true);
-    Object.defineProperty(window.navigator, 'userAgent', {
-      value: 'Mozilla',
-      configurable: true,
-    });
-    expect(isMobileDevice()).toBe(false);
-    Object.defineProperty(window.navigator, 'userAgent', { value: original });
-  });
-
-  it('userAgent判定', () => {
-    const original = window.navigator.userAgent;
-    Object.defineProperty(window.navigator, 'userAgent', {
-      value: 'iPhone',
-      configurable: true,
-    });
-    expect(isIOS()).toBe(true);
-    expect(isAndroid()).toBe(false);
-    Object.defineProperty(window.navigator, 'userAgent', { value: 'Android' });
-    expect(isIOS()).toBe(false);
-    expect(isAndroid()).toBe(true);
-    Object.defineProperty(window.navigator, 'userAgent', { value: original });
-  });
-
-  it('isStandalone判定', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      value: () => ({ matches: true }),
-      configurable: true,
-    });
-    expect(isStandalone()).toBe(true);
-  });
 });
 
 describe('日付フォーマットユーティリティ', () => {

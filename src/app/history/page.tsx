@@ -19,6 +19,7 @@ import {
   removeEventHistoryItem,
   syncEventHistory,
 } from '@/lib/event-history-actions';
+import EventOpenForm from '@/components/event-open-form';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
@@ -103,6 +104,8 @@ export default function HistoryPage() {
             </button>
           </div>
         )}
+
+        <EventOpenForm />
 
         <section className="mb-8">
           <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>
