@@ -24,7 +24,7 @@ export default function TermsPage() {
       <h1 className="mb-6 text-3xl font-bold">利用規約</h1>
 
       {/* 利用規約の最終更新日を明示 */}
-      <p className="mb-4">最終更新日：2026年1月19日</p>
+      <p className="mb-4">最終更新日：2026年2月2日</p>
 
       <p className="mb-6">
         この利用規約（以下「本規約」といいます。）は、当サービスの運営者（以下「運営者」といいます。）が提供するウェブサービス（以下「本サービス」といいます。）の利用条件を定めるものです。本サービスをご利用になる前に、本規約を必ずお読みいただき、内容に同意のうえご利用ください。
@@ -32,6 +32,9 @@ export default function TermsPage() {
       <h2 className="mb-4 mt-8 text-2xl font-semibold">改定履歴</h2>
       {/* 規約の更新履歴を時系列で掲載 */}
       <ul className="mb-6 list-disc pl-6">
+        <li className="mb-2">
+          2026年2月2日：ログイン（任意）とアカウント削除に関する記載を追記。
+        </li>
         <li className="mb-2">
           2026年1月19日：最終更新日・改定履歴・お問い合わせ窓口の記載を更新。
         </li>
@@ -52,7 +55,15 @@ export default function TermsPage() {
         <li className="mb-2">
           「コンテンツ」とは、本サイト上で提供されるテキスト、画像、映像、プログラム等一切の情報をいいます。
         </li>
+        <li className="mb-2">
+          「アカウント」とは、Googleアカウント連携により任意で利用できるログイン機能および関連情報をいいます。
+        </li>
       </ol>
+
+      <p className="mb-6">
+        本サービスはログイン不要で利用できますが、必要に応じてGoogleログインにより履歴同期等の付加機能を利用できます。
+        アカウント削除（連携解除）はアカウントページから本人の操作で行うものとします。
+      </p>
 
       <h2 className="mb-4 mt-8 text-2xl font-semibold">第2条（適用）</h2>
       <ol className="mb-6 list-decimal pl-6">

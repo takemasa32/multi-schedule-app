@@ -70,6 +70,8 @@ export default function HeroSection() {
             に決定。
             <br className="hidden sm:inline" />
             スマホ・PCどちらでも、誰でも簡単に使えます。
+            <br className="hidden sm:inline" />
+            ログインは任意。必要に応じて履歴を同期できます。
           </p>
           <div className="mb-4 flex min-h-[56px] flex-wrap gap-3 sm:gap-4">
             <motion.div
