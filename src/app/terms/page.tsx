@@ -32,9 +32,7 @@ export default function TermsPage() {
       <h2 className="mb-4 mt-8 text-2xl font-semibold">改定履歴</h2>
       {/* 規約の更新履歴を時系列で掲載 */}
       <ul className="mb-6 list-disc pl-6">
-        <li className="mb-2">
-          2026年2月2日：ログイン（任意）とアカウント削除に関する記載を追記。
-        </li>
+        <li className="mb-2">2026年2月2日：ログイン（任意）とアカウント削除に関する記載を追記。</li>
         <li className="mb-2">
           2026年1月19日：最終更新日・改定履歴・お問い合わせ窓口の記載を更新。
         </li>

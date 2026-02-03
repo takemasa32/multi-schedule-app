@@ -66,6 +66,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(page.getByLabel('イベントタイトル')).toBeVisible();
     await page.getByLabel('イベントタイトル').fill('E2Eテストイベント');
     await page.getByTestId('event-description-input').fill('E2E自動テスト用イベント');
+    await page.getByTestId('create-next').click();
+    await page.getByTestId('input-mode-auto').click();
+    await page.getByRole('button', { name: /次へ/ }).click();
     const dateInputs = await page.locator('input[type="date"]').all();
     if (dateInputs.length >= 2) {
       await dateInputs[0].fill('2099-01-01');
@@ -76,6 +79,7 @@ test.describe.serial('イベントE2Eフロー', () => {
       await timeInputs[0].fill('10:00');
       await timeInputs[1].fill('15:00');
     }
+    await page.getByRole('button', { name: /次へ/ }).click();
     const termsCheckbox = page.getByLabel('利用規約');
     if (await termsCheckbox.isVisible()) {
       await termsCheckbox.check();

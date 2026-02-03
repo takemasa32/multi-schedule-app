@@ -57,7 +57,7 @@ const siteConfig: SiteConfig = {
     year: new Date().getFullYear(),
     holder: 'DaySynth',
   },
-  url: 'https://schedule.k-tkms.com/',
+  url: 'https://daysynth.k-tkms.com/',
   ogImage: '/logo/web-app-manifest-512x512.png',
   illustrations: {
     hero: '/logo/web-app-manifest-512x512.png',

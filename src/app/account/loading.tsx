@@ -4,7 +4,7 @@ export default function Loading() {
       {/* ページタイトルのスケルトン */}
       <div className="skeleton h-7 w-32" />
 
-      <div className="card bg-base-100 border border-base-200 shadow-sm">
+      <div className="card bg-base-100 border-base-200 border shadow-sm">
         <div className="card-body space-y-4">
           {/* ユーザー情報カードのスケルトン */}
           <div className="flex items-center gap-4">
@@ -41,7 +41,7 @@ export default function Loading() {
       {/* 閲覧履歴のスケルトン */}
       <section className="space-y-3">
         <div className="skeleton h-6 w-32" />
-        <div className="rounded-lg bg-base-200 p-3">
+        <div className="bg-base-200 rounded-lg p-3">
           <div className="space-y-3">
             <div className="skeleton h-5 w-full" />
             <div className="skeleton h-5 w-11/12" />

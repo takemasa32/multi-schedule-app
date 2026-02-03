@@ -63,7 +63,9 @@ export async function recordEventHistory(item: EventHistoryItem): Promise<void> 
   }
 }
 
-export async function syncEventHistory(localHistory: EventHistoryItem[]): Promise<EventHistoryItem[]> {
+export async function syncEventHistory(
+  localHistory: EventHistoryItem[],
+): Promise<EventHistoryItem[]> {
   const session = await getAuthSession();
   if (!session?.user?.id) return localHistory;
 
@@ -110,7 +112,10 @@ export async function clearServerEventHistory(): Promise<void> {
   if (!session?.user?.id) return;
 
   const supabase = createSupabaseAdmin();
-  const { error } = await supabase.from('event_access_histories').delete().eq('user_id', session.user.id);
+  const { error } = await supabase
+    .from('event_access_histories')
+    .delete()
+    .eq('user_id', session.user.id);
 
   if (error) {
     console.error('イベント履歴の全削除に失敗しました:', error);
