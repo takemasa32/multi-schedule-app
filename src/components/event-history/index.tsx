@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  EventHistoryItem,
-  getEventHistory,
-  clearEventHistory,
-} from '@/lib/utils';
+import { EventHistoryItem, getEventHistory, clearEventHistory } from '@/lib/utils';
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
 import { signIn, useSession } from 'next-auth/react';
 import { clearServerEventHistory, syncEventHistory } from '@/lib/event-history-actions';
@@ -25,7 +21,9 @@ export default function EventHistory({
   withProvider = true,
 }: EventHistoryProps) {
   if (!withProvider) {
-    return <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />;
+    return (
+      <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />
+    );
   }
 
   return (

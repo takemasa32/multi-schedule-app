@@ -1,8 +1,11 @@
 describe('authOptions redirect callback', () => {
-  let redirect: ((params: { url: string; baseUrl: string }) => string | PromiseLike<string>) | undefined;
+  let redirect:
+    | ((params: { url: string; baseUrl: string }) => string | PromiseLike<string>)
+    | undefined;
 
   beforeAll(async () => {
-    process.env.SUPABASE_DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://localhost:5432/postgres';
+    process.env.SUPABASE_DB_URL =
+      process.env.SUPABASE_DB_URL ?? 'postgresql://localhost:5432/postgres';
     process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ?? 'test-secret';
     const { authOptions } = await import('@/lib/auth');
     redirect = authOptions.callbacks?.redirect;

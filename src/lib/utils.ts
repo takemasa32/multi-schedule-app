@@ -286,7 +286,10 @@ export function getEventHistory(): EventHistoryItem[] {
  * @param event 追加するイベント情報
  * @param maxItems 履歴の最大保持数
  */
-export function addEventToHistory(event: EventHistoryItem, maxItems = EVENT_HISTORY_DEFAULT_MAX_ITEMS): void {
+export function addEventToHistory(
+  event: EventHistoryItem,
+  maxItems = EVENT_HISTORY_DEFAULT_MAX_ITEMS,
+): void {
   if (typeof window === 'undefined') return;
 
   try {

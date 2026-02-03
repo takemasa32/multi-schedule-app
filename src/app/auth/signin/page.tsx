@@ -38,11 +38,11 @@ export default function SignInPage() {
   return (
     <section className="mx-auto w-full max-w-xl space-y-6 px-4 py-10">
       <div className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-base-200">
-          <CircleUser className="h-6 w-6 text-base-content/70" aria-hidden="true" />
+        <div className="bg-base-200 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+          <CircleUser className="text-base-content/70 h-6 w-6" aria-hidden="true" />
         </div>
         <h1 className="text-xl font-bold">ログイン</h1>
-        <p className="text-sm text-base-content/60">Googleアカウントでログインしてください。</p>
+        <p className="text-base-content/60 text-sm">Googleアカウントでログインしてください。</p>
       </div>
 
       {errorMessage && (
@@ -52,7 +52,7 @@ export default function SignInPage() {
         </div>
       )}
 
-      <div className="card bg-base-100 border border-base-200 shadow-sm">
+      <div className="card bg-base-100 border-base-200 border shadow-sm">
         <div className="card-body space-y-4">
           <button type="button" onClick={handleSignIn} className="btn btn-primary">
             Googleでログイン
