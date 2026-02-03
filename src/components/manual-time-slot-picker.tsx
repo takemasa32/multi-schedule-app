@@ -146,15 +146,13 @@ export default function ManualTimeSlotPicker({
   );
 
   useEffect(() => {
-    if (allSlots.length === 0) {
-      return;
-    }
     if (syncFromPropRef.current) {
       syncFromPropRef.current = false;
       return;
     }
+    // allSlots が空になった場合も親に [] を通知して状態の不整合を防ぐ
     onTimeSlotsChange(selectedSlots);
-  }, [allSlots.length, onTimeSlotsChange, selectedSlots]);
+  }, [onTimeSlotsChange, selectedSlots]);
 
   const dateKeys = useMemo(
     () => Array.from(new Set(allSlots.map((s) => format(s.date, 'yyyy-MM-dd')))).sort(),
