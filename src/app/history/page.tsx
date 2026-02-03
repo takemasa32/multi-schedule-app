@@ -23,7 +23,8 @@ import {
 import EventOpenForm from '@/components/event-open-form';
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<EventHistoryItem[]>(() => getEventHistory());
+  const [history, setHistory] = useState<EventHistoryItem[]>([]);
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const { status } = useSession();
 
   useEffect(() => {
@@ -32,13 +33,20 @@ export default function HistoryPage() {
       setHistory(getEventHistory());
     };
 
+    const localHistory = getEventHistory();
+    setHistory(localHistory);
+    if (localHistory.length > 0) {
+      setIsHistoryLoaded(true);
+    }
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      setHistory(getEventHistory());
+      const localHistory = getEventHistory();
+      setHistory(localHistory);
+      setIsHistoryLoaded(true);
       return;
     }
     if (status !== 'authenticated') return;
@@ -52,6 +60,7 @@ export default function HistoryPage() {
         setEventHistory(nextHistory);
       }
       setHistory(nextHistory);
+      setIsHistoryLoaded(true);
     };
 
     void syncHistory();
@@ -110,7 +119,7 @@ export default function HistoryPage() {
           <FavoriteEvents />
         </section>
 
-        {history.length === 0 ? (
+        {!isHistoryLoaded ? null : history.length === 0 ? (
           <div className="bg-base-200 rounded-lg py-10 text-center">
             <p>閲覧履歴はありません</p>
             <Link href="/" className="btn btn-primary mt-4">
