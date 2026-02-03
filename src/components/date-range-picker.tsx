@@ -9,6 +9,8 @@ import { TimeSlot } from '@/lib/utils'; // 共通のTimeSlot型をインポー�
 interface DateRangePickerProps {
   onDatesChange?: (dates: Date[]) => void; // 後方互換性のため残す
   onTimeSlotsChange: (timeSlots: TimeSlot[]) => void; // 新しいコールバック
+  onSettingsChange?: (settings: DateRangeSettings) => void;
+  hideUi?: boolean;
   /** 初期開始日（未指定時はnull） */
   initialStartDate?: Date | null;
   /** 初期終了日（未指定時はnull） */
@@ -25,9 +27,19 @@ interface DateRangePickerProps {
   allowPastDates?: boolean;
 }
 
+export type DateRangeSettings = {
+  startDate: Date | null;
+  endDate: Date | null;
+  defaultStartTime: string;
+  defaultEndTime: string;
+  intervalUnit: string;
+};
+
 export default function DateRangePicker({
   onDatesChange,
   onTimeSlotsChange,
+  onSettingsChange,
+  hideUi = false,
   initialStartDate = null,
   initialEndDate = null,
   initialDefaultStartTime = '08:00',
@@ -48,17 +60,20 @@ export default function DateRangePicker({
   const isIntervalLocked = forcedIntervalUnit != null;
   const intervalOptions = [
     { value: '10', label: '10分' },
-    { value: '30', label: '30分' },
-    { value: '60', label: '1時間' },
-    { value: '120', label: '2時間' },
-    { value: '180', label: '3時間' },
-    { value: '360', label: '6時間' },
+    { value: '30', label: '30min' },
+    { value: '60', label: '1h' },
+    { value: '120', label: '2h' },
+    { value: '180', label: '3h' },
+    { value: '360', label: '6h' },
   ];
+  const quickIntervals = ['30', '60', '120', '180'];
+  const [showCustomSelect, setShowCustomSelect] = useState(false);
   const shouldAddForcedIntervalOption =
     isIntervalLocked && !intervalOptions.some((option) => option.value === forcedIntervalUnit);
   const selectableIntervalOptions = shouldAddForcedIntervalOption
     ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
     : intervalOptions;
+  const isQuickInterval = quickIntervals.includes(intervalUnit);
 
   // 候補枠生成の基準となる開始・終了時刻の初期値を 8:00 〜 18:00 に設定
   const [defaultStartTime, setDefaultStartTime] = useState<string>(initialDefaultStartTime);
@@ -179,6 +194,13 @@ export default function DateRangePicker({
       setIntervalUnit(forcedIntervalUnit);
     }
   }, [forcedIntervalUnit]);
+  useEffect(() => {
+    if (isIntervalLocked) {
+      setShowCustomSelect(true);
+      return;
+    }
+    setShowCustomSelect((prev) => prev || !isQuickInterval);
+  }, [isIntervalLocked, isQuickInterval]);
 
   /**
    * 時間枠の長さ（分）を切り替えるハンドラ
@@ -287,6 +309,16 @@ export default function DateRangePicker({
   }, [onDatesChange]);
 
   useEffect(() => {
+    onSettingsChange?.({
+      startDate,
+      endDate,
+      defaultStartTime,
+      defaultEndTime,
+      intervalUnit,
+    });
+  }, [startDate, endDate, defaultStartTime, defaultEndTime, intervalUnit, onSettingsChange]);
+
+  useEffect(() => {
     // 親コンポーネントにタイムスロット情報を渡す
     onTimeSlotsChangeRef.current(timeSlots);
 
@@ -320,8 +352,12 @@ export default function DateRangePicker({
     }
   };
 
+  if (hideUi) {
+    return null;
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* フォーム用のポータルツールチップ中継（クリックされた?からカスタムツールチップを開く） */}
       <FormTipsRelay />
       {errorMessage && (
@@ -343,190 +379,190 @@ export default function DateRangePicker({
         </div>
       )}
 
-      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-        <div className="form-control w-full">
-          <div className="flex items-center gap-1">
-            <label htmlFor="drp-start-date" className="label-text font-semibold">
-              開始日
-            </label>
-            <button
-              type="button"
-              tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-              aria-label="開始日ヘルプ"
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = {
-                  x: rect.left,
-                  y: rect.bottom,
-                  text: 'イベント期間の開始日',
-                } as const;
-                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-              }}
-            >
-              ?
-            </button>
-          </div>
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-sm font-semibold">期間</h3>
+          <button
+            type="button"
+            tabIndex={-1}
+            className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
+            aria-label="期間ヘルプ"
+            onClick={(e) => {
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const detail = {
+                x: rect.left,
+                y: rect.bottom,
+                text: 'イベント期間の開始日と終了日を指定します',
+              } as const;
+              window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
+            }}
+          >
+            ?
+          </button>
+        </div>
+        <div className="join w-full">
           <input
             id="drp-start-date"
             type="date"
-            className="input input-bordered mt-1 w-full"
+            className="input input-bordered join-item w-full"
             value={startDate ? format(startDate, 'yyyy-MM-dd') : ''}
             onChange={handleStartDateChange}
             aria-label="開始日"
           />
-        </div>
-        <div className="form-control w-full">
-          <div className="flex items-center gap-1">
-            <label htmlFor="drp-end-date" className="label-text font-semibold">
-              終了日
-            </label>
-            <button
-              type="button"
-              tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-              aria-label="終了日ヘルプ"
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = {
-                  x: rect.left,
-                  y: rect.bottom,
-                  text: 'イベント期間の終了日',
-                } as const;
-                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-              }}
-            >
-              ?
-            </button>
-          </div>
+          <span className="join-item hidden items-center px-3 text-sm text-gray-500 sm:flex">
+            〜
+          </span>
           <input
             id="drp-end-date"
             type="date"
-            className="input input-bordered mt-1 w-full"
+            className="input input-bordered join-item w-full"
             value={endDate ? format(endDate, 'yyyy-MM-dd') : ''}
             onChange={handleEndDateChange}
             aria-label="終了日"
           />
         </div>
+        <div className="flex justify-between text-[11px] text-gray-500">
+          <span>開始日</span>
+          <span className="sm:hidden">〜</span>
+          <span>終了日</span>
+        </div>
       </div>
 
-      <div className="card bg-base-100 border-base-200 border shadow">
-        <div className="card-body p-3 sm:p-4">
-          <h3 className="card-title mb-2 text-base font-bold">時間枠の設定</h3>
-          <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="form-control w-full">
-              <div className="flex items-center gap-1">
-                <label htmlFor="drp-default-start-time" className="label-text">
-                  各日の開始時刻
-                </label>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="各日の開始時刻ヘルプ"
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = {
-                      x: rect.left,
-                      y: rect.bottom,
-                      text: '候補枠を自動生成するときの各日の開始時刻として扱います。指定した時刻から時間枠を作成します。',
-                    } as const;
-                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-                  }}
-                >
-                  ?
-                </button>
-              </div>
-              <input
-                id="drp-default-start-time"
-                type="time"
-                className="input input-bordered mt-1 w-full"
-                value={defaultStartTime}
-                onChange={handleDefaultStartTimeChange}
-                aria-label="各日の開始時刻"
-              />
-            </div>
-            <div className="form-control w-full">
-              <div className="flex items-center gap-1">
-                <label htmlFor="drp-default-end-time" className="label-text">
-                  各日の終了時刻
-                </label>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="各日の終了時刻ヘルプ"
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = {
-                      x: rect.left,
-                      y: rect.bottom,
-                      text: '候補枠を自動生成するときの各日の終了時刻として扱います。開始時刻より早い場合は翌日扱いになります。',
-                    } as const;
-                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-                  }}
-                >
-                  ?
-                </button>
-              </div>
-              <input
-                id="drp-default-end-time"
-                type="time"
-                className="input input-bordered mt-1 w-full"
-                value={defaultEndTime === '24:00' ? '00:00' : defaultEndTime}
-                onChange={handleDefaultEndTimeChange}
-                aria-label="各日の終了時刻"
-              />
-              <span className="label-text-alt text-info mt-1">00:00は翌日0:00として扱われます</span>
-            </div>
-            <div className="form-control w-full">
-              <div className="flex items-center gap-1">
-                <label htmlFor="drp-interval-unit" className="label-text">
-                  時間枠の長さ
-                </label>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-                  aria-label="時間枠の長さヘルプ"
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    const detail = {
-                      x: rect.left,
-                      y: rect.bottom,
-                      text: '各枠の長さを分単位で設定します',
-                    } as const;
-                    window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-                  }}
-                >
-                  ?
-                </button>
-              </div>
-              <select
-                id="drp-interval-unit"
-                className="select select-bordered mt-1 w-full"
-                value={intervalUnit}
-                onChange={handleIntervalUnitChange}
-                aria-label="時間枠の長さ"
-                disabled={isIntervalLocked}
-              >
-                {selectableIntervalOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {isIntervalLocked ? (
-                <span className="label-text-alt mt-1 text-gray-500">
-                  既存イベントの設定に合わせて固定されています
-                </span>
-              ) : (
-                <span className="label-text-alt mt-1 text-gray-500">
-                  例）60分を選ぶと1時間ごとの候補枠が作成されます
-                </span>
-              )}
-            </div>
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-sm font-semibold">時間帯</h3>
+          <button
+            type="button"
+            tabIndex={-1}
+            className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
+            aria-label="時間帯ヘルプ"
+            onClick={(e) => {
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const detail = {
+                x: rect.left,
+                y: rect.bottom,
+                text: '各日の開始・終了時刻を指定します。終了時刻が開始時刻より早い場合は翌日扱いになります。',
+              } as const;
+              window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
+            }}
+          >
+            ?
+          </button>
+        </div>
+        <div className="join w-full">
+          <input
+            id="drp-default-start-time"
+            type="time"
+            className="input input-bordered join-item w-full"
+            value={defaultStartTime}
+            onChange={handleDefaultStartTimeChange}
+            aria-label="各日の開始時刻"
+          />
+          <span className="join-item hidden items-center px-3 text-sm text-gray-500 sm:flex">
+            〜
+          </span>
+          <input
+            id="drp-default-end-time"
+            type="time"
+            className="input input-bordered join-item w-full"
+            value={defaultEndTime === '24:00' ? '00:00' : defaultEndTime}
+            onChange={handleDefaultEndTimeChange}
+            aria-label="各日の終了時刻"
+          />
+        </div>
+        <div className="flex justify-between text-[11px] text-gray-500">
+          <span>開始時刻</span>
+          <span className="sm:hidden">〜</span>
+          <span>終了時刻</span>
+        </div>
+        <span className="label-text-alt text-info text-xs">
+          00:00は翌日0:00として扱われます
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-sm font-semibold">時間枠の長さ</h3>
+          <span className="text-xs text-gray-500">1枠の長さ</span>
+        </div>
+        <div className="form-control w-full">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="drp-interval-unit" className="label-text text-xs font-medium">
+              長さ
+            </label>
+            <button
+              type="button"
+              tabIndex={-1}
+              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
+              aria-label="時間枠の長さヘルプ"
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const detail = {
+                  x: rect.left,
+                  y: rect.bottom,
+                  text: '各枠の長さを分単位で設定します',
+                } as const;
+                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
+              }}
+            >
+              ?
+            </button>
           </div>
+          <div className="mt-2 flex flex-nowrap gap-2 overflow-x-auto">
+            {quickIntervals.map((value) => {
+              const label = selectableIntervalOptions.find((option) => option.value === value)
+                ?.label;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={`btn btn-xs ${intervalUnit === value ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => {
+                    setIntervalUnit(value);
+                    setShowCustomSelect(false);
+                  }}
+                  disabled={isIntervalLocked}
+                >
+                  {label ?? `${value}分`}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className={`btn btn-xs ${!isQuickInterval ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setShowCustomSelect(true)}
+              disabled={isIntervalLocked}
+            >
+              その他
+            </button>
+          </div>
+          {showCustomSelect && (
+            <select
+              id="drp-interval-unit"
+              className="select select-bordered mt-2 w-full"
+              value={intervalUnit}
+              onChange={(e) => {
+                handleIntervalUnitChange(e);
+                const nextValue = e.target.value;
+                if (quickIntervals.includes(nextValue)) {
+                  setShowCustomSelect(false);
+                }
+              }}
+              aria-label="時間枠の長さ"
+              disabled={isIntervalLocked}
+            >
+              {selectableIntervalOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {isIntervalLocked && (
+            <span className="label-text-alt mt-1 text-gray-500">
+              既存イベントの設定に合わせて固定されています
+            </span>
+          )}
         </div>
       </div>
     </div>
