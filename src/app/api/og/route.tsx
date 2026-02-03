@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
-import { ImageResponse } from '@vercel/og';
+import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import siteConfig from '../../../lib/site-config';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 // タイトル等が変更できないため長期間キャッシュ
 export const revalidate = 2592000; // 30日
 
