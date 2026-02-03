@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ComponentProps } from 'react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
-import DateRangePicker from './date-range-picker';
+import DateRangePicker, { DateRangeSettings } from './date-range-picker';
 import { TimeSlot } from '@/lib/utils';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
@@ -14,6 +14,10 @@ import useSelectionDragController from '@/hooks/useSelectionDragController';
 interface ManualTimeSlotPickerProps {
   /** 選択中のマス一覧を親コンポーネントへ通知する */
   onTimeSlotsChange: (slots: TimeSlot[]) => void;
+  /** 期間や時間帯の設定変更を親へ通知する */
+  onSettingsChange?: (settings: DateRangeSettings) => void;
+  /** 期間・時間帯の設定UIを表示するか */
+  showDateRangePicker?: boolean;
   /** 初期選択済みマス */
   initialSlots?: TimeSlot[];
   /** 選択不可セルのキー（YYYY-MM-DD_HH:mm-HH:mm形式） */
@@ -37,6 +41,8 @@ interface ManualTimeSlotPickerProps {
  */
 export default function ManualTimeSlotPicker({
   onTimeSlotsChange,
+  onSettingsChange,
+  showDateRangePicker = true,
   initialSlots = [],
   disabledSlotKeys = [],
   forcedIntervalMinutes = null,
@@ -140,12 +146,15 @@ export default function ManualTimeSlotPicker({
   );
 
   useEffect(() => {
+    if (allSlots.length === 0) {
+      return;
+    }
     if (syncFromPropRef.current) {
       syncFromPropRef.current = false;
       return;
     }
     onTimeSlotsChange(selectedSlots);
-  }, [onTimeSlotsChange, selectedSlots]);
+  }, [allSlots.length, onTimeSlotsChange, selectedSlots]);
 
   const dateKeys = useMemo(
     () => Array.from(new Set(allSlots.map((s) => format(s.date, 'yyyy-MM-dd')))).sort(),
@@ -210,6 +219,7 @@ export default function ManualTimeSlotPicker({
     const props: Partial<ComponentProps<typeof DateRangePicker>> = {
       allowPastDates: true,
       forcedIntervalMinutes,
+      onSettingsChange,
     };
 
     if (initialStartDate !== undefined) {
@@ -257,6 +267,7 @@ export default function ManualTimeSlotPicker({
     initialDefaultEndTime,
     initialIntervalUnit,
     isTest,
+    onSettingsChange,
   ]);
 
   const selectionController = useSelectionDragController({
@@ -300,12 +311,12 @@ export default function ManualTimeSlotPicker({
 
   return (
     <div className="space-y-4">
-      <DateRangePicker onTimeSlotsChange={handleSlotsGenerate} {...dateRangeProps} />
-      {allSlots.length > 0 && (
-        <p className="text-sm text-gray-500">
-          カレンダー上でクリックして、候補の日時を個別に追加します。
-        </p>
-      )}
+      <DateRangePicker
+        onTimeSlotsChange={handleSlotsGenerate}
+        hideUi={!showDateRangePicker}
+        {...dateRangeProps}
+      />
+
       {allSlots.length > 0 && (
         <div className={`-mx-2 sm:-mx-4 md:-mx-6 ${isMobile ? 'touch-none' : ''}`}>
           {/* 表示範囲（ボタンとは別行） */}
@@ -350,31 +361,20 @@ export default function ManualTimeSlotPicker({
                 {visibleDates.map((d, index) => {
                   const prevDate = index > 0 ? visibleDates[index - 1] : null;
                   const parts = getHeaderDisplayParts(d, prevDate);
-                  const labelSegments = parts.label.split('/');
-                  const hasMonthLabel = labelSegments.length > 1;
-                  const leadingLabel = hasMonthLabel
-                    ? `${labelSegments.slice(0, -1).join('/')}/`
-                    : undefined;
-                  const dayLabel = labelSegments[labelSegments.length - 1];
                   return (
                     <th
                       key={d}
-                      className={`bg-base-200 sticky top-0 z-10 whitespace-normal text-center align-middle ${
+                      className={`bg-base-200 sticky top-0 z-10 whitespace-nowrap text-center align-middle ${
                         isMobile
                           ? 'p-0.5 text-[10px] leading-tight'
                           : 'p-0.5 text-[11px] leading-tight'
                       }`}
                     >
                       <div className="flex flex-col items-center justify-center gap-[2px]">
-                        {hasMonthLabel ? (
-                          <div className="flex w-full flex-col leading-tight">
-                            <span className="w-full text-left">{leadingLabel}</span>
-                            <span className="w-full text-right">{dayLabel}</span>
-                          </div>
-                        ) : (
-                          <span className="leading-tight">{dayLabel}</span>
-                        )}
-                        <span className="text-base-content/70 text-[10px]">({parts.weekday})</span>
+                        <span className="whitespace-nowrap leading-none">{parts.label}</span>
+                        <span className="text-base-content/70 whitespace-nowrap text-[10px] leading-none">
+                          ({parts.weekday})
+                        </span>
                       </div>
                     </th>
                   );
