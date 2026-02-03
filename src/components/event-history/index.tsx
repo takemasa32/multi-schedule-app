@@ -41,7 +41,7 @@ function EventHistoryInner({
   showClearButton = true,
   title = '過去のイベント',
 }: EventHistoryProps) {
-  const [history, setHistory] = useState<EventHistoryItem[]>(() => getEventHistory());
+  const [history, setHistory] = useState<EventHistoryItem[]>([]);
   const { favorites, addFavorite, removeFavorite } = useFavoriteEvents();
   const { status } = useSession();
 
@@ -51,6 +51,7 @@ function EventHistoryInner({
       setHistory(getEventHistory());
     };
 
+    setHistory(getEventHistory());
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
