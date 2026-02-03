@@ -9,6 +9,7 @@ import {
   getEventHistory,
   clearEventHistory,
   removeEventFromHistory,
+  setEventHistory,
 } from '@/lib/utils';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import FavoriteEvents from '@/components/favorite-events';
@@ -22,13 +23,10 @@ import {
 import EventOpenForm from '@/components/event-open-form';
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<EventHistoryItem[]>([]);
+  const [history, setHistory] = useState<EventHistoryItem[]>(() => getEventHistory());
   const { status } = useSession();
 
   useEffect(() => {
-    const localHistory = getEventHistory();
-    setHistory(localHistory);
-
     // ストレージの変更を監視
     const handleStorageChange = () => {
       setHistory(getEventHistory());
@@ -48,7 +46,12 @@ export default function HistoryPage() {
     const syncHistory = async () => {
       const localHistory = getEventHistory();
       const synced = await syncEventHistory(localHistory);
-      setHistory(synced);
+      // 同期結果が空でもローカル履歴を保持し、表示のチラツキを防ぐ
+      const nextHistory = synced.length === 0 && localHistory.length > 0 ? localHistory : synced;
+      if (nextHistory.length > 0) {
+        setEventHistory(nextHistory);
+      }
+      setHistory(nextHistory);
     };
 
     void syncHistory();

@@ -6,6 +6,7 @@ import {
   EventHistoryItem,
   getEventHistory,
   clearEventHistory,
+  setEventHistory,
 } from '@/lib/utils';
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
 import { signIn, useSession } from 'next-auth/react';
@@ -40,15 +41,11 @@ function EventHistoryInner({
   showClearButton = true,
   title = '過去のイベント',
 }: EventHistoryProps) {
-  const [history, setHistory] = useState<EventHistoryItem[]>([]);
+  const [history, setHistory] = useState<EventHistoryItem[]>(() => getEventHistory());
   const { favorites, addFavorite, removeFavorite } = useFavoriteEvents();
   const { status } = useSession();
 
   useEffect(() => {
-    // クライアント側でのみ実行
-    const localHistory = getEventHistory();
-    setHistory(localHistory);
-
     // ストレージの変更を監視する
     const handleStorageChange = () => {
       setHistory(getEventHistory());
@@ -68,7 +65,12 @@ function EventHistoryInner({
     const syncHistory = async () => {
       const localHistory = getEventHistory();
       const synced = await syncEventHistory(localHistory);
-      setHistory(synced);
+      // サーバー同期の結果が空でもローカル履歴を保持し、チラツキを防ぐ
+      const nextHistory = synced.length === 0 && localHistory.length > 0 ? localHistory : synced;
+      if (nextHistory.length > 0) {
+        setEventHistory(nextHistory);
+      }
+      setHistory(nextHistory);
     };
 
     void syncHistory();
