@@ -49,14 +49,14 @@ export default function AccountDeleteSection() {
       <dialog ref={dialogRef} className="modal">
         <div className="modal-box space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-error">連携解除・アカウント削除</h2>
-            <p className="text-sm text-base-content/70">
+            <h2 className="text-error text-lg font-semibold">連携解除・アカウント削除</h2>
+            <p className="text-base-content/70 text-sm">
               Google連携とアカウント情報を削除します。削除後は復元できません。
             </p>
           </div>
 
           {!isAuthenticated && (
-            <p className="text-sm text-base-content/60">この操作にはログインが必要です。</p>
+            <p className="text-base-content/60 text-sm">この操作にはログインが必要です。</p>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -74,7 +74,7 @@ export default function AccountDeleteSection() {
               />
             </label>
 
-            {message && <p className="text-sm text-error">{message}</p>}
+            {message && <p className="text-error text-sm">{message}</p>}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button type="button" onClick={handleClose} className="btn btn-ghost">

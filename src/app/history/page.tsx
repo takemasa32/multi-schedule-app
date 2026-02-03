@@ -86,11 +86,7 @@ export default function HistoryPage() {
   return (
     <FavoriteEventsProvider>
       <div className="container mx-auto px-4 py-8">
-        <Breadcrumbs
-          items={[
-            { label: '閲覧履歴', href: '/history' },
-          ]}
-        />
+        <Breadcrumbs items={[{ label: '閲覧履歴', href: '/history' }]} />
 
         <h1 className="mb-6 text-2xl font-bold">イベント閲覧履歴</h1>
         {status !== 'authenticated' && (

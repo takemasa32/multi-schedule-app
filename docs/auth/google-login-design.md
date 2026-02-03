@@ -51,13 +51,13 @@
 
 #### 4.1.2 環境変数（Auth.js）
 
-| 変数名 | 用途 |
-| --- | --- |
-| `NEXTAUTH_SECRET` | セッション暗号化キー |
-| `NEXTAUTH_URL` | Auth.js のベース URL |
-| `GOOGLE_CLIENT_ID` | Google OAuth クライアントID |
+| 変数名                 | 用途                                  |
+| ---------------------- | ------------------------------------- |
+| `NEXTAUTH_SECRET`      | セッション暗号化キー                  |
+| `NEXTAUTH_URL`         | Auth.js のベース URL                  |
+| `GOOGLE_CLIENT_ID`     | Google OAuth クライアントID           |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth クライアントシークレット |
-| `SUPABASE_DB_URL` | Auth.js 用の PostgreSQL 接続 URL |
+| `SUPABASE_DB_URL`      | Auth.js 用の PostgreSQL 接続 URL      |
 
 ### 4.2 データ保存方針
 
@@ -70,16 +70,16 @@ Auth.js が利用するテーブルは Adapter が管理するため、ここで
 
 **event_access_histories（実装）**
 
-| カラム名 | 型 | 説明 |
-| --- | --- | --- |
-| id | uuid | 主キー |
-| user_id | text | Auth.js の user.id と紐づく外部キー |
-| event_public_token | text | イベントの公開トークン |
-| event_title | text | イベントタイトル |
-| is_created_by_me | boolean | 自分が作成したイベントかどうか |
-| first_accessed_at | timestamptz | 初回アクセス日時 |
-| last_accessed_at | timestamptz | 最終アクセス日時 |
-| access_count | integer | アクセス回数（簡易的な分析用途） |
+| カラム名           | 型          | 説明                                |
+| ------------------ | ----------- | ----------------------------------- |
+| id                 | uuid        | 主キー                              |
+| user_id            | text        | Auth.js の user.id と紐づく外部キー |
+| event_public_token | text        | イベントの公開トークン              |
+| event_title        | text        | イベントタイトル                    |
+| is_created_by_me   | boolean     | 自分が作成したイベントかどうか      |
+| first_accessed_at  | timestamptz | 初回アクセス日時                    |
+| last_accessed_at   | timestamptz | 最終アクセス日時                    |
+| access_count       | integer     | アクセス回数（簡易的な分析用途）    |
 
 - `user_id + event_public_token` にユニーク制約を付与し、`upsert` で更新できるようにする。
 - RLS を有効化し、**サーバー経由のみ操作**する方針とする。

@@ -37,7 +37,8 @@ export default function PrivacyPolicyPage() {
       <h2 className="mb-4 mt-8 text-2xl font-semibold">1. 事業者情報・お問い合わせ窓口</h2>
       <h3 className="mb-2 text-xl font-semibold">1.1 お問い合わせ窓口</h3>
       <p className="mb-4">
-        本サービスにおける情報の取扱いに関するご質問、苦情・相談、ならびに後記「9. ご本人からの請求（開示等）」のお申出は、以下の窓口で受け付けます。
+        本サービスにおける情報の取扱いに関するご質問、苦情・相談、ならびに後記「9.
+        ご本人からの請求（開示等）」のお申出は、以下の窓口で受け付けます。
       </p>
       <ul className="mb-6 list-disc pl-6">
         <li>
@@ -48,7 +49,9 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
 
-      <h3 className="mb-2 text-xl font-semibold">1.2 事業者情報の通知について（常時掲示しない方針）</h3>
+      <h3 className="mb-2 text-xl font-semibold">
+        1.2 事業者情報の通知について（常時掲示しない方針）
+      </h3>
       <p className="mb-6">
         当方の氏名/名称・住所（法人の場合は代表者氏名を含む）は、本サービス上で常時掲示しません。ただし、個人情報保護法の趣旨に従い、
         ご本人から求めがあった場合には遅滞なく通知します。
@@ -60,7 +63,9 @@ export default function PrivacyPolicyPage() {
         <li>イベント情報（例：イベント名、説明文、候補日程等）</li>
         <li>回答情報（例：可否、コメント等）</li>
         <li>お問い合わせ情報（例：送信者情報、本文等）</li>
-        <li>ログイン時に取得されるアカウント情報（Googleアカウントの氏名、メールアドレス、プロフィール画像等）</li>
+        <li>
+          ログイン時に取得されるアカウント情報（Googleアカウントの氏名、メールアドレス、プロフィール画像等）
+        </li>
         <li>閲覧履歴（ログインユーザーの閲覧・作成履歴、同期情報）</li>
       </ul>
       <p className="mb-6">
@@ -77,7 +82,9 @@ export default function PrivacyPolicyPage() {
 
       <h3 className="mb-2 text-xl font-semibold">2.3 Cookie等の識別子・解析に伴い取得される情報</h3>
       <p className="mb-6">
-        当方は、後記「6. Cookie等・外部送信（アクセス解析等）」に記載のとおり、Google Tag Manager / Google Analytics 等の利用に伴い、Cookie等の識別子や閲覧情報等を取得・送信する場合があります。
+        当方は、後記「6. Cookie等・外部送信（アクセス解析等）」に記載のとおり、Google Tag Manager /
+        Google Analytics
+        等の利用に伴い、Cookie等の識別子や閲覧情報等を取得・送信する場合があります。
       </p>
       <p className="mb-6">
         ログインを利用する場合、セッション維持のためにCookie等の識別子が利用されます。
@@ -88,7 +95,9 @@ export default function PrivacyPolicyPage() {
       <ol className="mb-6 list-decimal pl-6">
         <li className="mb-2">本サービスの提供（イベント作成・表示・共有・回答の表示等）</li>
         <li className="mb-2">利用者からのお問い合わせ対応</li>
-        <li className="mb-2">本サービスの維持・保護（不正利用防止、セキュリティ確保、障害対応、ログ分析）</li>
+        <li className="mb-2">
+          本サービスの維持・保護（不正利用防止、セキュリティ確保、障害対応、ログ分析）
+        </li>
         <li className="mb-2">利用状況の分析および品質改善（アクセス解析）</li>
         <li className="mb-2">規約違反行為への対応、紛争対応</li>
         <li className="mb-2">ログイン連携・履歴同期・アカウント管理（連携解除/削除を含む）</li>
@@ -111,8 +120,8 @@ export default function PrivacyPolicyPage() {
         <li>Vercel：ホスティング、Edge実行環境、cron、OG生成等</li>
         <li>Cloudflare：CDN／DNS／リバースプロキシ、Email Routing（問い合わせメールの転送運用）</li>
         <li>
-          Google：Google OAuth（ログイン連携）、Google Tag Manager／Google Analytics（アクセス解析）、Google
-          Calendar（リンク遷移）、（条件により）Google Fonts
+          Google：Google OAuth（ログイン連携）、Google Tag Manager／Google
+          Analytics（アクセス解析）、Google Calendar（リンク遷移）、（条件により）Google Fonts
         </li>
       </ul>
 
@@ -125,7 +134,9 @@ export default function PrivacyPolicyPage() {
       <h4 className="mb-2 mt-4 text-lg font-semibold">(1) Google OAuth（ログイン連携）</h4>
       <ul className="mb-4 list-disc pl-6">
         <li>送信先：Google</li>
-        <li>送信される可能性のある情報：OAuth認証に必要な情報（認可リクエスト、端末/ブラウザ情報、IPアドレス等）</li>
+        <li>
+          送信される可能性のある情報：OAuth認証に必要な情報（認可リクエスト、端末/ブラウザ情報、IPアドレス等）
+        </li>
         <li>目的：ログイン認証</li>
       </ul>
 
@@ -143,39 +154,55 @@ export default function PrivacyPolicyPage() {
       <h4 className="mb-2 mt-4 text-lg font-semibold">(3) Vercel（ホスティング/Edge/cron/OG）</h4>
       <ul className="mb-4 list-disc pl-6">
         <li>送信先：Vercel</li>
-        <li>送信される可能性のある情報：アクセスログ（IP、User-Agent、リクエスト情報等）、Edge実行に必要なヘッダ情報等</li>
+        <li>
+          送信される可能性のある情報：アクセスログ（IP、User-Agent、リクエスト情報等）、Edge実行に必要なヘッダ情報等
+        </li>
         <li>目的：配信、性能・安定運用、障害対応・セキュリティ</li>
       </ul>
 
       <h4 className="mb-2 mt-4 text-lg font-semibold">(4) Supabase（DB/ストレージ）</h4>
       <ul className="mb-4 list-disc pl-6">
         <li>送信先：Supabase</li>
-        <li>送信される可能性のある情報：イベント/回答等の保存対象データ、アクセスに伴う技術情報（IP等）</li>
+        <li>
+          送信される可能性のある情報：イベント/回答等の保存対象データ、アクセスに伴う技術情報（IP等）
+        </li>
         <li>目的：データ保存、サービス提供（※現時点でSupabase Authは利用していません）</li>
       </ul>
 
-      <h4 className="mb-2 mt-4 text-lg font-semibold">(5) Cloudflare（CDN/DNS/Proxy、Email Routing）</h4>
+      <h4 className="mb-2 mt-4 text-lg font-semibold">
+        (5) Cloudflare（CDN/DNS/Proxy、Email Routing）
+      </h4>
       <ul className="mb-4 list-disc pl-6">
         <li>送信先：Cloudflare</li>
-        <li>送信される可能性のある情報：アクセスログ、セキュリティ上の検知に必要な情報、（Email Routingでは）転送されるメールのヘッダ/本文等</li>
+        <li>
+          送信される可能性のある情報：アクセスログ、セキュリティ上の検知に必要な情報、（Email
+          Routingでは）転送されるメールのヘッダ/本文等
+        </li>
         <li>目的：配信最適化、セキュリティ、メール転送</li>
       </ul>
 
       <h4 className="mb-2 mt-4 text-lg font-semibold">(6) Google Calendar（リンク遷移）</h4>
       <ul className="mb-4 list-disc pl-6">
-        <li>内容：利用者がリンクを選択した場合、calendar.google.com に遷移します。遷移に伴い参照元情報等が送信される場合があります。</li>
+        <li>
+          内容：利用者がリンクを選択した場合、calendar.google.com
+          に遷移します。遷移に伴い参照元情報等が送信される場合があります。
+        </li>
         <li>目的：利用者のカレンダー登録等の利便性提供</li>
       </ul>
 
       <h4 className="mb-2 mt-4 text-lg font-semibold">(7) Google Fonts（条件付き）</h4>
       <ul className="mb-4 list-disc pl-6">
         <li>送信先：fonts.googleapis.com / fonts.gstatic.com</li>
-        <li>備考：本サービスがフォントを読み込む実装になっている場合に限り通信が発生します（構成により発生しない場合があります）。</li>
+        <li>
+          備考：本サービスがフォントを読み込む実装になっている場合に限り通信が発生します（構成により発生しない場合があります）。
+        </li>
       </ul>
 
       <h3 className="mb-2 text-xl font-semibold">6.2 オプトアウト（解析の無効化）</h3>
       <p className="mb-6">
-        利用者は、ブラウザ設定によりCookieを無効化することができます。また、Google Analyticsについては、Googleが提供するオプトアウト手段（ブラウザアドオン等）により、Google Analyticsへの送信を無効化できる場合があります。
+        利用者は、ブラウザ設定によりCookieを無効化することができます。また、Google
+        Analyticsについては、Googleが提供するオプトアウト手段（ブラウザアドオン等）により、Google
+        Analyticsへの送信を無効化できる場合があります。
       </p>
 
       <h2 className="mb-4 mt-8 text-2xl font-semibold">7. 国外移転（越境移転）について</h2>
@@ -195,7 +222,9 @@ export default function PrivacyPolicyPage() {
         <li>インシデント対応体制の整備</li>
       </ul>
 
-      <h2 className="mb-4 mt-8 text-2xl font-semibold">9. ご本人からの請求（開示・訂正・利用停止等）</h2>
+      <h2 className="mb-4 mt-8 text-2xl font-semibold">
+        9. ご本人からの請求（開示・訂正・利用停止等）
+      </h2>
       <p className="mb-4">
         当方が保有するご本人に関する情報（保有個人データ）について、ご本人は、利用目的の通知、開示、訂正・追加・削除、利用停止、第三者提供停止等を求めることができます。
         これらの手続に関する事項は、本人の知り得る状態（求めに応じて遅滞なく回答する運用を含む）に置く必要があるとされています。
@@ -220,7 +249,9 @@ export default function PrivacyPolicyPage() {
         <li>お問い合わせ対応・紛争対応の必要性</li>
         <li>保管期間の長期化によるリスク</li>
       </ul>
-      <p className="mb-4">保存期間を具体化した場合は、本ポリシーまたは本サービス上の掲示により周知します。</p>
+      <p className="mb-4">
+        保存期間を具体化した場合は、本ポリシーまたは本サービス上の掲示により周知します。
+      </p>
 
       <h3 className="mb-2 text-xl font-semibold">10.2 利用者からの削除要請</h3>
       <p className="mb-4">
@@ -241,14 +272,14 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <h2 className="mb-4 mt-8 text-2xl font-semibold">11. 未成年の利用</h2>
-      <p className="mb-6">未成年の方が本サービスを利用する場合、必要に応じて保護者の同意のもとで利用してください。</p>
+      <p className="mb-6">
+        未成年の方が本サービスを利用する場合、必要に応じて保護者の同意のもとで利用してください。
+      </p>
 
       <h2 className="mb-4 mt-8 text-2xl font-semibold">12. 本ポリシーの変更</h2>
       <p className="mb-6">
         当方は、法令・ガイドラインの変更、サービス内容の変更等に応じて、本ポリシーを改定することがあります。
       </p>
-
-
     </div>
   );
 }
