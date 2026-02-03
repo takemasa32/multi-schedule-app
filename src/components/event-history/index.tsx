@@ -26,7 +26,9 @@ export default function EventHistory({
   withProvider = true,
 }: EventHistoryProps) {
   if (!withProvider) {
-    return <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />;
+    return (
+      <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />
+    );
   }
 
   return (

@@ -42,7 +42,7 @@ export default function AuthErrorPage() {
           <CircleAlert className="h-6 w-6" aria-hidden="true" />
         </div>
         <h1 className="text-xl font-bold">認証エラー</h1>
-        <p className="text-sm text-base-content/60">ログイン処理で問題が発生しました。</p>
+        <p className="text-base-content/60 text-sm">ログイン処理で問題が発生しました。</p>
       </div>
 
       <div className="alert alert-error">
@@ -50,7 +50,7 @@ export default function AuthErrorPage() {
         <span className="text-sm">{errorMessage}</span>
       </div>
 
-      <div className="card bg-base-100 border border-base-200 shadow-sm">
+      <div className="card bg-base-100 border-base-200 border shadow-sm">
         <div className="card-body space-y-4">
           <button type="button" onClick={handleSignIn} className="btn btn-primary">
             Googleで再ログイン

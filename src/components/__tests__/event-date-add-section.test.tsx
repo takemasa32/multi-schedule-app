@@ -36,6 +36,14 @@ jest.mock('../date-range-picker', () => {
     initialIntervalUnit?: string;
     initialStartDate?: Date | null;
     initialEndDate?: Date | null;
+    onSettingsChange?: (settings: {
+      startDate: Date | null;
+      endDate: Date | null;
+      defaultStartTime: string;
+      defaultEndTime: string;
+      intervalUnit: string;
+    }) => void;
+    hideUi?: boolean;
   };
   function MockDateRangePicker({
     onTimeSlotsChange,
