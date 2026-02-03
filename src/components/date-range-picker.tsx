@@ -59,7 +59,7 @@ export default function DateRangePicker({
   ); // 時間帯の単位（分）
   const isIntervalLocked = forcedIntervalUnit != null;
   const intervalOptions = [
-    { value: '10', label: '10分' },
+    { value: '10', label: '10min' },
     { value: '30', label: '30min' },
     { value: '60', label: '1h' },
     { value: '120', label: '2h' },
@@ -71,7 +71,7 @@ export default function DateRangePicker({
   const shouldAddForcedIntervalOption =
     isIntervalLocked && !intervalOptions.some((option) => option.value === forcedIntervalUnit);
   const selectableIntervalOptions = shouldAddForcedIntervalOption
-    ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}分` }]
+    ? [...intervalOptions, { value: forcedIntervalUnit, label: `${forcedIntervalUnit}min` }]
     : intervalOptions;
   const isQuickInterval = quickIntervals.includes(intervalUnit);
 

@@ -12,7 +12,7 @@ describe('DateRangePicker', () => {
     }) as HTMLSelectElement;
     const optionLabels = Array.from(intervalSelect.options).map((option) => option.textContent);
 
-    expect(optionLabels).toEqual(['10分', '30min', '1h', '2h', '3h', '6h']);
+    expect(optionLabels).toEqual(['10min', '30min', '1h', '2h', '3h', '6h']);
   });
 
   test('時間枠の長さを変更すると生成される枠数が更新される', async () => {
