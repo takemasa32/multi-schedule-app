@@ -25,6 +25,10 @@ interface AvailabilityFormProps {
   } | null;
   initialAvailabilities?: Record<string, boolean>;
   mode?: 'new' | 'edit';
+  isAuthenticated?: boolean;
+  lockedDateIds?: string[];
+  autoFillAvailabilities?: Record<string, boolean>;
+  overrideDateIds?: string[];
 }
 
 type ViewMode = 'list' | 'table' | 'heatmap';
@@ -42,6 +46,10 @@ export default function AvailabilityForm({
   initialParticipant,
   initialAvailabilities = {},
   mode = 'new',
+  isAuthenticated = false,
+  lockedDateIds = [],
+  autoFillAvailabilities = {},
+  overrideDateIds: initialOverrideDateIds = [],
 }: AvailabilityFormProps) {
   const [name, setName] = useState(initialParticipant?.name || '');
   const [comment, setComment] = useState(initialParticipant?.comment || '');
@@ -69,6 +77,10 @@ export default function AvailabilityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const [showPrefillModal, setShowPrefillModal] = useState(false);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+  const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
+  const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -88,6 +100,8 @@ export default function AvailabilityForm({
 
   // ページネーション用の状態
   const [currentPage, setCurrentPage] = useState(0);
+  const lockedDateIdSet = useMemo(() => new Set(lockedDateIds), [lockedDateIds]);
+  const overrideDateIdSet = useMemo(() => new Set(overrideDateIds), [overrideDateIds]);
 
   // セルのスタイルと状態を返す関数
   const getCellStyle = useCallback(
@@ -100,21 +114,24 @@ export default function AvailabilityForm({
       }
 
       const isSelected = selectedDates[dateId];
+      const isLocked = lockedDateIdSet.has(dateId) && !overrideDateIdSet.has(dateId);
       if (isSelected) {
         return {
-          className:
-            'bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner',
+          className: `bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner${
+            isLocked ? ' opacity-60' : ''
+          }`,
           status: 'available' as CellStatus,
         };
       } else {
         return {
-          className:
-            'bg-base-200/70 text-base-content/70 hover:bg-base-200 border border-base-300/40',
+          className: `bg-base-200/70 text-base-content/70 border border-base-300/40${
+            isLocked ? ' opacity-60' : ' hover:bg-base-200'
+          }`,
           status: 'unavailable' as CellStatus,
         };
       }
     },
-    [selectedDates],
+    [selectedDates, lockedDateIdSet, overrideDateIdSet],
   );
 
   const applyDateSelection = useCallback((keys: string[], value: boolean) => {
@@ -196,6 +213,63 @@ export default function AvailabilityForm({
     dateSelectionController.cancelDrag();
   }, [dateSelectionController]);
 
+  const applyAutoFill = useCallback(() => {
+    setSelectedDates((prev) => {
+      const next = { ...prev };
+      Object.entries(autoFillAvailabilities).forEach(([dateId, value]) => {
+        next[dateId] = value;
+      });
+      return next;
+    });
+    setShowPrefillModal(false);
+  }, [autoFillAvailabilities]);
+
+  const skipAutoFill = useCallback(() => {
+    setShowPrefillModal(false);
+  }, []);
+
+  const handleLockedOverride = useCallback(
+    (dateId: string) => {
+      if (!lockedDateIdSet.has(dateId)) return;
+      if (overrideDateIdSet.has(dateId)) return;
+      const confirmed = window.confirm(
+        'この枠は別の確定イベントと重複しています。上書きしますか？',
+      );
+      if (!confirmed) return;
+      setOverrideDateIds((prev) => (prev.includes(dateId) ? prev : [...prev, dateId]));
+      setSelectedDates((prev) => ({
+        ...prev,
+        [dateId]: !prev[dateId],
+      }));
+    },
+    [lockedDateIdSet, overrideDateIdSet],
+  );
+
+  const promptSyncScope = useCallback(
+    (formData: FormData) => {
+      if (!isAuthenticated) {
+        setIsSubmitting(true);
+        void handleFormAction(formData);
+        return;
+      }
+      setPendingSyncFormData(formData);
+      setShowSyncConfirm(true);
+    },
+    [isAuthenticated, handleFormAction],
+  );
+
+  const handleSyncScopeChoice = useCallback(
+    (scope: 'current' | 'all') => {
+      if (!pendingSyncFormData) return;
+      pendingSyncFormData.set('sync_scope', scope);
+      setShowSyncConfirm(false);
+      setIsSubmitting(true);
+      void handleFormAction(pendingSyncFormData);
+      setPendingSyncFormData(null);
+    },
+    [pendingSyncFormData, handleFormAction],
+  );
+
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
     // 既存回答データの名前とコメントがあればそれを優先
@@ -211,6 +285,12 @@ export default function AvailabilityForm({
       setComment(initialParticipant.comment);
     }
   }, [initialParticipant]);
+
+  useEffect(() => {
+    if (mode !== 'new' || !isAuthenticated) return;
+    if (Object.keys(autoFillAvailabilities).length === 0) return;
+    setShowPrefillModal(true);
+  }, [mode, isAuthenticated, autoFillAvailabilities]);
 
   // 時間範囲を読みやすい形式にフォーマット
   const formatTimeRange = (startTime: string, endTime: string) => {
@@ -328,8 +408,7 @@ export default function AvailabilityForm({
         setShowOverwriteConfirm(true);
       } else {
         // 既存の参加者がいない場合はそのまま送信
-        setIsSubmitting(true);
-        await handleFormAction(formData);
+        promptSyncScope(formData);
       }
     } catch (error) {
       console.error('送信エラー:', error);
@@ -338,8 +417,9 @@ export default function AvailabilityForm({
   };
 
   // Server Actionを使用したフォーム送信処理
-  const handleFormAction = async (formData: FormData): Promise<void> => {
+  async function handleFormAction(formData: FormData): Promise<void> {
     try {
+      formData.set('override_date_ids', JSON.stringify(overrideDateIds));
       // 編集モードの場合、既存の参加者IDを追加
       if (mode === 'edit' && initialParticipant?.id) {
         formData.append('participantId', initialParticipant.id);
@@ -362,7 +442,7 @@ export default function AvailabilityForm({
       setError(err instanceof Error ? err.message : '送信に失敗しました');
       setIsSubmitting(false);
     }
-  };
+  }
 
   const uniqueDateKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -1206,20 +1286,27 @@ export default function AvailabilityForm({
 
                         return sortedDates.map((date) => {
                           const { className, status } = getCellStyle(date.id);
+                          const isConflict = lockedDateIdSet.has(date.id);
+                          const isLocked = isConflict && !overrideDateIdSet.has(date.id);
                           const interactiveProps = dateSelectionController.getCellProps(date.id, {
-                            disabled: isWeekdayModeActive,
+                            disabled: isWeekdayModeActive || isLocked,
                           });
                           return (
                             <div
                               key={date.id}
                               data-date-id={date.id}
                               data-selection-key={date.id}
-                              className={`flex cursor-pointer items-center rounded-lg border p-3 transition-colors ${
+                              className={`flex items-center rounded-lg border p-3 transition-colors ${
                                 status === 'available'
                                   ? 'bg-success/10 border-success/40'
                                   : 'bg-base-200/10 border-base-300/40 hover:bg-base-200/20'
-                              }`}
+                              } ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                               {...interactiveProps}
+                              onClick={() => {
+                                if (isLocked) {
+                                  handleLockedOverride(date.id);
+                                }
+                              }}
                             >
                               <div
                                 className={`mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors duration-150 ${className}`}
@@ -1232,6 +1319,11 @@ export default function AvailabilityForm({
                                 </span>
                                 {date.label && (
                                   <span className="text-sm text-gray-500">{date.label}</span>
+                                )}
+                                {isConflict && (
+                                  <span className="badge badge-warning mt-1 w-fit text-xs">
+                                    重複しています
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -1272,6 +1364,8 @@ export default function AvailabilityForm({
                                   .padStart(2, '0')}`;
 
                                 const { className, status } = getCellStyle(date.id);
+                                const isConflict = lockedDateIdSet.has(date.id);
+                                const isLocked = isConflict && !overrideDateIdSet.has(date.id);
 
                                 return (
                                   <tr key={date.id} className="hover" data-date-id={date.id}>
@@ -1286,14 +1380,28 @@ export default function AvailabilityForm({
                                     <td className="border-base-300 border">{timeStr}</td>
                                     <td className="border-base-300 w-20 border text-center sm:w-auto">
                                       <div
-                                        className={`flex h-10 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-200 ease-in-out sm:rounded-md ${className}`}
+                                        className={`flex h-10 w-full items-center justify-center rounded-none transition-colors duration-200 ease-in-out sm:rounded-md ${className} ${
+                                          isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
+                                        }`}
                                         data-selection-key={date.id}
                                         {...dateSelectionController.getCellProps(date.id, {
-                                          disabled: isWeekdayModeActive,
+                                          disabled: isWeekdayModeActive || isLocked,
                                         })}
+                                        onClick={() => {
+                                          if (isLocked) {
+                                            handleLockedOverride(date.id);
+                                          }
+                                        }}
                                       >
                                         {getCellContent(status)}
                                       </div>
+                                      {isConflict && (
+                                        <div className="mt-1 text-center">
+                                          <span className="badge badge-warning text-xs">
+                                            重複しています
+                                          </span>
+                                        </div>
+                                      )}
                                     </td>
                                   </tr>
                                 );
@@ -1361,6 +1469,9 @@ export default function AvailabilityForm({
                                 {heatmapData.dates.map((date) => {
                                   const dateId = heatmapData.dateMap[date.dateKey]?.[timeSlot];
                                   const { className, status } = getCellStyle(dateId);
+                                  const isConflict = dateId ? lockedDateIdSet.has(dateId) : false;
+                                  const isLocked =
+                                    Boolean(dateId) && isConflict && !overrideDateIdSet.has(dateId);
 
                                   return (
                                     <td
@@ -1370,12 +1481,20 @@ export default function AvailabilityForm({
                                     >
                                       {dateId ? (
                                         <div
-                                          className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-150 sm:h-10 sm:rounded-sm ${className}`}
+                                          className={`flex h-9 w-full items-center justify-center rounded-none transition-colors duration-150 sm:h-10 sm:rounded-sm ${className} ${
+                                            isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
+                                          }`}
                                           data-date-id={dateId}
                                           data-selection-key={dateId}
                                           {...dateSelectionController.getCellProps(dateId, {
-                                            disabled: isWeekdayModeActive,
+                                            disabled: isWeekdayModeActive || isLocked,
                                           })}
+                                          onClick={() => {
+                                            if (isLocked && dateId) {
+                                              handleLockedOverride(dateId);
+                                            }
+                                          }}
+                                          title={isConflict ? '確定イベントと重複しています' : undefined}
                                         >
                                           {getCellContent(status)}
                                         </div>
@@ -1442,6 +1561,26 @@ export default function AvailabilityForm({
               />
             </div>
 
+            {/* 初期反映の確認ダイアログ */}
+            {showPrefillModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+                  <h3 className="mb-2 text-lg font-bold">過去の予定から反映しますか？</h3>
+                  <p className="mb-6 text-sm text-gray-600">
+                    ログイン中の予定情報をもとに、回答の初期値を設定できます。
+                  </p>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button type="button" onClick={skipAutoFill} className="btn btn-outline">
+                      まっさらで始める
+                    </button>
+                    <button type="button" onClick={applyAutoFill} className="btn btn-primary">
+                      反映する（推奨）
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 名前重複時の確認ダイアログ */}
             {showOverwriteConfirm && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -1466,14 +1605,52 @@ export default function AvailabilityForm({
                       onClick={async () => {
                         setShowOverwriteConfirm(false);
                         if (pendingFormData) {
-                          setIsSubmitting(true);
-                          await handleFormAction(pendingFormData);
                           setPendingFormData(null);
+                          promptSyncScope(pendingFormData);
                         }
                       }}
                       className="btn btn-primary"
                     >
                       上書きする
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 同期範囲の確認ダイアログ */}
+            {showSyncConfirm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+                  <h3 className="mb-4 text-lg font-bold">変更の反映範囲</h3>
+                  <p className="mb-6 text-sm text-gray-600">
+                    この変更を他のイベントにも反映しますか？
+                  </p>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSyncConfirm(false);
+                        setPendingSyncFormData(null);
+                        setIsSubmitting(false);
+                      }}
+                      className="btn btn-outline"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSyncScopeChoice('current')}
+                      className="btn btn-outline"
+                    >
+                      このイベントのみ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSyncScopeChoice('all')}
+                      className="btn btn-primary"
+                    >
+                      全イベントへ反映
                     </button>
                   </div>
                 </div>

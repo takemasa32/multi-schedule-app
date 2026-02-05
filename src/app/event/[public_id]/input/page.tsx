@@ -5,6 +5,7 @@ import AvailabilityForm from '@/components/availability-form';
 import siteConfig from '@/lib/site-config';
 import { Metadata } from 'next';
 import { EventNotFoundError } from '@/lib/errors';
+import { getUserScheduleContext } from '@/lib/schedule-actions';
 
 export async function generateMetadata({
   params,
@@ -73,6 +74,8 @@ export default async function EventPage({ params, searchParams }: EventPageProps
     participantPromise,
   ]);
 
+  const scheduleContext = await getUserScheduleContext(event.id, eventDates);
+
   const existingParticipant = participantResult?.participant || null;
   const existingAvailabilities = participantResult?.availabilityMap || null;
   const isEditMode = Boolean(existingParticipant);
@@ -99,6 +102,10 @@ export default async function EventPage({ params, searchParams }: EventPageProps
           initialParticipant={existingParticipant}
           initialAvailabilities={existingAvailabilities || undefined}
           mode={isEditMode ? 'edit' : 'new'}
+          isAuthenticated={scheduleContext.isAuthenticated}
+          lockedDateIds={scheduleContext.lockedDateIds}
+          autoFillAvailabilities={scheduleContext.autoFillAvailabilities}
+          overrideDateIds={scheduleContext.overrideDateIds}
         />
       </div>
 

@@ -7,6 +7,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { generatePublicToken } from './token';
 import { revalidatePath } from 'next/cache';
 import { getAuthSession } from '@/lib/auth';
+import {
+  saveAvailabilityOverrides,
+  syncUserAvailabilities,
+  updateUserScheduleTemplatesFromBlocks,
+  upsertUserEventLink,
+  upsertUserScheduleBlocks,
+} from '@/lib/schedule-actions';
 
 export type CreateEventSuccessResult = {
   success: true;
@@ -134,6 +141,7 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     }
 
     const event = created[0];
+    const createdEventId = event?.event_id ?? event?.id;
 
     // ログイン済みの場合はサーバー側で履歴を同期する
     const session = await getAuthSession();
@@ -148,6 +156,14 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
 
       if (historyError) {
         console.error('イベント履歴の更新に失敗しました:', historyError);
+      }
+
+      if (createdEventId) {
+        await upsertUserEventLink({
+          userId: session.user.id,
+          eventId: createdEventId,
+          participantId: null,
+        });
       }
     }
 
@@ -414,6 +430,17 @@ export async function submitAvailability(formData: FormData) {
     const publicToken = formData.get('publicToken') as string;
     const participantName = formData.get('participant_name') as string;
     const comment = (formData.get('comment') as string) || null;
+    const syncScope = (formData.get('sync_scope') as string) === 'all' ? 'all' : 'current';
+    const overrideDateIdsRaw = formData.get('override_date_ids') as string | null;
+    let overrideDateIds: string[] = [];
+    if (overrideDateIdsRaw) {
+      try {
+        overrideDateIds = JSON.parse(overrideDateIdsRaw) as string[];
+      } catch (error) {
+        console.error('上書き対象の解析に失敗しました:', error);
+        overrideDateIds = [];
+      }
+    }
 
     // 編集モードの場合、既存の参加者IDが提供される
     const participantId = formData.get('participantId') as string | null;
@@ -554,6 +581,58 @@ export async function submitAvailability(formData: FormData) {
       .update({ last_accessed_at: new Date().toISOString() })
       .eq('id', eventId);
 
+    const session = await getAuthSession();
+    if (session?.user?.id) {
+      const selectedDateIds = availabilityEntries
+        .filter((entry) => entry.availability)
+        .map((entry) => entry.event_date_id);
+
+      const { data: allEventDates, error: allDatesError } = await supabase
+        .from('event_dates')
+        .select('id,start_time,end_time')
+        .eq('event_id', eventId);
+
+      if (allDatesError) {
+        console.error('イベント日程取得エラー:', allDatesError);
+      }
+
+      await upsertUserEventLink({
+        userId: session.user.id,
+        eventId,
+        participantId: existingParticipantId,
+      });
+
+      if (allEventDates) {
+        await upsertUserScheduleBlocks({
+          userId: session.user.id,
+          eventId,
+          eventDates: allEventDates,
+          selectedDateIds,
+        });
+
+        await updateUserScheduleTemplatesFromBlocks({
+          userId: session.user.id,
+          eventDates: allEventDates,
+          selectedDateIds,
+        });
+      }
+
+      await saveAvailabilityOverrides({
+        userId: session.user.id,
+        eventId,
+        overrideDateIds,
+        selectedDateIds,
+      });
+
+      if (syncScope === 'all') {
+        await syncUserAvailabilities({
+          userId: session.user.id,
+          scope: 'all',
+          currentEventId: eventId,
+        });
+      }
+    }
+
     try {
       revalidatePath(`/event/${publicToken}`);
     } catch (e) {
@@ -626,6 +705,27 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
       if (process.env.NODE_ENV !== 'test') {
         console.error('revalidatePath error:', e);
       }
+    }
+
+    try {
+      const { data: linkedUsers } = await supabase
+        .from('user_event_links')
+        .select('user_id')
+        .eq('event_id', eventId);
+
+      const uniqueUserIds = Array.from(
+        new Set((linkedUsers ?? []).map((row) => row.user_id).filter(Boolean)),
+      );
+
+      for (const userId of uniqueUserIds) {
+        await syncUserAvailabilities({
+          userId,
+          scope: 'all',
+          currentEventId: eventId,
+        });
+      }
+    } catch (syncError) {
+      console.error('確定イベントの同期エラー:', syncError);
     }
 
     const message = dateIds.length === 0 ? 'イベント確定を解除しました' : undefined;
