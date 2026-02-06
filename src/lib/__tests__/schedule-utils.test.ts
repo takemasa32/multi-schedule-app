@@ -119,4 +119,21 @@ describe('computeAutoFillAvailability', () => {
 
     expect(result).toBeNull();
   });
+
+  it('タイムゾーン付きブロックでもローカル時刻基準で重なり判定する', () => {
+    const result = computeAutoFillAvailability({
+      start: '2026-02-05T10:00:00',
+      end: '2026-02-05T12:00:00',
+      blocks: [
+        {
+          start_time: '2026-02-05T10:30:00+00:00',
+          end_time: '2026-02-05T11:00:00+00:00',
+          availability: false,
+        },
+      ],
+      templates: [],
+    });
+
+    expect(result).toBe(false);
+  });
 });

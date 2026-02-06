@@ -28,6 +28,19 @@
 
 Supabase のローカル開発環境を使用して、オフラインでの開発や高速なフィードバックループを実現します。
 
+## 開発用ログイン（ローカル限定）
+
+ローカル環境でのみ利用できる開発用ログインを用意しています。以下の環境変数を設定し、`npm run dev` を再起動してください。
+
+```bash
+ENABLE_DEV_LOGIN=true
+DEV_LOGIN_ID=devuser
+DEV_LOGIN_PASSWORD=devpass
+NEXT_PUBLIC_ENABLE_DEV_LOGIN=true
+```
+
+※ 本番環境では `NODE_ENV=production` のため自動で無効化されます。
+
 ### 前提条件
 
 - Docker がインストールされていること
