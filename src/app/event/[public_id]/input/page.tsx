@@ -103,6 +103,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
           initialAvailabilities={existingAvailabilities || undefined}
           mode={isEditMode ? 'edit' : 'new'}
           isAuthenticated={scheduleContext.isAuthenticated}
+          hasSyncTargetEvents={scheduleContext.hasSyncTargetEvents}
           lockedDateIds={scheduleContext.lockedDateIds}
           autoFillAvailabilities={scheduleContext.autoFillAvailabilities}
           overrideDateIds={scheduleContext.overrideDateIds}

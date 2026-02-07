@@ -7,6 +7,7 @@ import DateRangePicker, { DateRangeSettings } from './date-range-picker';
 import { TimeSlot } from '@/lib/utils';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
+import WeekNavigationBar from './week-navigation-bar';
 
 /**
  * カレンダーで手動選択するコンポーネントのプロパティ
@@ -319,33 +320,17 @@ export default function ManualTimeSlotPicker({
 
       {allSlots.length > 0 && (
         <div className={`-mx-2 sm:-mx-4 md:-mx-6 ${isMobile ? 'touch-none' : ''}`}>
-          {/* 表示範囲（ボタンとは別行） */}
+          {/* 週送り */}
           {weekAnchors.length > 0 && (
-            <div className="text-base-content/80 mb-1 px-4 text-xs sm:text-sm" aria-live="polite">
-              表示: {weekLabel}（月曜はじまり）
-            </div>
-          )}
-          {/* 週送りボタン行（左右に配置） */}
-          {weekAnchors.length > 0 && (
-            <div className="mb-2 flex items-center justify-between px-4">
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setWeekIndex((i) => Math.max(0, i - 1))}
-                disabled={weekIndex <= 0}
-                aria-label="前の週へ"
-              >
-                ← 前の週
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setWeekIndex((i) => Math.min(weekAnchors.length - 1, i + 1))}
-                disabled={weekIndex >= weekAnchors.length - 1}
-                aria-label="次の週へ"
-              >
-                次の週 →
-              </button>
+            <div className="mb-2 px-4" aria-live="polite">
+              <WeekNavigationBar
+                periodLabel={weekLabel}
+                periodPrefix="表示:"
+                trailingNote="月曜はじまり"
+                currentPage={weekIndex}
+                totalPages={weekAnchors.length}
+                onPageChange={setWeekIndex}
+              />
             </div>
           )}
           <table className="table-xs border-base-300 table w-full min-w-0 table-fixed border-collapse border text-center">

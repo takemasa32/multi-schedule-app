@@ -1,12 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { submitAvailability, checkParticipantExists } from '@/lib/actions';
+import {
+  submitAvailability,
+  checkParticipantExists,
+  linkMyParticipantAnswerByName,
+} from '@/lib/actions';
 import { formatDateTimeWithDay } from '@/lib/utils';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
+import WeekNavigationBar from './week-navigation-bar';
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -26,6 +31,7 @@ interface AvailabilityFormProps {
   initialAvailabilities?: Record<string, boolean>;
   mode?: 'new' | 'edit';
   isAuthenticated?: boolean;
+  hasSyncTargetEvents?: boolean;
   lockedDateIds?: string[];
   autoFillAvailabilities?: Record<string, boolean>;
   overrideDateIds?: string[];
@@ -47,6 +53,7 @@ export default function AvailabilityForm({
   initialAvailabilities = {},
   mode = 'new',
   isAuthenticated = false,
+  hasSyncTargetEvents = false,
   lockedDateIds = [],
   autoFillAvailabilities = {},
   overrideDateIds: initialOverrideDateIds = [],
@@ -81,6 +88,9 @@ export default function AvailabilityForm({
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
+  const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
+  const [isLinkingExistingAnswer, setIsLinkingExistingAnswer] = useState(false);
+  const [linkExistingAnswerMessage, setLinkExistingAnswerMessage] = useState<string | null>(null);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -135,6 +145,7 @@ export default function AvailabilityForm({
   );
 
   const applyDateSelection = useCallback((keys: string[], value: boolean) => {
+    const changedKeys: string[] = [];
     setSelectedDates((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -147,9 +158,19 @@ export default function AvailabilityForm({
         }
         next[key] = value;
         changed = true;
+        changedKeys.push(key);
       }
       return changed ? next : prev;
     });
+    if (changedKeys.length > 0) {
+      setManuallyEditedDateIds((prev) => {
+        const next = { ...prev };
+        changedKeys.forEach((key) => {
+          next[key] = true;
+        });
+        return next;
+      });
+    }
   }, []);
 
   const dateSelectionController = useSelectionDragController({
@@ -241,13 +262,17 @@ export default function AvailabilityForm({
         ...prev,
         [dateId]: !prev[dateId],
       }));
+      setManuallyEditedDateIds((prev) => ({
+        ...prev,
+        [dateId]: true,
+      }));
     },
     [lockedDateIdSet, overrideDateIdSet],
   );
 
   const promptSyncScope = useCallback(
     (formData: FormData) => {
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !hasSyncTargetEvents) {
         setIsSubmitting(true);
         void handleFormAction(formData);
         return;
@@ -255,7 +280,7 @@ export default function AvailabilityForm({
       setPendingSyncFormData(formData);
       setShowSyncConfirm(true);
     },
-    [isAuthenticated, handleFormAction],
+    [isAuthenticated, hasSyncTargetEvents, handleFormAction],
   );
 
   const handleSyncScopeChoice = useCallback(
@@ -269,6 +294,29 @@ export default function AvailabilityForm({
     },
     [pendingSyncFormData, handleFormAction],
   );
+
+  const handleLinkExistingAnswer = useCallback(async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setLinkExistingAnswerMessage('先にお名前を入力してください');
+      return;
+    }
+
+    setIsLinkingExistingAnswer(true);
+    setLinkExistingAnswerMessage(null);
+    const result = await linkMyParticipantAnswerByName({
+      eventId,
+      participantName: trimmedName,
+    });
+    setIsLinkingExistingAnswer(false);
+
+    if (result.success && result.participantId && typeof window !== 'undefined') {
+      window.location.href = `/event/${publicToken}/input?participant_id=${result.participantId}`;
+      return;
+    }
+
+    setLinkExistingAnswerMessage(result.message);
+  }, [eventId, name, publicToken]);
 
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
@@ -740,6 +788,9 @@ export default function AvailabilityForm({
         const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
 
         if (weekday === day) {
+          if (manuallyEditedDateIds[date.id]) {
+            return;
+          }
           // この日程の時間帯ID
           const timeKey = getTimeKey(date.start_time, date.end_time);
 
@@ -754,7 +805,7 @@ export default function AvailabilityForm({
 
     // 状態を更新
     setSelectedDates(newSelectedDates);
-  }, [weekdaySelections, eventDates, selectedDates, getTimeKey]);
+  }, [weekdaySelections, eventDates, selectedDates, getTimeKey, manuallyEditedDateIds]);
 
   return (
     <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
@@ -867,6 +918,24 @@ export default function AvailabilityForm({
                 required={false}
                 disabled={isWeekdayModeActive}
               />
+              {isAuthenticated && mode === 'new' && (
+                <div className="bg-base-200 mt-2 rounded-md p-3 text-xs">
+                  <p className="mb-2">
+                    未ログイン時の回答がある場合、同じ名前の回答をアカウントに紐づけできます。
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-outline"
+                    onClick={() => void handleLinkExistingAnswer()}
+                    disabled={isLinkingExistingAnswer || isWeekdayModeActive}
+                  >
+                    {isLinkingExistingAnswer ? '検索中...' : '既存回答を探して紐づける'}
+                  </button>
+                  {linkExistingAnswerMessage && (
+                    <p className="mt-2 text-xs text-gray-600">{linkExistingAnswerMessage}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -1193,57 +1262,16 @@ export default function AvailabilityForm({
               {!isWeekdayModeActive &&
                 (viewMode === 'heatmap' || viewMode === 'table' || viewMode === 'list') &&
                 heatmapData.totalPages > 1 && (
-                  <div className="bg-base-200 mb-4 flex flex-col items-center justify-between gap-3 rounded-lg p-3 md:flex-row">
-                    <div className="flex items-center gap-2">
-                      {heatmapData.currentDateRange && (
-                        <span className="text-sm font-medium">
-                          表示期間: {heatmapData.currentDateRange.startLabel} 〜{' '}
-                          {heatmapData.currentDateRange.endLabel}
-                          <span className="ml-1 text-xs text-gray-500">
-                            (週 {currentPage + 1} / {heatmapData.totalPages})
-                          </span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="join">
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() => handlePageChange(0)}
-                          disabled={currentPage === 0}
-                        >
-                          «
-                        </button>
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
-                          disabled={currentPage === 0}
-                        >
-                          ‹
-                        </button>
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() =>
-                            handlePageChange(Math.min(heatmapData.totalPages - 1, currentPage + 1))
-                          }
-                          disabled={currentPage >= heatmapData.totalPages - 1}
-                        >
-                          ›
-                        </button>
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() => handlePageChange(heatmapData.totalPages - 1)}
-                          disabled={currentPage >= heatmapData.totalPages - 1}
-                        >
-                          »
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-500">表示: 1週間</span>
-                    </div>
+                  <div className="mb-4">
+                    <WeekNavigationBar
+                      periodLabel={`${heatmapData.currentDateRange?.startLabel ?? '-'} 〜 ${
+                        heatmapData.currentDateRange?.endLabel ?? '-'
+                      }`}
+                      currentPage={currentPage}
+                      totalPages={heatmapData.totalPages}
+                      onPageChange={handlePageChange}
+                      trailingNote="表示: 1週間"
+                    />
                   </div>
                 )}
 
@@ -1494,7 +1522,9 @@ export default function AvailabilityForm({
                                               handleLockedOverride(dateId);
                                             }
                                           }}
-                                          title={isConflict ? '確定イベントと重複しています' : undefined}
+                                          title={
+                                            isConflict ? '確定イベントと重複しています' : undefined
+                                          }
                                         >
                                           {getCellContent(status)}
                                         </div>

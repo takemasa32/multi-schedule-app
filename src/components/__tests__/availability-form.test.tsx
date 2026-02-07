@@ -12,8 +12,13 @@ import AvailabilityForm from '../availability-form';
 jest.mock('@/lib/actions', () => ({
   submitAvailability: jest.fn(),
   checkParticipantExists: jest.fn(),
+  linkMyParticipantAnswerByName: jest.fn(),
 }));
-import { submitAvailability, checkParticipantExists } from '@/lib/actions';
+import {
+  submitAvailability,
+  checkParticipantExists,
+  linkMyParticipantAnswerByName,
+} from '@/lib/actions';
 
 beforeAll(() => {
   (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
@@ -51,9 +56,24 @@ describe('AvailabilityForm', () => {
     eventDates,
   };
 
+  const fillRequiredFields = () => {
+    fireEvent.change(screen.getByLabelText(/お名前/), {
+      target: { value: 'テスト太郎' },
+    });
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    const firstCell = screen.getAllByText('×')[0];
+    fireEvent.pointerDown(firstCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(firstCell, { pointerId: 1, pointerType: 'mouse' });
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    (linkMyParticipantAnswerByName as jest.Mock).mockResolvedValue({
+      success: false,
+      status: 'not_found',
+      message: 'この名前の既存回答は見つかりませんでした',
+    });
   });
 
   it('名前未入力時はバリデーションエラーを表示する', async () => {
@@ -102,6 +122,103 @@ describe('AvailabilityForm', () => {
     });
     const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
     expect(formDataArg.get('comment')).toBe('テストコメント');
+  });
+
+  it('ログイン済みでも同期対象イベントがない場合は同期範囲モーダルを表示しない', async () => {
+    (submitAvailability as jest.Mock).mockResolvedValue({ success: true });
+    render(<AvailabilityForm {...defaultProps} isAuthenticated hasSyncTargetEvents={false} />);
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole('button', { name: /回答を送信/ }));
+
+    await waitFor(() => {
+      expect(submitAvailability).toHaveBeenCalled();
+    });
+    expect(screen.queryByText('変更の反映範囲')).not.toBeInTheDocument();
+  });
+
+  it('ログイン済みで同期対象イベントがある場合は同期範囲モーダルを表示する', async () => {
+    (submitAvailability as jest.Mock).mockResolvedValue({ success: true });
+    render(<AvailabilityForm {...defaultProps} isAuthenticated hasSyncTargetEvents />);
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole('button', { name: /回答を送信/ }));
+
+    expect(await screen.findByText('変更の反映範囲')).toBeInTheDocument();
+    expect(submitAvailability).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'このイベントのみ' }));
+    await waitFor(() => {
+      expect(submitAvailability).toHaveBeenCalled();
+    });
+  });
+
+  it('ログイン済み新規回答では既存回答の紐づけ導線を表示し、検索を実行できる', async () => {
+    render(<AvailabilityForm {...defaultProps} isAuthenticated mode="new" />);
+
+    fireEvent.change(screen.getByLabelText(/お名前/), {
+      target: { value: 'テスト太郎' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '既存回答を探して紐づける' }));
+
+    await waitFor(() => {
+      expect(linkMyParticipantAnswerByName).toHaveBeenCalledWith({
+        eventId: 'event1',
+        participantName: 'テスト太郎',
+      });
+    });
+  });
+
+  it('新規回答時は過去の予定から反映モーダルを表示し、反映を適用できる', async () => {
+    const { container } = render(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        mode="new"
+        autoFillAvailabilities={{ date1: true, date2: false }}
+      />,
+    );
+
+    expect(await screen.findByText('過去の予定から反映しますか？')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '反映する（推奨）' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('過去の予定から反映しますか？')).not.toBeInTheDocument();
+    });
+
+    expect(
+      container.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector<HTMLInputElement>('input[name="availability_date2"]'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('過去の予定から反映モーダルでスキップを選ぶと初期状態を維持する', async () => {
+    const { container } = render(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        mode="new"
+        autoFillAvailabilities={{ date1: true, date2: true }}
+      />,
+    );
+
+    expect(await screen.findByText('過去の予定から反映しますか？')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'まっさらで始める' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('過去の予定から反映しますか？')).not.toBeInTheDocument();
+    });
+
+    expect(
+      container.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
+    ).not.toBeInTheDocument();
+    expect(
+      container.querySelector<HTMLInputElement>('input[name="availability_date2"]'),
+    ).not.toBeInTheDocument();
   });
 
   it('サーバーエラー時はエラーメッセージを表示する', async () => {

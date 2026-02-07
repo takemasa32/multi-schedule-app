@@ -141,7 +141,7 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     }
 
     const event = created[0];
-    const createdEventId = event?.event_id ?? event?.id;
+    const createdEventId = event?.event_id;
 
     // ログイン済みの場合はサーバー側で履歴を同期する
     const session = await getAuthSession();
@@ -1012,6 +1012,15 @@ export async function copyAvailabilityBetweenEvents(
       return { success: false, message: '回答のコピーに失敗しました' };
     }
 
+    const session = await getAuthSession();
+    if (session?.user?.id) {
+      await upsertUserEventLink({
+        userId: session.user.id,
+        eventId: targetEventId,
+        participantId: targetParticipantId,
+      });
+    }
+
     try {
       revalidatePath(`/event/${targetEvent.public_token}`);
     } catch (e) {
@@ -1033,6 +1042,284 @@ export async function copyAvailabilityBetweenEvents(
       success: false,
       message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
+  }
+}
+
+/**
+ * 未ログインで作成済みの回答を、ログイン中ユーザーに紐づける
+ */
+export async function linkMyParticipantAnswerByName({
+  eventId,
+  participantName,
+}: {
+  eventId: string;
+  participantName: string;
+}): Promise<{
+  success: boolean;
+  status: 'linked' | 'not_found' | 'ambiguous' | 'error';
+  message: string;
+  participantId?: string;
+}> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return {
+      success: false,
+      status: 'error',
+      message: 'ログインが必要です',
+    };
+  }
+
+  const trimmedName = participantName.trim();
+  if (!eventId || !trimmedName) {
+    return {
+      success: false,
+      status: 'error',
+      message: 'イベントIDまたは参加者名が不正です',
+    };
+  }
+
+  try {
+    const supabase = createSupabaseAdmin();
+
+    const { data: currentLink, error: currentLinkError } = await supabase
+      .from('user_event_links')
+      .select('participant_id')
+      .eq('user_id', userId)
+      .eq('event_id', eventId)
+      .maybeSingle();
+
+    if (currentLinkError) {
+      console.error('既存リンク取得エラー:', currentLinkError);
+    }
+
+    if (currentLink?.participant_id) {
+      return {
+        success: true,
+        status: 'linked',
+        message: 'このイベントはすでに紐づいています',
+        participantId: currentLink.participant_id,
+      };
+    }
+
+    const { data: participants, error: participantsError } = await supabase
+      .from('participants')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('name', trimmedName)
+      .order('created_at', { ascending: false });
+
+    if (participantsError) {
+      console.error('参加者検索エラー:', participantsError);
+      return {
+        success: false,
+        status: 'error',
+        message: '既存回答の検索に失敗しました',
+      };
+    }
+
+    if (!participants || participants.length === 0) {
+      return {
+        success: false,
+        status: 'not_found',
+        message: 'この名前の既存回答は見つかりませんでした',
+      };
+    }
+
+    if (participants.length > 1) {
+      return {
+        success: false,
+        status: 'ambiguous',
+        message: '同名の回答が複数あります。既存の回答を編集から選択してください',
+      };
+    }
+
+    const participantId = participants[0].id;
+
+    await upsertUserEventLink({
+      userId,
+      eventId,
+      participantId,
+    });
+
+    return {
+      success: true,
+      status: 'linked',
+      message: '既存回答をアカウントに紐づけました',
+      participantId,
+    };
+  } catch (error) {
+    console.error('回答紐づけエラー:', error);
+    return {
+      success: false,
+      status: 'error',
+      message: '回答の紐づけに失敗しました',
+    };
+  }
+}
+
+export type UnlinkedAnswerCandidate = {
+  eventId: string;
+  publicToken: string;
+  title: string;
+  lastAccessedAt: string;
+  participants: Array<{
+    id: string;
+    name: string;
+    createdAt: string;
+  }>;
+};
+
+/**
+ * 閲覧履歴から、未ログイン回答の紐づけ候補イベントを取得する
+ */
+export async function fetchUnlinkedAnswerCandidates(): Promise<UnlinkedAnswerCandidate[]> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) return [];
+
+  try {
+    const supabase = createSupabaseAdmin();
+
+    const { data: histories, error: historiesError } = await supabase
+      .from('event_access_histories')
+      .select('event_public_token,event_title,last_accessed_at,is_created_by_me')
+      .eq('user_id', userId)
+      .eq('is_created_by_me', false)
+      .order('last_accessed_at', { ascending: false })
+      .limit(50);
+
+    if (historiesError || !histories) {
+      console.error('履歴取得エラー:', historiesError);
+      return [];
+    }
+
+    const tokens = Array.from(new Set(histories.map((row) => row.event_public_token)));
+    if (tokens.length === 0) return [];
+
+    const { data: events, error: eventsError } = await supabase
+      .from('events')
+      .select('id,public_token,title')
+      .in('public_token', tokens);
+
+    if (eventsError || !events) {
+      console.error('イベント取得エラー:', eventsError);
+      return [];
+    }
+
+    const eventByToken = new Map(events.map((row) => [row.public_token, row]));
+    const eventIds = events.map((row) => row.id);
+    if (eventIds.length === 0) return [];
+
+    const { data: links } = await supabase
+      .from('user_event_links')
+      .select('event_id,participant_id')
+      .eq('user_id', userId)
+      .in('event_id', eventIds);
+    const linkedEventIdSet = new Set(
+      (links ?? []).filter((row) => Boolean(row.participant_id)).map((row) => row.event_id),
+    );
+
+    const candidateEvents = histories
+      .map((history) => {
+        const event = eventByToken.get(history.event_public_token);
+        if (!event) return null;
+        if (linkedEventIdSet.has(event.id)) return null;
+        return {
+          eventId: event.id,
+          publicToken: event.public_token,
+          title: event.title || history.event_title,
+          lastAccessedAt: history.last_accessed_at,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
+
+    const uniqueByEvent = new Map(candidateEvents.map((row) => [row.eventId, row]));
+    const uniqueCandidates = Array.from(uniqueByEvent.values());
+    if (uniqueCandidates.length === 0) return [];
+
+    const { data: participants, error: participantsError } = await supabase
+      .from('participants')
+      .select('id,event_id,name,created_at')
+      .in(
+        'event_id',
+        uniqueCandidates.map((row) => row.eventId),
+      )
+      .order('created_at', { ascending: false });
+
+    if (participantsError || !participants) {
+      console.error('参加者取得エラー:', participantsError);
+      return [];
+    }
+
+    const participantsByEvent = new Map<string, UnlinkedAnswerCandidate['participants']>();
+    participants.forEach((row) => {
+      if (!participantsByEvent.has(row.event_id)) {
+        participantsByEvent.set(row.event_id, []);
+      }
+      participantsByEvent.get(row.event_id)!.push({
+        id: row.id,
+        name: row.name,
+        createdAt: row.created_at,
+      });
+    });
+
+    return uniqueCandidates
+      .map((candidate) => ({
+        ...candidate,
+        participants: participantsByEvent.get(candidate.eventId) ?? [],
+      }))
+      .filter((candidate) => candidate.participants.length > 0)
+      .sort((a, b) => b.lastAccessedAt.localeCompare(a.lastAccessedAt));
+  } catch (error) {
+    console.error('紐づけ候補取得エラー:', error);
+    return [];
+  }
+}
+
+/**
+ * 参加者IDを指定して回答をアカウントに紐づける
+ */
+export async function linkMyParticipantAnswerById({
+  eventId,
+  participantId,
+}: {
+  eventId: string;
+  participantId: string;
+}): Promise<{ success: boolean; message: string }> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: 'ログインが必要です' };
+  }
+
+  if (!eventId || !participantId) {
+    return { success: false, message: 'イベントまたは参加者が不正です' };
+  }
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { data: participant, error: participantError } = await supabase
+      .from('participants')
+      .select('id,event_id')
+      .eq('id', participantId)
+      .eq('event_id', eventId)
+      .maybeSingle();
+
+    if (participantError || !participant) {
+      return { success: false, message: '指定した回答が見つかりません' };
+    }
+
+    await upsertUserEventLink({
+      userId,
+      eventId,
+      participantId,
+    });
+
+    return { success: true, message: '回答をアカウントに紐づけました' };
+  } catch (error) {
+    console.error('回答ID紐づけエラー:', error);
+    return { success: false, message: '回答の紐づけに失敗しました' };
   }
 }
 
