@@ -184,7 +184,7 @@ describe('AccountScheduleTemplates', () => {
     ).toBe(true);
   });
 
-  it('週の設定が空でも日付ブロック由来の時間行を週ごとの用事に表示する', async () => {
+  it('週の設定が空でもデフォルト時間行で週ごとの用事を編集できる', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleTemplates.mockResolvedValue({
       manual: [],
@@ -204,10 +204,16 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '週ごとの用事' });
+    expect(
+      screen.getByText(
+        'テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。',
+      ),
+    ).toBeInTheDocument();
     const mondayCells = screen.getAllByRole('button').filter((button) => {
       const label = button.getAttribute('aria-label') ?? '';
       return /^月 \d{2}:\d{2}-\d{2}:\d{2}$/.test(label);
     });
     expect(mondayCells.length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: '月 21:00-22:00' })).not.toBeInTheDocument();
   });
 });

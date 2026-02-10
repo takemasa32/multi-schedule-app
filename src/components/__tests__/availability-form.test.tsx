@@ -14,11 +14,17 @@ jest.mock('@/lib/actions', () => ({
   checkParticipantExists: jest.fn(),
   linkMyParticipantAnswerByName: jest.fn(),
 }));
+jest.mock('@/lib/schedule-actions', () => ({
+  upsertWeeklyTemplatesFromWeekdaySelections: jest.fn(),
+  fetchUserScheduleTemplates: jest.fn(),
+}));
 import {
   submitAvailability,
   checkParticipantExists,
   linkMyParticipantAnswerByName,
 } from '@/lib/actions';
+import { upsertWeeklyTemplatesFromWeekdaySelections } from '@/lib/schedule-actions';
+import { fetchUserScheduleTemplates } from '@/lib/schedule-actions';
 
 beforeAll(() => {
   (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
@@ -69,6 +75,14 @@ describe('AvailabilityForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    (upsertWeeklyTemplatesFromWeekdaySelections as jest.Mock).mockResolvedValue({
+      success: true,
+      updatedCount: 1,
+    });
+    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
     (linkMyParticipantAnswerByName as jest.Mock).mockResolvedValue({
       success: false,
       status: 'not_found',
@@ -349,5 +363,101 @@ describe('AvailabilityForm', () => {
         value: originalElementFromPoint,
       });
     }
+  });
+
+  it('曜日ごとの設定適用時に保存オプションを選ぶと週次テンプレ更新を呼び出す', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        initialAvailabilities={{
+          date1: true,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /曜日ごとの時間帯設定/ }));
+    fireEvent.click(screen.getByRole('button', { name: '設定を適用する' }));
+
+    expect(await screen.findByText('適用方法を選択してください')).toBeInTheDocument();
+    const applyButton = await screen.findByRole('button', { name: /ユーザ設定.*適用/ });
+    fireEvent.click(applyButton);
+
+    await waitFor(() => {
+      expect(upsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalled();
+    });
+  });
+
+  it('ログイン中に曜日設定を開くと週テンプレを曜日マトリクスへ反映する', async () => {
+    const templateDates = [
+      {
+        id: 'mon-1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+      {
+        id: 'tue-1',
+        start_time: '2025-05-13T09:00:00.000Z',
+        end_time: '2025-05-13T10:00:00.000Z',
+      },
+    ];
+    const toTimeParts = (startIso: string, endIso: string) => {
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return {
+        startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+        endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
+      };
+    };
+    const { startTime, endTime } = toTimeParts(templateDates[0].start_time, templateDates[0].end_time);
+
+    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
+      manual: [
+        {
+          id: 'tpl-mon',
+          weekday: 1,
+          start_time: `${startTime}:00`,
+          end_time: `${endTime}:00`,
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+
+    const { container } = render(
+      <AvailabilityForm {...defaultProps} eventDates={templateDates} isAuthenticated />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /曜日ごとの時間帯設定/ }));
+
+    await waitFor(() => {
+      expect(fetchUserScheduleTemplates).toHaveBeenCalled();
+    });
+    const timeKey = `${startTime}-${endTime}`;
+    const monCell = container.querySelector<HTMLElement>(
+      `[data-day="月"][data-time-slot="${timeKey}"]`,
+    );
+    const tueCell = container.querySelector<HTMLElement>(
+      `[data-day="火"][data-time-slot="${timeKey}"]`,
+    );
+
+    expect(monCell?.textContent).toContain('○');
+    expect(tueCell?.textContent).toContain('×');
+  });
+
+  it('未ログイン時は曜日設定の確認モーダルを表示せずに今回のみ適用する', async () => {
+    render(<AvailabilityForm {...defaultProps} isAuthenticated={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /曜日ごとの時間帯設定/ }));
+    fireEvent.click(screen.getByRole('button', { name: '設定を適用する' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('適用方法を選択してください')).not.toBeInTheDocument();
+    });
+    expect(fetchUserScheduleTemplates).not.toHaveBeenCalled();
+    expect(upsertWeeklyTemplatesFromWeekdaySelections).not.toHaveBeenCalled();
   });
 });

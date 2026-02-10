@@ -99,6 +99,20 @@ const toMinutes = (time: string): number => {
 const toTimeString = (minutes: number): string =>
   `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
+const compareTimeSlotRange = (a: string, b: string): number => {
+  const [aStart = '00:00', aEnd = '00:00'] = a.split('-');
+  const [bStart = '00:00', bEnd = '00:00'] = b.split('-');
+  const startDiff = toMinutes(aStart) - toMinutes(bStart);
+  if (startDiff !== 0) return startDiff;
+  return toMinutes(aEnd) - toMinutes(bEnd);
+};
+
+const DEFAULT_WEEKLY_TIME_SLOTS = Array.from({ length: 12 }, (_, index) => {
+  const start = 8 + index;
+  const end = start + 1;
+  return `${String(start).padStart(2, '0')}:00-${String(end).padStart(2, '0')}:00`;
+});
+
 const buildSyncPreviewMatrix = (event: UserAvailabilitySyncPreviewEvent) => {
   const dateKeys = new Set<string>();
   const timeKeys = new Set<string>();
@@ -265,14 +279,13 @@ export default function AccountScheduleTemplates({
     [...manualTemplates, ...learnedTemplates].forEach((template) => {
       slotSet.add(`${normalizeTime(template.start_time)}-${normalizeTime(template.end_time)}`);
     });
-    scheduleBlocks.forEach((block) => {
-      const start = new Date(block.start_time);
-      const end = new Date(block.end_time);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
-      slotSet.add(`${toLocalTimeKey(start)}-${toLocalTimeKey(end)}`);
-    });
-    return Array.from(slotSet).sort();
-  }, [manualTemplates, learnedTemplates, scheduleBlocks]);
+    return Array.from(slotSet).sort(compareTimeSlotRange);
+  }, [manualTemplates, learnedTemplates]);
+
+  const weeklyDisplayTimeSlots = useMemo(
+    () => (weeklyTimeSlots.length > 0 ? weeklyTimeSlots : DEFAULT_WEEKLY_TIME_SLOTS),
+    [weeklyTimeSlots],
+  );
 
   const blockCalendarData = useMemo(() => {
     const dateKeys = new Set<string>();
@@ -363,10 +376,10 @@ export default function AccountScheduleTemplates({
   }, [weeklyHeaderDates]);
 
   const weeklyLastEndLabel = useMemo(() => {
-    if (weeklyTimeSlots.length === 0) return null;
-    const [, end] = weeklyTimeSlots[weeklyTimeSlots.length - 1].split('-');
+    if (weeklyDisplayTimeSlots.length === 0) return null;
+    const [, end] = weeklyDisplayTimeSlots[weeklyDisplayTimeSlots.length - 1].split('-');
     return end;
-  }, [weeklyTimeSlots]);
+  }, [weeklyDisplayTimeSlots]);
 
   const datedPeriodLabel = useMemo(() => {
     if (visibleBlockDates.length === 0) return null;
@@ -703,14 +716,17 @@ export default function AccountScheduleTemplates({
 
           {isLoading ? (
             <p className="text-sm text-gray-500">読み込み中...</p>
-          ) : weeklyTimeSlots.length === 0 ? (
-            <p className="text-sm text-gray-500">テンプレデータはまだありません。</p>
           ) : (
             <>
               <div className="bg-base-200 mb-2 flex items-center justify-between rounded-lg p-3">
                 <span className="text-sm font-medium">表示期間: {weeklyPeriodLabel}</span>
                 <span className="text-xs text-gray-600">週次固定</span>
               </div>
+              {weeklyTimeSlots.length === 0 && (
+                <p className="mb-2 text-xs text-gray-500">
+                  テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。
+                </p>
+              )}
               <div className="overflow-x-auto">
                 <table className="table-xs table w-full table-fixed border-collapse">
                   <thead>
@@ -740,7 +756,7 @@ export default function AccountScheduleTemplates({
                         <td key={`${weekday}-spacer`} className="h-1 md:h-3" />
                       ))}
                     </tr>
-                    {weeklyTimeSlots.map((timeSlot, rowIndex) => {
+                    {weeklyDisplayTimeSlots.map((timeSlot, rowIndex) => {
                       const [startTime, endTime] = timeSlot.split('-');
                       return (
                         <tr key={timeSlot}>

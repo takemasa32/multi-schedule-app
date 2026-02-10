@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
+  fetchUserScheduleTemplates,
+  upsertWeeklyTemplatesFromWeekdaySelections,
+} from '@/lib/schedule-actions';
+import {
   submitAvailability,
   checkParticipantExists,
   linkMyParticipantAnswerByName,
@@ -44,6 +48,12 @@ type WeekDaySchedule = {
   timeSlots: Record<string, boolean>;
 };
 type CellStatus = 'available' | 'unavailable' | 'empty';
+type WeekdayTemplatePayloadRow = {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  availability: boolean;
+};
 
 export default function AvailabilityForm({
   eventId,
@@ -87,6 +97,12 @@ export default function AvailabilityForm({
   const [showPrefillModal, setShowPrefillModal] = useState(false);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
+  const [showWeekdayApplyConfirm, setShowWeekdayApplyConfirm] = useState(false);
+  const [isSavingWeekdayTemplate, setIsSavingWeekdayTemplate] = useState(false);
+  const [weekdayApplyMessage, setWeekdayApplyMessage] = useState<string | null>(null);
+  const [isResolvingWeekdayApplyLabel, setIsResolvingWeekdayApplyLabel] = useState(false);
+  const [weekdayTemplateApplyLabel, setWeekdayTemplateApplyLabel] =
+    useState('ユーザ設定に保存して適用');
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const [isLinkingExistingAnswer, setIsLinkingExistingAnswer] = useState(false);
@@ -269,6 +285,19 @@ export default function AvailabilityForm({
     },
     [lockedDateIdSet, overrideDateIdSet],
   );
+
+  const weekdayToNumber = useCallback((weekday: WeekDay): number => {
+    const mapping: Record<WeekDay, number> = {
+      日: 0,
+      月: 1,
+      火: 2,
+      水: 3,
+      木: 4,
+      金: 5,
+      土: 6,
+    };
+    return mapping[weekday];
+  }, []);
 
   const promptSyncScope = useCallback(
     (formData: FormData) => {
@@ -691,7 +720,7 @@ export default function AvailabilityForm({
   }, []);
 
   // 週入力モード用の時間帯スロットを初期化する関数
-  const initializeWeekdayTimeSlots = () => {
+  const initializeWeekdayTimeSlots = useCallback(async () => {
     // 全ての時間帯を収集
     const timeSlots: Record<string, boolean> = {};
 
@@ -712,22 +741,43 @@ export default function AvailabilityForm({
       日: { ...timeSlots },
     };
 
+    const templateWeekdayMap = new Map<string, boolean>();
+    const selectedWeekdaysByTemplate = new Set<WeekDay>();
+    if (isAuthenticated) {
+      const templateData = await fetchUserScheduleTemplates();
+      templateData.manual.forEach((template) => {
+        const weekday =
+          ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as WeekDay | undefined;
+        if (!weekday) return;
+        const key = `${weekday}_${template.start_time.slice(0, 5)}-${template.end_time.slice(0, 5)}`;
+        templateWeekdayMap.set(key, template.availability);
+      });
+    }
+
     // 既存の選択データがある場合、曜日ごとに振り分ける
     eventDates.forEach((date) => {
+      const dateObj = new Date(date.start_time);
+      const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
+      const timeKey = getTimeKey(date.start_time, date.end_time);
+      const templateKey = `${weekday}_${timeKey}`;
+      if (templateWeekdayMap.has(templateKey)) {
+        weekdayData[weekday][timeKey] = templateWeekdayMap.get(templateKey) ?? false;
+        selectedWeekdaysByTemplate.add(weekday);
+      }
+
       if (selectedDates[date.id]) {
-        const dateObj = new Date(date.start_time);
-        const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
-        const timeKey = getTimeKey(date.start_time, date.end_time);
         weekdayData[weekday][timeKey] = true;
       }
     });
 
     // 各曜日に時間帯スロットを設定
-    const updatedSelections = { ...weekdaySelections };
-    Object.keys(updatedSelections).forEach((day) => {
+    const updatedSelections = {} as Record<WeekDay, WeekDaySchedule>;
+    (Object.keys(weekdayData) as WeekDay[]).forEach((day) => {
       const weekday = day as WeekDay;
-      // 少なくとも1つ選択されている場合はその曜日を「選択済み」とする
-      const hasSelection = Object.values(weekdayData[weekday]).some((val) => val);
+      // テンプレの該当行がある曜日、または少なくとも1つ選択されている曜日を選択済みにする。
+      const hasSelection =
+        selectedWeekdaysByTemplate.has(weekday) ||
+        Object.values(weekdayData[weekday]).some((val) => val);
 
       updatedSelections[weekday] = {
         selected: hasSelection,
@@ -736,7 +786,7 @@ export default function AvailabilityForm({
     });
 
     setWeekdaySelections(updatedSelections);
-  };
+  }, [eventDates, getTimeKey, isAuthenticated, selectedDates]);
 
   // CellStatusに基づいて表示するアイコンやテキスト
   const getCellContent = (status: CellStatus) => {
@@ -806,6 +856,157 @@ export default function AvailabilityForm({
     // 状態を更新
     setSelectedDates(newSelectedDates);
   }, [weekdaySelections, eventDates, selectedDates, getTimeKey, manuallyEditedDateIds]);
+
+  const buildWeekdayTemplatePayload = useCallback(() => {
+    const rows: WeekdayTemplatePayloadRow[] = [];
+    Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
+      if (!daySchedule.selected) return;
+      const weekdayNumber = weekdayToNumber(day as WeekDay);
+      Object.entries(daySchedule.timeSlots).forEach(([timeKey, availability]) => {
+        const [startTime, endTime] = timeKey.split('-');
+        if (!startTime || !endTime) return;
+        rows.push({
+          weekday: weekdayNumber,
+          startTime,
+          endTime,
+          availability,
+        });
+      });
+    });
+    return rows;
+  }, [weekdaySelections, weekdayToNumber]);
+
+  const alignWeekdayTemplatePayloadToManual = useCallback(
+    (
+      payload: WeekdayTemplatePayloadRow[],
+      manualRows: Array<{
+        weekday: number;
+        start_time: string;
+        end_time: string;
+        availability: boolean;
+      }>,
+    ): WeekdayTemplatePayloadRow[] => {
+      if (payload.length === 0) return payload;
+
+      const payloadWeekdays = Array.from(new Set(payload.map((row) => row.weekday)));
+      const payloadMap = new Map<string, WeekdayTemplatePayloadRow>();
+      payload.forEach((row) => {
+        payloadMap.set(`${row.weekday}_${row.startTime}-${row.endTime}`, row);
+      });
+
+      const manualByWeekday = new Map<number, typeof manualRows>();
+      manualRows.forEach((row) => {
+        const entries = manualByWeekday.get(row.weekday) ?? [];
+        entries.push(row);
+        manualByWeekday.set(row.weekday, entries);
+      });
+
+      const alignedRows: WeekdayTemplatePayloadRow[] = [];
+      payloadWeekdays.forEach((weekday) => {
+        const manualEntries = manualByWeekday.get(weekday) ?? [];
+        if (manualEntries.length === 0) {
+          payload
+            .filter((row) => row.weekday === weekday)
+            .forEach((row) => {
+              alignedRows.push(row);
+            });
+          return;
+        }
+
+        manualEntries.forEach((manualRow) => {
+          const startTime = manualRow.start_time.slice(0, 5);
+          const endTime = manualRow.end_time.slice(0, 5);
+          const key = `${weekday}_${startTime}-${endTime}`;
+          const incoming = payloadMap.get(key);
+          alignedRows.push({
+            weekday,
+            startTime,
+            endTime,
+            availability: incoming ? incoming.availability : manualRow.availability,
+          });
+        });
+      });
+
+      return alignedRows;
+    },
+    [],
+  );
+
+  const resolveWeekdayTemplateApplyLabel = useCallback(async () => {
+    setIsResolvingWeekdayApplyLabel(true);
+    const rawPayload = buildWeekdayTemplatePayload();
+    if (!rawPayload.length) {
+      setWeekdayTemplateApplyLabel('ユーザ設定に保存して適用');
+      setIsResolvingWeekdayApplyLabel(false);
+      return;
+    }
+
+    const templates = await fetchUserScheduleTemplates();
+    const payload = alignWeekdayTemplatePayloadToManual(rawPayload, templates.manual);
+    const manualMap = new Map<
+      string,
+      {
+        availability: boolean;
+      }
+    >();
+    templates.manual.forEach((row) => {
+      manualMap.set(`${row.weekday}_${row.start_time.slice(0, 5)}-${row.end_time.slice(0, 5)}`, {
+        availability: row.availability,
+      });
+    });
+
+    let hasCreate = false;
+    let hasUpdate = false;
+    payload.forEach((row) => {
+      const key = `${row.weekday}_${row.startTime}-${row.endTime}`;
+      const current = manualMap.get(key);
+      if (!current) {
+        hasCreate = true;
+        return;
+      }
+      if (current.availability !== row.availability) {
+        hasUpdate = true;
+      }
+    });
+
+    if (hasCreate && hasUpdate) {
+      setWeekdayTemplateApplyLabel('ユーザ設定を保存・更新して適用');
+    } else if (hasUpdate) {
+      setWeekdayTemplateApplyLabel('ユーザ設定を更新して適用');
+    } else if (hasCreate) {
+      setWeekdayTemplateApplyLabel('ユーザ設定に保存して適用');
+    } else {
+      setWeekdayTemplateApplyLabel('ユーザ設定を維持して適用');
+    }
+
+    setIsResolvingWeekdayApplyLabel(false);
+  }, [alignWeekdayTemplatePayloadToManual, buildWeekdayTemplatePayload]);
+
+  const applyWeekdaySelectionsCurrentOnly = useCallback(() => {
+    applyWeekdaySelections();
+    setIsWeekdayModeActive(false);
+    setShowWeekdayApplyConfirm(false);
+    setWeekdayApplyMessage('今回のイベントにのみ適用しました。');
+  }, [applyWeekdaySelections]);
+
+  const applyWeekdaySelectionsWithTemplateSave = useCallback(async () => {
+    setIsSavingWeekdayTemplate(true);
+    const rawPayload = buildWeekdayTemplatePayload();
+    const templates = await fetchUserScheduleTemplates();
+    const templatePayload = alignWeekdayTemplatePayloadToManual(rawPayload, templates.manual);
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: templatePayload,
+    });
+    setIsSavingWeekdayTemplate(false);
+    if (!result.success) {
+      setWeekdayApplyMessage(result.message ?? '週ごとの用事の更新に失敗しました。');
+      return;
+    }
+    applyWeekdaySelections();
+    setIsWeekdayModeActive(false);
+    setShowWeekdayApplyConfirm(false);
+    setWeekdayApplyMessage('ユーザ設定にも保存して適用しました。');
+  }, [alignWeekdayTemplatePayloadToManual, applyWeekdaySelections, buildWeekdayTemplatePayload]);
 
   return (
     <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
@@ -1247,14 +1448,21 @@ export default function AvailabilityForm({
                         type="button"
                         className="btn btn-sm btn-primary"
                         onClick={() => {
-                          // 選択した曜日と時間帯に基づいて日程を更新
-                          applyWeekdaySelections();
-                          setIsWeekdayModeActive(false);
+                          if (!isAuthenticated) {
+                            applyWeekdaySelectionsCurrentOnly();
+                            return;
+                          }
+                          setShowWeekdayApplyConfirm(true);
+                          setWeekdayApplyMessage(null);
+                          void resolveWeekdayTemplateApplyLabel();
                         }}
                       >
                         設定を適用する
                       </button>
                     </div>
+                    {weekdayApplyMessage && (
+                      <p className="mt-2 text-xs text-gray-600">{weekdayApplyMessage}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -1683,6 +1891,55 @@ export default function AvailabilityForm({
                     >
                       全イベントへ反映
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 曜日入力の適用方法確認ダイアログ */}
+            {showWeekdayApplyConfirm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+                  <h3 className="mb-4 text-lg font-bold">適用方法を選択してください</h3>
+                  <p className="mb-6 text-sm text-gray-600">
+                    {isAuthenticated
+                      ? '曜日ごとの時間帯設定を今回のイベントに適用します。あわせて、ユーザ設定（週ごとの用事）を更新することもできます。'
+                      : '曜日ごとの時間帯設定を今回のイベントに適用します。'}
+                  </p>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowWeekdayApplyConfirm(false);
+                        setWeekdayApplyMessage(null);
+                      }}
+                      className="btn btn-outline"
+                      disabled={isSavingWeekdayTemplate}
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={applyWeekdaySelectionsCurrentOnly}
+                      className={isAuthenticated ? 'btn btn-outline' : 'btn btn-primary'}
+                      disabled={isSavingWeekdayTemplate}
+                    >
+                      今回のみ適用
+                    </button>
+                    {isAuthenticated && (
+                      <button
+                        type="button"
+                        onClick={() => void applyWeekdaySelectionsWithTemplateSave()}
+                        className="btn btn-primary"
+                        disabled={isSavingWeekdayTemplate || isResolvingWeekdayApplyLabel}
+                      >
+                        {isResolvingWeekdayApplyLabel
+                          ? '判定中...'
+                          : isSavingWeekdayTemplate
+                            ? '保存して適用中...'
+                            : weekdayTemplateApplyLabel}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

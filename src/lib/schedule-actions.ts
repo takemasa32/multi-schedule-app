@@ -990,3 +990,60 @@ export async function removeUserScheduleBlock(blockId: string): Promise<{ succes
 
   return { success: true };
 }
+
+export async function upsertWeeklyTemplatesFromWeekdaySelections({
+  templates,
+}: {
+  templates: Array<{
+    weekday: number;
+    startTime: string;
+    endTime: string;
+    availability: boolean;
+  }>;
+}): Promise<{ success: boolean; message?: string; updatedCount: number }> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: 'ログインが必要です', updatedCount: 0 };
+  }
+
+  if (!templates.length) {
+    return { success: false, message: '保存対象の設定がありません', updatedCount: 0 };
+  }
+
+  const normalized = templates.filter(
+    (row) =>
+      Number.isInteger(row.weekday) &&
+      row.weekday >= 0 &&
+      row.weekday <= 6 &&
+      row.startTime &&
+      row.endTime &&
+      row.startTime < row.endTime,
+  );
+  if (!normalized.length) {
+    return { success: false, message: '曜日ごとの設定が不正です', updatedCount: 0 };
+  }
+
+  const supabase = createSupabaseAdmin();
+  const payload = normalized.map((row) => ({
+    user_id: userId,
+    weekday: row.weekday,
+    start_time: row.startTime,
+    end_time: row.endTime,
+    availability: row.availability,
+    source: 'manual',
+    sample_count: 1,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { error } = await supabase
+    .from('user_schedule_templates')
+    .upsert(payload, { onConflict: 'user_id,weekday,start_time,end_time,source' });
+
+  if (error) {
+    console.error('週次テンプレ更新エラー:', error);
+    return { success: false, message: '週ごとの用事の更新に失敗しました', updatedCount: 0 };
+  }
+
+  return { success: true, updatedCount: payload.length };
+}
