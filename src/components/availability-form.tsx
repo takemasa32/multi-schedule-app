@@ -928,6 +928,7 @@ export default function AvailabilityForm({
                     className="btn btn-xs btn-outline"
                     onClick={() => void handleLinkExistingAnswer()}
                     disabled={isLinkingExistingAnswer || isWeekdayModeActive}
+                    data-testid="availability-link-existing-answer"
                   >
                     {isLinkingExistingAnswer ? '検索中...' : '既存回答を探して紐づける'}
                   </button>

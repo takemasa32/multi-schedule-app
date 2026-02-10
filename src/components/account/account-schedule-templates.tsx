@@ -146,12 +146,18 @@ const toWeeklyDateBuckets = (dateKeys: string[]): string[][] => {
   return buckets;
 };
 
-export default function AccountScheduleTemplates() {
+type AccountScheduleTemplatesProps = {
+  initialIsAuthenticated?: boolean;
+};
+
+export default function AccountScheduleTemplates({
+  initialIsAuthenticated = false,
+}: AccountScheduleTemplatesProps) {
   const { status } = useSession();
   const [manualTemplates, setManualTemplates] = useState<ScheduleTemplate[]>([]);
   const [learnedTemplates, setLearnedTemplates] = useState<ScheduleTemplate[]>([]);
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(initialIsAuthenticated);
   const [activeTab, setActiveTab] = useState<ActiveTab>('weekly');
 
   const [weeklyEditing, setWeeklyEditing] = useState(false);
@@ -179,8 +185,11 @@ export default function AccountScheduleTemplates() {
   const [syncApplyingEventId, setSyncApplyingEventId] = useState<string | null>(null);
   const syncSectionRef = useRef<HTMLDivElement | null>(null);
 
+  const isAuthenticated =
+    status === 'authenticated' || (status === 'loading' && initialIsAuthenticated);
+
   const loadAll = useCallback(async () => {
-    if (status !== 'authenticated') return;
+    if (!isAuthenticated) return;
     setIsLoading(true);
     const [templateData, blocksData] = await Promise.all([
       fetchUserScheduleTemplates(),
@@ -190,7 +199,7 @@ export default function AccountScheduleTemplates() {
     setLearnedTemplates(templateData.learned);
     setScheduleBlocks(blocksData);
     setIsLoading(false);
-  }, [status]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     void loadAll();
@@ -610,7 +619,7 @@ export default function AccountScheduleTemplates() {
     }
   };
 
-  if (status !== 'authenticated') {
+  if (!isAuthenticated) {
     return (
       <div className="bg-base-200 rounded-lg p-4 text-sm text-gray-500">
         ログインすると予定設定を管理できます。
@@ -621,7 +630,10 @@ export default function AccountScheduleTemplates() {
   const isWeeklyTab = activeTab === 'weekly';
 
   return (
-    <div className="bg-base-100 rounded-lg border p-4 shadow-sm">
+    <div
+      className="bg-base-100 rounded-lg border p-4 shadow-sm"
+      data-testid="account-schedule-templates"
+    >
       <h3 className="mb-2 text-lg font-semibold">マイ予定設定</h3>
       <p className="mb-4 text-sm text-gray-500">タブで表示対象を切り替えて編集できます。</p>
 
@@ -630,6 +642,7 @@ export default function AccountScheduleTemplates() {
           type="button"
           className={`join-item btn btn-sm ${isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('weekly')}
+          data-testid="account-tab-weekly"
         >
           週ごとの用事
         </button>
@@ -637,6 +650,7 @@ export default function AccountScheduleTemplates() {
           type="button"
           className={`join-item btn btn-sm ${!isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('dated')}
+          data-testid="account-tab-dated"
         >
           予定一括管理
         </button>
@@ -657,6 +671,7 @@ export default function AccountScheduleTemplates() {
                     setWeeklyMessage(null);
                   }}
                   disabled={weeklySaving}
+                  data-testid="weekly-cancel"
                 >
                   キャンセル
                 </button>
@@ -665,6 +680,7 @@ export default function AccountScheduleTemplates() {
                   className="btn btn-sm btn-primary"
                   onClick={() => void saveWeekly()}
                   disabled={weeklySaving}
+                  data-testid="weekly-save"
                 >
                   {weeklySaving ? '更新中...' : '更新する'}
                 </button>
@@ -678,6 +694,7 @@ export default function AccountScheduleTemplates() {
                   setWeeklyEditing(true);
                   setWeeklyMessage(null);
                 }}
+                data-testid="weekly-edit"
               >
                 編集する
               </button>
@@ -813,6 +830,7 @@ export default function AccountScheduleTemplates() {
                     setDatedMessage(null);
                   }}
                   disabled={datedSaving}
+                  data-testid="dated-cancel"
                 >
                   キャンセル
                 </button>
@@ -821,6 +839,7 @@ export default function AccountScheduleTemplates() {
                   className="btn btn-sm btn-primary"
                   onClick={() => void saveDated()}
                   disabled={datedSaving}
+                  data-testid="dated-save"
                 >
                   {datedSaving ? '更新中...' : '更新する'}
                 </button>
@@ -834,6 +853,7 @@ export default function AccountScheduleTemplates() {
                   setDatedEditing(true);
                   setDatedMessage(null);
                 }}
+                data-testid="dated-edit"
               >
                 編集する
               </button>
@@ -961,7 +981,7 @@ export default function AccountScheduleTemplates() {
           <div className="mt-2 text-xs text-gray-500">凡例: ○=可 / ×=不可 / -=未設定</div>
           {datedMessage && <p className="text-info mt-2 text-sm">{datedMessage}</p>}
 
-          <div ref={syncSectionRef} className="mt-6 space-y-3">
+          <div ref={syncSectionRef} className="mt-6 space-y-3" data-testid="schedule-sync-section">
             <div className="flex items-center justify-between gap-2">
               <h5 className="text-sm font-semibold">回答イベントへの反映</h5>
               <button
@@ -969,6 +989,7 @@ export default function AccountScheduleTemplates() {
                 className="btn btn-sm btn-outline"
                 onClick={() => void loadSyncPreview()}
                 disabled={isSyncPreviewLoading || datedEditing}
+                data-testid="sync-check-button"
               >
                 {isSyncPreviewLoading ? '確認中...' : '変更内容を確認'}
               </button>
@@ -1190,6 +1211,7 @@ export default function AccountScheduleTemplates() {
                         type="button"
                         className="btn btn-sm btn-primary ml-auto"
                         disabled={isUpdating}
+                        data-testid={`sync-apply-${event.eventId}`}
                         onClick={async () => {
                           setSyncApplyingEventId(event.eventId);
                           const result = await applyUserAvailabilitySyncForEvent({

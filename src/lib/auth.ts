@@ -18,8 +18,10 @@ const createAuthPool = () => {
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const allowDevLoginInProduction = process.env.ALLOW_DEV_LOGIN_IN_PRODUCTION === 'true';
 const devLoginEnabled =
-  process.env.ENABLE_DEV_LOGIN === 'true' && process.env.NODE_ENV !== 'production';
+  process.env.ENABLE_DEV_LOGIN === 'true' &&
+  (process.env.NODE_ENV !== 'production' || allowDevLoginInProduction);
 const devLoginId = process.env.DEV_LOGIN_ID;
 const devLoginPassword = process.env.DEV_LOGIN_PASSWORD;
 const allowDevLogin = Boolean(devLoginEnabled && devLoginId && devLoginPassword);

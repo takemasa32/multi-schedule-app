@@ -39,12 +39,19 @@ export default function AccountAnswerLinker() {
 
   useEffect(() => {
     void loadCandidates();
+    const handleHistorySynced = () => {
+      void loadCandidates();
+    };
+    window.addEventListener('event-history-synced', handleHistorySynced);
+    return () => {
+      window.removeEventListener('event-history-synced', handleHistorySynced);
+    };
   }, [loadCandidates]);
 
   const hasCandidates = useMemo(() => candidates.length > 0, [candidates.length]);
 
   return (
-    <section className="mb-8">
+    <section className="mb-8" data-testid="account-answer-linker">
       <h2 className="mb-2 text-lg font-semibold">未ログイン回答の紐づけ</h2>
       <p className="mb-3 text-sm text-gray-500">
         未ログイン時に閲覧・回答したイベントを、アカウントへ紐づけできます。
@@ -56,6 +63,7 @@ export default function AccountAnswerLinker() {
           className="btn btn-sm btn-outline"
           onClick={() => void loadCandidates()}
           disabled={isLoading}
+          data-testid="answer-linker-refresh"
         >
           {isLoading ? '読み込み中...' : '候補を更新'}
         </button>
@@ -71,7 +79,11 @@ export default function AccountAnswerLinker() {
             const selectedId = selectedParticipantMap[candidate.eventId] ?? '';
             const isLinking = linkingEventId === candidate.eventId;
             return (
-              <div key={candidate.eventId} className="bg-base-100 rounded-lg border p-4">
+              <div
+                key={candidate.eventId}
+                className="bg-base-100 rounded-lg border p-4"
+                data-testid={`answer-linker-candidate-${candidate.eventId}`}
+              >
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{candidate.title}</p>
@@ -93,6 +105,7 @@ export default function AccountAnswerLinker() {
                   <select
                     className="select select-bordered select-sm w-full sm:max-w-xs"
                     value={selectedId}
+                    data-testid={`answer-linker-select-${candidate.eventId}`}
                     onChange={(e) =>
                       setSelectedParticipantMap((prev) => ({
                         ...prev,
@@ -110,6 +123,7 @@ export default function AccountAnswerLinker() {
                     type="button"
                     className="btn btn-sm btn-primary"
                     disabled={!selectedId || isLinking}
+                    data-testid={`answer-linker-link-${candidate.eventId}`}
                     onClick={async () => {
                       if (!selectedId) return;
                       setLinkingEventId(candidate.eventId);

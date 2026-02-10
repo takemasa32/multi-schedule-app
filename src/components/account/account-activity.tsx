@@ -6,12 +6,16 @@ import { FavoriteEventsProvider } from '@/components/favorite-events-context';
 import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
 import AccountAnswerLinker from '@/components/account/account-answer-linker';
 
-export default function AccountActivity() {
+type AccountActivityProps = {
+  isAuthenticated: boolean;
+};
+
+export default function AccountActivity({ isAuthenticated }: AccountActivityProps) {
   return (
     <FavoriteEventsProvider>
       <section className="mb-8">
         <h2 className="mb-2 text-lg font-semibold">マイ予定設定</h2>
-        <AccountScheduleTemplates />
+        <AccountScheduleTemplates initialIsAuthenticated={isAuthenticated} />
       </section>
       <AccountAnswerLinker />
       <section className="mb-8">

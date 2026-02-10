@@ -60,6 +60,20 @@ describe('AccountScheduleTemplates', () => {
     expect(screen.getByText('ログインすると予定設定を管理できます。')).toBeInTheDocument();
   });
 
+  it('初期認証済みの場合はセッション読込中でも未ログイン文言を表示しない', async () => {
+    mockUseSession.mockReturnValue({ status: 'loading' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+
+    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+
+    expect(screen.queryByText('ログインすると予定設定を管理できます。')).not.toBeInTheDocument();
+    await screen.findByRole('heading', { name: '週ごとの用事' });
+  });
+
   it('編集して更新するとテンプレを保存できる', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleTemplates.mockResolvedValue({

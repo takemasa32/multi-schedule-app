@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  EventHistoryItem,
-  getEventHistory,
-  clearEventHistory,
-  setEventHistory,
-} from '@/lib/utils';
+import { EventHistoryItem, getEventHistory, clearEventHistory, setEventHistory } from '@/lib/utils';
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
 import { signIn, useSession } from 'next-auth/react';
 import { clearServerEventHistory, syncEventHistory } from '@/lib/event-history-actions';
@@ -74,6 +69,7 @@ function EventHistoryInner({
         setEventHistory(nextHistory);
       }
       setHistory(nextHistory);
+      window.dispatchEvent(new CustomEvent('event-history-synced'));
     };
 
     void syncHistory();

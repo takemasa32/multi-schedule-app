@@ -30,8 +30,10 @@ export default function SignInPage() {
   const [devId, setDevId] = useState('');
   const [devPassword, setDevPassword] = useState('');
   const [devError, setDevError] = useState<string | null>(null);
+  const allowDevLoginInProduction = process.env.NEXT_PUBLIC_ALLOW_DEV_LOGIN_IN_PRODUCTION === 'true';
   const isDevLoginEnabled =
-    process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' && process.env.NODE_ENV !== 'production';
+    process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' &&
+    (process.env.NODE_ENV !== 'production' || allowDevLoginInProduction);
 
   const handleBack = () => {
     router.push(callbackUrl);

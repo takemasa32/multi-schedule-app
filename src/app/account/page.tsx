@@ -61,7 +61,7 @@ export default async function AccountPage() {
         </div>
       </div>
 
-      <AccountActivity />
+      <AccountActivity isAuthenticated={Boolean(user)} />
     </section>
   );
 }
