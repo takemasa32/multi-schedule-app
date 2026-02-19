@@ -13,10 +13,10 @@ type AccountActivityProps = {
 export default function AccountActivity({ isAuthenticated }: AccountActivityProps) {
   return (
     <FavoriteEventsProvider>
+      <AccountAnswerLinker />
       <section className="mb-8">
         <AccountScheduleTemplates initialIsAuthenticated={isAuthenticated} />
       </section>
-      <AccountAnswerLinker />
       <section className="mb-8">
         <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>
         <FavoriteEvents />

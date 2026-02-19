@@ -1861,22 +1861,11 @@ export default function AvailabilityForm({
             {showSyncConfirm && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
-                  <h3 className="mb-4 text-lg font-bold">変更の反映範囲</h3>
+                  <h3 className="mb-4 text-lg font-bold">回答後の保存方法</h3>
                   <p className="mb-6 text-sm text-gray-600">
-                    この変更を他のイベントにも反映しますか？
+                    この回答をアカウント予定に保存し、他イベントへの反映も実行しますか？
                   </p>
                   <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSyncConfirm(false);
-                        setPendingSyncFormData(null);
-                        setIsSubmitting(false);
-                      }}
-                      className="btn btn-outline"
-                    >
-                      キャンセル
-                    </button>
                     <button
                       type="button"
                       onClick={() => handleSyncScopeChoice('current')}
@@ -1889,7 +1878,7 @@ export default function AvailabilityForm({
                       onClick={() => handleSyncScopeChoice('all')}
                       className="btn btn-primary"
                     >
-                      全イベントへ反映
+                      アカウント予定に保存して反映
                     </button>
                   </div>
                 </div>

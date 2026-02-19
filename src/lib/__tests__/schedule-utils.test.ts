@@ -1,4 +1,4 @@
-import { computeAutoFillAvailability } from '@/lib/schedule-utils';
+import { computeAutoFillAvailability, toWallClockUtcIso } from '@/lib/schedule-utils';
 
 describe('computeAutoFillAvailability', () => {
   it('可は内包のみを反映する', () => {
@@ -16,6 +16,45 @@ describe('computeAutoFillAvailability', () => {
     });
 
     expect(result).toBe(true);
+  });
+
+  it('可ブロックが連続して対象時間を覆う場合は可を返す', () => {
+    const result = computeAutoFillAvailability({
+      start: '2026-02-05T09:00:00.000Z',
+      end: '2026-02-05T11:00:00.000Z',
+      blocks: [
+        {
+          start_time: '2026-02-05T09:00:00.000Z',
+          end_time: '2026-02-05T10:00:00.000Z',
+          availability: true,
+        },
+        {
+          start_time: '2026-02-05T10:00:00.000Z',
+          end_time: '2026-02-05T11:00:00.000Z',
+          availability: true,
+        },
+      ],
+      templates: [],
+    });
+
+    expect(result).toBe(true);
+  });
+
+  it('可ブロックに欠けがある場合は可を返さない', () => {
+    const result = computeAutoFillAvailability({
+      start: '2026-02-05T09:00:00.000Z',
+      end: '2026-02-05T11:00:00.000Z',
+      blocks: [
+        {
+          start_time: '2026-02-05T09:00:00.000Z',
+          end_time: '2026-02-05T10:00:00.000Z',
+          availability: true,
+        },
+      ],
+      templates: [],
+    });
+
+    expect(result).toBeNull();
   });
 
   it('不可は重なりで反映する', () => {
@@ -135,5 +174,17 @@ describe('computeAutoFillAvailability', () => {
     });
 
     expect(result).toBe(false);
+  });
+});
+
+describe('toWallClockUtcIso', () => {
+  it('タイムゾーンなし日時を壁時計時刻のままUTC ISOへ正規化する', () => {
+    const result = toWallClockUtcIso('2026-02-05T09:30:00');
+    expect(result).toBe('2026-02-05T09:30:00.000Z');
+  });
+
+  it('タイムゾーン付き日時も壁時計時刻を維持してUTC ISOへ正規化する', () => {
+    const result = toWallClockUtcIso('2026-02-05T09:30:00+09:00');
+    expect(result).toBe('2026-02-05T09:30:00.000Z');
   });
 });

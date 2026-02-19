@@ -94,11 +94,20 @@ const loginAsDevUser = async (page: Page): Promise<void> => {
 };
 
 const closeAutoFillModalIfPresent = async (page: Page): Promise<void> => {
+  const dialogHeading = page.getByRole('heading', { name: '過去の予定から反映しますか？' });
   const skipButton = page.getByRole('button', { name: 'まっさらで始める' });
-  if (await skipButton.isVisible().catch(() => false)) {
-    await skipButton.click();
-    await expect(skipButton).not.toBeVisible({ timeout: 5000 });
-  }
+
+  // モーダルが遅延表示されるケースを考慮して短時間待機する。
+  const isDialogVisible =
+    (await dialogHeading.isVisible().catch(() => false)) ||
+    (await dialogHeading.waitFor({ state: 'visible', timeout: 3000 }).then(
+      () => true,
+      () => false,
+    ));
+  if (!isDialogVisible) return;
+
+  await skipButton.click();
+  await expect(dialogHeading).toBeHidden({ timeout: 5000 });
 };
 
 test.describe('アカウント連携管理E2E @auth-required', () => {
@@ -324,7 +333,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     );
     await db.query(
       `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source,event_id,updated_at)
-       values($1,'2099-04-06T03:00:00Z','2099-04-06T04:00:00Z',true,'manual',null,now())`,
+       values($1,date_trunc('hour', now()),date_trunc('hour', now()) + interval '1 hour',true,'manual',null,now())`,
       [userId],
     );
 
@@ -332,6 +341,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
     const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
 
+    await scheduleTemplates.getByTestId('account-tab-weekly').click();
     await scheduleTemplates.getByTestId('weekly-edit').click();
     await scheduleTemplates.locator('button[aria-label*=":"]').first().click();
     await scheduleTemplates.getByTestId('weekly-save').click();
@@ -343,7 +353,6 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await scheduleTemplates.getByTestId('dated-edit').click();
     await scheduleTemplates
       .locator('button[aria-label^="20"]')
-      .filter({ hasText: '-' })
       .first()
       .click();
     await scheduleTemplates.getByTestId('dated-save').click();

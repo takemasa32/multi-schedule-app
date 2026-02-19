@@ -38,10 +38,58 @@ export const toComparableDate = (value: string): Date => {
   return new Date(value);
 };
 
+/**
+ * タイムゾーン表現の差を吸収し、壁時計時刻（YYYY-MM-DD HH:mm:ss）を維持した UTC ISO へ正規化する
+ */
+export const toWallClockUtcIso = (value: string): string => {
+  const date = toComparableDate(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Date(
+    Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds(),
+    ),
+  ).toISOString();
+};
+
 const toTimeRange = (start: string, end: string): TimeRange => ({
   start: toComparableDate(start),
   end: toComparableDate(end),
 });
+
+const isCoveredByRanges = (target: TimeRange, ranges: TimeRange[]): boolean => {
+  const normalized = ranges
+    .map((range) => ({
+      start: range.start < target.start ? target.start : range.start,
+      end: range.end > target.end ? target.end : range.end,
+    }))
+    .filter((range) => range.start < range.end)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  if (normalized.length === 0) return false;
+
+  let coveredUntil = target.start;
+  for (const range of normalized) {
+    if (range.start > coveredUntil) {
+      return false;
+    }
+    if (range.end > coveredUntil) {
+      coveredUntil = range.end;
+    }
+    if (coveredUntil >= target.end) {
+      return true;
+    }
+  }
+
+  return coveredUntil >= target.end;
+};
 
 const toMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
@@ -50,10 +98,6 @@ const toMinutes = (time: string): number => {
 
 export const isRangeOverlapping = (a: TimeRange, b: TimeRange): boolean => {
   return a.start < b.end && a.end > b.start;
-};
-
-export const isRangeContained = (inner: TimeRange, outer: TimeRange): boolean => {
-  return inner.start >= outer.start && inner.end <= outer.end;
 };
 
 const toTimeOfDayRange = (date: Date): TimeOfDayRange => {
@@ -102,11 +146,10 @@ export const computeAutoFillAvailability = ({
   });
   if (hasUnavailableOverlap) return false;
 
-  const hasAvailableContained = blocks.some((block) => {
-    if (!block.availability) return false;
-    return isRangeContained(targetRange, toTimeRange(block.start_time, block.end_time));
-  });
-  if (hasAvailableContained) return true;
+  const availableRanges = blocks
+    .filter((block) => block.availability)
+    .map((block) => toTimeRange(block.start_time, block.end_time));
+  if (isCoveredByRanges(targetRange, availableRanges)) return true;
 
   const targetStart = toComparableDate(start);
   const targetEnd = toComparableDate(end);

@@ -50,6 +50,10 @@ export default function AccountAnswerLinker() {
 
   const hasCandidates = useMemo(() => candidates.length > 0, [candidates.length]);
 
+  if (!hasCandidates) {
+    return null;
+  }
+
   return (
     <section className="mb-8" data-testid="account-answer-linker">
       <h2 className="mb-2 text-lg font-semibold">未ログイン回答の紐づけ</h2>
@@ -69,90 +73,84 @@ export default function AccountAnswerLinker() {
         </button>
       </div>
 
-      {!isLoading && !hasCandidates ? (
-        <div className="bg-base-200 rounded-lg p-4 text-sm text-gray-500">
-          紐づけ候補はありません。
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {candidates.map((candidate) => {
-            const selectedId = selectedParticipantMap[candidate.eventId] ?? '';
-            const isLinking = linkingEventId === candidate.eventId;
-            return (
-              <div
-                key={candidate.eventId}
-                className="bg-base-100 rounded-lg border p-4"
-                data-testid={`answer-linker-candidate-${candidate.eventId}`}
-              >
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{candidate.title}</p>
-                    <p className="text-xs text-gray-500">
-                      最終閲覧: {formatLastAccessed(candidate.lastAccessedAt)}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/event/${candidate.publicToken}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-xs btn-outline"
-                  >
-                    イベントを開く
-                  </Link>
+      <div className="space-y-3">
+        {candidates.map((candidate) => {
+          const selectedId = selectedParticipantMap[candidate.eventId] ?? '';
+          const isLinking = linkingEventId === candidate.eventId;
+          return (
+            <div
+              key={candidate.eventId}
+              className="bg-base-100 rounded-lg border p-4"
+              data-testid={`answer-linker-candidate-${candidate.eventId}`}
+            >
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{candidate.title}</p>
+                  <p className="text-xs text-gray-500">
+                    最終閲覧: {formatLastAccessed(candidate.lastAccessedAt)}
+                  </p>
                 </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <select
-                    className="select select-bordered select-sm w-full sm:max-w-xs"
-                    value={selectedId}
-                    data-testid={`answer-linker-select-${candidate.eventId}`}
-                    onChange={(e) =>
-                      setSelectedParticipantMap((prev) => ({
-                        ...prev,
-                        [candidate.eventId]: e.target.value,
-                      }))
-                    }
-                  >
-                    {candidate.participants.map((participant) => (
-                      <option key={participant.id} value={participant.id}>
-                        {participant.name}（回答: {formatLastAccessed(participant.createdAt)}）
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    disabled={!selectedId || isLinking}
-                    data-testid={`answer-linker-link-${candidate.eventId}`}
-                    onClick={async () => {
-                      if (!selectedId) return;
-                      setLinkingEventId(candidate.eventId);
-                      const result = await linkMyParticipantAnswerById({
-                        eventId: candidate.eventId,
-                        participantId: selectedId,
-                      });
-                      setLinkingEventId(null);
-                      setMessageMap((prev) => ({
-                        ...prev,
-                        [candidate.eventId]: result.message,
-                      }));
-                      if (result.success) {
-                        await loadCandidates();
-                      }
-                    }}
-                  >
-                    {isLinking ? '紐づけ中...' : 'この回答を紐づける'}
-                  </button>
-                </div>
-
-                {messageMap[candidate.eventId] && (
-                  <p className="mt-2 text-xs text-gray-600">{messageMap[candidate.eventId]}</p>
-                )}
+                <Link
+                  href={`/event/${candidate.publicToken}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-xs btn-outline"
+                >
+                  イベントを開く
+                </Link>
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  className="select select-bordered select-sm w-full sm:max-w-xs"
+                  value={selectedId}
+                  data-testid={`answer-linker-select-${candidate.eventId}`}
+                  onChange={(e) =>
+                    setSelectedParticipantMap((prev) => ({
+                      ...prev,
+                      [candidate.eventId]: e.target.value,
+                    }))
+                  }
+                >
+                  {candidate.participants.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {participant.name}（回答: {formatLastAccessed(participant.createdAt)}）
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  disabled={!selectedId || isLinking}
+                  data-testid={`answer-linker-link-${candidate.eventId}`}
+                  onClick={async () => {
+                    if (!selectedId) return;
+                    setLinkingEventId(candidate.eventId);
+                    const result = await linkMyParticipantAnswerById({
+                      eventId: candidate.eventId,
+                      participantId: selectedId,
+                    });
+                    setLinkingEventId(null);
+                    setMessageMap((prev) => ({
+                      ...prev,
+                      [candidate.eventId]: result.message,
+                    }));
+                    if (result.success) {
+                      await loadCandidates();
+                    }
+                  }}
+                >
+                  {isLinking ? '紐づけ中...' : 'この回答を紐づける'}
+                </button>
+              </div>
+
+              {messageMap[candidate.eventId] && (
+                <p className="mt-2 text-xs text-gray-600">{messageMap[candidate.eventId]}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

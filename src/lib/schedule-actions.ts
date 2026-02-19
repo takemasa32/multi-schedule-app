@@ -6,6 +6,7 @@ import {
   computeAutoFillAvailability,
   isRangeOverlapping,
   toComparableDate,
+  toWallClockUtcIso,
   type ScheduleBlock,
   type ScheduleTemplate,
 } from '@/lib/schedule-utils';
@@ -273,21 +274,39 @@ const buildUserAvailabilitySyncPreview = async (
 };
 
 const splitToHourlyRanges = (start: string, end: string): Array<{ start: string; end: string }> => {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if (
-    Number.isNaN(startDate.getTime()) ||
-    Number.isNaN(endDate.getTime()) ||
-    startDate >= endDate
-  ) {
+  const startDate = toComparableDate(start);
+  const endDate = toComparableDate(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
     return [];
   }
 
   const result: Array<{ start: string; end: string }> = [];
-  let cursor = new Date(startDate);
-  while (cursor < endDate) {
+  let cursor = new Date(
+    Date.UTC(
+      startDate.getFullYear(),
+      startDate.getMonth(),
+      startDate.getDate(),
+      startDate.getHours(),
+      startDate.getMinutes(),
+      startDate.getSeconds(),
+      startDate.getMilliseconds(),
+    ),
+  );
+  const endAt = new Date(
+    Date.UTC(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      endDate.getDate(),
+      endDate.getHours(),
+      endDate.getMinutes(),
+      endDate.getSeconds(),
+      endDate.getMilliseconds(),
+    ),
+  );
+
+  while (cursor < endAt) {
     const next = new Date(cursor.getTime() + 60 * 60 * 1000);
-    const chunkEnd = next < endDate ? next : endDate;
+    const chunkEnd = next < endAt ? next : endAt;
     result.push({
       start: new Date(cursor).toISOString(),
       end: new Date(chunkEnd).toISOString(),
@@ -469,8 +488,8 @@ export async function upsertUserScheduleBlocks({
   const payload = eventDates.flatMap((date) =>
     splitToHourlyRanges(date.start_time, date.end_time).map((range) => ({
       user_id: userId,
-      start_time: range.start,
-      end_time: range.end,
+      start_time: toWallClockUtcIso(range.start),
+      end_time: toWallClockUtcIso(range.end),
       availability: selectedSet.has(date.id),
       source: 'event',
       event_id: eventId,
@@ -950,8 +969,8 @@ export async function upsertUserScheduleBlock({
 
   const payload = ranges.map((range) => ({
     user_id: userId,
-    start_time: range.start,
-    end_time: range.end,
+    start_time: toWallClockUtcIso(range.start),
+    end_time: toWallClockUtcIso(range.end),
     availability,
     source: 'manual',
     event_id: null,

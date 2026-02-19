@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useSession } from 'next-auth/react';
 import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
 import {
@@ -60,6 +60,35 @@ const createLocalTimeRange = (startHour: number, endHour: number) => {
       start.getDate(),
     ).padStart(2, '0')}`,
   };
+};
+
+const createFixedLocalTimeRange = (
+  year: number,
+  monthIndex: number,
+  day: number,
+  startHour: number,
+  endHour: number,
+) => {
+  const start = new Date(year, monthIndex, day, startHour, 0, 0, 0);
+  const end = new Date(year, monthIndex, day, endHour, 0, 0, 0);
+  return {
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+  };
+};
+
+const toWeekPeriodLabelFromIso = (iso: string) => {
+  const base = new Date(iso);
+  const diffToMonday = (base.getDay() + 6) % 7;
+  const monday = new Date(base.getFullYear(), base.getMonth(), base.getDate() - diffToMonday);
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  return `${monday.toLocaleDateString('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+  })} 〜 ${sunday.toLocaleDateString('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+  })}`;
 };
 
 describe('AccountScheduleTemplates', () => {
@@ -176,6 +205,7 @@ describe('AccountScheduleTemplates', () => {
   it('表示中の週が2時間単位のみなら2時間区切りで表示する', async () => {
     const firstRange = createLocalTimeRange(9, 10);
     const secondRange = createLocalTimeRange(10, 11);
+    const mergedLabel = `${firstRange.startIso.slice(11, 16)}-${secondRange.endIso.slice(11, 16)}`;
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleTemplates.mockResolvedValue({
       manual: [],
@@ -210,8 +240,96 @@ describe('AccountScheduleTemplates', () => {
     expect(
       screen
         .getAllByRole('button')
-        .some((button) => (button.getAttribute('aria-label') ?? '').includes('09:00-11:00')),
+        .some((button) => (button.getAttribute('aria-label') ?? '').includes(mergedLabel)),
     ).toBe(true);
+  });
+
+  it('予定一括管理の保存時は壁時計時刻で更新する', async () => {
+    const range = createLocalTimeRange(9, 10);
+    const startClock = range.startIso.slice(11, 16);
+    const endClock = range.endIso.slice(11, 16);
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([
+      {
+        id: 'block-1',
+        start_time: range.startIso,
+        end_time: range.endIso,
+        availability: true,
+        source: 'manual',
+        event_id: null,
+      },
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('dated-edit'));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(`${range.dateKey} ${startClock}-${endClock}$`),
+      }),
+    );
+    fireEvent.click(screen.getByTestId('dated-save-bottom'));
+
+    await waitFor(() => {
+      expect(mockUpsertUserScheduleBlock).toHaveBeenCalledWith({
+        startTime: `${range.dateKey}T${startClock}:00`,
+        endTime: `${range.dateKey}T${endClock}:00`,
+        availability: false,
+        replaceBlockId: 'block-1',
+      });
+    });
+  });
+
+  it('予定一括管理の更新完了メッセージは一定時間後に自動で消える', async () => {
+    jest.useFakeTimers();
+    try {
+      const range = createLocalTimeRange(9, 10);
+      const startClock = range.startIso.slice(11, 16);
+      const endClock = range.endIso.slice(11, 16);
+      mockUseSession.mockReturnValue({ status: 'authenticated' });
+      mockFetchUserScheduleTemplates.mockResolvedValue({
+        manual: [],
+        learned: [],
+      });
+      mockFetchUserScheduleBlocks.mockResolvedValue([
+        {
+          id: 'block-1',
+          start_time: range.startIso,
+          end_time: range.endIso,
+          availability: true,
+          source: 'manual',
+          event_id: null,
+        },
+      ]);
+
+      render(<AccountScheduleTemplates />);
+
+      await screen.findByRole('heading', { name: '予定一括管理' });
+      fireEvent.click(screen.getByTestId('dated-edit'));
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: new RegExp(`${range.dateKey} ${startClock}-${endClock}$`),
+        }),
+      );
+      fireEvent.click(screen.getByTestId('dated-save-bottom'));
+
+      expect(await screen.findByText('予定一括管理を更新しました')).toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(4000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('予定一括管理を更新しました')).not.toBeInTheDocument();
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('週の設定が空でもデフォルト時間行で週ごとの用事を編集できる', async () => {
@@ -248,5 +366,111 @@ describe('AccountScheduleTemplates', () => {
     });
     expect(mondayCells.length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: '月 21:00-22:00' })).not.toBeInTheDocument();
+  });
+
+  it('回答イベントへの反映は変更がある最初の週を初期表示する', async () => {
+    const firstWeek = createFixedLocalTimeRange(2026, 1, 9, 9, 10);
+    const changedWeek = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
+    const firstWeekLabel = toWeekPeriodLabelFromIso(firstWeek.startIso);
+    const changedWeekLabel = toWeekPeriodLabelFromIso(changedWeek.startIso);
+
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      {
+        eventId: 'event-1',
+        publicToken: 'event-token-1',
+        title: 'イベントA',
+        isFinalized: false,
+        changes: {
+          total: 1,
+          availableToUnavailable: 0,
+          unavailableToAvailable: 1,
+          protected: 0,
+        },
+        dates: [
+          {
+            eventDateId: 'date-1',
+            startTime: firstWeek.startIso,
+            endTime: firstWeek.endIso,
+            currentAvailability: false,
+            desiredAvailability: false,
+            willChange: false,
+            isProtected: false,
+          },
+          {
+            eventDateId: 'date-2',
+            startTime: changedWeek.startIso,
+            endTime: changedWeek.endIso,
+            currentAvailability: false,
+            desiredAvailability: true,
+            willChange: true,
+            isProtected: false,
+          },
+        ],
+      },
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    await waitFor(() => {
+      expect(screen.getByText(`表示期間: ${changedWeekLabel}`)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(`表示期間: ${firstWeekLabel}`)).not.toBeInTheDocument();
+  });
+
+  it('回答イベントへの反映バッジは0件項目を表示せず、件数種別ごとに色分けする', async () => {
+    const changed = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
+
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      {
+        eventId: 'event-1',
+        publicToken: 'event-token-1',
+        title: 'イベントA',
+        isFinalized: false,
+        changes: {
+          total: 1,
+          availableToUnavailable: 1,
+          unavailableToAvailable: 0,
+          protected: 0,
+        },
+        dates: [
+          {
+            eventDateId: 'date-1',
+            startTime: changed.startIso,
+            endTime: changed.endIso,
+            currentAvailability: true,
+            desiredAvailability: false,
+            willChange: true,
+            isProtected: false,
+          },
+        ],
+      },
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    const totalBadge = await screen.findByText('変更 1件');
+    const unavailableBadge = screen.getByText('可→不可 1');
+    expect(totalBadge).toHaveClass('badge-info');
+    expect(unavailableBadge).toHaveClass('badge-error');
+    expect(screen.queryByText(/不可→可/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/保護/)).not.toBeInTheDocument();
   });
 });

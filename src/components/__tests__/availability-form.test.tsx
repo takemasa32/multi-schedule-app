@@ -148,7 +148,7 @@ describe('AvailabilityForm', () => {
     await waitFor(() => {
       expect(submitAvailability).toHaveBeenCalled();
     });
-    expect(screen.queryByText('変更の反映範囲')).not.toBeInTheDocument();
+    expect(screen.queryByText('回答後の保存方法')).not.toBeInTheDocument();
   });
 
   it('ログイン済みで同期対象イベントがある場合は同期範囲モーダルを表示する', async () => {
@@ -158,13 +158,32 @@ describe('AvailabilityForm', () => {
     fillRequiredFields();
     fireEvent.click(screen.getByRole('button', { name: /回答を送信/ }));
 
-    expect(await screen.findByText('変更の反映範囲')).toBeInTheDocument();
+    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
     expect(submitAvailability).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'キャンセル' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'このイベントのみ' }));
     await waitFor(() => {
       expect(submitAvailability).toHaveBeenCalled();
     });
+    const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
+    expect(formDataArg.get('sync_scope')).toBe('current');
+  });
+
+  it('同期モーダルでアカウント予定に保存して反映を選ぶとsync_scope=allで送信する', async () => {
+    (submitAvailability as jest.Mock).mockResolvedValue({ success: true });
+    render(<AvailabilityForm {...defaultProps} isAuthenticated hasSyncTargetEvents />);
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole('button', { name: /回答を送信/ }));
+
+    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'アカウント予定に保存して反映' }));
+    await waitFor(() => {
+      expect(submitAvailability).toHaveBeenCalled();
+    });
+    const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
+    expect(formDataArg.get('sync_scope')).toBe('all');
   });
 
   it('ログイン済み新規回答では既存回答の紐づけ導線を表示し、検索を実行できる', async () => {

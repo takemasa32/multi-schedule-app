@@ -14,6 +14,7 @@ import {
   type UserAvailabilitySyncPreviewEvent,
   upsertUserScheduleBlock,
 } from '@/lib/schedule-actions';
+import { toComparableDate } from '@/lib/schedule-utils';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from '@/components/week-navigation-bar';
 
@@ -113,6 +114,8 @@ const DEFAULT_WEEKLY_TIME_SLOTS = Array.from({ length: 12 }, (_, index) => {
   return `${String(start).padStart(2, '0')}:00-${String(end).padStart(2, '0')}:00`;
 });
 
+const DATED_UPDATE_SUCCESS_MESSAGE = '予定一括管理を更新しました';
+
 const buildSyncPreviewMatrix = (event: UserAvailabilitySyncPreviewEvent) => {
   const dateKeys = new Set<string>();
   const timeKeys = new Set<string>();
@@ -159,6 +162,32 @@ const toWeeklyDateBuckets = (dateKeys: string[]): string[][] => {
   }
   return buckets;
 };
+
+const resolveInitialSyncPreviewWeekPage = (event: UserAvailabilitySyncPreviewEvent): number => {
+  const matrix = buildSyncPreviewMatrix(event);
+  const dateBuckets = toWeeklyDateBuckets(matrix.sortedDates);
+  if (dateBuckets.length === 0) return 0;
+
+  const changedDateKeys = event.dates
+    .filter((row) => row.willChange)
+    .map((row) => {
+      const start = new Date(row.startTime);
+      return Number.isNaN(start.getTime()) ? null : toLocalDateKey(start);
+    })
+    .filter((key): key is string => key !== null)
+    .sort();
+
+  const firstChangedDateKey = changedDateKeys[0];
+  if (!firstChangedDateKey) return 0;
+
+  const page = dateBuckets.findIndex((week) => week.includes(firstChangedDateKey));
+  return page >= 0 ? page : 0;
+};
+
+const buildInitialSyncPreviewWeekPageMap = (
+  events: UserAvailabilitySyncPreviewEvent[],
+): Record<string, number> =>
+  Object.fromEntries(events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]));
 
 type AccountScheduleTemplatesProps = {
   initialIsAuthenticated?: boolean;
@@ -219,6 +248,16 @@ export default function AccountScheduleTemplates({
     void loadAll();
   }, [loadAll]);
 
+  useEffect(() => {
+    if (datedMessage !== DATED_UPDATE_SUCCESS_MESSAGE) return;
+    const timerId = window.setTimeout(() => {
+      setDatedMessage(null);
+    }, 4000);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [datedMessage]);
+
   const loadSyncPreview = useCallback(async () => {
     setIsSyncPreviewLoading(true);
     setSyncPreviewMessage(null);
@@ -232,7 +271,7 @@ export default function AccountScheduleTemplates({
         ]),
       ),
     );
-    setSyncPreviewWeekPageMap(Object.fromEntries(preview.map((row) => [row.eventId, 0])));
+    setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(preview));
     setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
     setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
     setSyncMessageMap({});
@@ -293,8 +332,8 @@ export default function AccountScheduleTemplates({
     const dateMap: Record<string, Record<string, BlockCell>> = {};
 
     scheduleBlocks.forEach((block) => {
-      const start = new Date(block.start_time);
-      const end = new Date(block.end_time);
+      const start = toComparableDate(block.start_time);
+      const end = toComparableDate(block.end_time);
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
 
       const dateKey = toLocalDateKey(start);
@@ -582,8 +621,8 @@ export default function AccountScheduleTemplates({
 
       operations.push(() =>
         upsertUserScheduleBlock({
-          startTime: new Date(`${parsed.dateKey}T${parsed.startTime}:00`).toISOString(),
-          endTime: new Date(`${parsed.dateKey}T${parsed.endTime}:00`).toISOString(),
+          startTime: `${parsed.dateKey}T${parsed.startTime}:00`,
+          endTime: `${parsed.dateKey}T${parsed.endTime}:00`,
           availability: nextAvailability,
           replaceBlockId: current?.id,
         }),
@@ -608,7 +647,7 @@ export default function AccountScheduleTemplates({
 
     setDatedSaving(false);
     setDatedEditing(false);
-    setDatedMessage('予定一括管理を更新しました');
+    setDatedMessage(DATED_UPDATE_SUCCESS_MESSAGE);
     await loadAll();
     const preview = await fetchUserAvailabilitySyncPreview();
     if (preview.length > 0) {
@@ -623,7 +662,7 @@ export default function AccountScheduleTemplates({
           ]),
         ),
       );
-      setSyncPreviewWeekPageMap(Object.fromEntries(preview.map((row) => [row.eventId, 0])));
+      setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(preview));
       setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
       setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
       setSyncPreviewMessage('変更のあるイベントを下で確認できます');
@@ -658,19 +697,19 @@ export default function AccountScheduleTemplates({
       <div className="join mb-4">
         <button
           type="button"
-          className={`join-item btn btn-sm ${isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setActiveTab('weekly')}
-          data-testid="account-tab-weekly"
-        >
-          週ごとの用事
-        </button>
-        <button
-          type="button"
           className={`join-item btn btn-sm ${!isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('dated')}
           data-testid="account-tab-dated"
         >
           予定一括管理
+        </button>
+        <button
+          type="button"
+          className={`join-item btn btn-sm ${isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('weekly')}
+          data-testid="account-tab-weekly"
+        >
+          週ごとの用事
         </button>
       </div>
 
@@ -1076,15 +1115,21 @@ export default function AccountScheduleTemplates({
                           </Link>
                         </p>
                         <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                          <span className="badge badge-outline">変更 {event.changes.total}件</span>
-                          <span className="badge badge-outline">
-                            可→不可 {event.changes.availableToUnavailable}
+                          <span className="badge badge-info badge-outline">
+                            変更 {event.changes.total}件
                           </span>
-                          <span className="badge badge-outline">
-                            不可→可 {event.changes.unavailableToAvailable}
-                          </span>
+                          {event.changes.availableToUnavailable > 0 && (
+                            <span className="badge badge-error badge-outline">
+                              可→不可 {event.changes.availableToUnavailable}
+                            </span>
+                          )}
+                          {event.changes.unavailableToAvailable > 0 && (
+                            <span className="badge badge-success badge-outline">
+                              不可→可 {event.changes.unavailableToAvailable}
+                            </span>
+                          )}
                           {event.changes.protected > 0 && (
-                            <span className="badge badge-outline">
+                            <span className="badge badge-warning badge-outline">
                               保護 {event.changes.protected}件
                             </span>
                           )}
