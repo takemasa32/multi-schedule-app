@@ -65,7 +65,7 @@ npx supabase status
 
 Supabase を起動すると、以下のような情報が表示されます：
 
-```
+```text
 API URL: http://localhost:54321
 GraphQL URL: http://localhost:54321/graphql/v1
 DB URL: postgresql://postgres:postgres@localhost:54322/postgres
@@ -172,7 +172,7 @@ GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 - **ヘッドレステスト**: `npm run e2e:headless` - 本番ビルドでブラウザを表示せずにテストを実行し、シンプルなドット形式でレポートします。
 - **CI 環境用 E2E テスト**: `npm run e2e:ci` - CI 環境向けの最適化されたヘッドレステスト実行コマンドです。 -->
 
-### 注意事項
+### Jest テスト実行時の注意事項
 
 - すべてのテストは Next.js 公式推奨の`next/jest`プリセットを利用しており、babel や ts-jest は不要です。
 - TypeScript 型エラーや Lint エラーが残っている場合、テストは失敗します。必ず型・Lint が通る状態で実行してください。
@@ -237,7 +237,7 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 - **テストレポートの確認**
   テスト実行後、以下のコマンドで HTML レポートをブラウザで確認できます。
 
-#### 注意事項
+#### E2E テスト実行時の注意事項
 
 - テスト実行には Supabase のローカル環境が起動している必要があります。起動していない場合は、`npx supabase start` で起動してください。
 - テストは実際のデータベースに影響を与えないよう設計されていますが、ローカル環境での実行を推奨します。
