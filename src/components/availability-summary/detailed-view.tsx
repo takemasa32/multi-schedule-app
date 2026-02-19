@@ -14,6 +14,7 @@ interface DetailedViewProps {
   finalizedDateIds: string[];
   onEditClick?: (participantId: string, participantName: string) => void;
   publicToken?: string;
+  myParticipantId?: string | null;
 }
 
 /**
@@ -26,6 +27,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   finalizedDateIds,
   onEditClick,
   publicToken,
+  myParticipantId = null,
 }) => {
   return (
     <div className="fade-in mt-4 overflow-x-auto">
@@ -72,11 +74,19 @@ const DetailedView: React.FC<DetailedViewProps> = ({
           </thead>
           <tbody>
             {participants.map((participant) => (
-              <tr key={participant.id} className="hover:bg-base-200 transition-colors">
+              <tr
+                key={participant.id}
+                className={`hover:bg-base-200 transition-colors ${
+                  myParticipantId === participant.id ? 'bg-success/5' : ''
+                }`}
+              >
                 <td className="bg-base-100 sticky left-0 z-10 whitespace-nowrap font-medium">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span>{participant.name}</span>
+                      {myParticipantId === participant.id && (
+                        <span className="badge badge-xs badge-success ml-2">自分の回答</span>
+                      )}
                       {participant.comment && (
                         <div className="break-words text-xs text-gray-500">
                           {participant.comment}

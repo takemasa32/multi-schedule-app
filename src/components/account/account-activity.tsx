@@ -22,7 +22,7 @@ export default function AccountActivity({ isAuthenticated }: AccountActivityProp
         <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>
         <FavoriteEvents />
       </section>
-      <EventHistory maxDisplay={10} showClearButton={true} title="閲覧履歴" withProvider={false} />
+      <EventHistory maxDisplay={10} showClearButton={true} title="回答履歴" withProvider={false} />
     </FavoriteEventsProvider>
   );
 }

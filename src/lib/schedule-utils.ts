@@ -28,7 +28,7 @@ type TimeOfDayRange = {
   endMinutes: number;
 };
 
-const toLocalDate = (value: string): Date => {
+export const toComparableDate = (value: string): Date => {
   const match = value.match(
     /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/,
   );
@@ -39,8 +39,8 @@ const toLocalDate = (value: string): Date => {
 };
 
 const toTimeRange = (start: string, end: string): TimeRange => ({
-  start: toLocalDate(start),
-  end: toLocalDate(end),
+  start: toComparableDate(start),
+  end: toComparableDate(end),
 });
 
 const toMinutes = (time: string): number => {
@@ -108,8 +108,8 @@ export const computeAutoFillAvailability = ({
   });
   if (hasAvailableContained) return true;
 
-  const targetStart = toLocalDate(start);
-  const targetEnd = toLocalDate(end);
+  const targetStart = toComparableDate(start);
+  const targetEnd = toComparableDate(end);
   const targetDayRange: TimeOfDayRange = {
     ...toTimeOfDayRange(targetStart),
     endMinutes: targetEnd.getHours() * 60 + targetEnd.getMinutes(),

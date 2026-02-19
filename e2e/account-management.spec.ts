@@ -357,4 +357,114 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
       /変更対象のイベントはありません|変更のあるイベントを下で確認できます|この変更を適用/,
     );
   });
+
+  test('予定一括管理が新規回答と回答イベント反映に適用される', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
+
+    const syncEvent = await createSeedEvent('E2E_反映対象_実適用', [
+      { start: '2099-05-03T03:00:00Z', end: '2099-05-03T04:00:00Z' },
+    ]);
+    const syncParticipantId = await createParticipant(syncEvent.id, `E2E_反映先_${Date.now()}`);
+    await db.query(
+      'insert into public.availabilities(event_id,participant_id,event_date_id,availability) values($1,$2,$3,false)',
+      [syncEvent.id, syncParticipantId, syncEvent.dateIds[0]],
+    );
+    await db.query(
+      `insert into public.user_event_links(user_id,event_id,participant_id,auto_sync,created_at,updated_at)
+       values($1,$2,$3,true,now(),now())
+       on conflict(user_id,event_id) do update set participant_id=excluded.participant_id,updated_at=now()`,
+      [userId, syncEvent.id, syncParticipantId],
+    );
+
+    const answerEvent = await createSeedEvent('E2E_新規回答_自動反映', [
+      { start: '2099-05-10T03:00:00Z', end: '2099-05-10T04:00:00Z' },
+    ]);
+
+    await db.query(
+      `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source,event_id,updated_at)
+       values
+       ($1,'2099-05-03T03:00:00Z','2099-05-03T04:00:00Z',true,'manual',null,now()),
+       ($1,'2099-05-10T03:00:00Z','2099-05-10T04:00:00Z',true,'manual',null,now())
+       on conflict(user_id,start_time,end_time)
+       do update set availability=excluded.availability,source='manual',event_id=null,updated_at=now()`,
+      [userId],
+    );
+
+    await loginAsDevUser(page);
+    await page.goto(`/event/${answerEvent.publicToken}/input`, { waitUntil: 'domcontentloaded' });
+
+    const autofillDialog = page.getByRole('heading', { name: '過去の予定から反映しますか？' });
+    await expect(autofillDialog).toBeVisible();
+    await page.getByRole('button', { name: '反映する（推奨）' }).click();
+    await expect(autofillDialog).not.toBeVisible({ timeout: 5000 });
+
+    const answerName = `E2E_自動反映回答_${Date.now()}`;
+    await page.getByLabel('お名前').fill(answerName);
+    await page.getByLabel('利用規約を読み、同意します').check();
+    await page.getByRole('button', { name: '回答を送信' }).click();
+    await page.waitForTimeout(400);
+    const syncScopeButton = page.getByRole('button', { name: 'このイベントのみ' });
+    if (await syncScopeButton.isVisible().catch(() => false)) {
+      await page.getByRole('button', { name: 'このイベントのみ' }).click();
+    }
+
+    await expect
+      .poll(
+        async () => {
+          const participant = await db.query<{ id: string }>(
+            'select id from public.participants where event_id=$1 and name=$2 order by created_at desc limit 1',
+            [answerEvent.id, answerName],
+          );
+          return participant.rows[0]?.id ?? null;
+        },
+        { timeout: 10000 },
+      )
+      .not.toBeNull();
+    const answeredParticipant = await db.query<{ id: string }>(
+      'select id from public.participants where event_id=$1 and name=$2 order by created_at desc limit 1',
+      [answerEvent.id, answerName],
+    );
+    const answeredParticipantId = answeredParticipant.rows[0]?.id;
+    expect(answeredParticipantId).toBeTruthy();
+
+    await expect
+      .poll(
+        async () => {
+          const row = await db.query<{ availability: boolean }>(
+            'select availability from public.availabilities where event_id=$1 and participant_id=$2 and event_date_id=$3',
+            [answerEvent.id, answeredParticipantId, answerEvent.dateIds[0]],
+          );
+          return row.rows[0]?.availability ?? null;
+        },
+        { timeout: 10000 },
+      )
+      .toBe(true);
+
+    await page.goto('/account', { waitUntil: 'domcontentloaded' });
+    const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
+    await scheduleTemplates.getByTestId('account-tab-dated').click();
+    await scheduleTemplates.getByTestId('sync-check-button').click();
+
+    const syncCard = scheduleTemplates
+      .getByTestId('schedule-sync-section')
+      .locator('div')
+      .filter({ hasText: syncEvent.title })
+      .first();
+    await expect(syncCard).toBeVisible();
+    await expect(syncCard).toContainText('変更 1件');
+
+    await scheduleTemplates.getByTestId(`sync-apply-${syncEvent.id}`).click();
+    await expect
+      .poll(
+        async () => {
+          const row = await db.query<{ availability: boolean }>(
+            'select availability from public.availabilities where event_id=$1 and participant_id=$2 and event_date_id=$3',
+            [syncEvent.id, syncParticipantId, syncEvent.dateIds[0]],
+          );
+          return row.rows[0]?.availability ?? null;
+        },
+        { timeout: 10000 },
+      )
+      .toBe(true);
+  });
 });

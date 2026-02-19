@@ -1324,6 +1324,35 @@ export async function linkMyParticipantAnswerById({
 }
 
 /**
+ * ログインユーザーに紐づく、このイベントの参加者IDを取得する
+ */
+export async function getMyLinkedParticipantIdForEvent(eventId: string): Promise<string | null> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId || !eventId) return null;
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('user_event_links')
+      .select('participant_id')
+      .eq('user_id', userId)
+      .eq('event_id', eventId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('紐づき回答取得エラー:', error);
+      return null;
+    }
+
+    return data?.participant_id ?? null;
+  } catch (error) {
+    console.error('紐づき回答取得例外:', error);
+    return null;
+  }
+}
+
+/**
  * イベント日程追加アクション
  */
 export async function addEventDates(formData: FormData) {

@@ -5,6 +5,7 @@ import { createSupabaseAdmin } from '@/lib/supabase';
 import {
   computeAutoFillAvailability,
   isRangeOverlapping,
+  toComparableDate,
   type ScheduleBlock,
   type ScheduleTemplate,
 } from '@/lib/schedule-utils';
@@ -80,13 +81,13 @@ const computeAutoFillWithPriority = ({
   templates: ScheduleTemplate[];
 }): boolean | null => {
   const targetRange = {
-    start: new Date(start),
-    end: new Date(end),
+    start: toComparableDate(start),
+    end: toComparableDate(end),
   };
   const overlappingBlocks = blocks.filter((block) =>
     isRangeOverlapping(targetRange, {
-      start: new Date(block.start_time),
-      end: new Date(block.end_time),
+      start: toComparableDate(block.start_time),
+      end: toComparableDate(block.end_time),
     }),
   );
 

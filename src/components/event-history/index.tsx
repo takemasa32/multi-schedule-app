@@ -154,6 +154,11 @@ function EventHistoryInner({
                         主催
                       </span>
                     )}
+                    {event.answeredByMe && (
+                      <span className="bg-success/20 text-success ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium">
+                        回答済み
+                      </span>
+                    )}
                   </p>
                 </div>
                 <button

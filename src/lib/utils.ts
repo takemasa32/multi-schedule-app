@@ -249,6 +249,8 @@ export interface EventHistoryItem {
   title: string; // イベントのタイトル
   createdAt: string; // 作成日時またはアクセス日時（ISO文字列）
   isCreatedByMe: boolean; // 自分が作成したかどうか
+  answeredByMe?: boolean; // 自分の回答が紐づいているかどうか
+  myParticipantName?: string | null; // 自分の回答名
 }
 
 type StoredEventHistoryItem = EventHistoryItem & { adminToken?: string };
@@ -274,6 +276,8 @@ export function getEventHistory(): EventHistoryItem[] {
       title: item.title,
       createdAt: item.createdAt,
       isCreatedByMe: Boolean(item.isCreatedByMe),
+      answeredByMe: Boolean(item.answeredByMe),
+      myParticipantName: item.myParticipantName ?? null,
     }));
   } catch (error) {
     console.error('イベント履歴の取得に失敗しました:', error);

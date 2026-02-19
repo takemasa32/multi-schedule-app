@@ -21,6 +21,7 @@ interface EventFormSectionProps {
   eventDates: EventDate[];
   participants: { id: string; name: string; comment?: string | null }[];
   finalizedDateIds?: string[];
+  myParticipantId?: string | null;
 }
 
 export default function EventFormSection({
@@ -28,6 +29,7 @@ export default function EventFormSection({
   eventDates,
   participants,
   finalizedDateIds = [],
+  myParticipantId = null,
 }: EventFormSectionProps) {
   const { status } = useSession();
   const historyItemRef = useRef({
@@ -162,12 +164,22 @@ export default function EventFormSection({
                   className="dropdown-content menu bg-base-100 rounded-box absolute z-[100] max-h-60 w-52 overflow-y-auto p-2 shadow"
                   style={{ maxHeight: '300px' }}
                 >
+                  {myParticipantId && (
+                    <li>
+                      <Link
+                        href={`/event/${event.public_token}/input?participant_id=${myParticipantId}`}
+                      >
+                        自分の回答を編集
+                      </Link>
+                    </li>
+                  )}
                   {participants.map((participant) => (
                     <li key={participant.id}>
                       <Link
                         href={`/event/${event.public_token}/input?participant_id=${participant.id}`}
                       >
                         {participant.name}
+                        {participant.id === myParticipantId ? '（自分）' : ''}
                       </Link>
                     </li>
                   ))}
