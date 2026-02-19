@@ -9,6 +9,7 @@
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
 - [イベント作成ウィザード設計メモ](docs/architecture/create-wizard.md)
 - [アカウント予定連携の設計](docs/architecture/account-schedule.md)
+- [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
@@ -23,6 +24,7 @@
 - Google ログインを行うと **履歴の同期** が可能
 - アカウントページで **履歴・お気に入りの確認** と **ログアウト / 連携削除** が可能
 - ログイン時は **予定テンプレの管理** と **回答の自動反映・同期** が利用可能
+- 初回ログイン時は `/account` で **使い方ツアー（7ステップ）** を表示し、以降は **手動再表示** で確認可能
 
 ## Supabase ローカル開発環境
 

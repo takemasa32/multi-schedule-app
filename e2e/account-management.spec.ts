@@ -225,6 +225,43 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(page.locator('body')).not.toContainText('ログインすると予定設定を管理できます。');
   });
 
+  test('/account ツアーは初回表示後に抑止され、手動で再表示できる', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
+
+    await loginAsDevUser(page);
+    await page.goto('/account', { waitUntil: 'domcontentloaded' });
+
+    await page.evaluate(() => {
+      localStorage.removeItem('account_page_tour_state_v1');
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    const tourDialog = page.getByRole('dialog', { name: 'アカウントページの使い方' });
+    await expect(tourDialog).toBeVisible();
+    await page.getByTestId('account-tour-skip').click();
+    await expect(tourDialog).toBeHidden();
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(tourDialog).toBeHidden();
+
+    await page.getByTestId('account-tour-open').click();
+    await expect(tourDialog).toBeVisible();
+    await page.getByTestId('account-tour-next').click();
+    await expect(page.getByText('マイ予定設定')).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByTestId('account-tour-skip').click();
+    await expect(tourDialog).toBeHidden();
+
+    await page.getByTestId('account-tour-open').click();
+    await expect(tourDialog).toBeVisible();
+    await page.getByTestId('account-tour-next').click();
+    await expect(page.getByText('マイ予定設定')).toBeVisible();
+  });
+
   test('未ログイン回答の紐づけ候補を /account で紐づけできる', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
 
@@ -351,20 +388,13 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await scheduleTemplates.getByTestId('weekly-edit').click();
     await scheduleTemplates.locator('button[aria-label*=":"]').first().click();
     await scheduleTemplates.getByTestId('weekly-save').click();
-    await expect(scheduleTemplates).toContainText(
-      /週ごとの用事を更新しました|変更はありません/,
-    );
+    await expect(scheduleTemplates).toContainText(/週ごとの用事を更新しました|変更はありません/);
 
     await scheduleTemplates.getByTestId('account-tab-dated').click();
     await scheduleTemplates.getByTestId('dated-edit').click();
-    await scheduleTemplates
-      .locator('button[aria-label^="20"]')
-      .first()
-      .click();
+    await scheduleTemplates.locator('button[aria-label^="20"]').first().click();
     await scheduleTemplates.getByTestId('dated-save').click();
-    await expect(scheduleTemplates).toContainText(
-      /予定一括管理を更新しました|変更はありません/,
-    );
+    await expect(scheduleTemplates).toContainText(/予定一括管理を更新しました|変更はありません/);
 
     await scheduleTemplates.getByTestId('sync-check-button').click();
     const syncSection = scheduleTemplates.getByTestId('schedule-sync-section');

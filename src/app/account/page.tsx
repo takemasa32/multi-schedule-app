@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import AccountActions from '@/components/auth/account-actions';
 import AccountActivity from '@/components/account/account-activity';
 import AccountDeleteSection from '@/components/account/account-delete-section';
+import AccountPageTour from '@/components/account/account-page-tour';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { getAuthSession } from '@/lib/auth';
 
@@ -20,9 +21,15 @@ export default async function AccountPage() {
   return (
     <section className="mx-auto w-full max-w-xl space-y-6">
       <Breadcrumbs items={[{ label: 'アカウント' }]} />
-      <h1 className="text-xl font-bold">アカウント</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-bold">アカウント</h1>
+        <AccountPageTour initialIsAuthenticated={Boolean(user)} />
+      </div>
 
-      <div className="card bg-base-100 border-base-200 border shadow-sm">
+      <div
+        className="card bg-base-100 border-base-200 border shadow-sm"
+        data-tour-id="account-profile-card"
+      >
         <div className="card-body space-y-4">
           <div className="flex items-center gap-4">
             <div className="bg-base-200 flex h-12 w-12 items-center justify-center rounded-full">

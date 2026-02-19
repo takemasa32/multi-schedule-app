@@ -187,7 +187,9 @@ const resolveInitialSyncPreviewWeekPage = (event: UserAvailabilitySyncPreviewEve
 const buildInitialSyncPreviewWeekPageMap = (
   events: UserAvailabilitySyncPreviewEvent[],
 ): Record<string, number> =>
-  Object.fromEntries(events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]));
+  Object.fromEntries(
+    events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]),
+  );
 
 type AccountScheduleTemplatesProps = {
   initialIsAuthenticated?: boolean;
@@ -408,7 +410,8 @@ export default function AccountScheduleTemplates({
     [todayDateKey, weeklyDateBuckets],
   );
   const resolvedBlockPage =
-    blockPage ?? (initialBlockPage >= 0 ? initialBlockPage : Math.max(weeklyDateBuckets.length - 1, 0));
+    blockPage ??
+    (initialBlockPage >= 0 ? initialBlockPage : Math.max(weeklyDateBuckets.length - 1, 0));
 
   const visibleBlockDates = useMemo(
     () => weeklyDateBuckets[Math.max(0, resolvedBlockPage)] ?? [],
@@ -690,6 +693,7 @@ export default function AccountScheduleTemplates({
     <div
       className="bg-base-100 rounded-lg border p-4 shadow-sm"
       data-testid="account-schedule-templates"
+      data-tour-id="account-schedule-templates"
     >
       <h3 className="mb-2 text-lg font-semibold">マイ予定設定</h3>
       <p className="mb-4 text-sm text-gray-500">タブで表示対象を切り替えて編集できます。</p>
@@ -700,6 +704,7 @@ export default function AccountScheduleTemplates({
           className={`join-item btn btn-sm ${!isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('dated')}
           data-testid="account-tab-dated"
+          data-tour-id="account-tab-dated"
         >
           予定一括管理
         </button>
@@ -708,6 +713,7 @@ export default function AccountScheduleTemplates({
           className={`join-item btn btn-sm ${isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('weekly')}
           data-testid="account-tab-weekly"
+          data-tour-id="account-tab-weekly"
         >
           週ごとの用事
         </button>
@@ -923,6 +929,7 @@ export default function AccountScheduleTemplates({
                   setDatedMessage(null);
                 }}
                 data-testid="dated-edit"
+                data-tour-id="account-dated-edit"
               >
                 編集する
               </button>
@@ -1064,7 +1071,12 @@ export default function AccountScheduleTemplates({
           <div className="mt-2 text-xs text-gray-500">凡例: ○=可 / ×=不可 / -=未設定</div>
           {datedMessage && <p className="text-info mt-2 text-sm">{datedMessage}</p>}
 
-          <div ref={syncSectionRef} className="mt-6 space-y-3" data-testid="schedule-sync-section">
+          <div
+            ref={syncSectionRef}
+            className="mt-6 space-y-3"
+            data-testid="schedule-sync-section"
+            data-tour-id="account-sync-section"
+          >
             <div className="flex items-center justify-between gap-2">
               <h5 className="text-sm font-semibold">回答イベントへの反映</h5>
               <button

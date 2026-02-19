@@ -17,7 +17,7 @@ export default function AccountActivity({ isAuthenticated }: AccountActivityProp
       <section className="mb-8">
         <AccountScheduleTemplates initialIsAuthenticated={isAuthenticated} />
       </section>
-      <section className="mb-8">
+      <section className="mb-8" data-tour-id="account-favorite-history">
         <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>
         <FavoriteEvents />
       </section>

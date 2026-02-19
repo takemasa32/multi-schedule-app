@@ -55,7 +55,11 @@ export default function AccountAnswerLinker() {
   }
 
   return (
-    <section className="mb-8" data-testid="account-answer-linker">
+    <section
+      className="mb-8"
+      data-testid="account-answer-linker"
+      data-tour-id="account-answer-linker"
+    >
       <h2 className="mb-2 text-lg font-semibold">未ログイン回答の紐づけ</h2>
       <p className="mb-3 text-sm text-gray-500">
         未ログイン時に閲覧・回答したイベントを、アカウントへ紐づけできます。
