@@ -22,7 +22,13 @@ type ScheduleContext = {
   hasSyncTargetEvents: boolean;
   lockedDateIds: string[];
   autoFillAvailabilities: Record<string, boolean>;
+  dailyAutoFillDateIds: string[];
   overrideDateIds: string[];
+  coveredDateIds: string[];
+  uncoveredDateKeys: string[];
+  uncoveredDayCount: number;
+  requireWeeklyStep: boolean;
+  hasAccountSeedData: boolean;
 };
 
 type UserScheduleTemplateRow = {
@@ -321,6 +327,21 @@ export async function getUserScheduleContext(
   eventId: string,
   eventDates: EventDateRange[],
 ): Promise<ScheduleContext> {
+  const toDateKey = (value: string): string => {
+    const date = toComparableDate(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const toTimeSlotKey = (start: string, end: string): string => {
+    const startDate = toComparableDate(start);
+    const endDate = toComparableDate(end);
+    const toHm = (date: Date) =>
+      `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    return `${toHm(startDate)}-${toHm(endDate)}`;
+  };
+
   const session = await getAuthSession();
   const userId = session?.user?.id;
   if (!userId) {
@@ -329,7 +350,13 @@ export async function getUserScheduleContext(
       hasSyncTargetEvents: false,
       lockedDateIds: [],
       autoFillAvailabilities: {},
+      dailyAutoFillDateIds: [],
       overrideDateIds: [],
+      coveredDateIds: [],
+      uncoveredDateKeys: [],
+      uncoveredDayCount: 0,
+      requireWeeklyStep: false,
+      hasAccountSeedData: false,
     };
   }
 
@@ -340,7 +367,13 @@ export async function getUserScheduleContext(
       hasSyncTargetEvents: false,
       lockedDateIds: [],
       autoFillAvailabilities: {},
+      dailyAutoFillDateIds: [],
       overrideDateIds: [],
+      coveredDateIds: [],
+      uncoveredDateKeys: [],
+      uncoveredDayCount: 0,
+      requireWeeklyStep: false,
+      hasAccountSeedData: false,
     };
   }
 
@@ -424,8 +457,20 @@ export async function getUserScheduleContext(
 
   const lockedSet = new Set(lockedDateIds);
   const autoFillAvailabilities: Record<string, boolean> = {};
+  const dailyCoveredSet = new Set<string>(lockedDateIds);
+  const dailyAutoFillSet = new Set<string>();
 
   eventDates.forEach((date) => {
+    const blockOnlyResult = computeAutoFillAvailability({
+      start: date.start_time,
+      end: date.end_time,
+      blocks: (blocks ?? []) as ScheduleBlock[],
+      templates: [],
+    });
+    if (blockOnlyResult !== null) {
+      dailyCoveredSet.add(date.id);
+    }
+
     if (lockedSet.has(date.id)) return;
     const result = computeAutoFillWithPriority({
       start: date.start_time,
@@ -435,15 +480,50 @@ export async function getUserScheduleContext(
     });
     if (result !== null) {
       autoFillAvailabilities[date.id] = result;
+      if (blockOnlyResult !== null) {
+        dailyAutoFillSet.add(date.id);
+      }
     }
   });
+
+  const coveredSet = new Set<string>([...lockedDateIds, ...Object.keys(autoFillAvailabilities)]);
+  const coveredDateIds = eventDates
+    .filter((date) => coveredSet.has(date.id))
+    .map((date) => date.id);
+
+  // Step2必須/省略判定は、週テンプレではなく「各日予定（blocks）で判定可能な枠」ベースで算出する。
+
+  const uncoveredDateKeys = Array.from(
+    new Set(
+      eventDates
+        .filter((date) => !dailyCoveredSet.has(date.id))
+        .map((date) => toDateKey(date.start_time)),
+    ),
+  ).sort();
+  const uncoveredDayCount = uncoveredDateKeys.length;
+  const uncoveredCellCount = eventDates.filter((date) => !dailyCoveredSet.has(date.id)).length;
+  const uniqueTimeSlotCount = new Set(
+    eventDates.map((date) => toTimeSlotKey(date.start_time, date.end_time)),
+  ).size;
+  const weeklyCellCount = 7 * uniqueTimeSlotCount;
+  const requireWeeklyStep = uncoveredCellCount > weeklyCellCount;
+  const hasAccountSeedData =
+    Boolean(blocks && blocks.length > 0) ||
+    Boolean(templates && templates.length > 0) ||
+    lockedDateIds.length > 0;
 
   return {
     isAuthenticated: true,
     hasSyncTargetEvents,
     lockedDateIds,
     autoFillAvailabilities,
+    dailyAutoFillDateIds: Array.from(dailyAutoFillSet),
     overrideDateIds,
+    coveredDateIds,
+    uncoveredDateKeys,
+    uncoveredDayCount,
+    requireWeeklyStep,
+    hasAccountSeedData,
   };
 }
 

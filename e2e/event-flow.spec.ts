@@ -109,11 +109,8 @@ test.describe.serial('イベントE2Eフロー', () => {
     await participantPage.waitForURL(/\/input/);
     participantName = `E2E参加者${Date.now()}`;
     await participantPage.getByLabel('お名前').fill(participantName);
-    await participantPage.getByLabel('コメント・メモ').fill('E2Eコメント');
-    const participantTerms = participantPage.getByLabel('利用規約');
-    if (await participantTerms.isVisible()) {
-      await participantTerms.check();
-    }
+    await participantPage.getByRole('button', { name: 'ログインせずに進む' }).click();
+    await participantPage.getByRole('button', { name: '次へ' }).click();
     const dateDivs = participantPage.locator('div[data-date-id]');
     await dateDivs.first().click();
     if ((await dateDivs.count()) >= 2) {
@@ -123,10 +120,11 @@ test.describe.serial('イベントE2Eフロー', () => {
     if ((await dateDivs.count()) >= 2) {
       await expect(dateDivs.nth(1)).toContainText('○');
     }
-    expect(participantPage.url()).toContain('/input');
-    const participantTerms2 = participantPage.getByLabel('利用規約');
-    if (await participantTerms2.isVisible()) {
-      await participantTerms2.check();
+    await participantPage.getByRole('button', { name: '確認へ進む' }).click();
+    await participantPage.getByLabel('コメント・メモ').fill('E2Eコメント');
+    const participantTerms = participantPage.getByLabel(/利用規約/);
+    if (await participantTerms.isVisible()) {
+      await participantTerms.check();
     }
     await participantPage.getByRole('button', { name: /回答を送信/ }).click();
 
@@ -196,10 +194,11 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('link', { name: '新しく回答する' }).click();
     await page.waitForURL(/\/input$/);
     await page.getByLabel('お名前').fill('週表示参加者');
-    await page.getByRole('button', { name: /曜日ごとの時間帯設定/ }).click();
+    await page.getByRole('button', { name: 'ログインせずに進む' }).click();
     await page.locator('td[data-day="月"][data-time-slot]').first().click();
-    await page.getByRole('button', { name: '設定を適用する' }).click();
-    const terms2 = page.getByLabel('利用規約');
+    await page.getByRole('button', { name: '次へ' }).click();
+    await page.getByRole('button', { name: '確認へ進む' }).click();
+    const terms2 = page.getByLabel(/利用規約/);
     if (await terms2.isVisible()) {
       await terms2.check();
     }
@@ -239,8 +238,10 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('link', { name: new RegExp(`^${participantNamePrefix}`) }).click();
     await page.waitForURL(/\/input\?participant_id=/);
     const newName = `${participantNamePrefix}-編集`;
+    await page.getByRole('button', { name: '次へ' }).click();
+    await page.getByRole('button', { name: '確認へ進む' }).click();
     await page.getByLabel('お名前').fill(newName);
-    const editTermsCheckbox = page.getByLabel('利用規約');
+    const editTermsCheckbox = page.getByLabel(/利用規約/);
     if (await editTermsCheckbox.isVisible()) {
       await editTermsCheckbox.check();
     }

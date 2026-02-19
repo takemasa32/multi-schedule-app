@@ -8,6 +8,7 @@
 - [アクセス権限・閲覧方針](docs/architecture/access-policy.md)
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
 - [イベント作成ウィザード設計メモ](docs/architecture/create-wizard.md)
+- [回答ウィザード設計メモ](docs/architecture/answer-wizard.md)
 - [アカウント予定連携の設計](docs/architecture/account-schedule.md)
 - [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)

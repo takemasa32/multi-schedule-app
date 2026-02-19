@@ -89,25 +89,19 @@ const loginAsDevUser = async (page: Page): Promise<void> => {
   await expect(page.getByRole('heading', { name: '開発用ログイン' })).toBeVisible();
   await page.getByLabel('開発ID').fill(runtime.devLoginId);
   await page.getByLabel('開発パスワード').fill(runtime.devLoginPassword);
-  await page.getByRole('button', { name: '開発用ログインで進む' }).click();
+  await page.getByRole('button', { name: '開発用ログインで進む' }).click({ force: true });
   await expect(page.getByRole('button', { name: 'ログアウト' })).toBeVisible();
 };
 
-const closeAutoFillModalIfPresent = async (page: Page): Promise<void> => {
-  const dialogHeading = page.getByRole('heading', { name: '過去の予定から反映しますか？' });
-  const skipButton = page.getByRole('button', { name: 'まっさらで始める' });
-
-  // モーダルが遅延表示されるケースを考慮して短時間待機する。
-  const isDialogVisible =
-    (await dialogHeading.isVisible().catch(() => false)) ||
-    (await dialogHeading.waitFor({ state: 'visible', timeout: 3000 }).then(
-      () => true,
-      () => false,
-    ));
-  if (!isDialogVisible) return;
-
-  await skipButton.click();
-  await expect(dialogHeading).toBeHidden({ timeout: 5000 });
+const dismissAccountTourIfVisible = async (page: Page): Promise<void> => {
+  const tourDialog = page.getByTestId('account-tour-dialog');
+  await page.waitForTimeout(150);
+  if (!(await tourDialog.isVisible().catch(() => false))) return;
+  const skipButton = page.getByTestId('account-tour-skip');
+  if (await skipButton.isVisible().catch(() => false)) {
+    await skipButton.click({ force: true });
+  }
+  await expect(tourDialog).toBeHidden();
 };
 
 test.describe('アカウント連携管理E2E @auth-required', () => {
@@ -247,19 +241,19 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(tourDialog).toBeHidden();
 
-    await page.getByTestId('account-tour-open').click();
+    await page.getByTestId('account-tour-open').first().click();
     await expect(tourDialog).toBeVisible();
     await page.getByTestId('account-tour-next').click();
-    await expect(page.getByText('マイ予定設定')).toBeVisible();
+    await expect(tourDialog.getByText('マイ予定設定')).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByTestId('account-tour-skip').click();
     await expect(tourDialog).toBeHidden();
 
-    await page.getByTestId('account-tour-open').click();
+    await page.getByTestId('account-tour-open').first().click();
     await expect(tourDialog).toBeVisible();
     await page.getByTestId('account-tour-next').click();
-    await expect(page.getByText('マイ予定設定')).toBeVisible();
+    await expect(tourDialog.getByText('マイ予定設定')).toBeVisible();
   });
 
   test('未ログイン回答の紐づけ候補を /account で紐づけできる', async ({ page, browserName }) => {
@@ -280,6 +274,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
 
     await loginAsDevUser(page);
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
+    await dismissAccountTourIfVisible(page);
     const refreshButton = page
       .getByTestId('answer-linker-refresh')
       .filter({ hasText: '候補を更新' })
@@ -307,7 +302,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
       .toBe(participantId);
   });
 
-  test('イベント入力画面の既存回答紐づけで not_found / ambiguous / success を確認できる', async ({
+  test('イベント入力画面では既存回答紐づけ導線を表示しない', async ({
     page,
     browserName,
   }) => {
@@ -316,28 +311,10 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     const event = await createSeedEvent('E2E_入力紐づけ', [
       { start: '2099-03-02T03:00:00Z', end: '2099-03-02T04:00:00Z' },
     ]);
-    const successName = `E2E_成功_${Date.now()}`;
-    const ambiguousName = `E2E_重複_${Date.now()}`;
-    const successParticipantId = await createParticipant(event.id, successName);
-    await createParticipant(event.id, ambiguousName);
-    await createParticipant(event.id, ambiguousName);
 
     await loginAsDevUser(page);
     await page.goto(`/event/${event.publicToken}/input`, { waitUntil: 'domcontentloaded' });
-    await closeAutoFillModalIfPresent(page);
-
-    const linkButton = page.getByTestId('availability-link-existing-answer').first();
-    await page.getByLabel('お名前').fill(`E2E_未存在_${Date.now()}`);
-    await linkButton.click();
-    await expect(page.locator('body')).toContainText('この名前の既存回答は見つかりませんでした');
-
-    await page.getByLabel('お名前').fill(ambiguousName);
-    await linkButton.click();
-    await expect(page.locator('body')).toContainText('同名の回答が複数あります');
-
-    await page.getByLabel('お名前').fill(successName);
-    await linkButton.click();
-    await expect(page).toHaveURL(new RegExp(`participant_id=${successParticipantId}`));
+    await expect(page.getByTestId('availability-link-existing-answer')).toHaveCount(0);
   });
 
   test('週ごとの用事/予定一括管理の更新と反映プレビュー導線を確認できる', async ({
@@ -382,6 +359,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
 
     await loginAsDevUser(page);
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
+    await dismissAccountTourIfVisible(page);
     const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
 
     await scheduleTemplates.getByTestId('account-tab-weekly').click();
@@ -438,13 +416,18 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await loginAsDevUser(page);
     await page.goto(`/event/${answerEvent.publicToken}/input`, { waitUntil: 'domcontentloaded' });
 
-    const autofillDialog = page.getByRole('heading', { name: '過去の予定から反映しますか？' });
-    await expect(autofillDialog).toBeVisible();
-    await page.getByRole('button', { name: '反映する（推奨）' }).click();
-    await expect(autofillDialog).not.toBeVisible({ timeout: 5000 });
-
     const answerName = `E2E_自動反映回答_${Date.now()}`;
     await page.getByLabel('お名前').fill(answerName);
+    await page.getByRole('button', { name: '次へ' }).click();
+    const weeklyNextButton = page.getByRole('button', { name: '次へ' });
+    if (await weeklyNextButton.isVisible().catch(() => false)) {
+      await weeklyNextButton.click();
+      const saveWeeklyButton = page.getByRole('button', { name: '更新して次へ' });
+      if (await saveWeeklyButton.isVisible().catch(() => false)) {
+        await saveWeeklyButton.click();
+      }
+    }
+    await page.getByRole('button', { name: '確認へ進む' }).click();
     await page.getByLabel('利用規約を読み、同意します').check();
     await page.getByRole('button', { name: '回答を送信' }).click();
     await page.waitForTimeout(400);
@@ -486,6 +469,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
       .toBe(true);
 
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
+    await dismissAccountTourIfVisible(page);
     const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
     await scheduleTemplates.getByTestId('account-tab-dated').click();
     await scheduleTemplates.getByTestId('sync-check-button').click();

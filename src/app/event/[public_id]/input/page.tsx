@@ -106,7 +106,13 @@ export default async function EventPage({ params, searchParams }: EventPageProps
           hasSyncTargetEvents={scheduleContext.hasSyncTargetEvents}
           lockedDateIds={scheduleContext.lockedDateIds}
           autoFillAvailabilities={scheduleContext.autoFillAvailabilities}
+          dailyAutoFillDateIds={scheduleContext.dailyAutoFillDateIds}
           overrideDateIds={scheduleContext.overrideDateIds}
+          coveredDateIds={scheduleContext.coveredDateIds}
+          uncoveredDateKeys={scheduleContext.uncoveredDateKeys}
+          uncoveredDayCount={scheduleContext.uncoveredDayCount}
+          requireWeeklyStep={scheduleContext.requireWeeklyStep}
+          hasAccountSeedData={scheduleContext.hasAccountSeedData}
         />
       </div>
 
