@@ -429,7 +429,10 @@ describe('AvailabilityForm', () => {
         endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
       };
     };
-    const { startTime, endTime } = toTimeParts(templateDates[0].start_time, templateDates[0].end_time);
+    const { startTime, endTime } = toTimeParts(
+      templateDates[0].start_time,
+      templateDates[0].end_time,
+    );
 
     (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
       manual: [
@@ -478,5 +481,72 @@ describe('AvailabilityForm', () => {
     });
     expect(fetchUserScheduleTemplates).not.toHaveBeenCalled();
     expect(upsertWeeklyTemplatesFromWeekdaySelections).not.toHaveBeenCalled();
+  });
+
+  it('曜日ごとの時間帯設定テーブルは縦横スクロールを無効化している', async () => {
+    const { container } = render(<AvailabilityForm {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /曜日ごとの時間帯設定/ }));
+
+    const matrixContainer = container.querySelector('.matrix-container');
+    expect(matrixContainer).toBeInTheDocument();
+    expect(matrixContainer).toHaveClass('overflow-hidden');
+    expect(matrixContainer).not.toHaveClass('overflow-x-auto');
+    expect(matrixContainer).not.toHaveClass('overflow-y-auto');
+    expect(matrixContainer).not.toHaveClass('-mx-4');
+    expect(matrixContainer).not.toHaveClass('w-screen');
+    expect(matrixContainer).not.toHaveClass('-translate-x-1/2');
+  });
+
+  it('曜日ごとの時間帯設定テーブルの時刻ラベル位置を行ごとに正しく切り替える', async () => {
+    const { container } = render(<AvailabilityForm {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /曜日ごとの時間帯設定/ }));
+
+    const timeLabels = container.querySelectorAll<HTMLSpanElement>(
+      '.matrix-container tbody tr th > span.absolute.left-2',
+    );
+    expect(timeLabels.length).toBeGreaterThanOrEqual(2);
+    expect(timeLabels[0]).toHaveClass('top-0');
+    expect(timeLabels[0]).not.toHaveClass('-translate-y-1/2');
+    expect(timeLabels[1]).toHaveClass('top-0');
+    expect(timeLabels[1]).toHaveClass('-translate-y-1/2');
+  });
+
+  it('曜日ごとの時間帯設定で横方向ドラッグすると通過セルが連続選択される', async () => {
+    const { container } = render(<AvailabilityForm {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /曜日ごとの時間帯設定/ }));
+
+    const start = new Date(defaultProps.eventDates[0].start_time);
+    const end = new Date(defaultProps.eventDates[0].end_time);
+    const timeKey = `${String(start.getHours()).padStart(2, '0')}:${String(
+      start.getMinutes(),
+    ).padStart(2, '0')}-${String(end.getHours()).padStart(2, '0')}:${String(
+      end.getMinutes(),
+    ).padStart(2, '0')}`;
+
+    const monCell = container.querySelector<HTMLElement>(
+      `[data-day="月"][data-time-slot="${timeKey}"]`,
+    );
+    const tueCell = container.querySelector<HTMLElement>(
+      `[data-day="火"][data-time-slot="${timeKey}"]`,
+    );
+
+    if (!monCell || !tueCell) {
+      throw new Error('曜日セルが見つかりません');
+    }
+
+    expect(monCell.textContent).toContain('×');
+    expect(tueCell.textContent).toContain('×');
+
+    fireEvent.pointerDown(monCell, { pointerId: 40, pointerType: 'mouse' });
+    fireEvent.pointerEnter(tueCell, { pointerId: 40, pointerType: 'mouse', buttons: 1 });
+    fireEvent.pointerUp(tueCell, { pointerId: 40, pointerType: 'mouse' });
+
+    await waitFor(() => {
+      expect(monCell.textContent).toContain('○');
+      expect(tueCell.textContent).toContain('○');
+    });
   });
 });

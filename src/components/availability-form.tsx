@@ -746,8 +746,9 @@ export default function AvailabilityForm({
     if (isAuthenticated) {
       const templateData = await fetchUserScheduleTemplates();
       templateData.manual.forEach((template) => {
-        const weekday =
-          ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as WeekDay | undefined;
+        const weekday = ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as
+          | WeekDay
+          | undefined;
         if (!weekday) return;
         const key = `${weekday}_${template.start_time.slice(0, 5)}-${template.end_time.slice(0, 5)}`;
         templateWeekdayMap.set(key, template.availability);
@@ -1286,7 +1287,7 @@ export default function AvailabilityForm({
               {/* 週入力アコーディオンセクション */}
               {isWeekdayModeActive && (
                 <div className="mb-6 animate-fadeIn transition-all duration-300">
-                  <div className="bg-base-200 border-base-300 rounded-lg border p-4 shadow-sm">
+                  <div className="bg-base-200 border-base-300 rounded-lg border p-2 shadow-sm sm:p-4">
                     <h3 className="mb-4 text-lg font-bold">曜日ごとの時間帯設定</h3>
                     <p className="mb-4 text-sm">
                       曜日と時間帯で参加可能な枠を一括設定できます。表の各セルをクリックして、参加可能（○）または参加不可（×）を設定してください。
@@ -1295,25 +1296,26 @@ export default function AvailabilityForm({
                     <div className="divider text-xs">曜日×時間帯表</div>
 
                     <div
-                      className="matrix-container -mx-4 mb-4 touch-none overflow-x-hidden"
-                      style={{ touchAction: 'none' }}
+                      className="matrix-container mb-4 touch-none overflow-hidden"
+                      style={{ touchAction: 'none', overscrollBehavior: 'none' }}
                     >
                       <table
-                        className="table-xs table w-full table-fixed border-collapse"
+                        className="border-base-300 table w-full table-fixed border-collapse border text-center"
                         onMouseDown={(e) => e.preventDefault()} // ドラッグ動作中のテキスト選択を防止
                         onTouchStart={(e) => e.preventDefault()} // タッチ操作中のスクロールを完全に防止
+                        onTouchMove={(e) => e.preventDefault()} // ドラッグ中の縦横スクロールを防止
                       >
                         <thead className="sticky top-0 z-20">
                           <tr className="bg-base-200">
-                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 border px-2 py-1 text-center">
-                              <span className="text-xs">\</span>
+                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                              <span className="text-sm font-semibold">時間</span>
                             </th>
                             {Object.entries(weekdaySelections).map(([day]) => (
                               <th
                                 key={day}
-                                className="border-base-300 border px-1 py-1 text-center"
+                                className="border-base-300 border px-0.5 py-1 text-center md:px-1 md:py-2"
                               >
-                                {day}
+                                <span className="text-sm font-semibold md:text-sm">{day}</span>
                               </th>
                             ))}
                           </tr>
@@ -1338,25 +1340,32 @@ export default function AvailabilityForm({
                             }
                             return (
                               <>
-                                {sortedTimeSlots.map((timeSlot) => {
+                                <tr>
+                                  <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
+                                  {Object.keys(weekdaySelections).map((day) => (
+                                    <td key={`${day}-spacer`} className="h-1 md:h-3" />
+                                  ))}
+                                </tr>
+                                {sortedTimeSlots.map((timeSlot, rowIndex) => {
                                   const [startTime] = timeSlot.split('-');
                                   return (
                                     <tr key={timeSlot}>
-                                      <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-right">
+                                      <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
                                         <span
-                                          className="text-base-content/80 absolute left-2 text-xs font-medium leading-none"
-                                          style={{ top: 0 }}
+                                          className={`absolute left-2 text-sm font-semibold ${
+                                            rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
+                                          }`}
                                         >
                                           {startTime.replace(/^0/, '')}
                                         </span>
-                                      </td>
+                                      </th>
                                       {Object.entries(weekdaySelections).map(
                                         ([day, daySchedule]) => {
                                           const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
                                           return (
                                             <td
                                               key={`${day}-${timeSlot}`}
-                                              className="border-base-300 w-16 cursor-pointer border p-0 text-center sm:w-auto"
+                                              className="border-base-300 border p-0"
                                               data-day={day}
                                               data-time-slot={timeSlot}
                                               data-selection-key={matrixKey}
@@ -1367,22 +1376,24 @@ export default function AvailabilityForm({
                                                 },
                                               )}
                                             >
-                                              <div
-                                                className={`flex h-7 w-full items-center justify-center rounded-none sm:rounded-sm ${
-                                                  daySchedule.timeSlots[timeSlot]
-                                                    ? 'bg-success text-success-content'
-                                                    : 'bg-base-200'
-                                                }`}
-                                              >
-                                                {daySchedule.timeSlots[timeSlot] ? (
-                                                  <div className="inline-block select-none text-lg font-bold">
-                                                    ○
-                                                  </div>
-                                                ) : (
-                                                  <div className="inline-block select-none text-lg font-bold opacity-70">
-                                                    ×
-                                                  </div>
-                                                )}
+                                              <div className="flex w-full justify-center px-0.5 py-1 md:py-1">
+                                                <div
+                                                  className={`flex h-9 w-full items-center justify-center rounded-md text-xs md:h-10 md:text-sm ${
+                                                    daySchedule.timeSlots[timeSlot]
+                                                      ? 'bg-success text-success-content'
+                                                      : 'bg-base-200/80 text-base-content/80'
+                                                  }`}
+                                                >
+                                                  {daySchedule.timeSlots[timeSlot] ? (
+                                                    <span className="inline-block select-none text-xl font-bold leading-none">
+                                                      ○
+                                                    </span>
+                                                  ) : (
+                                                    <span className="inline-block select-none text-xl font-bold leading-none opacity-70">
+                                                      ×
+                                                    </span>
+                                                  )}
+                                                </div>
                                               </div>
                                             </td>
                                           );
@@ -1398,14 +1409,11 @@ export default function AvailabilityForm({
                                     rawEnd === '24:00' ? rawEnd : rawEnd.replace(/^0/, '');
                                   return (
                                     <tr key="weekday-endtime">
-                                      <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-right">
-                                        <span
-                                          className="text-base-content/80 absolute left-2 text-xs font-medium leading-none"
-                                          style={{ top: 0 }}
-                                        >
+                                      <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                                        <span className="absolute left-2 top-0 -translate-y-1/2 text-sm font-semibold">
                                           {displayEnd}
                                         </span>
-                                      </td>
+                                      </th>
                                       {Object.keys(weekdaySelections).map((day) => (
                                         <td
                                           key={`${day}-endtime`}
@@ -1652,31 +1660,32 @@ export default function AvailabilityForm({
 
                   {viewMode === 'heatmap' && (
                     <div
-                      className="table-container-mobile select-none overflow-x-auto overscroll-contain"
+                      className="table-container-mobile -mx-2 select-none overflow-x-auto overscroll-contain sm:mx-0"
                       style={{
                         overscrollBehaviorY: 'contain',
                         touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x', // ドラッグ中はタッチ操作を無効化
                       }}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <table className="table-xs sm:table-sm table w-full table-fixed border-collapse">
+                      <table className="table-xs border-base-300 table w-full min-w-0 table-fixed border-collapse border text-center">
                         <thead className="sticky top-0 z-20">
                           <tr className="bg-base-200">
-                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-1 text-center sm:w-24 sm:px-2 sm:py-3">
-                              <span className="text-xs sm:text-sm">時間</span>
+                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                              <span className="text-xs">時間</span>
                             </th>
                             {heatmapData.dates.map((date) => (
                               <th
                                 key={date.dateKey}
-                                className="border-base-300 heatmap-cell-mobile border px-1 py-1 text-center sm:px-2 sm:py-3"
+                                className="border-base-300 heatmap-cell-mobile border px-0.5 py-1 text-center md:px-1 md:py-2"
                               >
-                                <span className="whitespace-nowrap text-xs sm:text-sm">
-                                  {date.formattedDate.split('(')[0]}
-                                  <br />
+                                <div className="flex flex-col items-center leading-tight">
+                                  <span className="text-xs font-semibold md:text-sm">
+                                    {date.formattedDate.split('(')[0]}
+                                  </span>
                                   <span className="text-xs text-gray-500">
                                     ({date.formattedDate.split('(')[1]}
                                   </span>
-                                </span>
+                                </div>
                               </th>
                             ))}
                           </tr>
@@ -1684,25 +1693,26 @@ export default function AvailabilityForm({
                         <tbody>
                           {/* Spacer for top time label */}
                           <tr>
-                            <td className="bg-base-100 sticky left-0 z-10 h-3 sm:h-4"></td>
+                            <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
+                            {heatmapData.dates.map((date) => (
+                              <td key={`${date.dateKey}-spacer`} className="h-1 md:h-3" />
+                            ))}
                           </tr>
-                          {heatmapData.timeSlots.map((timeSlot) => {
+                          {heatmapData.timeSlots.map((timeSlot, rowIndex) => {
                             const [startTime] = timeSlot.split('-');
                             const formattedStartTime = startTime.replace(/^0/, '');
 
                             return (
-                              <tr key={timeSlot} className="hover">
-                                <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-center font-medium">
+                              <tr key={timeSlot}>
+                                <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
                                   <span
-                                    className="text-base-content/80 absolute left-2 text-xs font-medium sm:text-sm"
-                                    style={{
-                                      top: 0,
-                                      transform: 'translateY(-50%)',
-                                    }}
+                                    className={`absolute left-2 text-xs font-medium ${
+                                      rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
+                                    }`}
                                   >
                                     {formattedStartTime}
                                   </span>
-                                </td>
+                                </th>
                                 {heatmapData.dates.map((date) => {
                                   const dateId = heatmapData.dateMap[date.dateKey]?.[timeSlot];
                                   const { className, status } = getCellStyle(dateId);
@@ -1713,12 +1723,12 @@ export default function AvailabilityForm({
                                   return (
                                     <td
                                       key={`${date.dateKey}-${timeSlot}`}
-                                      className="border-base-300 w-16 border p-0 text-center sm:w-auto"
+                                      className="border-base-300 border p-0.5 md:p-1"
                                       data-date-id={dateId}
                                     >
                                       {dateId ? (
                                         <div
-                                          className={`flex h-9 w-full items-center justify-center rounded-none transition-colors duration-150 sm:h-10 sm:rounded-sm ${className} ${
+                                          className={`mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold transition-colors duration-150 md:aspect-auto md:h-10 md:w-full md:text-sm ${className} ${
                                             isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
                                           }`}
                                           data-date-id={dateId}
@@ -1735,11 +1745,15 @@ export default function AvailabilityForm({
                                             isConflict ? '確定イベントと重複しています' : undefined
                                           }
                                         >
-                                          {getCellContent(status)}
+                                          {status === 'available'
+                                            ? '○'
+                                            : status === 'unavailable'
+                                              ? '×'
+                                              : '-'}
                                         </div>
                                       ) : (
-                                        <div className="bg-base-200/30 text-base-content/30 flex h-9 w-full items-center justify-center rounded-none sm:h-10 sm:rounded-sm">
-                                          <span className="text-xs sm:text-sm">ー</span>
+                                        <div className="bg-base-200/30 text-base-content/30 mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm">
+                                          <span>-</span>
                                         </div>
                                       )}
                                     </td>
@@ -1759,20 +1773,17 @@ export default function AvailabilityForm({
                                 formattedEndTime = '24:00';
                               }
                               return (
-                                <tr className="h-0">
-                                  <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-center font-medium">
-                                    <span
-                                      className="text-base-content/80 absolute left-2 text-xs font-medium sm:text-sm"
-                                      style={{
-                                        top: 0,
-                                        transform: 'translateY(-50%)',
-                                      }}
-                                    >
+                                <tr>
+                                  <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                                    <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
                                       {formattedEndTime}
                                     </span>
-                                  </td>
+                                  </th>
                                   {heatmapData.dates.map((date) => (
-                                    <td key={`${date.dateKey}-endtime-filler`} />
+                                    <td
+                                      key={`${date.dateKey}-endtime-filler`}
+                                      className="border-base-300 border p-0"
+                                    />
                                   ))}
                                 </tr>
                               );
