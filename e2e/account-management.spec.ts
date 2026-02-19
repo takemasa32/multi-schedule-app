@@ -333,7 +333,13 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     );
     await db.query(
       `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source,event_id,updated_at)
-       values($1,date_trunc('hour', now()),date_trunc('hour', now()) + interval '1 hour',true,'manual',null,now())`,
+       values($1,date_trunc('hour', now()),date_trunc('hour', now()) + interval '1 hour',true,'manual',null,now())
+       on conflict(user_id,start_time,end_time)
+       do update set
+         availability=excluded.availability,
+         source=excluded.source,
+         event_id=excluded.event_id,
+         updated_at=excluded.updated_at`,
       [userId],
     );
 
