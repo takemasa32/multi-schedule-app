@@ -109,8 +109,15 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
     target: '[data-tour-id="account-favorite-history"]',
     title: 'お気に入りと回答履歴',
     description:
-      'お気に入りイベントと回答履歴を確認できます。よく使うイベントの再アクセスや過去回答の確認に利用します。これで以上です。再度見たい場合には使い方ツアーから確認できます。',
+      'お気に入りイベントと回答履歴を確認できます。よく使うイベントの再アクセスや過去回答の確認に利用します。',
     placement: 'top',
+  },
+  {
+    id: 'tour-finish',
+    target: '[data-testid="account-tour-open"]',
+    title: '使い方ツアーの再確認',
+    description: 'これで以上です。再度見たい場合には「使い方ツアー」から確認できます。',
+    placement: 'bottom',
   },
 ];
 
