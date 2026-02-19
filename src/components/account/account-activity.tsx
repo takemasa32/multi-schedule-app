@@ -14,7 +14,6 @@ export default function AccountActivity({ isAuthenticated }: AccountActivityProp
   return (
     <FavoriteEventsProvider>
       <section className="mb-8">
-        <h2 className="mb-2 text-lg font-semibold">マイ予定設定</h2>
         <AccountScheduleTemplates initialIsAuthenticated={isAuthenticated} />
       </section>
       <AccountAnswerLinker />

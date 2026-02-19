@@ -37,6 +37,31 @@ const mockRemoveScheduleTemplate = removeScheduleTemplate as jest.Mock;
 const mockUpsertUserScheduleBlock = upsertUserScheduleBlock as jest.Mock;
 const mockRemoveUserScheduleBlock = removeUserScheduleBlock as jest.Mock;
 
+const createLocalTimeRange = (startHour: number, endHour: number) => {
+  const now = new Date();
+  const start = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    startHour,
+    0,
+    0,
+    0,
+  );
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, 0, 0, 0);
+  return {
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+    dateLabel: start.toLocaleDateString('ja-JP', {
+      month: 'numeric',
+      day: 'numeric',
+    }),
+    dateKey: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(
+      start.getDate(),
+    ).padStart(2, '0')}`,
+  };
+};
+
 describe('AccountScheduleTemplates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -71,7 +96,7 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
 
     expect(screen.queryByText('ログインすると予定設定を管理できます。')).not.toBeInTheDocument();
-    await screen.findByRole('heading', { name: '週ごとの用事' });
+    await screen.findByRole('heading', { name: '予定一括管理' });
   });
 
   it('編集して更新するとテンプレを保存できる', async () => {
@@ -104,11 +129,13 @@ describe('AccountScheduleTemplates', () => {
 
     render(<AccountScheduleTemplates />);
 
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('account-tab-weekly'));
     await screen.findByRole('heading', { name: '週ごとの用事' });
     expect(screen.queryByText('学')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '編集する' }));
     fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
-    fireEvent.click(screen.getByRole('button', { name: '更新する' }));
+    fireEvent.click(screen.getByTestId('weekly-save-bottom'));
 
     await waitFor(() => {
       expect(mockCreateManualScheduleTemplate).toHaveBeenCalledTimes(1);
@@ -122,6 +149,7 @@ describe('AccountScheduleTemplates', () => {
   });
 
   it('予定一括管理をカレンダー表示できる', async () => {
+    const range = createLocalTimeRange(9, 10);
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleTemplates.mockResolvedValue({
       manual: [],
@@ -130,8 +158,8 @@ describe('AccountScheduleTemplates', () => {
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-1',
-        start_time: '2026-02-06T09:00:00Z',
-        end_time: '2026-02-06T10:00:00Z',
+        start_time: range.startIso,
+        end_time: range.endIso,
         availability: true,
         source: 'event',
         event_id: 'event-1',
@@ -140,13 +168,14 @@ describe('AccountScheduleTemplates', () => {
 
     render(<AccountScheduleTemplates />);
 
-    await screen.findByText('予定一括管理');
-    fireEvent.click(screen.getByRole('button', { name: '予定一括管理' }));
-    expect(screen.getByText(/2\/6/)).toBeInTheDocument();
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    expect(screen.getByText(range.dateLabel)).toBeInTheDocument();
     expect(screen.getByText('○')).toBeInTheDocument();
   });
 
   it('表示中の週が2時間単位のみなら2時間区切りで表示する', async () => {
+    const firstRange = createLocalTimeRange(9, 10);
+    const secondRange = createLocalTimeRange(10, 11);
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleTemplates.mockResolvedValue({
       manual: [],
@@ -155,16 +184,16 @@ describe('AccountScheduleTemplates', () => {
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-1',
-        start_time: '2026-02-06T09:00:00Z',
-        end_time: '2026-02-06T10:00:00Z',
+        start_time: firstRange.startIso,
+        end_time: firstRange.endIso,
         availability: true,
         source: 'event',
         event_id: 'event-1',
       },
       {
         id: 'block-2',
-        start_time: '2026-02-06T10:00:00Z',
-        end_time: '2026-02-06T11:00:00Z',
+        start_time: secondRange.startIso,
+        end_time: secondRange.endIso,
         availability: true,
         source: 'event',
         event_id: 'event-1',
@@ -173,14 +202,15 @@ describe('AccountScheduleTemplates', () => {
 
     render(<AccountScheduleTemplates />);
 
-    await screen.findByText('予定一括管理');
-    fireEvent.click(screen.getByRole('button', { name: '予定一括管理' }));
+    await screen.findByRole('heading', { name: '予定一括管理' });
 
-    expect(screen.getByRole('button', { name: /2026-02-06 .*:.*-.*:.*$/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: new RegExp(`${firstRange.dateKey} .*:.*-.*:.*$`) }),
+    ).toBeInTheDocument();
     expect(
       screen
         .getAllByRole('button')
-        .some((button) => (button.getAttribute('aria-label') ?? '').includes('18:00-20:00')),
+        .some((button) => (button.getAttribute('aria-label') ?? '').includes('09:00-11:00')),
     ).toBe(true);
   });
 
@@ -203,12 +233,15 @@ describe('AccountScheduleTemplates', () => {
 
     render(<AccountScheduleTemplates />);
 
+    fireEvent.click(screen.getByTestId('account-tab-weekly'));
     await screen.findByRole('heading', { name: '週ごとの用事' });
-    expect(
-      screen.getByText(
-        'テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。',
-      ),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。',
+        ),
+      ).toBeInTheDocument();
+    });
     const mondayCells = screen.getAllByRole('button').filter((button) => {
       const label = button.getAttribute('aria-label') ?? '';
       return /^月 \d{2}:\d{2}-\d{2}:\d{2}$/.test(label);

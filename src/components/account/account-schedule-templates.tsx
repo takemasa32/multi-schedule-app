@@ -172,7 +172,7 @@ export default function AccountScheduleTemplates({
   const [learnedTemplates, setLearnedTemplates] = useState<ScheduleTemplate[]>([]);
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [isLoading, setIsLoading] = useState(initialIsAuthenticated);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('weekly');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dated');
 
   const [weeklyEditing, setWeeklyEditing] = useState(false);
   const [weeklySaving, setWeeklySaving] = useState(false);
@@ -183,7 +183,7 @@ export default function AccountScheduleTemplates({
   const [datedSaving, setDatedSaving] = useState(false);
   const [datedDraftMap, setDatedDraftMap] = useState<Record<string, CellState>>({});
   const [datedMessage, setDatedMessage] = useState<string | null>(null);
-  const [blockPage, setBlockPage] = useState(0);
+  const [blockPage, setBlockPage] = useState<number | null>(null);
   const [syncPreviewEvents, setSyncPreviewEvents] = useState<UserAvailabilitySyncPreviewEvent[]>(
     [],
   );
@@ -320,6 +320,9 @@ export default function AccountScheduleTemplates({
 
   const weeklyDateBuckets = useMemo(() => {
     if (blockCalendarData.dateKeys.length === 0) return [] as string[][];
+    const today = new Date();
+    const todayWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const todayWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
     const firstWeekStart = startOfWeek(new Date(`${blockCalendarData.dateKeys[0]}T00:00:00`), {
       weekStartsOn: 1,
     });
@@ -327,10 +330,13 @@ export default function AccountScheduleTemplates({
       new Date(`${blockCalendarData.dateKeys[blockCalendarData.dateKeys.length - 1]}T00:00:00`),
       { weekStartsOn: 1 },
     );
+    const rangeStart =
+      firstWeekStart.getTime() <= todayWeekStart.getTime() ? firstWeekStart : todayWeekStart;
+    const rangeEnd = lastWeekEnd.getTime() >= todayWeekEnd.getTime() ? lastWeekEnd : todayWeekEnd;
     const buckets: string[][] = [];
     for (
-      let cursor = new Date(firstWeekStart);
-      cursor.getTime() <= lastWeekEnd.getTime();
+      let cursor = new Date(rangeStart);
+      cursor.getTime() <= rangeEnd.getTime();
       cursor = addDays(cursor, 7)
     ) {
       const week: string[] = [];
@@ -349,31 +355,30 @@ export default function AccountScheduleTemplates({
 
   useEffect(() => {
     if (weeklyDateBuckets.length === 0) {
-      setBlockPage(0);
+      setBlockPage(null);
       return;
     }
-    if (blockPage >= weeklyDateBuckets.length) {
+    if (blockPage !== null && blockPage >= weeklyDateBuckets.length) {
       setBlockPage(weeklyDateBuckets.length - 1);
     }
   }, [blockPage, weeklyDateBuckets.length]);
 
-  const visibleBlockDates = weeklyDateBuckets[Math.max(0, blockPage)] ?? [];
+  const todayDateKey = useMemo(() => toLocalDateKey(new Date()), []);
+  const initialBlockPage = useMemo(
+    () => weeklyDateBuckets.findIndex((week) => week.includes(todayDateKey)),
+    [todayDateKey, weeklyDateBuckets],
+  );
+  const resolvedBlockPage =
+    blockPage ?? (initialBlockPage >= 0 ? initialBlockPage : Math.max(weeklyDateBuckets.length - 1, 0));
+
+  const visibleBlockDates = useMemo(
+    () => weeklyDateBuckets[Math.max(0, resolvedBlockPage)] ?? [],
+    [resolvedBlockPage, weeklyDateBuckets],
+  );
   const weeklyHeaderDates = useMemo(() => {
     const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
   }, []);
-
-  const weeklyPeriodLabel = useMemo(() => {
-    const start = weeklyHeaderDates[0];
-    const end = weeklyHeaderDates[weeklyHeaderDates.length - 1];
-    return `${start.toLocaleDateString('ja-JP', {
-      month: 'numeric',
-      day: 'numeric',
-    })} 〜 ${end.toLocaleDateString('ja-JP', {
-      month: 'numeric',
-      day: 'numeric',
-    })}`;
-  }, [weeklyHeaderDates]);
 
   const weeklyLastEndLabel = useMemo(() => {
     if (weeklyDisplayTimeSlots.length === 0) return null;
@@ -718,10 +723,6 @@ export default function AccountScheduleTemplates({
             <p className="text-sm text-gray-500">読み込み中...</p>
           ) : (
             <>
-              <div className="bg-base-200 mb-2 flex items-center justify-between rounded-lg p-3">
-                <span className="text-sm font-medium">表示期間: {weeklyPeriodLabel}</span>
-                <span className="text-xs text-gray-600">週次固定</span>
-              </div>
               {weeklyTimeSlots.length === 0 && (
                 <p className="mb-2 text-xs text-gray-500">
                   テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。
@@ -826,6 +827,19 @@ export default function AccountScheduleTemplates({
                   </tbody>
                 </table>
               </div>
+              {weeklyEditing && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={() => void saveWeekly()}
+                    disabled={weeklySaving}
+                    data-testid="weekly-save-bottom"
+                  >
+                    {weeklySaving ? '更新中...' : '更新する'}
+                  </button>
+                </div>
+              )}
             </>
           )}
           <div className="mt-2 text-xs text-gray-500">凡例: ○=可 / ×=不可 / -=未設定</div>
@@ -883,9 +897,10 @@ export default function AccountScheduleTemplates({
               <div className="mb-2">
                 <WeekNavigationBar
                   periodLabel={datedPeriodLabel ?? '-'}
-                  currentPage={blockPage}
+                  currentPage={resolvedBlockPage}
                   totalPages={weeklyDateBuckets.length}
                   onPageChange={setBlockPage}
+                  hidePageIndicator={true}
                 />
               </div>
               <div className="overflow-x-auto">
@@ -992,6 +1007,19 @@ export default function AccountScheduleTemplates({
                   </tbody>
                 </table>
               </div>
+              {datedEditing && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={() => void saveDated()}
+                    disabled={datedSaving}
+                    data-testid="dated-save-bottom"
+                  >
+                    {datedSaving ? '更新中...' : '更新する'}
+                  </button>
+                </div>
+              )}
             </>
           )}
           <div className="mt-2 text-xs text-gray-500">凡例: ○=可 / ×=不可 / -=未設定</div>
@@ -1087,6 +1115,7 @@ export default function AccountScheduleTemplates({
                               [event.eventId]: page,
                             }))
                           }
+                          hidePageIndicator={true}
                         />
                       </div>
                     )}
