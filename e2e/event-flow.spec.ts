@@ -237,10 +237,9 @@ test.describe.serial('イベントE2Eフロー', () => {
     const participantNamePrefix = originalParticipantName?.split(' ')[0] || '週表示参加者';
     await page.getByRole('link', { name: new RegExp(`^${participantNamePrefix}`) }).click();
     await page.waitForURL(/\/input\?participant_id=/);
-    const newName = `${participantNamePrefix}-編集`;
     await page.getByRole('button', { name: '次へ' }).click();
     await page.getByRole('button', { name: '確認へ進む' }).click();
-    await page.getByLabel('お名前').fill(newName);
+    await expect(page.locator('#participant_name_confirm')).toHaveCount(0);
     const editTermsCheckbox = page.getByLabel(/利用規約/);
     if (await editTermsCheckbox.isVisible()) {
       await editTermsCheckbox.check();
@@ -261,8 +260,8 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(individualTab).toBeVisible({ timeout: 15000 });
     await individualTab.click();
 
-    // 編集後の参加者名が表示されるまで待機
-    await expect(page.getByRole('cell', { name: new RegExp(newName) })).toBeVisible({
+    // 編集後も参加者が表示されることを確認
+    await expect(page.getByRole('cell', { name: new RegExp(participantNamePrefix) })).toBeVisible({
       timeout: 10000,
     });
   });
