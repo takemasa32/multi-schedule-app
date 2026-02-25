@@ -109,6 +109,7 @@ export default function AvailabilityForm({
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+  const [showGuestConfirm, setShowGuestConfirm] = useState(false);
   const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
   const [showWeeklySaveConfirm, setShowWeeklySaveConfirm] = useState(false);
   const [pendingWeeklyTemplates, setPendingWeeklyTemplates] = useState<WeeklyTemplatePayloadRow[]>(
@@ -507,6 +508,19 @@ export default function AvailabilityForm({
       setCurrentStep(confirmStep);
     }
   }, [confirmStep, currentStep, heatmapStep, isNewMode, name, selectedDates, weeklyStep]);
+
+  const handleOpenGuestConfirm = useCallback(() => {
+    setShowGuestConfirm(true);
+  }, []);
+
+  const handleContinueAsGuest = useCallback(() => {
+    setShowGuestConfirm(false);
+    handleNextStep();
+  }, [handleNextStep]);
+
+  const handleCloseGuestConfirm = useCallback(() => {
+    setShowGuestConfirm(false);
+  }, []);
 
   const handlePrevStep = useCallback(() => {
     setError(null);
@@ -1055,7 +1069,15 @@ export default function AvailabilityForm({
             </div>
 
             {!isAuthenticated && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleOpenGuestConfirm}
+                  data-testid="availability-guest-continue"
+                >
+                  ログインせずに進む
+                </button>
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -1063,14 +1085,6 @@ export default function AvailabilityForm({
                   data-testid="availability-login-continue"
                 >
                   ログインして進む
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={handleNextStep}
-                  data-testid="availability-guest-continue"
-                >
-                  ログインせずに進む
                 </button>
               </div>
             )}
@@ -1458,6 +1472,48 @@ export default function AvailabilityForm({
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {showGuestConfirm && (
+          <div className="modal modal-open" role="dialog" aria-modal="true">
+            <div className="modal-box max-w-lg">
+              <h3 className="mb-2 text-lg font-bold">ログイン方法を選択してください</h3>
+              <p className="text-base-content/80 text-sm leading-relaxed">
+                ログインすると回答履歴の同期や、次回入力の自動反映が利用できます。おすすめは
+                <span className="text-primary font-semibold">「ログインして回答」</span>
+                です。
+              </p>
+              <div className="mt-5 space-y-2">
+                <button
+                  type="button"
+                  className="btn btn-primary w-full"
+                  onClick={handleSignInAndContinue}
+                  data-testid="availability-guest-confirm-signin"
+                >
+                  ログインして回答
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline w-full"
+                  onClick={handleContinueAsGuest}
+                  data-testid="availability-guest-confirm-continue"
+                >
+                  ログインせず回答
+                </button>
+              </div>
+              <div className="modal-action">
+                <button type="button" className="btn btn-ghost" onClick={handleCloseGuestConfirm}>
+                  戻る
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="modal-backdrop"
+              aria-label="ログイン確認を閉じる"
+              onClick={handleCloseGuestConfirm}
+            />
           </div>
         )}
       </form>

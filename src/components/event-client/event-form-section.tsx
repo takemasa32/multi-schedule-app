@@ -1,11 +1,12 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { CalendarLinks } from '@/components/calendar-links';
 import ShareEventButton from '@/components/share-event-button';
 import { addEventToHistory, EVENT_HISTORY_SYNC_MAX_ITEMS } from '@/lib/utils';
 import { recordEventHistory } from '@/lib/event-history-actions';
 import { useSession } from 'next-auth/react';
+import EventAnswerLinkEditor from '@/components/event-client/event-answer-link-editor';
 
 import { EventDate } from './event-details-section';
 
@@ -32,6 +33,7 @@ export default function EventFormSection({
   myParticipantId = null,
 }: EventFormSectionProps) {
   const { status } = useSession();
+  const [linkedParticipantId, setLinkedParticipantId] = useState<string | null>(myParticipantId);
   const historyItemRef = useRef({
     id: event.public_token,
     title: event.title,
@@ -86,6 +88,10 @@ export default function EventFormSection({
     }
   }, [status]);
 
+  useEffect(() => {
+    setLinkedParticipantId(myParticipantId);
+  }, [myParticipantId]);
+
   return (
     <>
       {/* 確定済み日程表示・カレンダー連携 */}
@@ -135,12 +141,22 @@ export default function EventFormSection({
       {/* 参加回答ボタンエリア */}
       <div className="card bg-base-100 border-base-200 mb-8 overflow-visible border shadow-md">
         <div className="card-body">
-          <h3 className="card-title text-lg">参加予定を入力する</h3>
+          <div className="mb-1 flex items-start justify-between gap-2">
+            <h3 className="card-title text-lg">参加予定を入力する</h3>
+            <EventAnswerLinkEditor
+              eventId={event.id}
+              eventPublicToken={event.public_token}
+              participants={participants}
+              linkedParticipantId={linkedParticipantId}
+              onLinkedParticipantIdChange={setLinkedParticipantId}
+            />
+          </div>
           <p className="mb-4 text-sm text-gray-600">
             {event.is_finalized
               ? 'イベントは確定していますが、引き続き回答を更新できます。'
               : '以下のボタンから参加予定を入力してください。'}
           </p>
+
           <div className="flex flex-wrap gap-3">
             <Link href={`/event/${event.public_token}/input`} className="btn btn-primary">
               新しく回答する
@@ -164,10 +180,10 @@ export default function EventFormSection({
                   className="dropdown-content menu bg-base-100 rounded-box absolute z-[100] max-h-60 w-52 overflow-y-auto p-2 shadow"
                   style={{ maxHeight: '300px' }}
                 >
-                  {myParticipantId && (
+                  {linkedParticipantId && (
                     <li>
                       <Link
-                        href={`/event/${event.public_token}/input?participant_id=${myParticipantId}`}
+                        href={`/event/${event.public_token}/input?participant_id=${linkedParticipantId}`}
                       >
                         自分の回答を編集
                       </Link>
@@ -179,7 +195,7 @@ export default function EventFormSection({
                         href={`/event/${event.public_token}/input?participant_id=${participant.id}`}
                       >
                         {participant.name}
-                        {participant.id === myParticipantId ? '（自分）' : ''}
+                        {participant.id === linkedParticipantId ? '（自分）' : ''}
                       </Link>
                     </li>
                   ))}
