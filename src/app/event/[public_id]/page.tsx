@@ -3,6 +3,7 @@ import { getEventDates } from '@/lib/actions';
 import { getParticipants } from '@/lib/actions';
 import { getAvailabilities } from '@/lib/actions';
 import { getFinalizedDateIds } from '@/lib/actions';
+import { getMyLinkedParticipantIdForEvent } from '@/lib/actions';
 import { EventNotFoundError } from '@/lib/errors';
 import { notFound } from 'next/navigation';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
@@ -102,16 +103,18 @@ export default async function EventPage({ params }: EventPageProps) {
   // 同時に走らせるデータ取得処理をここで起動しておく
   const eventDatesPromise = getEventDates(event.id);
   const participantsPromise = getParticipants(event.id);
+  const myParticipantIdPromise = getMyLinkedParticipantIdForEvent(event.id);
   const availabilitiesPromise = getAvailabilities(event.id);
   const finalizedDateIdsPromise = event.is_finalized
     ? getFinalizedDateIds(event.id, event.final_date_id ?? null)
     : Promise.resolve<string[]>([]);
 
   // フォーム表示に必須となるデータは全て揃ってから描画する
-  const [eventDates, participants, finalizedDateIds] = await Promise.all([
+  const [eventDates, participants, finalizedDateIds, myParticipantId] = await Promise.all([
     eventDatesPromise,
     participantsPromise,
     finalizedDateIdsPromise,
+    myParticipantIdPromise,
   ]);
 
   return (
@@ -130,6 +133,7 @@ export default async function EventPage({ params }: EventPageProps) {
             eventDates={eventDates}
             participants={participants}
             finalizedDateIds={finalizedDateIds}
+            myParticipantId={myParticipantId}
           />
         </div>
 
@@ -153,6 +157,7 @@ export default async function EventPage({ params }: EventPageProps) {
             participants={participants}
             availabilities={availabilitiesPromise}
             finalizedDateIds={finalizedDateIds}
+            myParticipantId={myParticipantId}
           />
         </Suspense>
       </div>
@@ -187,12 +192,14 @@ async function EventDetailsSectionLoader({
   participants,
   availabilities,
   finalizedDateIds,
+  myParticipantId,
 }: {
   event: EventDetailsSectionEvent;
   eventDates: EventDate[];
   participants: Participant[];
   availabilities: Promise<Availability[]>;
   finalizedDateIds: string[];
+  myParticipantId: string | null;
 }) {
   const availabilityList = await availabilities;
   return (
@@ -202,6 +209,7 @@ async function EventDetailsSectionLoader({
       participants={participants || []}
       availabilities={availabilityList || []}
       finalizedDateIds={finalizedDateIds}
+      myParticipantId={myParticipantId}
     />
   );
 }

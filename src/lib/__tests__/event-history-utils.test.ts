@@ -109,10 +109,14 @@ describe('イベント履歴ユーティリティ', () => {
         title: '上書き',
         createdAt: now,
         isCreatedByMe: true,
+        answeredByMe: true,
+        myParticipantName: '自分の回答名',
       },
     ]);
     const history = getEventHistory();
     expect(history).toHaveLength(1);
     expect(history[0].id).toBe('9');
+    expect(history[0].answeredByMe).toBe(true);
+    expect(history[0].myParticipantName).toBe('自分の回答名');
   });
 });

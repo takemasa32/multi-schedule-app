@@ -12,6 +12,16 @@ type EventHistoryRow = {
   last_accessed_at: string;
 };
 
+type EventBasicRow = {
+  id: string;
+  public_token: string;
+};
+
+type UserEventLinkRow = {
+  event_id: string;
+  participant_id: string | null;
+};
+
 const isValidHistoryItem = (item: EventHistoryItem) =>
   Boolean(item?.id && item?.title && item?.createdAt);
 
@@ -40,7 +50,42 @@ export async function fetchEventHistory(): Promise<EventHistoryItem[]> {
     return [];
   }
 
-  return data.map((row) => mapRowToItem(row));
+  const baseItems = data.map((row) => mapRowToItem(row));
+  const publicTokens = Array.from(new Set(baseItems.map((item) => item.id)));
+  if (publicTokens.length === 0) {
+    return baseItems;
+  }
+
+  const { data: eventsData } = await supabase
+    .from('events')
+    .select('id,public_token')
+    .in('public_token', publicTokens);
+  const events = (eventsData ?? []) as EventBasicRow[];
+  const eventIdByToken = new Map(events.map((event) => [event.public_token, event.id]));
+
+  const eventIds = events.map((event) => event.id);
+  if (eventIds.length === 0) {
+    return baseItems;
+  }
+
+  const { data: linksData } = await supabase
+    .from('user_event_links')
+    .select('event_id,participant_id')
+    .eq('user_id', session.user.id)
+    .in('event_id', eventIds);
+  const links = (linksData ?? []) as UserEventLinkRow[];
+  const participantIdByEventId = new Map<string, string | null>(
+    links.map((link) => [link.event_id, link.participant_id]),
+  );
+
+  return baseItems.map((item) => {
+    const eventId = eventIdByToken.get(item.id);
+    const participantId = eventId ? (participantIdByEventId.get(eventId) ?? null) : null;
+    return {
+      ...item,
+      answeredByMe: Boolean(participantId),
+    };
+  });
 }
 
 export async function recordEventHistory(item: EventHistoryItem): Promise<void> {

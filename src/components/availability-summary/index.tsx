@@ -57,6 +57,7 @@ type AvailabilitySummaryProps = {
    * 1を指定すると従来通り全てのセルがカラー表示されます
    */
   minColoredCount?: number;
+  myParticipantId?: string | null;
 };
 
 // type ViewMode = "list" | "heatmap" | "detailed";
@@ -74,6 +75,7 @@ export default function AvailabilitySummary({
   excludedParticipantIds = [],
   testIdPrefix,
   minColoredCount = 1,
+  myParticipantId = null,
 }: AvailabilitySummaryProps) {
   // viewModeは内部でuseState管理
   const [viewMode, setViewMode] = useState<'list' | 'heatmap' | 'detailed'>('heatmap');
@@ -678,6 +680,7 @@ export default function AvailabilitySummary({
             finalizedDateIds={finalizedDateIds}
             onEditClick={onShowParticipantForm ? handleEditClick : undefined}
             publicToken={publicToken}
+            myParticipantId={myParticipantId}
           />
         )}
       </div>

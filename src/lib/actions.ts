@@ -7,6 +7,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { generatePublicToken } from './token';
 import { revalidatePath } from 'next/cache';
 import { getAuthSession } from '@/lib/auth';
+import {
+  saveAvailabilityOverrides,
+  syncUserAvailabilities,
+  updateUserScheduleTemplatesFromBlocks,
+  upsertUserEventLink,
+  upsertUserScheduleBlocks,
+} from '@/lib/schedule-actions';
 
 export type CreateEventSuccessResult = {
   success: true;
@@ -134,6 +141,7 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
     }
 
     const event = created[0];
+    const createdEventId = event?.event_id;
 
     // ログイン済みの場合はサーバー側で履歴を同期する
     const session = await getAuthSession();
@@ -148,6 +156,14 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
 
       if (historyError) {
         console.error('イベント履歴の更新に失敗しました:', historyError);
+      }
+
+      if (createdEventId) {
+        await upsertUserEventLink({
+          userId: session.user.id,
+          eventId: createdEventId,
+          participantId: null,
+        });
       }
     }
 
@@ -414,6 +430,17 @@ export async function submitAvailability(formData: FormData) {
     const publicToken = formData.get('publicToken') as string;
     const participantName = formData.get('participant_name') as string;
     const comment = (formData.get('comment') as string) || null;
+    const syncScope = (formData.get('sync_scope') as string) === 'all' ? 'all' : 'current';
+    const overrideDateIdsRaw = formData.get('override_date_ids') as string | null;
+    let overrideDateIds: string[] = [];
+    if (overrideDateIdsRaw) {
+      try {
+        overrideDateIds = JSON.parse(overrideDateIdsRaw) as string[];
+      } catch (error) {
+        console.error('上書き対象の解析に失敗しました:', error);
+        overrideDateIds = [];
+      }
+    }
 
     // 編集モードの場合、既存の参加者IDが提供される
     const participantId = formData.get('participantId') as string | null;
@@ -554,6 +581,58 @@ export async function submitAvailability(formData: FormData) {
       .update({ last_accessed_at: new Date().toISOString() })
       .eq('id', eventId);
 
+    const session = await getAuthSession();
+    if (session?.user?.id) {
+      const selectedDateIds = availabilityEntries
+        .filter((entry) => entry.availability)
+        .map((entry) => entry.event_date_id);
+
+      const { data: allEventDates, error: allDatesError } = await supabase
+        .from('event_dates')
+        .select('id,start_time,end_time')
+        .eq('event_id', eventId);
+
+      if (allDatesError) {
+        console.error('イベント日程取得エラー:', allDatesError);
+      }
+
+      await upsertUserEventLink({
+        userId: session.user.id,
+        eventId,
+        participantId: existingParticipantId,
+      });
+
+      if (allEventDates) {
+        await upsertUserScheduleBlocks({
+          userId: session.user.id,
+          eventId,
+          eventDates: allEventDates,
+          selectedDateIds,
+        });
+
+        await updateUserScheduleTemplatesFromBlocks({
+          userId: session.user.id,
+          eventDates: allEventDates,
+          selectedDateIds,
+        });
+      }
+
+      await saveAvailabilityOverrides({
+        userId: session.user.id,
+        eventId,
+        overrideDateIds,
+        selectedDateIds,
+      });
+
+      if (syncScope === 'all') {
+        await syncUserAvailabilities({
+          userId: session.user.id,
+          scope: 'all',
+          currentEventId: eventId,
+        });
+      }
+    }
+
     try {
       revalidatePath(`/event/${publicToken}`);
     } catch (e) {
@@ -626,6 +705,27 @@ export async function finalizeEvent(eventId: string, dateIds: string[]) {
       if (process.env.NODE_ENV !== 'test') {
         console.error('revalidatePath error:', e);
       }
+    }
+
+    try {
+      const { data: linkedUsers } = await supabase
+        .from('user_event_links')
+        .select('user_id')
+        .eq('event_id', eventId);
+
+      const uniqueUserIds = Array.from(
+        new Set((linkedUsers ?? []).map((row) => row.user_id).filter(Boolean)),
+      );
+
+      for (const userId of uniqueUserIds) {
+        await syncUserAvailabilities({
+          userId,
+          scope: 'all',
+          currentEventId: eventId,
+        });
+      }
+    } catch (syncError) {
+      console.error('確定イベントの同期エラー:', syncError);
     }
 
     const message = dateIds.length === 0 ? 'イベント確定を解除しました' : undefined;
@@ -912,6 +1012,15 @@ export async function copyAvailabilityBetweenEvents(
       return { success: false, message: '回答のコピーに失敗しました' };
     }
 
+    const session = await getAuthSession();
+    if (session?.user?.id) {
+      await upsertUserEventLink({
+        userId: session.user.id,
+        eventId: targetEventId,
+        participantId: targetParticipantId,
+      });
+    }
+
     try {
       revalidatePath(`/event/${targetEvent.public_token}`);
     } catch (e) {
@@ -933,6 +1042,232 @@ export async function copyAvailabilityBetweenEvents(
       success: false,
       message: err instanceof Error ? err.message : '予期せぬエラーが発生しました',
     };
+  }
+}
+
+export type UnlinkedAnswerCandidate = {
+  eventId: string;
+  publicToken: string;
+  title: string;
+  lastAccessedAt: string;
+  participants: Array<{
+    id: string;
+    name: string;
+    createdAt: string;
+  }>;
+};
+
+/**
+ * 閲覧履歴から、未ログイン回答の紐づけ候補イベントを取得する
+ */
+export async function fetchUnlinkedAnswerCandidates(): Promise<UnlinkedAnswerCandidate[]> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) return [];
+
+  try {
+    const supabase = createSupabaseAdmin();
+
+    const { data: histories, error: historiesError } = await supabase
+      .from('event_access_histories')
+      .select('event_public_token,event_title,last_accessed_at,is_created_by_me')
+      .eq('user_id', userId)
+      .eq('is_created_by_me', false)
+      .order('last_accessed_at', { ascending: false })
+      .limit(50);
+
+    if (historiesError || !histories) {
+      console.error('履歴取得エラー:', historiesError);
+      return [];
+    }
+
+    const tokens = Array.from(new Set(histories.map((row) => row.event_public_token)));
+    if (tokens.length === 0) return [];
+
+    const { data: events, error: eventsError } = await supabase
+      .from('events')
+      .select('id,public_token,title')
+      .in('public_token', tokens);
+
+    if (eventsError || !events) {
+      console.error('イベント取得エラー:', eventsError);
+      return [];
+    }
+
+    const eventByToken = new Map(events.map((row) => [row.public_token, row]));
+    const eventIds = events.map((row) => row.id);
+    if (eventIds.length === 0) return [];
+
+    const { data: links } = await supabase
+      .from('user_event_links')
+      .select('event_id,participant_id')
+      .eq('user_id', userId)
+      .in('event_id', eventIds);
+    const linkedEventIdSet = new Set(
+      (links ?? []).filter((row) => Boolean(row.participant_id)).map((row) => row.event_id),
+    );
+
+    const candidateEvents = histories
+      .map((history) => {
+        const event = eventByToken.get(history.event_public_token);
+        if (!event) return null;
+        if (linkedEventIdSet.has(event.id)) return null;
+        return {
+          eventId: event.id,
+          publicToken: event.public_token,
+          title: event.title || history.event_title,
+          lastAccessedAt: history.last_accessed_at,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
+
+    const uniqueByEvent = new Map(candidateEvents.map((row) => [row.eventId, row]));
+    const uniqueCandidates = Array.from(uniqueByEvent.values());
+    if (uniqueCandidates.length === 0) return [];
+
+    const { data: participants, error: participantsError } = await supabase
+      .from('participants')
+      .select('id,event_id,name,created_at')
+      .in(
+        'event_id',
+        uniqueCandidates.map((row) => row.eventId),
+      )
+      .order('created_at', { ascending: false });
+
+    if (participantsError || !participants) {
+      console.error('参加者取得エラー:', participantsError);
+      return [];
+    }
+
+    const participantsByEvent = new Map<string, UnlinkedAnswerCandidate['participants']>();
+    participants.forEach((row) => {
+      if (!participantsByEvent.has(row.event_id)) {
+        participantsByEvent.set(row.event_id, []);
+      }
+      participantsByEvent.get(row.event_id)!.push({
+        id: row.id,
+        name: row.name,
+        createdAt: row.created_at,
+      });
+    });
+
+    return uniqueCandidates
+      .map((candidate) => ({
+        ...candidate,
+        participants: participantsByEvent.get(candidate.eventId) ?? [],
+      }))
+      .filter((candidate) => candidate.participants.length > 0)
+      .sort((a, b) => b.lastAccessedAt.localeCompare(a.lastAccessedAt));
+  } catch (error) {
+    console.error('紐づけ候補取得エラー:', error);
+    return [];
+  }
+}
+
+/**
+ * 参加者IDを指定して回答をアカウントに紐づける
+ */
+export async function linkMyParticipantAnswerById({
+  eventId,
+  participantId,
+  confirmNameMismatch: _confirmNameMismatch,
+}: {
+  eventId: string;
+  participantId: string;
+  confirmNameMismatch?: boolean;
+}): Promise<{ success: boolean; message: string; requiresConfirmation?: boolean }> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: 'ログインが必要です' };
+  }
+
+  if (!eventId || !participantId) {
+    return { success: false, message: 'イベントまたは参加者が不正です' };
+  }
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { data: participant, error: participantError } = await supabase
+      .from('participants')
+      .select('id,event_id,name')
+      .eq('id', participantId)
+      .eq('event_id', eventId)
+      .maybeSingle();
+
+    if (participantError || !participant) {
+      return { success: false, message: '指定した回答が見つかりません' };
+    }
+
+    const { data: existingLink, error: existingLinkError } = await supabase
+      .from('user_event_links')
+      .select('user_id')
+      .eq('participant_id', participantId)
+      .maybeSingle();
+
+    if (existingLinkError) {
+      console.error('既存紐づけ確認エラー:', existingLinkError);
+      return { success: false, message: '回答の確認に失敗しました' };
+    }
+
+    if (existingLink?.user_id && existingLink.user_id !== userId) {
+      return {
+        success: false,
+        message: 'この回答はすでに別アカウントに紐づいています',
+      };
+    }
+
+    const linkResult = await upsertUserEventLink({
+      userId,
+      eventId,
+      participantId,
+    });
+    if (!linkResult.success) {
+      if (linkResult.code === '23505') {
+        return {
+          success: false,
+          message: 'この回答はすでに別アカウントに紐づいています',
+        };
+      }
+      return {
+        success: false,
+        message: linkResult.message ?? '回答の紐づけに失敗しました',
+      };
+    }
+
+    return { success: true, message: '回答をアカウントに紐づけました' };
+  } catch (error) {
+    console.error('回答ID紐づけエラー:', error);
+    return { success: false, message: '回答の紐づけに失敗しました' };
+  }
+}
+
+/**
+ * ログインユーザーに紐づく、このイベントの参加者IDを取得する
+ */
+export async function getMyLinkedParticipantIdForEvent(eventId: string): Promise<string | null> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId || !eventId) return null;
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('user_event_links')
+      .select('participant_id')
+      .eq('user_id', userId)
+      .eq('event_id', eventId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('紐づき回答取得エラー:', error);
+      return null;
+    }
+
+    return data?.participant_id ?? null;
+  } catch (error) {
+    console.error('紐づき回答取得例外:', error);
+    return null;
   }
 }
 

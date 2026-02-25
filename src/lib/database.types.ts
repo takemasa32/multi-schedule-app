@@ -239,6 +239,173 @@ export type Database = {
           },
         ];
       };
+      user_event_availability_overrides: {
+        Row: {
+          availability: boolean;
+          event_date_id: string;
+          event_id: string;
+          id: string;
+          reason: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          availability: boolean;
+          event_date_id: string;
+          event_id: string;
+          id?: string;
+          reason: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          availability?: boolean;
+          event_date_id?: string;
+          event_id?: string;
+          id?: string;
+          reason?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_event_availability_overrides_event_date_id_fkey';
+            columns: ['event_date_id'];
+            isOneToOne: false;
+            referencedRelation: 'event_dates';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_event_availability_overrides_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_event_links: {
+        Row: {
+          auto_sync: boolean;
+          created_at: string;
+          event_id: string;
+          id: string;
+          participant_id: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          auto_sync?: boolean;
+          created_at?: string;
+          event_id: string;
+          id?: string;
+          participant_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          auto_sync?: boolean;
+          created_at?: string;
+          event_id?: string;
+          id?: string;
+          participant_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_event_links_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_event_links_participant_id_fkey';
+            columns: ['participant_id'];
+            isOneToOne: false;
+            referencedRelation: 'participants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_schedule_blocks: {
+        Row: {
+          availability: boolean;
+          end_time: string;
+          event_id: string | null;
+          id: string;
+          source: string;
+          start_time: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          availability: boolean;
+          end_time: string;
+          event_id?: string | null;
+          id?: string;
+          source: string;
+          start_time: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          availability?: boolean;
+          end_time?: string;
+          event_id?: string | null;
+          id?: string;
+          source?: string;
+          start_time?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_schedule_blocks_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_schedule_templates: {
+        Row: {
+          availability: boolean;
+          end_time: string;
+          id: string;
+          sample_count: number;
+          source: string;
+          start_time: string;
+          updated_at: string;
+          user_id: string;
+          weekday: number;
+        };
+        Insert: {
+          availability: boolean;
+          end_time: string;
+          id?: string;
+          sample_count?: number;
+          source: string;
+          start_time: string;
+          updated_at?: string;
+          user_id: string;
+          weekday: number;
+        };
+        Update: {
+          availability?: boolean;
+          end_time?: string;
+          id?: string;
+          sample_count?: number;
+          source?: string;
+          start_time?: string;
+          updated_at?: string;
+          user_id?: string;
+          weekday?: number;
+        };
+        Relationships: [];
+      };
       participants: {
         Row: {
           comment: string | null;
