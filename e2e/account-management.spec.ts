@@ -256,56 +256,20 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(tourDialog.getByText('マイ予定設定')).toBeVisible();
   });
 
-  test('未ログイン回答の紐づけ候補を /account で紐づけできる', async ({ page, browserName }) => {
+  test('/account では未ログイン回答の紐づけセクションを表示しない', async ({
+    page,
+    browserName,
+  }) => {
     test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
-
-    const event = await createSeedEvent('E2E_候補イベント', [
-      { start: '2099-02-02T03:00:00Z', end: '2099-02-02T04:00:00Z' },
-    ]);
-    const participantId = await createParticipant(event.id, 'E2E_候補参加者');
-
-    await db.query(
-      `insert into public.event_access_histories(user_id,event_public_token,event_title,is_created_by_me,last_accessed_at)
-       values($1,$2,$3,false,now())
-       on conflict(user_id,event_public_token)
-       do update set event_title=excluded.event_title,last_accessed_at=excluded.last_accessed_at`,
-      [userId, event.publicToken, event.title],
-    );
 
     await loginAsDevUser(page);
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await dismissAccountTourIfVisible(page);
-    const refreshButton = page
-      .getByTestId('answer-linker-refresh')
-      .filter({ hasText: '候補を更新' })
-      .first();
-    await expect(refreshButton).toBeVisible();
-    await refreshButton.click();
-
-    const candidateCard = page
-      .locator('[data-testid^="answer-linker-candidate-"]')
-      .filter({ hasText: event.title })
-      .first();
-    await expect(candidateCard).toBeVisible();
-    await candidateCard.locator('[data-testid^="answer-linker-link-"]').click();
-    await expect
-      .poll(
-        async () => {
-          const linked = await db.query<{ participant_id: string | null }>(
-            'select participant_id from public.user_event_links where user_id=$1 and event_id=$2',
-            [userId, event.id],
-          );
-          return linked.rows[0]?.participant_id ?? null;
-        },
-        { timeout: 10000 },
-      )
-      .toBe(participantId);
+    await expect(page.getByTestId('account-answer-linker')).toHaveCount(0);
+    await expect(page.getByText('未ログイン回答の紐づけ')).toHaveCount(0);
   });
 
-  test('イベント入力画面では既存回答紐づけ導線を表示しない', async ({
-    page,
-    browserName,
-  }) => {
+  test('イベント入力画面では既存回答紐づけ導線を表示しない', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
 
     const event = await createSeedEvent('E2E_入力紐づけ', [

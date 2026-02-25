@@ -4,7 +4,6 @@ import EventHistory from '@/components/event-history';
 import FavoriteEvents from '@/components/favorite-events';
 import { FavoriteEventsProvider } from '@/components/favorite-events-context';
 import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
-import AccountAnswerLinker from '@/components/account/account-answer-linker';
 
 type AccountActivityProps = {
   isAuthenticated: boolean;
@@ -13,7 +12,6 @@ type AccountActivityProps = {
 export default function AccountActivity({ isAuthenticated }: AccountActivityProps) {
   return (
     <FavoriteEventsProvider>
-      <AccountAnswerLinker />
       <section className="mb-8">
         <AccountScheduleTemplates initialIsAuthenticated={isAuthenticated} />
       </section>
