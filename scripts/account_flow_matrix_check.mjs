@@ -104,13 +104,19 @@ const browser = await chromium.launch({
 
 try {
   // 1) 未ログイン状態
-  const guestCtx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'ja-JP' });
+  const guestCtx = await browser.newContext({
+    viewport: { width: 1366, height: 900 },
+    locale: 'ja-JP',
+  });
   const guestPage = await guestCtx.newPage();
   attachDebug(guestPage, 'guest-main');
 
   await guestPage.goto(`${BASE_URL}/account`, { waitUntil: 'domcontentloaded' });
   const unauthText = await guestPage.textContent('body');
-  add('未ログイン/account案内表示', Boolean(unauthText?.includes('ログインすると予定設定を管理できます。')));
+  add(
+    '未ログイン/account案内表示',
+    Boolean(unauthText?.includes('ログインすると予定設定を管理できます。')),
+  );
   await guestPage.screenshot({ path: path.join(outDir, 'account-unauth.png'), fullPage: true });
 
   const candidateName = `候補_${Date.now()}`;
@@ -127,28 +133,25 @@ try {
   // 3) /account フラッシュ確認
   await guestPage.goto(`${BASE_URL}/account`, { waitUntil: 'domcontentloaded' });
   const firstPaintText = await guestPage.textContent('body');
-  const flashAtFirstPaint = Boolean(firstPaintText?.includes('ログインすると予定設定を管理できます。'));
+  const flashAtFirstPaint = Boolean(
+    firstPaintText?.includes('ログインすると予定設定を管理できます。'),
+  );
   await guestPage.waitForTimeout(1500);
   const settledText = await guestPage.textContent('body');
   const flashAfterSettle = Boolean(settledText?.includes('ログインすると予定設定を管理できます。'));
   add('ログイン直後/accountフラッシュなし(初期描画)', !flashAtFirstPaint);
   add('ログイン直後/accountフラッシュなし(安定後)', !flashAfterSettle);
-  await guestPage.screenshot({ path: path.join(outDir, 'account-auth-desktop.png'), fullPage: true });
+  await guestPage.screenshot({
+    path: path.join(outDir, 'account-auth-desktop.png'),
+    fullPage: true,
+  });
 
-  // 4) アカウント紐づけ候補(表示のみ先に確認)
-  await guestPage.waitForTimeout(2000);
-  const refreshButton = guestPage.getByRole('button', { name: '候補を更新' });
-  if (await refreshButton.isVisible().catch(() => false)) {
-    await refreshButton.click();
-    await guestPage.waitForTimeout(1500);
-  }
-  const bodyAfterLoad = (await guestPage.textContent('body')) ?? '';
-  const hasLinkerButton = bodyAfterLoad.includes('この回答を紐づける') || bodyAfterLoad.includes(candidateName);
-  add(
-    '未ログイン回答の紐づけ候補表示',
-    hasLinkerButton,
-    hasLinkerButton ? candidateName : '候補ボタン未表示',
+  // 4) /account では未ログイン回答紐づけセクションを表示しない
+  await guestPage.waitForTimeout(1500);
+  const hasAccountLinker = ((await guestPage.textContent('body')) ?? '').includes(
+    '未ログイン回答の紐づけ',
   );
+  add('/account で未ログイン回答紐づけを表示しない', !hasAccountLinker);
 
   // 5) not_found
   await guestPage.goto(INPUT_URL, { waitUntil: 'domcontentloaded' });
@@ -163,8 +166,14 @@ try {
 
   // 6) ambiguous
   const dupName = `重複_${Date.now()}`;
-  const dupGuest1 = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'ja-JP' });
-  const dupGuest2 = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'ja-JP' });
+  const dupGuest1 = await browser.newContext({
+    viewport: { width: 1366, height: 900 },
+    locale: 'ja-JP',
+  });
+  const dupGuest2 = await browser.newContext({
+    viewport: { width: 1366, height: 900 },
+    locale: 'ja-JP',
+  });
   await submitGuestAnswer(dupGuest1, dupName);
   await submitGuestAnswer(dupGuest2, dupName);
   await dupGuest1.close();
@@ -191,7 +200,10 @@ try {
 
   // 7) イベント入力画面での名前紐づけ 成功
   const successName = `成功_${Date.now()}`;
-  const anotherGuest = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'ja-JP' });
+  const anotherGuest = await browser.newContext({
+    viewport: { width: 1366, height: 900 },
+    locale: 'ja-JP',
+  });
   await submitGuestAnswer(anotherGuest, successName);
   await anotherGuest.close();
 
@@ -205,21 +217,13 @@ try {
     guestPage.url(),
   );
 
-  // 8) アカウント画面での紐づけ実行（候補が残っている場合）
+  // 8) /account では未ログイン回答紐づけ導線を表示しない
   await guestPage.goto(`${BASE_URL}/account`, { waitUntil: 'domcontentloaded' });
-  await guestPage.waitForTimeout(1800);
-  const hasLinkerButtonAfter = ((await guestPage.textContent('body')) ?? '').includes('この回答を紐づける');
-  if (hasLinkerButtonAfter) {
-    await guestPage.getByRole('button', { name: 'この回答を紐づける' }).first().click();
-    await guestPage.waitForTimeout(1200);
-    const afterLinkText = (await guestPage.textContent('body')) ?? '';
-    add(
-      'アカウント画面での紐づけ実行',
-      afterLinkText.includes('回答をアカウントに紐づけました') || afterLinkText.includes('紐づけ候補はありません'),
-    );
-  } else {
-    add('アカウント画面での紐づけ実行', true, '候補なし（事前に紐づけ済みのため）');
-  }
+  await guestPage.waitForTimeout(1200);
+  const hasLinkerButtonAfter = ((await guestPage.textContent('body')) ?? '').includes(
+    'この回答を紐づける',
+  );
+  add('/account で回答紐づけボタンを表示しない', !hasLinkerButtonAfter);
 
   // 9) 週ごとの用事 更新
   await guestPage.waitForTimeout(1800);
@@ -263,7 +267,10 @@ try {
   );
 
   // 11) モバイル表示
-  const mobileCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ja-JP' });
+  const mobileCtx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    locale: 'ja-JP',
+  });
   const mobilePage = await mobileCtx.newPage();
   attachDebug(mobilePage, 'mobile');
 
@@ -280,7 +287,10 @@ try {
 
   await mobileAuthPage.goto(`${BASE_URL}/account`, { waitUntil: 'domcontentloaded' });
   await mobileAuthPage.waitForTimeout(1500);
-  await mobileAuthPage.screenshot({ path: path.join(outDir, 'account-auth-mobile.png'), fullPage: true });
+  await mobileAuthPage.screenshot({
+    path: path.join(outDir, 'account-auth-mobile.png'),
+    fullPage: true,
+  });
 
   await mobileAuthPage.goto(INPUT_URL, { waitUntil: 'domcontentloaded' });
   await mobileAuthPage.waitForTimeout(1200);
@@ -289,15 +299,26 @@ try {
     await tableViewButton.click();
   }
   await mobileAuthPage.waitForTimeout(400);
-  await mobileAuthPage.screenshot({ path: path.join(outDir, 'event-input-mobile.png'), fullPage: true });
+  await mobileAuthPage.screenshot({
+    path: path.join(outDir, 'event-input-mobile.png'),
+    fullPage: true,
+  });
 
   const cellMetrics = await mobileAuthPage.evaluate(() => {
     const cellButton = document.querySelector('table tbody td button, [data-date-id]');
     if (!cellButton) return null;
     const r = cellButton.getBoundingClientRect();
-    return { width: Math.round(r.width), height: Math.round(r.height), ratio: Number((r.width / r.height).toFixed(2)) };
+    return {
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+      ratio: Number((r.width / r.height).toFixed(2)),
+    };
   });
-  add('モバイルセル縦横比チェック', Boolean(cellMetrics && cellMetrics.ratio >= 0.75), JSON.stringify(cellMetrics));
+  add(
+    'モバイルセル縦横比チェック',
+    Boolean(cellMetrics && cellMetrics.ratio >= 0.75),
+    JSON.stringify(cellMetrics),
+  );
 
   await mobileAuthCtx.close();
   await guestCtx.close();
