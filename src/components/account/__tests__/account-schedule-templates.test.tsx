@@ -77,6 +77,11 @@ const createFixedLocalTimeRange = (
   };
 };
 
+const toDateKey = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
+
 const toWeekPeriodLabelFromIso = (iso: string) => {
   const base = new Date(iso);
   const diffToMonday = (base.getDay() + 6) % 7;
@@ -281,6 +286,50 @@ describe('AccountScheduleTemplates', () => {
         endTime: `${range.dateKey}T${endClock}:00`,
         availability: false,
         replaceBlockId: 'block-1',
+      });
+    });
+  });
+
+  it('予定一括管理の保存時に 23:00-24:00 は翌日 00:00 終了として更新する', async () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateKey = toDateKey(today);
+    const nextDateKey = toDateKey(tomorrow);
+
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([
+      {
+        id: 'block-midnight',
+        start_time: `${dateKey}T23:00:00Z`,
+        end_time: `${nextDateKey}T00:00:00Z`,
+        availability: true,
+        source: 'manual',
+        event_id: null,
+      },
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('dated-edit'));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(`${dateKey} 23:00-24:00$`),
+      }),
+    );
+    fireEvent.click(screen.getByTestId('dated-save-bottom'));
+
+    await waitFor(() => {
+      expect(mockUpsertUserScheduleBlock).toHaveBeenCalledWith({
+        startTime: `${dateKey}T23:00:00`,
+        endTime: `${nextDateKey}T00:00:00`,
+        availability: false,
+        replaceBlockId: 'block-midnight',
       });
     });
   });

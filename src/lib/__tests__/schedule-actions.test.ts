@@ -1,10 +1,16 @@
-import { saveAvailabilityOverrides } from '@/lib/schedule-actions';
+import { saveAvailabilityOverrides, upsertUserScheduleBlock } from '@/lib/schedule-actions';
+import { getAuthSession } from '@/lib/auth';
 import { createSupabaseAdmin } from '@/lib/supabase';
+
+jest.mock('@/lib/auth', () => ({
+  getAuthSession: jest.fn(),
+}));
 
 jest.mock('@/lib/supabase', () => ({
   createSupabaseAdmin: jest.fn(),
 }));
 
+const mockedGetAuthSession = getAuthSession as jest.Mock;
 const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
 
 describe('saveAvailabilityOverrides', () => {
@@ -79,5 +85,55 @@ describe('saveAvailabilityOverrides', () => {
     expect(deleteFirstEqMock).toHaveBeenCalledWith('user_id', 'user-1');
     expect(deleteSecondEqMock).toHaveBeenCalledWith('event_id', 'event-1');
     expect(deleteInMock).toHaveBeenCalledWith('event_date_id', ['d2']);
+  });
+});
+
+describe('upsertUserScheduleBlock', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({
+      user: { id: 'user-1' },
+    });
+  });
+
+  it('同日 23:00-00:00 指定は翌日 00:00 終了に補正して保存する', async () => {
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+    const fromMock = jest.fn().mockReturnValue({ upsert: upsertMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await upsertUserScheduleBlock({
+      startTime: '2026-03-10T23:00:00',
+      endTime: '2026-03-10T00:00:00',
+      availability: true,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(upsertMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          user_id: 'user-1',
+          start_time: '2026-03-10T23:00:00.000Z',
+          end_time: '2026-03-11T00:00:00.000Z',
+          availability: true,
+          source: 'manual',
+          event_id: null,
+        }),
+      ],
+      { onConflict: 'user_id,start_time,end_time' },
+    );
+  });
+
+  it('同日で終了が開始より前でも 00:00 以外は不正として拒否する', async () => {
+    const result = await upsertUserScheduleBlock({
+      startTime: '2026-03-10T23:00:00',
+      endTime: '2026-03-10T22:00:00',
+      availability: false,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      message: '時間帯の指定が正しくありません',
+    });
+    expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
   });
 });

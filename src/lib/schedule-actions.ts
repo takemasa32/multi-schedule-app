@@ -76,6 +76,49 @@ export type UserAvailabilitySyncPreviewEvent = {
   dates: SyncPreviewDateRow[];
 };
 
+const toLocalDateTimeString = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(
+    date.getMinutes(),
+  ).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+
+const normalizeManualBlockRange = ({
+  startTime,
+  endTime,
+}: {
+  startTime: string;
+  endTime: string;
+}): { startTime: string; endTime: string } => {
+  const startDate = toComparableDate(startTime);
+  const endDate = toComparableDate(endTime);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return { startTime, endTime };
+  }
+
+  const isSameDay =
+    startDate.getFullYear() === endDate.getFullYear() &&
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getDate() === endDate.getDate();
+  const isMidnightEnd =
+    endDate.getHours() === 0 &&
+    endDate.getMinutes() === 0 &&
+    endDate.getSeconds() === 0 &&
+    endDate.getMilliseconds() === 0;
+
+  // 同日 00:00 終了は「その日の終わり（翌日00:00）」として補正する。
+  if (isSameDay && isMidnightEnd && endDate <= startDate) {
+    const adjustedEnd = new Date(endDate);
+    adjustedEnd.setDate(adjustedEnd.getDate() + 1);
+    return {
+      startTime: toLocalDateTimeString(startDate),
+      endTime: toLocalDateTimeString(adjustedEnd),
+    };
+  }
+
+  return { startTime, endTime };
+};
+
 const computeAutoFillWithPriority = ({
   start,
   end,
@@ -1073,7 +1116,16 @@ export async function upsertUserScheduleBlock({
     return { success: false, message: 'ログインが必要です' };
   }
 
-  if (!startTime || !endTime || startTime >= endTime) {
+  const normalizedRange = normalizeManualBlockRange({ startTime, endTime });
+  const startDate = toComparableDate(normalizedRange.startTime);
+  const endDate = toComparableDate(normalizedRange.endTime);
+  if (
+    !normalizedRange.startTime ||
+    !normalizedRange.endTime ||
+    Number.isNaN(startDate.getTime()) ||
+    Number.isNaN(endDate.getTime()) ||
+    startDate >= endDate
+  ) {
     return { success: false, message: '時間帯の指定が正しくありません' };
   }
 
@@ -1090,7 +1142,7 @@ export async function upsertUserScheduleBlock({
     }
   }
 
-  const ranges = splitToHourlyRanges(startTime, endTime);
+  const ranges = splitToHourlyRanges(normalizedRange.startTime, normalizedRange.endTime);
   if (ranges.length === 0) {
     return { success: false, message: '時間帯の指定が正しくありません' };
   }

@@ -68,6 +68,19 @@ const toLocalDateKey = (date: Date): string =>
 const toLocalTimeKey = (date: Date): string =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
+const toDisplayTimeRangeKey = (start: Date, end: Date): string => {
+  const startTime = toLocalTimeKey(start);
+  const endTime = toLocalTimeKey(end);
+  const spansNextDay = toLocalDateKey(start) !== toLocalDateKey(end);
+
+  // 24:00終了として表示し、日付またぎの終端を明確にする。
+  if (spansNextDay && endTime === '00:00') {
+    return `${startTime}-24:00`;
+  }
+
+  return `${startTime}-${endTime}`;
+};
+
 const toTemplateCellKey = (weekday: number, startTime: string, endTime: string) =>
   `${weekday}_${normalizeTime(startTime)}-${normalizeTime(endTime)}`;
 
@@ -95,6 +108,33 @@ const parseBlockCellKey = (
 const toMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
+};
+
+const resolveDatedBlockDateTimeRange = ({
+  dateKey,
+  startTime,
+  endTime,
+}: {
+  dateKey: string;
+  startTime: string;
+  endTime: string;
+}): { startDateTime: string; endDateTime: string } => {
+  const startDate = new Date(`${dateKey}T00:00:00`);
+  const endDate = new Date(startDate);
+  const normalizedEndTime = endTime === '24:00' ? '00:00' : endTime;
+  const treatAsEndOfDay = endTime === '24:00';
+
+  // 終了時刻が開始時刻より前、または24:00指定なら翌日終了として扱う。
+  if (treatAsEndOfDay || toMinutes(normalizedEndTime) < toMinutes(startTime)) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+
+  const endDateKey = toLocalDateKey(endDate);
+
+  return {
+    startDateTime: `${dateKey}T${startTime}:00`,
+    endDateTime: `${endDateKey}T${normalizedEndTime}:00`,
+  };
 };
 
 const toTimeString = (minutes: number): string =>
@@ -126,7 +166,7 @@ const buildSyncPreviewMatrix = (event: UserAvailabilitySyncPreviewEvent) => {
     const end = new Date(row.endTime);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
     const dateKey = toLocalDateKey(start);
-    const timeKey = `${toLocalTimeKey(start)}-${toLocalTimeKey(end)}`;
+    const timeKey = toDisplayTimeRangeKey(start, end);
     dateKeys.add(dateKey);
     timeKeys.add(timeKey);
     map[`${dateKey}_${timeKey}`] = row;
@@ -339,7 +379,7 @@ export default function AccountScheduleTemplates({
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
 
       const dateKey = toLocalDateKey(start);
-      const timeKey = `${toLocalTimeKey(start)}-${toLocalTimeKey(end)}`;
+      const timeKey = toDisplayTimeRangeKey(start, end);
       dateKeys.add(dateKey);
       timeKeys.add(timeKey);
       if (!dateMap[dateKey]) {
@@ -621,11 +661,16 @@ export default function AccountScheduleTemplates({
 
       const nextAvailability = draft === 'available';
       if (current && current.availability === nextAvailability) return;
+      const dateTimeRange = resolveDatedBlockDateTimeRange({
+        dateKey: parsed.dateKey,
+        startTime: parsed.startTime,
+        endTime: parsed.endTime,
+      });
 
       operations.push(() =>
         upsertUserScheduleBlock({
-          startTime: `${parsed.dateKey}T${parsed.startTime}:00`,
-          endTime: `${parsed.dateKey}T${parsed.endTime}:00`,
+          startTime: dateTimeRange.startDateTime,
+          endTime: dateTimeRange.endDateTime,
           availability: nextAvailability,
           replaceBlockId: current?.id,
         }),
@@ -857,8 +902,8 @@ export default function AccountScheduleTemplates({
                     })}
                     {weeklyLastEndLabel && (
                       <tr>
-                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
-                          <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
+                        <th className="bg-base-100 border-base-300 border px-1 py-1 text-right md:px-2">
+                          <span className="text-xs font-medium">
                             {weeklyLastEndLabel === '00:00'
                               ? '24:00'
                               : weeklyLastEndLabel.replace(/^0/, '')}
@@ -1038,8 +1083,8 @@ export default function AccountScheduleTemplates({
                     ))}
                     {datedLastEndLabel && (
                       <tr>
-                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
-                          <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
+                        <th className="bg-base-100 border-base-300 border px-1 py-1 text-right md:px-2">
+                          <span className="text-xs font-medium">
                             {datedLastEndLabel === '00:00'
                               ? '24:00'
                               : datedLastEndLabel.replace(/^0/, '')}
