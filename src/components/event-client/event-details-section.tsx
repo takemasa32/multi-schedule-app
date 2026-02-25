@@ -32,6 +32,7 @@ interface EventDetailsSectionProps {
   participants: Participant[];
   availabilities: Availability[];
   finalizedDateIds: string[];
+  myParticipantId?: string | null;
 }
 
 export default function EventDetailsSection({
@@ -40,6 +41,7 @@ export default function EventDetailsSection({
   participants,
   availabilities,
   finalizedDateIds,
+  myParticipantId = null,
 }: EventDetailsSectionProps) {
   // 参加者名バッジのトグルUI
   const [excludedParticipantIds, setExcludedParticipantIds] = useState<string[]>([]);
@@ -62,6 +64,7 @@ export default function EventDetailsSection({
             finalizedDateIds={finalizedDateIds}
             excludedParticipantIds={excludedParticipantIds}
             testIdPrefix="public"
+            myParticipantId={myParticipantId}
           />
           {/* 参加者名リスト（表示/非表示トグル） */}
           {participants.length > 0 && (
@@ -86,6 +89,9 @@ export default function EventDetailsSection({
                     <span className="mr-1">👤</span>
                   )}
                   {p.name}
+                  {myParticipantId === p.id && (
+                    <span className="badge badge-xs badge-success ml-1">自分</span>
+                  )}
                 </button>
               ))}
             </div>

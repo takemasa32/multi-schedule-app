@@ -76,3 +76,4 @@ junit.xml
 # e2eテスト用のファイル
 test-results/
 playwright-report/
+.playwright-cli

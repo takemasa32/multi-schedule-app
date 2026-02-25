@@ -8,6 +8,9 @@
 - [アクセス権限・閲覧方針](docs/architecture/access-policy.md)
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
 - [イベント作成ウィザード設計メモ](docs/architecture/create-wizard.md)
+- [回答ウィザード設計メモ](docs/architecture/answer-wizard.md)
+- [アカウント予定連携の設計](docs/architecture/account-schedule.md)
+- [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
@@ -21,10 +24,25 @@
 - **ログイン不要で利用可能**（ゲスト利用を優先）
 - Google ログインを行うと **履歴の同期** が可能
 - アカウントページで **履歴・お気に入りの確認** と **ログアウト / 連携削除** が可能
+- ログイン時は **予定テンプレの管理** と **回答の自動反映・同期** が利用可能
+- 初回ログイン時は `/account` で **使い方ツアー（8ステップ）** を表示し、以降は **手動再表示** で確認可能
 
 ## Supabase ローカル開発環境
 
 Supabase のローカル開発環境を使用して、オフラインでの開発や高速なフィードバックループを実現します。
+
+## 開発用ログイン（ローカル限定）
+
+ローカル環境でのみ利用できる開発用ログインを用意しています。以下の環境変数を設定し、`npm run dev` を再起動してください。
+
+```bash
+ENABLE_DEV_LOGIN=true
+DEV_LOGIN_ID=devuser
+DEV_LOGIN_PASSWORD=devpass
+NEXT_PUBLIC_ENABLE_DEV_LOGIN=true
+```
+
+※ 本番環境では `NODE_ENV=production` のため自動で無効化されます。
 
 ### 前提条件
 
@@ -48,7 +66,7 @@ npx supabase status
 
 Supabase を起動すると、以下のような情報が表示されます：
 
-```
+```text
 API URL: http://localhost:54321
 GraphQL URL: http://localhost:54321/graphql/v1
 DB URL: postgresql://postgres:postgres@localhost:54322/postgres
@@ -146,16 +164,14 @@ GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 
 ### E2E テスト (Playwright)
 
-`npm run dev`で開発サーバーを起動している状態で、以下のコマンドを実行してください。
+- 推奨（公開フロー + 認証フロー）: `npm run test:e2e:chrome`
+- 公開フローのみ: `npm run test:e2e:chrome:public`
+- 認証フローのみ: `npm run test:e2e:auth`
+- すでに開発サーバーを起動済みで Playwright のみ実行したい場合: `npm run test:e2e`
 
-`npx playwright test`
+詳細な実行パターンと前提条件は、下部の「e2e テストについて」を参照してください。
 
-<!-- - **開発環境での E2E テスト**: `npm run e2e:dev` - 開発サーバーを起動し、ブラウザウィンドウを表示してテストを実行します。
-- **本番ビルドでの E2E テスト**: `npm run e2e` - 本番用ビルドを作成し、その環境でブラウザウィンドウを表示してテストを実行します。
-- **ヘッドレステスト**: `npm run e2e:headless` - 本番ビルドでブラウザを表示せずにテストを実行し、シンプルなドット形式でレポートします。
-- **CI 環境用 E2E テスト**: `npm run e2e:ci` - CI 環境向けの最適化されたヘッドレステスト実行コマンドです。 -->
-
-### 注意事項
+### Jest テスト実行時の注意事項
 
 - すべてのテストは Next.js 公式推奨の`next/jest`プリセットを利用しており、babel や ts-jest は不要です。
 - TypeScript 型エラーや Lint エラーが残っている場合、テストは失敗します。必ず型・Lint が通る状態で実行してください。
@@ -196,6 +212,7 @@ GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 e2e テストは Playwright を使用しており、以下のようなテストケースをカバーしています：
 
 - イベント作成 → リンク共有 → 参加者回答 → 主催者確定 → カレンダー連携
+- 認証ありフロー（`/account`、予定一括管理、回答紐づけ、ツアー）を含む回帰確認
 - サーバー・Supabase 同時起動、ヘッドレス実行、HTML レポート出力
 
 ### 使用方法
@@ -204,6 +221,19 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
   `npm run e2e`
   - Next.js サーバー・Supabase ローカル環境・Playwright テストを並列で自動起動します。
   - テストはヘッドレスモードで実行され、結果は HTML レポートとして `playwright-report/` ディレクトリに出力されます。
+
+- **Chromium向けの推奨実行（公開フロー + 認証フロー）**
+  `npm run test:e2e:chrome`
+  - `test:e2e:chrome:public`（公開フロー）と `test:e2e:auth`（認証必須フロー）を並列実行します。
+  - 認証フローは `playwright.auth.config.ts` を使い、`http://localhost:3201` で検証します。
+
+- **公開フローのみ実行（`@auth-required` を除外）**
+  `npm run test:e2e:chrome:public`
+
+- **認証フローのみ実行**
+  `npm run test:e2e:auth`
+  - 内部で `ENABLE_DEV_LOGIN` などの必要な環境変数を設定し、ビルド済みサーバーを `:3201` で起動して実行します。
+  - DB接続（`SUPABASE_DB_URL`）とローカル環境の準備が必要です。
 
 - **開発モードでの e2e テスト実行**
   `npm run e2e:dev`
@@ -220,10 +250,11 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 - **テストレポートの確認**
   テスト実行後、以下のコマンドで HTML レポートをブラウザで確認できます。
 
-#### 注意事項
+#### E2E テスト実行時の注意事項
 
 - テスト実行には Supabase のローカル環境が起動している必要があります。起動していない場合は、`npx supabase start` で起動してください。
 - テストは実際のデータベースに影響を与えないよう設計されていますが、ローカル環境での実行を推奨します。
+- 認証付きE2Eを実行する場合は、少なくとも `SUPABASE_DB_URL` を解決できる状態にしてください（`.env.local` または環境変数）。
 - テストの詳細・注意事項は `e2e/` ディレクトリおよび各テストファイルを参照してください。
 
 ---

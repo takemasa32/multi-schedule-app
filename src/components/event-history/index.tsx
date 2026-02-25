@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  EventHistoryItem,
-  getEventHistory,
-  clearEventHistory,
-  setEventHistory,
-} from '@/lib/utils';
+import { EventHistoryItem, getEventHistory, clearEventHistory, setEventHistory } from '@/lib/utils';
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
 import { signIn, useSession } from 'next-auth/react';
 import { clearServerEventHistory, syncEventHistory } from '@/lib/event-history-actions';
@@ -74,6 +69,7 @@ function EventHistoryInner({
         setEventHistory(nextHistory);
       }
       setHistory(nextHistory);
+      window.dispatchEvent(new CustomEvent('event-history-synced'));
     };
 
     void syncHistory();
@@ -156,6 +152,11 @@ function EventHistoryInner({
                     {event.isCreatedByMe && (
                       <span className="bg-primary/20 text-primary ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium">
                         主催
+                      </span>
+                    )}
+                    {event.answeredByMe && (
+                      <span className="bg-success/20 text-success ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium">
+                        回答済み
                       </span>
                     )}
                   </p>

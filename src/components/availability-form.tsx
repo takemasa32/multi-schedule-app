@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import {
+  fetchUserScheduleTemplates,
+  upsertWeeklyTemplatesFromWeekdaySelections,
+} from '@/lib/schedule-actions';
 import { submitAvailability, checkParticipantExists } from '@/lib/actions';
-import { formatDateTimeWithDay } from '@/lib/utils';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
+import WeekNavigationBar from './week-navigation-bar';
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -25,15 +29,32 @@ interface AvailabilityFormProps {
   } | null;
   initialAvailabilities?: Record<string, boolean>;
   mode?: 'new' | 'edit';
+  isAuthenticated?: boolean;
+  hasSyncTargetEvents?: boolean;
+  lockedDateIds?: string[];
+  autoFillAvailabilities?: Record<string, boolean>;
+  dailyAutoFillDateIds?: string[];
+  overrideDateIds?: string[];
+  coveredDateIds?: string[];
+  uncoveredDateKeys?: string[];
+  uncoveredDayCount?: number;
+  requireWeeklyStep?: boolean;
+  hasAccountSeedData?: boolean;
 }
 
-type ViewMode = 'list' | 'table' | 'heatmap';
 type WeekDay = '月' | '火' | '水' | '木' | '金' | '土' | '日';
 type WeekDaySchedule = {
   selected: boolean;
   timeSlots: Record<string, boolean>;
 };
 type CellStatus = 'available' | 'unavailable' | 'empty';
+type WizardStep = 1 | 2 | 3 | 4;
+type WeeklyTemplatePayloadRow = {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  availability: boolean;
+};
 
 export default function AvailabilityForm({
   eventId,
@@ -42,17 +63,35 @@ export default function AvailabilityForm({
   initialParticipant,
   initialAvailabilities = {},
   mode = 'new',
+  isAuthenticated = false,
+  hasSyncTargetEvents = false,
+  lockedDateIds = [],
+  autoFillAvailabilities = {},
+  dailyAutoFillDateIds = [],
+  overrideDateIds: initialOverrideDateIds = [],
+  coveredDateIds: _coveredDateIds = [],
+  uncoveredDateKeys: _uncoveredDateKeys = [],
+  uncoveredDayCount = 0,
+  requireWeeklyStep: _requireWeeklyStep = false,
+  hasAccountSeedData: _hasAccountSeedData = false,
 }: AvailabilityFormProps) {
+  const isNewMode = mode === 'new';
+  const showWeeklyStep = !isAuthenticated || uncoveredDayCount > 0;
+  const weeklyStep = showWeeklyStep ? ((isNewMode ? 2 : 1) as WizardStep) : null;
+  const heatmapStep: WizardStep = isNewMode
+    ? ((showWeeklyStep ? 3 : 2) as WizardStep)
+    : ((showWeeklyStep ? 2 : 1) as WizardStep);
+  const confirmStep: WizardStep = isNewMode
+    ? ((showWeeklyStep ? 4 : 3) as WizardStep)
+    : ((showWeeklyStep ? 3 : 2) as WizardStep);
+
   const [name, setName] = useState(initialParticipant?.name || '');
   const [comment, setComment] = useState(initialParticipant?.comment || '');
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false); // 更新モード用の状態
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
-  // 名前の重複確認用状態
-  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState<boolean>(false);
+  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+  const [weekdayInitialized, setWeekdayInitialized] = useState(false);
+  const [showNameInputOnDuplicate, setShowNameInputOnDuplicate] = useState(false);
   const [isCheckingName, setIsCheckingName] = useState(false);
-  // フォーム送信の一時保存用
-  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   // すべての日程に対して初期状態を設定
   const [selectedDates, setSelectedDates] = useState<Record<string, boolean>>(() => {
     const initialState: Record<string, boolean> = {};
@@ -69,12 +108,21 @@ export default function AvailabilityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+  const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
+  const [showWeeklySaveConfirm, setShowWeeklySaveConfirm] = useState(false);
+  const [pendingWeeklyTemplates, setPendingWeeklyTemplates] = useState<WeeklyTemplatePayloadRow[]>(
+    [],
+  );
+  const [isSavingWeeklyTemplates, setIsSavingWeeklyTemplates] = useState(false);
+  const [hasWeekdayEdits, setHasWeekdayEdits] = useState(false);
+  const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
+  const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
+  const hasAutoFillAppliedRef = useRef(false);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
-  const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
-  // 週入力モード（アコーディオンを表示中か）：この状態が true の時は通常入力を無効化
-  const [isWeekdayModeActive, setIsWeekdayModeActive] = useState(false);
+  const isWeekdayModeActive = weeklyStep !== null && currentStep === weeklyStep;
   // 曜日ごとの選択状態と時間帯設定
   const [weekdaySelections, setWeekdaySelections] = useState<Record<WeekDay, WeekDaySchedule>>({
     月: { selected: false, timeSlots: {} },
@@ -88,6 +136,12 @@ export default function AvailabilityForm({
 
   // ページネーション用の状態
   const [currentPage, setCurrentPage] = useState(0);
+  const lockedDateIdSet = useMemo(() => new Set(lockedDateIds), [lockedDateIds]);
+  const overrideDateIdSet = useMemo(() => new Set(overrideDateIds), [overrideDateIds]);
+  const dailyAutoFillDateIdSet = useMemo(
+    () => new Set(dailyAutoFillDateIds),
+    [dailyAutoFillDateIds],
+  );
 
   // セルのスタイルと状態を返す関数
   const getCellStyle = useCallback(
@@ -100,24 +154,28 @@ export default function AvailabilityForm({
       }
 
       const isSelected = selectedDates[dateId];
+      const isLocked = lockedDateIdSet.has(dateId) && !overrideDateIdSet.has(dateId);
       if (isSelected) {
         return {
-          className:
-            'bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner',
+          className: `bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner${
+            isLocked ? ' opacity-60' : ''
+          }`,
           status: 'available' as CellStatus,
         };
       } else {
         return {
-          className:
-            'bg-base-200/70 text-base-content/70 hover:bg-base-200 border border-base-300/40',
+          className: `bg-base-200/70 text-base-content/70 border border-base-300/40${
+            isLocked ? ' opacity-60' : ' hover:bg-base-200'
+          }`,
           status: 'unavailable' as CellStatus,
         };
       }
     },
-    [selectedDates],
+    [selectedDates, lockedDateIdSet, overrideDateIdSet],
   );
 
   const applyDateSelection = useCallback((keys: string[], value: boolean) => {
+    const changedKeys: string[] = [];
     setSelectedDates((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -130,9 +188,19 @@ export default function AvailabilityForm({
         }
         next[key] = value;
         changed = true;
+        changedKeys.push(key);
       }
       return changed ? next : prev;
     });
+    if (changedKeys.length > 0) {
+      setManuallyEditedDateIds((prev) => {
+        const next = { ...prev };
+        changedKeys.forEach((key) => {
+          next[key] = true;
+        });
+        return next;
+      });
+    }
   }, []);
 
   const dateSelectionController = useSelectionDragController({
@@ -153,6 +221,7 @@ export default function AvailabilityForm({
 
   const applyMatrixSelection = useCallback(
     (keys: string[], value: boolean) => {
+      setHasWeekdayEdits(true);
       setWeekdaySelections((prev) => {
         let changed = false;
         const next: Record<WeekDay, WeekDaySchedule> = { ...prev };
@@ -165,12 +234,14 @@ export default function AvailabilityForm({
             return;
           }
           changed = true;
+          const nextTimeSlots = {
+            ...schedule.timeSlots,
+            [slot]: value,
+          };
           next[weekday] = {
-            selected: value ? true : schedule.selected,
-            timeSlots: {
-              ...schedule.timeSlots,
-              [slot]: value,
-            },
+            // 全セルが false に戻った曜日は未選択として扱い、意図しない保存対象化を防ぐ。
+            selected: Object.values(nextTimeSlots).some(Boolean),
+            timeSlots: nextTimeSlots,
           };
         });
         return changed ? next : prev;
@@ -196,6 +267,27 @@ export default function AvailabilityForm({
     dateSelectionController.cancelDrag();
   }, [dateSelectionController]);
 
+  const handleLockedOverride = useCallback(
+    (dateId: string) => {
+      if (!lockedDateIdSet.has(dateId)) return;
+      if (overrideDateIdSet.has(dateId)) return;
+      const confirmed = window.confirm(
+        'この枠は別の確定イベントと重複しています。上書きしますか？',
+      );
+      if (!confirmed) return;
+      setOverrideDateIds((prev) => (prev.includes(dateId) ? prev : [...prev, dateId]));
+      setSelectedDates((prev) => ({
+        ...prev,
+        [dateId]: !prev[dateId],
+      }));
+      setManuallyEditedDateIds((prev) => ({
+        ...prev,
+        [dateId]: true,
+      }));
+    },
+    [lockedDateIdSet, overrideDateIdSet],
+  );
+
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
     // 既存回答データの名前とコメントがあればそれを優先
@@ -212,55 +304,41 @@ export default function AvailabilityForm({
     }
   }, [initialParticipant]);
 
-  // 時間範囲を読みやすい形式にフォーマット
-  const formatTimeRange = (startTime: string, endTime: string) => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+  useEffect(() => {
+    setCurrentStep(1);
+    setWeekdayInitialized(false);
+    setHasWeekdayEdits(false);
+    hasAutoFillAppliedRef.current = false;
+  }, [mode, eventId]);
 
-    // 00:00を24:00として表示する処理
-    const formatEndTime = () => {
-      if (end.getHours() === 0 && end.getMinutes() === 0) {
-        // 開始日と終了日を比較
-        const startDate = new Date(start);
-        startDate.setHours(0, 0, 0, 0); // 時刻部分をリセット
+  useEffect(() => {
+    if (!isNewMode) return;
+    setCurrentStep(1);
+  }, [isAuthenticated, isNewMode]);
 
-        const endDate = new Date(end);
-        endDate.setHours(0, 0, 0, 0); // 時刻部分をリセット
-
-        // 終了日が開始日の翌日である場合は24:00と表示
-        if (endDate.getTime() - startDate.getTime() === 24 * 60 * 60 * 1000) {
-          return '24:00';
-        }
-      }
-
-      return `${end.getHours().toString().padStart(2, '0')}:${end
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')}`;
-    };
-
-    // 同じ日または24:00にまたがる場合は日付を1回だけ表示
-    const startDay = new Date(start);
-    startDay.setHours(0, 0, 0, 0);
-
-    const endDay = new Date(end);
-    endDay.setHours(0, 0, 0, 0);
-
-    const oneDayDiff = endDay.getTime() - startDay.getTime() === 24 * 60 * 60 * 1000;
-    const sameDay = startDay.getTime() === endDay.getTime();
-
-    if (sameDay || (oneDayDiff && end.getHours() === 0 && end.getMinutes() === 0)) {
-      return `${formatDateTimeWithDay(start)} 〜 ${formatEndTime()}`;
-    } else {
-      // 異なる日の場合は両方の日付を表示
-      return `${formatDateTimeWithDay(start)} 〜 ${formatDateTimeWithDay(end)}`;
-    }
-  };
+  useEffect(() => {
+    if (!isNewMode || !isAuthenticated) return;
+    if (hasAutoFillAppliedRef.current) return;
+    if (Object.keys(autoFillAvailabilities).length === 0) return;
+    setSelectedDates((prev) => {
+      const next = { ...prev };
+      Object.entries(autoFillAvailabilities).forEach(([dateId, value]) => {
+        next[dateId] = value;
+      });
+      return next;
+    });
+    hasAutoFillAppliedRef.current = true;
+  }, [autoFillAvailabilities, isAuthenticated, isNewMode]);
 
   // フォーム送信前のバリデーション用
   const validateForm = async () => {
     if (!name.trim()) {
       setError('お名前を入力してください');
+      return false;
+    }
+
+    if (!Object.values(selectedDates).some(Boolean)) {
+      setError('少なくとも1つの参加可能枠（○）を選択してください');
       return false;
     }
 
@@ -294,8 +372,12 @@ export default function AvailabilityForm({
 
   // この関数はServer Actionを呼び出す前の準備として使用
   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentStep !== confirmStep) {
+      setError('確認ステップで送信してください');
+      return;
+    }
     if (!(await validateForm())) {
-      e.preventDefault();
       return;
     }
 
@@ -313,8 +395,6 @@ export default function AvailabilityForm({
     //   formData.get("participant_name")
     // );
 
-    e.preventDefault(); // デフォルトの送信をキャンセル
-
     // 名前をLocalStorageに保存
     localStorage.setItem('participantName', name);
 
@@ -323,13 +403,12 @@ export default function AvailabilityForm({
       const exists = await checkExistingParticipant();
 
       if (exists) {
-        // 既存の参加者がいる場合は確認ダイアログを表示
-        setPendingFormData(formData);
-        setShowOverwriteConfirm(true);
+        setShowNameInputOnDuplicate(true);
+        setError('同じ名前の回答が既に存在します。お名前を変更してください。');
       } else {
         // 既存の参加者がいない場合はそのまま送信
-        setIsSubmitting(true);
-        await handleFormAction(formData);
+        setShowNameInputOnDuplicate(false);
+        promptSyncScope(formData);
       }
     } catch (error) {
       console.error('送信エラー:', error);
@@ -338,31 +417,116 @@ export default function AvailabilityForm({
   };
 
   // Server Actionを使用したフォーム送信処理
-  const handleFormAction = async (formData: FormData): Promise<void> => {
-    try {
-      // 編集モードの場合、既存の参加者IDを追加
-      if (mode === 'edit' && initialParticipant?.id) {
-        formData.append('participantId', initialParticipant.id);
-      }
-
-      const response = await submitAvailability(formData);
-
-      if (response.success) {
-        setFeedback(response.message ?? '送信が完了しました');
-        // 入力ページの場合は元の確認ページに戻る
-        if (typeof window !== 'undefined') {
-          window.location.href = `/event/${publicToken}`;
+  const handleFormAction = useCallback(
+    async (formData: FormData): Promise<void> => {
+      try {
+        formData.set('override_date_ids', JSON.stringify(overrideDateIds));
+        // 編集モードの場合、既存の参加者IDを追加
+        if (mode === 'edit' && initialParticipant?.id) {
+          formData.append('participantId', initialParticipant.id);
         }
-      } else {
-        setError(response.message || '送信に失敗しました');
-      }
 
-      setIsSubmitting(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '送信に失敗しました');
-      setIsSubmitting(false);
+        const response = await submitAvailability(formData);
+
+        if (response.success) {
+          // 入力ページの場合は元の確認ページに戻る
+          if (typeof window !== 'undefined') {
+            window.location.href = `/event/${publicToken}`;
+          }
+        } else {
+          setError(response.message || '送信に失敗しました');
+        }
+
+        setIsSubmitting(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '送信に失敗しました');
+        setIsSubmitting(false);
+      }
+    },
+    [initialParticipant?.id, mode, overrideDateIds, publicToken],
+  );
+
+  const promptSyncScope = useCallback(
+    (formData: FormData) => {
+      if (!isAuthenticated || !hasSyncTargetEvents) {
+        setIsSubmitting(true);
+        void handleFormAction(formData);
+        return;
+      }
+      setPendingSyncFormData(formData);
+      setShowSyncConfirm(true);
+    },
+    [handleFormAction, hasSyncTargetEvents, isAuthenticated],
+  );
+
+  const handleSyncScopeChoice = useCallback(
+    (scope: 'current' | 'all') => {
+      if (!pendingSyncFormData) return;
+      pendingSyncFormData.set('sync_scope', scope);
+      setShowSyncConfirm(false);
+      setIsSubmitting(true);
+      void handleFormAction(pendingSyncFormData);
+      setPendingSyncFormData(null);
+    },
+    [handleFormAction, pendingSyncFormData],
+  );
+
+  const handleCloseSyncScopeConfirm = useCallback(() => {
+    setShowSyncConfirm(false);
+    setPendingSyncFormData(null);
+  }, []);
+
+  const handleSignInAndContinue = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const callbackUrl = `${window.location.pathname}${window.location.search}`;
+    window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  }, []);
+
+  const handleNextStep = useCallback(() => {
+    setError(null);
+
+    if (isNewMode && currentStep === 1) {
+      if (!name.trim()) {
+        setError('お名前を入力してください');
+        return;
+      }
+      setCurrentStep(weeklyStep ?? heatmapStep);
+      return;
     }
-  };
+
+    if (weeklyStep !== null && currentStep === weeklyStep) {
+      setCurrentStep(heatmapStep);
+      return;
+    }
+
+    if (currentStep === heatmapStep) {
+      if (!Object.values(selectedDates).some(Boolean)) {
+        setError('少なくとも1つの参加可能枠（○）を選択してください');
+        return;
+      }
+      setCurrentStep(confirmStep);
+    }
+  }, [confirmStep, currentStep, heatmapStep, isNewMode, name, selectedDates, weeklyStep]);
+
+  const handlePrevStep = useCallback(() => {
+    setError(null);
+    if (currentStep <= 1) {
+      return;
+    }
+    if (isNewMode && currentStep === 2) {
+      setCurrentStep(1);
+      return;
+    }
+    if (currentStep === heatmapStep && weeklyStep !== null) {
+      setCurrentStep(weeklyStep);
+      return;
+    }
+    if (currentStep === confirmStep) {
+      setCurrentStep(heatmapStep);
+      return;
+    }
+    setCurrentStep((prev) => Math.max(prev - 1, 1) as WizardStep);
+  }, [confirmStep, currentStep, heatmapStep, isNewMode, weeklyStep]);
 
   const uniqueDateKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -429,49 +593,6 @@ export default function AvailabilityForm({
     const clampedIndex = Math.min(Math.max(currentPage, 0), weeklyDateBuckets.length - 1);
     return weeklyDateBuckets[clampedIndex];
   }, [currentPage, weeklyDateBuckets]);
-
-  const currentWeekDateSet = useMemo(() => new Set(currentWeekDates), [currentWeekDates]);
-
-  // 日付のグループ化（日付別に時間帯をまとめる）
-  const dateGroups = useMemo(() => {
-    const groups: Record<string, typeof eventDates> = {};
-
-    eventDates.forEach((date) => {
-      const dateObj = new Date(date.start_time);
-      const dateKey = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD形式
-
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-
-      groups[dateKey].push(date);
-    });
-
-    // 日付順にソート
-    const sortedGroups = Object.entries(groups)
-      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-      .map(([dateStr, dates]) => {
-        const date = new Date(dateStr);
-        return {
-          dateKey: dateStr,
-          formattedDate: date.toLocaleDateString('ja-JP', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'short',
-          }),
-          slots: dates.sort(
-            (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
-          ),
-        };
-      });
-
-    if (currentWeekDateSet.size === 0) {
-      return sortedGroups;
-    }
-
-    return sortedGroups.filter((group) => currentWeekDateSet.has(group.dateKey));
-  }, [eventDates, currentWeekDateSet]);
 
   // ヒートマップ表示用のデータ構造を生成
   const heatmapData = useMemo(() => {
@@ -563,7 +684,7 @@ export default function AvailabilityForm({
   }, []);
 
   // 週入力モード用の時間帯スロットを初期化する関数
-  const initializeWeekdayTimeSlots = () => {
+  const initializeWeekdayTimeSlots = useCallback(async () => {
     // 全ての時間帯を収集
     const timeSlots: Record<string, boolean> = {};
 
@@ -584,22 +705,44 @@ export default function AvailabilityForm({
       日: { ...timeSlots },
     };
 
+    const templateWeekdayMap = new Map<string, boolean>();
+    const selectedWeekdaysByTemplate = new Set<WeekDay>();
+    if (isAuthenticated) {
+      const templateData = await fetchUserScheduleTemplates();
+      templateData.manual.forEach((template) => {
+        const weekday = ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as
+          | WeekDay
+          | undefined;
+        if (!weekday) return;
+        const key = `${weekday}_${template.start_time.slice(0, 5)}-${template.end_time.slice(0, 5)}`;
+        templateWeekdayMap.set(key, template.availability);
+      });
+    }
+
     // 既存の選択データがある場合、曜日ごとに振り分ける
     eventDates.forEach((date) => {
+      const dateObj = new Date(date.start_time);
+      const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
+      const timeKey = getTimeKey(date.start_time, date.end_time);
+      const templateKey = `${weekday}_${timeKey}`;
+      if (templateWeekdayMap.has(templateKey)) {
+        weekdayData[weekday][timeKey] = templateWeekdayMap.get(templateKey) ?? false;
+        selectedWeekdaysByTemplate.add(weekday);
+      }
+
       if (selectedDates[date.id]) {
-        const dateObj = new Date(date.start_time);
-        const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
-        const timeKey = getTimeKey(date.start_time, date.end_time);
         weekdayData[weekday][timeKey] = true;
       }
     });
 
     // 各曜日に時間帯スロットを設定
-    const updatedSelections = { ...weekdaySelections };
-    Object.keys(updatedSelections).forEach((day) => {
+    const updatedSelections = {} as Record<WeekDay, WeekDaySchedule>;
+    (Object.keys(weekdayData) as WeekDay[]).forEach((day) => {
       const weekday = day as WeekDay;
-      // 少なくとも1つ選択されている場合はその曜日を「選択済み」とする
-      const hasSelection = Object.values(weekdayData[weekday]).some((val) => val);
+      // テンプレの該当行がある曜日、または少なくとも1つ選択されている曜日を選択済みにする。
+      const hasSelection =
+        selectedWeekdaysByTemplate.has(weekday) ||
+        Object.values(weekdayData[weekday]).some((val) => val);
 
       updatedSelections[weekday] = {
         selected: hasSelection,
@@ -608,23 +751,15 @@ export default function AvailabilityForm({
     });
 
     setWeekdaySelections(updatedSelections);
-  };
+  }, [eventDates, getTimeKey, isAuthenticated, selectedDates]);
 
-  // CellStatusに基づいて表示するアイコンやテキスト
-  const getCellContent = (status: CellStatus) => {
-    switch (status) {
-      case 'available':
-        return (
-          <div className="inline-block select-none text-lg font-bold">○</div> // inline-blockを追加して表示を安定化
-        );
-      case 'unavailable':
-        return (
-          <div className="inline-block select-none text-lg font-bold opacity-70">×</div> // 同様にinline-blockを追加
-        );
-      case 'empty':
-        return <span className="inline-block select-none">ー</span>;
-    }
-  };
+  useEffect(() => {
+    if (weeklyStep === null) return;
+    if (currentStep !== weeklyStep) return;
+    if (weekdayInitialized) return;
+    void initializeWeekdayTimeSlots();
+    setWeekdayInitialized(true);
+  }, [currentStep, initializeWeekdayTimeSlots, weekdayInitialized, weeklyStep]);
 
   // ページを変更するハンドラー
   const handlePageChange = useCallback(
@@ -638,12 +773,6 @@ export default function AvailabilityForm({
     },
     [weeklyDateBuckets],
   );
-
-  // 編集モードを切り替える処理
-  const handleEditClick = () => {
-    setIsEditing(true);
-    setFeedback(null); // 編集モードに変わるとフィードバックメッセージを消去
-  };
 
   // 曜日ごとの選択と時間帯を適用する関数
   const applyWeekdaySelections = useCallback(() => {
@@ -660,6 +789,13 @@ export default function AvailabilityForm({
         const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
 
         if (weekday === day) {
+          // 各日予定（アカウント紐づけ）で反映済みの枠は、曜日一括入力では上書きしない。
+          if (dailyAutoFillDateIdSet.has(date.id)) {
+            return;
+          }
+          if (manuallyEditedDateIds[date.id]) {
+            return;
+          }
           // この日程の時間帯ID
           const timeKey = getTimeKey(date.start_time, date.end_time);
 
@@ -674,760 +810,544 @@ export default function AvailabilityForm({
 
     // 状態を更新
     setSelectedDates(newSelectedDates);
-  }, [weekdaySelections, eventDates, selectedDates, getTimeKey]);
+  }, [
+    weekdaySelections,
+    eventDates,
+    selectedDates,
+    getTimeKey,
+    manuallyEditedDateIds,
+    dailyAutoFillDateIdSet,
+  ]);
+
+  const weekdayToNumber = useCallback((weekday: WeekDay): number => {
+    const mapping: Record<WeekDay, number> = {
+      日: 0,
+      月: 1,
+      火: 2,
+      水: 3,
+      木: 4,
+      金: 5,
+      土: 6,
+    };
+    return mapping[weekday];
+  }, []);
+
+  const buildWeeklyTemplatePayload = useCallback((): WeeklyTemplatePayloadRow[] => {
+    const rows: WeeklyTemplatePayloadRow[] = [];
+    Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
+      if (!daySchedule.selected) return;
+      const weekday = weekdayToNumber(day as WeekDay);
+      Object.entries(daySchedule.timeSlots).forEach(([timeKey, availability]) => {
+        const [startTime, endTime] = timeKey.split('-');
+        if (!startTime || !endTime) return;
+        rows.push({
+          weekday,
+          startTime,
+          endTime,
+          availability,
+        });
+      });
+    });
+    return rows;
+  }, [weekdaySelections, weekdayToNumber]);
+
+  const hasWeeklyTemplateChanges = useCallback(
+    (
+      payload: WeeklyTemplatePayloadRow[],
+      manualRows: Array<{
+        weekday: number;
+        start_time: string;
+        end_time: string;
+        availability: boolean;
+      }>,
+    ): boolean => {
+      if (payload.length === 0) return false;
+      const manualMap = new Map<string, boolean>();
+      manualRows.forEach((row) => {
+        manualMap.set(
+          `${row.weekday}_${row.start_time.slice(0, 5)}-${row.end_time.slice(0, 5)}`,
+          row.availability,
+        );
+      });
+      return payload.some((row) => {
+        const key = `${row.weekday}_${row.startTime}-${row.endTime}`;
+        const current = manualMap.get(key);
+        return current === undefined || current !== row.availability;
+      });
+    },
+    [],
+  );
+
+  const proceedToHeatmap = useCallback(() => {
+    setShowWeeklySaveConfirm(false);
+    setPendingWeeklyTemplates([]);
+    setHasWeekdayEdits(false);
+    setCurrentStep(heatmapStep);
+  }, [heatmapStep]);
+
+  const handleProceedFromWeeklyStep = useCallback(async () => {
+    setError(null);
+    applyWeekdaySelections();
+
+    if (!isAuthenticated) {
+      setCurrentStep(heatmapStep);
+      return;
+    }
+
+    if (!hasWeekdayEdits) {
+      setCurrentStep(heatmapStep);
+      return;
+    }
+
+    const payload = buildWeeklyTemplatePayload();
+    if (payload.length === 0) {
+      setCurrentStep(heatmapStep);
+      return;
+    }
+
+    const templates = await fetchUserScheduleTemplates();
+    const changed = hasWeeklyTemplateChanges(payload, templates.manual);
+    if (!changed) {
+      setCurrentStep(heatmapStep);
+      return;
+    }
+
+    setPendingWeeklyTemplates(payload);
+    setShowWeeklySaveConfirm(true);
+  }, [
+    applyWeekdaySelections,
+    buildWeeklyTemplatePayload,
+    hasWeekdayEdits,
+    hasWeeklyTemplateChanges,
+    heatmapStep,
+    isAuthenticated,
+  ]);
+
+  const handleSaveWeeklyAndProceed = useCallback(async () => {
+    if (!pendingWeeklyTemplates.length) {
+      proceedToHeatmap();
+      return;
+    }
+    setIsSavingWeeklyTemplates(true);
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: pendingWeeklyTemplates,
+    });
+    setIsSavingWeeklyTemplates(false);
+    if (!result.success) {
+      setError(result.message ?? '週予定の更新に失敗しました');
+      return;
+    }
+    proceedToHeatmap();
+  }, [pendingWeeklyTemplates, proceedToHeatmap]);
+
+  const selectedAvailableCount = useMemo(
+    () => Object.values(selectedDates).filter(Boolean).length,
+    [selectedDates],
+  );
+  const insertedAccountDatesLabel = useMemo(() => {
+    if (!isAuthenticated) return null;
+    const insertedIds = dailyAutoFillDateIds;
+    if (insertedIds.length === 0) return null;
+
+    const insertedDates = eventDates
+      .filter((date) => insertedIds.includes(date.id))
+      .map((date) => new Date(date.start_time))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (insertedDates.length === 0) return null;
+    const formatter = new Intl.DateTimeFormat('ja-JP', {
+      month: 'numeric',
+      day: 'numeric',
+    });
+    const uniqueLabels = Array.from(new Set(insertedDates.map((date) => formatter.format(date))));
+    if (uniqueLabels.length <= 3) {
+      return `${uniqueLabels.join('、')}（${uniqueLabels.length}日）`;
+    }
+    return `${uniqueLabels[0]}、${uniqueLabels[1]}、${uniqueLabels[2]} ほか（${uniqueLabels.length}日）`;
+  }, [dailyAutoFillDateIds, eventDates, isAuthenticated]);
+  const stepLabels = useMemo(
+    () =>
+      isNewMode
+        ? showWeeklyStep
+          ? ['回答者情報', '曜日一括入力', '予定確認・修正', '確認・送信']
+          : ['回答者情報', '予定確認・修正', '確認・送信']
+        : showWeeklyStep
+          ? ['曜日一括入力', '予定確認・修正', '確認・送信']
+          : ['予定確認・修正', '確認・送信'],
+    [isNewMode, showWeeklyStep],
+  );
+  const stepLabel = useMemo(() => {
+    const label = stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
+    return `ステップ${currentStep}: ${label}`;
+  }, [currentStep, stepLabels]);
+  const weekdayTimeSlots = useMemo(() => {
+    const baseSchedule = Object.values(weekdaySelections)[0];
+    return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
+  }, [weekdaySelections]);
 
   return (
     <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
-      {feedback && !isEditing ? (
-        <>
-          <h2 className="mb-4 text-xl font-bold">回答が送信されました</h2>
-          <div className="feedback-message feedback-success mb-6" role="alert">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="mr-2 h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{feedback}</span>
-          </div>
-          <p className="text-base-content">
-            ご回答ありがとうございました。他の参加者の回答状況は下のセクションでご確認いただけます。
-          </p>
-          <p className="mb-6 mt-2 text-sm text-gray-500">
-            ※ 回答内容を更新したい場合は以下のボタンをクリックしてください。
-          </p>
-          <button type="button" onClick={handleEditClick} className="btn btn-outline btn-primary">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="mr-2 h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 1 1 3.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
-            </svg>
-            回答を更新する
-          </button>
-        </>
-      ) : (
-        <>
-          <h2 className="mb-4 text-xl font-bold">
-            {mode === 'edit'
-              ? `${initialParticipant?.name}さんの予定を編集`
-              : isEditing
-                ? '回答を更新する'
-                : '回答する'}
-          </h2>
+      <h2 className="mb-3 text-xl font-bold">
+        {mode === 'edit' ? `${initialParticipant?.name ?? '回答'}の編集` : '回答ウィザード'}
+      </h2>
+      <div className="mb-2 overflow-x-auto">
+        <ul className="steps w-full whitespace-nowrap text-xs sm:text-sm">
+          {stepLabels.map((label, index) => {
+            const step = (index + 1) as WizardStep;
+            return (
+              <li key={label} className={`step ${currentStep >= step ? 'step-primary' : ''}`}>
+                <span className="sm:hidden">Step {step}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div className="mb-4 scroll-mt-24 text-base font-semibold">{stepLabel}</div>
 
-          {error && (
-            <div
-              className="alert alert-error mb-4"
-              role="alert"
-              aria-live="assertive"
-              ref={errorRef}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 shrink-0 stroke-current"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-            onClick={(e) => {
-              // フォームクリック時のバブリング処理
-              // セルクリックとフォーム送信の競合を防ぐ
-              const target = e.target as HTMLElement;
-              // セル内クリックの場合は特別処理
-              if (target.closest('[data-date-id]')) {
-                // ここでは何もしない（セル側で処理）
-              }
-            }}
+      {error && (
+        <div className="alert alert-error mb-4" role="alert" aria-live="assertive" ref={errorRef}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 shrink-0 stroke-current"
+            fill="none"
+            viewBox="0 0 24 24"
           >
-            {/* イベント情報を隠しフィールドとして渡す */}
-            <input type="hidden" name="eventId" value={eventId} />
-            <input type="hidden" name="publicToken" value={publicToken} />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
 
-            <div className={isWeekdayModeActive ? 'pointer-events-none opacity-50' : ''}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input type="hidden" name="eventId" value={eventId} />
+        <input type="hidden" name="publicToken" value={publicToken} />
+        <input type="hidden" name="participant_name" value={name} />
+
+        {Object.entries(selectedDates).map(
+          ([dateId, isSelected]) =>
+            isSelected && (
+              <input key={dateId} type="hidden" name={`availability_${dateId}`} value="on" />
+            ),
+        )}
+
+        {isNewMode && currentStep === 1 && (
+          <section className="space-y-4" data-testid="availability-step-1">
+            <div className="bg-base-200 rounded-md p-3 text-sm">まずは名前を入力してください。</div>
+
+            <div>
               <label htmlFor="participant_name" className="mb-1 block text-sm font-medium">
                 お名前 <span className="text-error">*</span>
               </label>
               <input
                 type="text"
                 id="participant_name"
-                name="participant_name"
-                className="input input-bordered w-full transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
+                className="input input-bordered w-full"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required={false}
-                disabled={isWeekdayModeActive}
               />
             </div>
 
-            <div>
-              <div className="space-y-3">
-                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                  <label className="block text-sm font-medium">
-                    候補日程から参加可能な日を選択してください
-                    <span className="text-error">*</span>
-                  </label>
-
-                  <div
-                    role="group"
-                    aria-label="表示形式の選択"
-                    className={`join bg-base-200 rounded-lg ${
-                      isWeekdayModeActive ? 'pointer-events-none opacity-50' : ''
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className={`join-item btn btn-sm ${
-                        viewMode === 'heatmap'
-                          ? 'btn-active bg-primary text-primary-content font-medium'
-                          : 'text-base-content'
-                      }`}
-                      onClick={() => setViewMode('heatmap')}
-                      aria-pressed={viewMode === 'heatmap'}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-1 h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M5 3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H5zm6-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5zm0 8a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2z" />
-                      </svg>
-                      表
-                    </button>
-                    <button
-                      type="button"
-                      className={`join-item btn btn-sm ${
-                        viewMode === 'list'
-                          ? 'btn-active bg-primary text-primary-content font-medium'
-                          : 'text-base-content'
-                      }`}
-                      onClick={() => setViewMode('list')}
-                      aria-pressed={viewMode === 'list'}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-1 h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M3 4a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      個別
-                    </button>
-                    <button
-                      type="button"
-                      className={`join-item btn btn-sm ${
-                        viewMode === 'table'
-                          ? 'btn-active bg-primary text-primary-content font-medium'
-                          : 'text-base-content'
-                      }`}
-                      onClick={() => setViewMode('table')}
-                      aria-pressed={viewMode === 'table'}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-1 h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5 4a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H5zm-1 9v-1h5v2H5a1 1 0 0 1-1-1zm7 1h4a1 1 0 0 0 1-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      リスト
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4 flex flex-col gap-3 md:flex-row">
-                <div
-                  className={`bg-info/10 text-info border-info/20 flex flex-grow items-center rounded-lg border p-2 text-xs ${
-                    isWeekdayModeActive ? 'opacity-50' : ''
-                  }`}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    className="stroke-info mr-1 h-4 w-4 flex-shrink-0"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-                    ></path>
-                  </svg>
-                  <span>
-                    {isWeekdayModeActive
-                      ? '曜日入力モード中です。設定を適用またはキャンセルしてから回答を送信してください。'
-                      : 'セルをドラッグすると複数選択できます（タッチ操作も対応）'}
-                  </span>
-                </div>
+            {!isAuthenticated && (
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    // アコーディオンを開く/閉じる処理
-                    setIsWeekdayModeActive(!isWeekdayModeActive);
-                    // 週入力モードがアクティブになったときは時間帯スロットを初期化
-                    if (!isWeekdayModeActive) {
-                      initializeWeekdayTimeSlots();
-                    }
-                  }}
-                  className={`btn btn-sm ${
-                    isWeekdayModeActive ? 'btn-primary' : 'btn-accent'
-                  } flex-shrink-0 text-xs font-medium sm:text-sm`}
+                  className="btn btn-primary"
+                  onClick={handleSignInAndContinue}
+                  data-testid="availability-login-continue"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="mr-1 h-4 w-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M6 2a1 1 0 0 1 1-1v1h8V1a1 1 0 1 1 2 0v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zm0 5a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H6z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  曜日ごとの時間帯設定
-                  {isWeekdayModeActive ? '（閉じる）' : ''}
+                  ログインして進む
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleNextStep}
+                  data-testid="availability-guest-continue"
+                >
+                  ログインせずに進む
                 </button>
               </div>
+            )}
 
-              {/* 週入力アコーディオンセクション */}
-              {isWeekdayModeActive && (
-                <div className="mb-6 animate-fadeIn transition-all duration-300">
-                  <div className="bg-base-200 border-base-300 rounded-lg border p-4 shadow-sm">
-                    <h3 className="mb-4 text-lg font-bold">曜日ごとの時間帯設定</h3>
-                    <p className="mb-4 text-sm">
-                      曜日と時間帯で参加可能な枠を一括設定できます。表の各セルをクリックして、参加可能（○）または参加不可（×）を設定してください。
-                    </p>
+            {isAuthenticated && (
+              <div className="flex justify-end">
+                <button type="button" className="btn btn-primary" onClick={handleNextStep}>
+                  次へ
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
-                    <div className="divider text-xs">曜日×時間帯表</div>
+        {showWeeklyStep && weeklyStep !== null && currentStep === weeklyStep && (
+          <section className="space-y-4" data-testid="availability-step-weekly">
+            <div className="bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
+              <p>各曜日の予定を入力してください。</p>
+            </div>
 
-                    <div
-                      className="matrix-container -mx-4 mb-4 touch-none overflow-x-hidden"
-                      style={{ touchAction: 'none' }}
-                    >
-                      <table
-                        className="table-xs table w-full table-fixed border-collapse"
-                        onMouseDown={(e) => e.preventDefault()} // ドラッグ動作中のテキスト選択を防止
-                        onTouchStart={(e) => e.preventDefault()} // タッチ操作中のスクロールを完全に防止
-                      >
-                        <thead className="sticky top-0 z-20">
-                          <tr className="bg-base-200">
-                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 border px-2 py-1 text-center">
-                              <span className="text-xs">\</span>
-                            </th>
-                            {Object.entries(weekdaySelections).map(([day]) => (
-                              <th
-                                key={day}
-                                className="border-base-300 border px-1 py-1 text-center"
-                              >
-                                {day}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(() => {
-                            const baseSchedule = Object.values(weekdaySelections)[0];
-                            const sortedTimeSlots = baseSchedule
-                              ? Object.keys(baseSchedule.timeSlots).sort()
-                              : [];
-                            if (sortedTimeSlots.length === 0) {
-                              return (
-                                <tr>
-                                  <td
-                                    colSpan={1 + Object.keys(weekdaySelections).length}
-                                    className="py-4 text-center"
-                                  >
-                                    利用可能な時間帯がありません
-                                  </td>
-                                </tr>
-                              );
-                            }
+            <div className="bg-base-200 border-base-300 rounded-lg border p-3 shadow-sm">
+              <h3 className="mb-3 text-lg font-bold">曜日一括入力</h3>
+              <div className="matrix-container mb-3 touch-none overflow-hidden">
+                <table
+                  className="border-base-300 table w-full table-fixed border-collapse border text-center"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onTouchMove={(e) => e.preventDefault()}
+                >
+                  <thead>
+                    <tr className="bg-base-200">
+                      <th className="border-base-300 border px-1 py-2 text-center text-sm">時間</th>
+                      {Object.keys(weekdaySelections).map((day) => (
+                        <th
+                          key={day}
+                          className="border-base-300 border px-1 py-2 text-center text-sm"
+                        >
+                          {day}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weekdayTimeSlots.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={1 + Object.keys(weekdaySelections).length}
+                          className="py-4 text-center text-sm"
+                        >
+                          利用可能な時間帯がありません
+                        </td>
+                      </tr>
+                    ) : (
+                      weekdayTimeSlots.map((timeSlot) => (
+                        <tr key={timeSlot}>
+                          <th className="border-base-300 border px-1 py-2 text-right text-xs">
+                            {timeSlot.split('-')[0]}
+                          </th>
+                          {Object.entries(weekdaySelections).map(([day, daySchedule]) => {
+                            const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
                             return (
-                              <>
-                                {sortedTimeSlots.map((timeSlot) => {
-                                  const [startTime] = timeSlot.split('-');
-                                  return (
-                                    <tr key={timeSlot}>
-                                      <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-right">
-                                        <span
-                                          className="text-base-content/80 absolute left-2 text-xs font-medium leading-none"
-                                          style={{ top: 0 }}
-                                        >
-                                          {startTime.replace(/^0/, '')}
-                                        </span>
-                                      </td>
-                                      {Object.entries(weekdaySelections).map(
-                                        ([day, daySchedule]) => {
-                                          const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
-                                          return (
-                                            <td
-                                              key={`${day}-${timeSlot}`}
-                                              className="border-base-300 w-16 cursor-pointer border p-0 text-center sm:w-auto"
-                                              data-day={day}
-                                              data-time-slot={timeSlot}
-                                              data-selection-key={matrixKey}
-                                              {...weekdaySelectionController.getCellProps(
-                                                matrixKey,
-                                                {
-                                                  disabled: !isWeekdayModeActive,
-                                                },
-                                              )}
-                                            >
-                                              <div
-                                                className={`flex h-7 w-full items-center justify-center rounded-none sm:rounded-sm ${
-                                                  daySchedule.timeSlots[timeSlot]
-                                                    ? 'bg-success text-success-content'
-                                                    : 'bg-base-200'
-                                                }`}
-                                              >
-                                                {daySchedule.timeSlots[timeSlot] ? (
-                                                  <div className="inline-block select-none text-lg font-bold">
-                                                    ○
-                                                  </div>
-                                                ) : (
-                                                  <div className="inline-block select-none text-lg font-bold opacity-70">
-                                                    ×
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </td>
-                                          );
-                                        },
-                                      )}
-                                    </tr>
-                                  );
+                              <td
+                                key={`${day}-${timeSlot}`}
+                                className="border-base-300 border p-1"
+                                data-day={day}
+                                data-time-slot={timeSlot}
+                                data-selection-key={matrixKey}
+                                {...weekdaySelectionController.getCellProps(matrixKey, {
+                                  disabled: !isWeekdayModeActive,
                                 })}
-                                {(() => {
-                                  const lastSlot = sortedTimeSlots[sortedTimeSlots.length - 1];
-                                  const [, rawEnd] = lastSlot.split('-');
-                                  const displayEnd =
-                                    rawEnd === '24:00' ? rawEnd : rawEnd.replace(/^0/, '');
-                                  return (
-                                    <tr key="weekday-endtime">
-                                      <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-right">
-                                        <span
-                                          className="text-base-content/80 absolute left-2 text-xs font-medium leading-none"
-                                          style={{ top: 0 }}
-                                        >
-                                          {displayEnd}
-                                        </span>
-                                      </td>
-                                      {Object.keys(weekdaySelections).map((day) => (
-                                        <td
-                                          key={`${day}-endtime`}
-                                          className="border-base-300 border p-0"
-                                        />
-                                      ))}
-                                    </tr>
-                                  );
-                                })()}
-                              </>
+                              >
+                                <div
+                                  className={`flex h-8 items-center justify-center rounded-md ${
+                                    daySchedule.timeSlots[timeSlot]
+                                      ? 'bg-success text-success-content'
+                                      : 'bg-base-100 text-base-content/80'
+                                  }`}
+                                >
+                                  {daySchedule.timeSlots[timeSlot] ? '○' : '×'}
+                                </div>
+                              </td>
                             );
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {Object.entries(weekdaySelections).filter(
-                      ([, daySchedule]) => daySchedule.selected,
-                    ).length === 0 && (
-                      <div className="py-4 text-center text-sm text-gray-500">
-                        曜日を選択すると、時間帯の設定が表示されます
-                      </div>
+                          })}
+                        </tr>
+                      ))
                     )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-                    <div className="text-base-content/70 mb-4 text-xs">
-                      ※選択した曜日の時間帯ごとに参加可否を設定できます。
-                      <br />
-                      チェックがついている時間帯が「参加可能」になります。
-                    </div>
+            <div className="flex flex-wrap justify-between gap-2">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handlePrevStep}
+                disabled={currentStep === 1}
+              >
+                戻る
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void handleProceedFromWeeklyStep()}
+              >
+                次へ
+              </button>
+            </div>
+          </section>
+        )}
 
-                    <div className="mt-4 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline"
-                        onClick={() => setIsWeekdayModeActive(false)}
+        {currentStep === heatmapStep && (
+          <section className="space-y-4" data-testid="availability-step-heatmap">
+            <div className="bg-base-200 rounded-lg p-3 text-sm">
+              <p>表で予定を確認・修正してください。</p>
+              {insertedAccountDatesLabel && (
+                <p className="text-base-content/60 mt-1 text-xs">
+                  アカウント予定を反映済み（{insertedAccountDatesLabel}）
+                </p>
+              )}
+            </div>
+            {heatmapData.totalPages > 1 && (
+              <WeekNavigationBar
+                periodLabel={`${heatmapData.currentDateRange?.startLabel ?? '-'} 〜 ${
+                  heatmapData.currentDateRange?.endLabel ?? '-'
+                }`}
+                currentPage={currentPage}
+                totalPages={heatmapData.totalPages}
+                onPageChange={handlePageChange}
+                trailingNote="表示: 1週間"
+              />
+            )}
+
+            <div
+              className="table-container-mobile -mx-2 select-none overflow-x-auto overscroll-contain sm:mx-0"
+              style={{
+                overscrollBehaviorY: 'contain',
+                touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x',
+              }}
+              onMouseLeave={handleMouseLeave}
+            >
+              <table className="table-xs border-base-300 table w-full min-w-0 table-fixed border-collapse border text-center">
+                <thead className="sticky top-0 z-20">
+                  <tr className="bg-base-200">
+                    <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                      <span className="text-xs">時間</span>
+                    </th>
+                    {heatmapData.dates.map((date) => (
+                      <th
+                        key={date.dateKey}
+                        className="border-base-300 heatmap-cell-mobile border px-0.5 py-1 text-center md:px-1 md:py-2"
                       >
-                        キャンセル
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-primary"
-                        onClick={() => {
-                          // 選択した曜日と時間帯に基づいて日程を更新
-                          applyWeekdaySelections();
-                          setIsWeekdayModeActive(false);
-                        }}
-                      >
-                        設定を適用する
-                      </button>
-                    </div>
-                  </div>
+                        <div className="flex flex-col items-center leading-tight">
+                          <span className="text-xs font-semibold md:text-sm">
+                            {date.formattedDate.split('(')[0]}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({date.formattedDate.split('(')[1]}
+                          </span>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
+                    {heatmapData.dates.map((date) => (
+                      <td key={`${date.dateKey}-spacer`} className="h-1 md:h-3" />
+                    ))}
+                  </tr>
+                  {heatmapData.timeSlots.map((timeSlot, rowIndex) => {
+                    const [startTime] = timeSlot.split('-');
+                    const formattedStartTime = startTime.replace(/^0/, '');
+
+                    return (
+                      <tr key={timeSlot}>
+                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                          <span
+                            className={`absolute left-2 text-xs font-medium ${
+                              rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
+                            }`}
+                          >
+                            {formattedStartTime}
+                          </span>
+                        </th>
+                        {heatmapData.dates.map((date) => {
+                          const dateId = heatmapData.dateMap[date.dateKey]?.[timeSlot];
+                          const { className, status } = getCellStyle(dateId);
+                          const isConflict = dateId ? lockedDateIdSet.has(dateId) : false;
+                          const isLocked =
+                            Boolean(dateId) && isConflict && !overrideDateIdSet.has(dateId);
+
+                          return (
+                            <td
+                              key={`${date.dateKey}-${timeSlot}`}
+                              className="border-base-300 border p-0.5 md:p-1"
+                              data-date-id={dateId}
+                            >
+                              {dateId ? (
+                                <div
+                                  className={`mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold transition-colors duration-150 md:aspect-auto md:h-10 md:w-full md:text-sm ${className} ${
+                                    isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
+                                  }`}
+                                  data-date-id={dateId}
+                                  data-selection-key={dateId}
+                                  {...dateSelectionController.getCellProps(dateId, {
+                                    disabled: isWeekdayModeActive || isLocked,
+                                  })}
+                                  onClick={() => {
+                                    if (isLocked && dateId) {
+                                      handleLockedOverride(dateId);
+                                    }
+                                  }}
+                                  title={isConflict ? '確定イベントと重複しています' : undefined}
+                                >
+                                  {status === 'available'
+                                    ? '○'
+                                    : status === 'unavailable'
+                                      ? '×'
+                                      : '-'}
+                                </div>
+                              ) : (
+                                <div className="bg-base-200/30 text-base-content/30 mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm">
+                                  <span>-</span>
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-wrap justify-between gap-2">
+              <button type="button" className="btn btn-outline" onClick={handlePrevStep}>
+                戻る
+              </button>
+              <button type="button" className="btn btn-primary" onClick={handleNextStep}>
+                確認へ進む
+              </button>
+            </div>
+          </section>
+        )}
+
+        {currentStep === confirmStep && (
+          <section className="space-y-4" data-testid="availability-step-confirm">
+            <div className="bg-base-200 rounded-lg p-3 text-sm">
+              <p>お名前: {name || '未入力'}</p>
+              <p>参加可能枠（○）: {selectedAvailableCount}件</p>
+            </div>
+
+            <div>
+              {showNameInputOnDuplicate && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="participant_name_confirm"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    お名前 <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="participant_name_confirm"
+                    className="input input-bordered w-full"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      setError(null);
+                    }}
+                  />
                 </div>
               )}
 
-              {/* ページネーションUI - 週入力モードが無効の場合のみ表示 */}
-              {!isWeekdayModeActive &&
-                (viewMode === 'heatmap' || viewMode === 'table' || viewMode === 'list') &&
-                heatmapData.totalPages > 1 && (
-                  <div className="bg-base-200 mb-4 flex flex-col items-center justify-between gap-3 rounded-lg p-3 md:flex-row">
-                    <div className="flex items-center gap-2">
-                      {heatmapData.currentDateRange && (
-                        <span className="text-sm font-medium">
-                          表示期間: {heatmapData.currentDateRange.startLabel} 〜{' '}
-                          {heatmapData.currentDateRange.endLabel}
-                          <span className="ml-1 text-xs text-gray-500">
-                            (週 {currentPage + 1} / {heatmapData.totalPages})
-                          </span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="join">
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() => handlePageChange(0)}
-                          disabled={currentPage === 0}
-                        >
-                          «
-                        </button>
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
-                          disabled={currentPage === 0}
-                        >
-                          ‹
-                        </button>
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() =>
-                            handlePageChange(Math.min(heatmapData.totalPages - 1, currentPage + 1))
-                          }
-                          disabled={currentPage >= heatmapData.totalPages - 1}
-                        >
-                          ›
-                        </button>
-                        <button
-                          type="button"
-                          className="join-item btn btn-sm btn-outline"
-                          onClick={() => handlePageChange(heatmapData.totalPages - 1)}
-                          disabled={currentPage >= heatmapData.totalPages - 1}
-                        >
-                          »
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-500">表示: 1週間</span>
-                    </div>
-                  </div>
-                )}
-
-              {/* 週入力モードがアクティブでない場合のみ、通常の入力フォームを表示 */}
-              {!isWeekdayModeActive && (
-                <>
-                  {/* 選択した日程の隠しフィールド */}
-                  {Object.entries(selectedDates).map(
-                    ([dateId, isSelected]) =>
-                      isSelected && (
-                        <input
-                          key={dateId}
-                          type="hidden"
-                          name={`availability_${dateId}`}
-                          value="on"
-                        />
-                      ),
-                  )}
-
-                  {viewMode === 'list' && (
-                    <div
-                      className="grid select-none grid-cols-1 gap-1"
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      {/* リストビュー用にページネーションされたイベント日程データを準備 */}
-                      {(() => {
-                        // 日程を日付順にソート
-                        const sortedDates = [...eventDates]
-                          .sort(
-                            (a, b) =>
-                              new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
-                          )
-                          .filter((date) => {
-                            if (currentWeekDateSet.size === 0) {
-                              return true;
-                            }
-                            const dateKey = new Date(date.start_time).toISOString().split('T')[0];
-                            return currentWeekDateSet.has(dateKey);
-                          });
-
-                        return sortedDates.map((date) => {
-                          const { className, status } = getCellStyle(date.id);
-                          const interactiveProps = dateSelectionController.getCellProps(date.id, {
-                            disabled: isWeekdayModeActive,
-                          });
-                          return (
-                            <div
-                              key={date.id}
-                              data-date-id={date.id}
-                              data-selection-key={date.id}
-                              className={`flex cursor-pointer items-center rounded-lg border p-3 transition-colors ${
-                                status === 'available'
-                                  ? 'bg-success/10 border-success/40'
-                                  : 'bg-base-200/10 border-base-300/40 hover:bg-base-200/20'
-                              }`}
-                              {...interactiveProps}
-                            >
-                              <div
-                                className={`mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors duration-150 ${className}`}
-                              >
-                                {getCellContent(status)}
-                              </div>
-                              <div className="grid grid-cols-1">
-                                <span className="font-medium">
-                                  {formatTimeRange(date.start_time, date.end_time)}
-                                </span>
-                                {date.label && (
-                                  <span className="text-sm text-gray-500">{date.label}</span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-                  )}
-
-                  {viewMode === 'table' && (
-                    <div className="select-none overflow-x-auto" onMouseLeave={handleMouseLeave}>
-                      <table className="table w-full table-fixed border-collapse">
-                        <thead>
-                          <tr className="bg-base-200">
-                            <th className="border-base-300 w-32 border">日付</th>
-                            <th className="border-base-300 w-32 border">時間帯</th>
-                            <th className="border-base-300 w-24 border text-center">参加可否</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dateGroups.map((group) => (
-                            <React.Fragment key={group.dateKey}>
-                              {group.slots.map((date, index) => {
-                                const start = new Date(date.start_time);
-                                const end = new Date(date.end_time);
-                                const timeStr = `${start
-                                  .getHours()
-                                  .toString()
-                                  .padStart(2, '0')}:${start
-                                  .getMinutes()
-                                  .toString()
-                                  .padStart(2, '0')}～${end
-                                  .getHours()
-                                  .toString()
-                                  .padStart(2, '0')}:${end
-                                  .getMinutes()
-                                  .toString()
-                                  .padStart(2, '0')}`;
-
-                                const { className, status } = getCellStyle(date.id);
-
-                                return (
-                                  <tr key={date.id} className="hover" data-date-id={date.id}>
-                                    {index === 0 && (
-                                      <td
-                                        rowSpan={group.slots.length}
-                                        className="border-base-300 bg-base-100 border align-middle"
-                                      >
-                                        <div className="font-medium">{group.formattedDate}</div>
-                                      </td>
-                                    )}
-                                    <td className="border-base-300 border">{timeStr}</td>
-                                    <td className="border-base-300 w-20 border text-center sm:w-auto">
-                                      <div
-                                        className={`flex h-10 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-200 ease-in-out sm:rounded-md ${className}`}
-                                        data-selection-key={date.id}
-                                        {...dateSelectionController.getCellProps(date.id, {
-                                          disabled: isWeekdayModeActive,
-                                        })}
-                                      >
-                                        {getCellContent(status)}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </React.Fragment>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {viewMode === 'heatmap' && (
-                    <div
-                      className="table-container-mobile select-none overflow-x-auto overscroll-contain"
-                      style={{
-                        overscrollBehaviorY: 'contain',
-                        touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x', // ドラッグ中はタッチ操作を無効化
-                      }}
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      <table className="table-xs sm:table-sm table w-full table-fixed border-collapse">
-                        <thead className="sticky top-0 z-20">
-                          <tr className="bg-base-200">
-                            <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-1 text-center sm:w-24 sm:px-2 sm:py-3">
-                              <span className="text-xs sm:text-sm">時間</span>
-                            </th>
-                            {heatmapData.dates.map((date) => (
-                              <th
-                                key={date.dateKey}
-                                className="border-base-300 heatmap-cell-mobile border px-1 py-1 text-center sm:px-2 sm:py-3"
-                              >
-                                <span className="whitespace-nowrap text-xs sm:text-sm">
-                                  {date.formattedDate.split('(')[0]}
-                                  <br />
-                                  <span className="text-xs text-gray-500">
-                                    ({date.formattedDate.split('(')[1]}
-                                  </span>
-                                </span>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {/* Spacer for top time label */}
-                          <tr>
-                            <td className="bg-base-100 sticky left-0 z-10 h-3 sm:h-4"></td>
-                          </tr>
-                          {heatmapData.timeSlots.map((timeSlot) => {
-                            const [startTime] = timeSlot.split('-');
-                            const formattedStartTime = startTime.replace(/^0/, '');
-
-                            return (
-                              <tr key={timeSlot} className="hover">
-                                <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-center font-medium">
-                                  <span
-                                    className="text-base-content/80 absolute left-2 text-xs font-medium sm:text-sm"
-                                    style={{
-                                      top: 0,
-                                      transform: 'translateY(-50%)',
-                                    }}
-                                  >
-                                    {formattedStartTime}
-                                  </span>
-                                </td>
-                                {heatmapData.dates.map((date) => {
-                                  const dateId = heatmapData.dateMap[date.dateKey]?.[timeSlot];
-                                  const { className, status } = getCellStyle(dateId);
-
-                                  return (
-                                    <td
-                                      key={`${date.dateKey}-${timeSlot}`}
-                                      className="border-base-300 w-16 border p-0 text-center sm:w-auto"
-                                      data-date-id={dateId}
-                                    >
-                                      {dateId ? (
-                                        <div
-                                          className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-none transition-colors duration-150 sm:h-10 sm:rounded-sm ${className}`}
-                                          data-date-id={dateId}
-                                          data-selection-key={dateId}
-                                          {...dateSelectionController.getCellProps(dateId, {
-                                            disabled: isWeekdayModeActive,
-                                          })}
-                                        >
-                                          {getCellContent(status)}
-                                        </div>
-                                      ) : (
-                                        <div className="bg-base-200/30 text-base-content/30 flex h-9 w-full items-center justify-center rounded-none sm:h-10 sm:rounded-sm">
-                                          <span className="text-xs sm:text-sm">ー</span>
-                                        </div>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                          {/* Row for the last end time */}
-                          {heatmapData.timeSlots.length > 0 &&
-                            (() => {
-                              const lastTimeSlot =
-                                heatmapData.timeSlots[heatmapData.timeSlots.length - 1];
-                              const [, endTime] = lastTimeSlot.split('-');
-                              let formattedEndTime = endTime.replace(/^0/, '');
-                              if (endTime === '00:00') {
-                                formattedEndTime = '24:00';
-                              }
-                              return (
-                                <tr className="h-0">
-                                  <td className="border-base-300 bg-base-100 sticky left-0 z-10 whitespace-nowrap border px-2 py-0 text-center font-medium">
-                                    <span
-                                      className="text-base-content/80 absolute left-2 text-xs font-medium sm:text-sm"
-                                      style={{
-                                        top: 0,
-                                        transform: 'translateY(-50%)',
-                                      }}
-                                    >
-                                      {formattedEndTime}
-                                    </span>
-                                  </td>
-                                  {heatmapData.dates.map((date) => (
-                                    <td key={`${date.dateKey}-endtime-filler`} />
-                                  ))}
-                                </tr>
-                              );
-                            })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="mt-4">
               <label htmlFor="comment" className="mb-1 block text-sm font-medium">
                 コメント・メモ
               </label>
@@ -1438,96 +1358,109 @@ export default function AvailabilityForm({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
-                disabled={isWeekdayModeActive}
               />
             </div>
 
-            {/* 名前重複時の確認ダイアログ */}
-            {showOverwriteConfirm && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
-                  <h3 className="mb-4 text-lg font-bold">同じ名前の回答が既に存在します</h3>
-                  <p className="mb-6">
-                    「{name}
-                    」さんの回答は既に登録されています。上書きしてもよろしいですか？
-                    <br />
-                    （以前の回答は削除されます）
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowOverwriteConfirm(false)}
-                      className="btn btn-outline"
-                    >
-                      キャンセル
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setShowOverwriteConfirm(false);
-                        if (pendingFormData) {
-                          setIsSubmitting(true);
-                          await handleFormAction(pendingFormData);
-                          setPendingFormData(null);
-                        }
-                      }}
-                      className="btn btn-primary"
-                    >
-                      上書きする
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <TermsCheckbox
+              isChecked={termsAccepted}
+              onChange={setTermsAccepted}
+              id="availability-form-terms"
+              disabled={isSubmitting}
+            />
 
-            <div className={`flex flex-wrap gap-2 pt-4 ${isWeekdayModeActive ? 'opacity-50' : ''}`}>
-              <TermsCheckbox
-                isChecked={termsAccepted}
-                onChange={setTermsAccepted}
-                id="availability-form-terms"
-                disabled={isWeekdayModeActive}
-              />
-
+            <div className="flex flex-wrap justify-between gap-2">
+              <button type="button" className="btn btn-outline" onClick={handlePrevStep}>
+                戻る
+              </button>
               <button
                 type="submit"
-                className={`btn btn-primary w-full md:w-auto ${
-                  isSubmitting || isWeekdayModeActive || isCheckingName ? 'opacity-70' : ''
-                }`}
-                disabled={isSubmitting || isWeekdayModeActive || isCheckingName}
+                className="btn btn-primary"
+                disabled={isSubmitting || isCheckingName}
               >
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
-                    {isEditing ? '保存中...' : '送信中...'}
+                    送信中...
                   </>
                 ) : isCheckingName ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
                     名前を確認中...
                   </>
-                ) : isWeekdayModeActive ? (
-                  '曜日ごとの設定を完了してください'
                 ) : mode === 'edit' ? (
                   '回答を更新する'
                 ) : (
                   '回答を送信'
                 )}
               </button>
-
-              {/* キャンセルボタン - 入力ページに戻る */}
-              <a
-                href={isSubmitting || isWeekdayModeActive ? '#' : `/event/${publicToken}`}
-                className={`btn btn-outline w-full md:w-auto ${
-                  isSubmitting || isWeekdayModeActive ? 'pointer-events-none opacity-60' : ''
-                }`}
-                onClick={(e) => (isSubmitting || isWeekdayModeActive) && e.preventDefault()}
-              >
-                キャンセル
-              </a>
             </div>
-          </form>
-        </>
-      )}
+          </section>
+        )}
+
+        {/* 同期範囲の確認ダイアログ */}
+        {showSyncConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-bold">回答後の保存方法</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                この回答をアカウント予定に保存し、他イベントへの反映も実行しますか？
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseSyncScopeConfirm}
+                  className="btn btn-ghost"
+                >
+                  確認へ戻る
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSyncScopeChoice('current')}
+                  className="btn btn-outline"
+                >
+                  このイベントのみ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSyncScopeChoice('all')}
+                  className="btn btn-primary"
+                >
+                  アカウント予定に保存して反映
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showWeeklySaveConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-bold">週予定の更新</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                曜日一括入力の変更をアカウントの週予定にも反映しますか？
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={proceedToHeatmap}
+                  disabled={isSavingWeeklyTemplates}
+                >
+                  更新せず次へ
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => void handleSaveWeeklyAndProceed()}
+                  disabled={isSavingWeeklyTemplates}
+                >
+                  {isSavingWeeklyTemplates ? '更新中...' : '更新して次へ'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </form>
     </div>
   );
 }
