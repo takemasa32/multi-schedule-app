@@ -5,7 +5,7 @@ if (!window.HTMLFormElement.prototype.requestSubmit) {
 }
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AvailabilityForm from '../availability-form';
 
 jest.mock('@/lib/actions', () => ({
@@ -140,6 +140,89 @@ describe('AvailabilityForm', () => {
     goToWeeklyStepAsGuest();
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
+  });
+
+  it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
+    const multiSlotEventDates = [
+      {
+        id: 'date1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+      {
+        id: 'date2',
+        start_time: '2025-05-12T10:00:00.000Z',
+        end_time: '2025-05-12T11:00:00.000Z',
+      },
+    ];
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated={false}
+        eventDates={multiSlotEventDates}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+
+    const weeklySection = screen.getByTestId('availability-step-weekly');
+    const slotKeys = Array.from(
+      new Set(
+        Array.from(weeklySection.querySelectorAll<HTMLTableCellElement>('td[data-time-slot]'))
+          .map((cell) => cell.getAttribute('data-time-slot') ?? '')
+          .filter((slot): slot is string => slot.length > 0),
+      ),
+    ).sort();
+
+    expect(slotKeys.length).toBe(2);
+
+    const [firstStart, firstEnd] = slotKeys[0].split('-');
+    const [, lastEndRaw] = slotKeys[slotKeys.length - 1].split('-');
+    const lastEnd = lastEndRaw === '00:00' ? '24:00' : lastEndRaw;
+
+    expect(within(weeklySection).getByText(firstStart)).toBeInTheDocument();
+    expect(within(weeklySection).getByText(firstEnd)).toBeInTheDocument();
+    expect(within(weeklySection).getByText(lastEnd)).toBeInTheDocument();
+  });
+
+  it('予定確認・修正で時間区切りの最下段に終了時刻を表示する', async () => {
+    const multiSlotEventDates = [
+      {
+        id: 'date1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+      {
+        id: 'date2',
+        start_time: '2025-05-12T10:00:00.000Z',
+        end_time: '2025-05-12T11:00:00.000Z',
+      },
+    ];
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated={false}
+        eventDates={multiSlotEventDates}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const heatmapSection = await screen.findByTestId('availability-step-heatmap');
+    const slotKeys = Array.from(
+      new Set(
+        Array.from(heatmapSection.querySelectorAll<HTMLTableCellElement>('td[data-time-slot]'))
+          .map((cell) => cell.getAttribute('data-time-slot') ?? '')
+          .filter((slot): slot is string => slot.length > 0),
+      ),
+    ).sort();
+    const [, lastEndRaw] = slotKeys[slotKeys.length - 1].split('-');
+    const expectedLastEnd = lastEndRaw === '00:00' ? '24:00' : lastEndRaw.replace(/^0/, '');
+
+    expect(within(heatmapSection).getByText(expectedLastEnd)).toBeInTheDocument();
   });
 
   it('ヒートマップで○が0件のままは確認へ進めない', async () => {

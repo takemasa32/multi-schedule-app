@@ -158,15 +158,15 @@ export default function AvailabilityForm({
       const isLocked = lockedDateIdSet.has(dateId) && !overrideDateIdSet.has(dateId);
       if (isSelected) {
         return {
-          className: `bg-success/90 text-success-content font-semibold border border-success/50 shadow-inner${
-            isLocked ? ' opacity-60' : ''
+          className: `bg-success/90 text-success-content font-semibold shadow-inner ${
+            isLocked ? 'opacity-60 ring-1 ring-base-300/50' : ''
           }`,
           status: 'available' as CellStatus,
         };
       } else {
         return {
-          className: `bg-base-200/70 text-base-content/70 border border-base-300/40${
-            isLocked ? ' opacity-60' : ' hover:bg-base-200'
+          className: `bg-base-200/70 text-base-content/70 ${
+            isLocked ? 'opacity-60 ring-1 ring-base-300/50' : 'hover:bg-base-200'
           }`,
           status: 'unavailable' as CellStatus,
         };
@@ -980,6 +980,13 @@ export default function AvailabilityForm({
     }
     return `${uniqueLabels[0]}、${uniqueLabels[1]}、${uniqueLabels[2]} ほか（${uniqueLabels.length}日）`;
   }, [dailyAutoFillDateIds, eventDates, isAuthenticated]);
+  const heatmapLastEndLabel = useMemo(() => {
+    if (heatmapData.timeSlots.length === 0) return null;
+    const [, endTime] = heatmapData.timeSlots[heatmapData.timeSlots.length - 1].split('-');
+    if (!endTime) return null;
+    if (endTime === '00:00') return '24:00';
+    return endTime.replace(/^0/, '');
+  }, [heatmapData.timeSlots]);
   const stepLabels = useMemo(
     () =>
       isNewMode
@@ -999,6 +1006,12 @@ export default function AvailabilityForm({
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
   }, [weekdaySelections]);
+  const weekdayLastEndLabel = useMemo(() => {
+    if (weekdayTimeSlots.length === 0) return null;
+    const [, endTime] = weekdayTimeSlots[weekdayTimeSlots.length - 1].split('-');
+    if (!endTime) return null;
+    return endTime === '00:00' ? '24:00' : endTime;
+  }, [weekdayTimeSlots]);
 
   return (
     <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
@@ -1109,20 +1122,22 @@ export default function AvailabilityForm({
               <h3 className="mb-3 text-lg font-bold">曜日一括入力</h3>
               <div className="matrix-container mb-3 touch-none overflow-hidden">
                 <table
-                  className="border-base-300 table w-full table-fixed border-collapse border text-center"
+                  className="table-xs border-base-300 table w-full table-fixed border-collapse border text-center"
                   onMouseDown={(e) => e.preventDefault()}
                   onTouchStart={(e) => e.preventDefault()}
                   onTouchMove={(e) => e.preventDefault()}
                 >
                   <thead>
                     <tr className="bg-base-200">
-                      <th className="border-base-300 border px-1 py-2 text-center text-sm">時間</th>
+                      <th className="border-base-300 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                        時間
+                      </th>
                       {Object.keys(weekdaySelections).map((day) => (
                         <th
                           key={day}
-                          className="border-base-300 border px-1 py-2 text-center text-sm"
+                          className="border-base-300 border px-0.5 py-1 text-center md:px-1 md:py-2"
                         >
-                          {day}
+                          <span className="text-xs font-semibold md:text-sm">{day}</span>
                         </th>
                       ))}
                     </tr>
@@ -1138,38 +1153,69 @@ export default function AvailabilityForm({
                         </td>
                       </tr>
                     ) : (
-                      weekdayTimeSlots.map((timeSlot) => (
-                        <tr key={timeSlot}>
-                          <th className="border-base-300 border px-1 py-2 text-right text-xs">
-                            {timeSlot.split('-')[0]}
-                          </th>
-                          {Object.entries(weekdaySelections).map(([day, daySchedule]) => {
-                            const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
-                            return (
-                              <td
-                                key={`${day}-${timeSlot}`}
-                                className="border-base-300 border p-1"
-                                data-day={day}
-                                data-time-slot={timeSlot}
-                                data-selection-key={matrixKey}
-                                {...weekdaySelectionController.getCellProps(matrixKey, {
-                                  disabled: !isWeekdayModeActive,
-                                })}
-                              >
-                                <div
-                                  className={`flex h-8 items-center justify-center rounded-md ${
-                                    daySchedule.timeSlots[timeSlot]
-                                      ? 'bg-success text-success-content'
-                                      : 'bg-base-100 text-base-content/80'
+                      <>
+                        <tr>
+                          <th className="bg-base-100 border-base-300 h-1 border p-0 md:h-3"></th>
+                          {Object.keys(weekdaySelections).map((day) => (
+                            <td key={`${day}-spacer`} className="h-1 md:h-3" />
+                          ))}
+                        </tr>
+                        {weekdayTimeSlots.map((timeSlot, rowIndex) => {
+                          const [startTime] = timeSlot.split('-');
+                          return (
+                            <tr key={timeSlot}>
+                              <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                                <span
+                                  className={`absolute left-2 text-xs font-medium ${
+                                    rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
                                   }`}
                                 >
-                                  {daySchedule.timeSlots[timeSlot] ? '○' : '×'}
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))
+                                  {startTime.replace(/^0/, '')}
+                                </span>
+                              </th>
+                              {Object.entries(weekdaySelections).map(([day, daySchedule]) => {
+                                const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
+                                return (
+                                  <td
+                                    key={`${day}-${timeSlot}`}
+                                    className="border-base-300 border p-0.5 md:p-1"
+                                    data-day={day}
+                                    data-time-slot={timeSlot}
+                                    data-selection-key={matrixKey}
+                                    {...weekdaySelectionController.getCellProps(matrixKey, {
+                                      disabled: !isWeekdayModeActive,
+                                    })}
+                                  >
+                                    <div
+                                      className={`mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${
+                                        daySchedule.timeSlots[timeSlot]
+                                          ? 'bg-success text-success-content'
+                                          : 'bg-base-100 text-base-content/80'
+                                      }`}
+                                    >
+                                      {daySchedule.timeSlots[timeSlot] ? '○' : '×'}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                        {weekdayLastEndLabel && (
+                          <tr className="h-0">
+                            <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                              <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
+                                {weekdayLastEndLabel === '24:00'
+                                  ? '24:00'
+                                  : weekdayLastEndLabel.replace(/^0/, '')}
+                              </span>
+                            </th>
+                            {Object.keys(weekdaySelections).map((day) => (
+                              <td key={`${day}-end`} className="border-base-300 border p-0" />
+                            ))}
+                          </tr>
+                        )}
+                      </>
                     )}
                   </tbody>
                 </table>
@@ -1283,6 +1329,7 @@ export default function AvailabilityForm({
                               key={`${date.dateKey}-${timeSlot}`}
                               className="border-base-300 border p-0.5 md:p-1"
                               data-date-id={dateId}
+                              data-time-slot={timeSlot}
                             >
                               {dateId ? (
                                 <div
@@ -1318,6 +1365,18 @@ export default function AvailabilityForm({
                       </tr>
                     );
                   })}
+                  {heatmapLastEndLabel && (
+                    <tr className="h-0">
+                      <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                        <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
+                          {heatmapLastEndLabel}
+                        </span>
+                      </th>
+                      {heatmapData.dates.map((date) => (
+                        <td key={`${date.dateKey}-endtime`} className="border-base-300 border p-0" />
+                      ))}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
