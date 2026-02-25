@@ -65,7 +65,7 @@ describe('EventAnswerLinkEditor', () => {
       />,
     );
 
-    fireEvent.click(screen.getByTestId('event-answer-link-edit-toggle'));
+    fireEvent.click(screen.getByTestId('event-answer-link-open'));
     fireEvent.click(screen.getByTestId('event-answer-link-link'));
 
     await waitFor(() => {
@@ -95,7 +95,7 @@ describe('EventAnswerLinkEditor', () => {
       />,
     );
 
-    fireEvent.click(screen.getByTestId('event-answer-link-edit-toggle'));
+    fireEvent.click(screen.getByTestId('event-answer-link-open'));
     fireEvent.click(screen.getByTestId('event-answer-link-unlink'));
 
     await waitFor(() => {

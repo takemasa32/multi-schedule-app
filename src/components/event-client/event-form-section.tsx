@@ -141,20 +141,21 @@ export default function EventFormSection({
       {/* 参加回答ボタンエリア */}
       <div className="card bg-base-100 border-base-200 mb-8 overflow-visible border shadow-md">
         <div className="card-body">
-          <h3 className="card-title text-lg">参加予定を入力する</h3>
+          <div className="mb-1 flex items-start justify-between gap-2">
+            <h3 className="card-title text-lg">参加予定を入力する</h3>
+            <EventAnswerLinkEditor
+              eventId={event.id}
+              eventPublicToken={event.public_token}
+              participants={participants}
+              linkedParticipantId={linkedParticipantId}
+              onLinkedParticipantIdChange={setLinkedParticipantId}
+            />
+          </div>
           <p className="mb-4 text-sm text-gray-600">
             {event.is_finalized
               ? 'イベントは確定していますが、引き続き回答を更新できます。'
               : '以下のボタンから参加予定を入力してください。'}
           </p>
-
-          <EventAnswerLinkEditor
-            eventId={event.id}
-            eventPublicToken={event.public_token}
-            participants={participants}
-            linkedParticipantId={linkedParticipantId}
-            onLinkedParticipantIdChange={setLinkedParticipantId}
-          />
 
           <div className="flex flex-wrap gap-3">
             <Link href={`/event/${event.public_token}/input`} className="btn btn-primary">
