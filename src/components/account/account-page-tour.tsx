@@ -65,6 +65,15 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
     placement: 'bottom',
   },
   {
+    id: 'answer-linker',
+    target: '[data-tour-id="account-answer-linker"]',
+    title: '未ログイン回答の紐づけ',
+    description:
+      '未ログイン時に作成した回答候補がある場合、このセクションから自分のアカウントへ紐づけできます。',
+    optional: true,
+    placement: 'bottom',
+  },
+  {
     id: 'schedule-overview',
     target: '[data-tour-id="account-schedule-templates"]',
     title: 'マイ予定設定',

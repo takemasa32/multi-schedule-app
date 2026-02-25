@@ -67,12 +67,13 @@ describe('AccountPageTour', () => {
     ).toBeInTheDocument();
   });
 
-  it('次のステップへ進むとマイ予定設定へ遷移する', async () => {
+  it('optionalステップの対象がなくても次のステップへ進む', async () => {
     renderWithTargets();
     expect(await screen.findByText('アカウント基本情報')).toBeInTheDocument();
     expect(screen.getByText('1 / 7')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('account-tour-next'));
     expect(await screen.findByText('マイ予定設定')).toBeInTheDocument();
+    expect(screen.queryByText('未ログイン回答の紐づけ')).not.toBeInTheDocument();
     expect(screen.getByText('2 / 7')).toBeInTheDocument();
   });
 

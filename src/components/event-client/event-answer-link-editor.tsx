@@ -62,53 +62,66 @@ export default function EventAnswerLinkEditor({
   };
 
   return (
-    <div className="bg-base-200 mb-4 rounded-lg p-3" data-testid="event-answer-link-editor">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">このイベントの回答紐づき</p>
+    <section
+      className="border-base-300/70 bg-base-100 mb-4 rounded-lg border px-3 py-2.5"
+      data-testid="event-answer-link-editor"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="bg-base-200 text-base-content/70 inline-flex rounded px-2 py-1 text-[11px] font-semibold">
+            回答紐づき
+          </span>
+          <p className="truncate text-sm">
+            {linkedParticipant ? `現在: 「${linkedParticipant.name}」を紐づけ中` : '現在: 未紐づけ'}
+          </p>
+        </div>
+
         <button
           type="button"
-          className="btn btn-xs btn-outline"
+          className="btn btn-ghost btn-xs"
           data-testid="event-answer-link-edit-toggle"
           onClick={() => {
             setIsEditMode((prev) => !prev);
             setMessage('');
           }}
         >
-          {isEditMode ? '編集を終了' : '回答紐づきを編集'}
+          {isEditMode ? '編集を閉じる' : '回答紐づきを編集'}
         </button>
       </div>
 
-      <p className="text-xs text-gray-500">
-        {linkedParticipant
-          ? `現在は「${linkedParticipant.name}」の回答がアカウントに紐づいています。`
-          : '未ログイン時の回答を、このアカウントへ紐づけできます。'}
+      <p className="mt-1 text-xs text-gray-500">
+        未ログイン時の回答がある場合のみ、ここからこのイベントの回答をアカウントへ紐づけ/解除できます。
       </p>
 
       {isEditMode && (
-        <div className="mt-3">
+        <div className="border-base-300 mt-2 border-t pt-2">
           {linkedParticipant ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-warning"
-              data-testid="event-answer-link-unlink"
-              disabled={isSubmitting}
-              onClick={async () => {
-                if (!window.confirm('このイベントの回答紐づきを解除しますか？')) return;
-                setIsSubmitting(true);
-                const result = await unlinkMyParticipantAnswerByEventPublicToken(eventPublicToken);
-                setIsSubmitting(false);
-                setMessage(result.message);
-                if (!result.success) return;
-                onLinkedParticipantIdChange(null);
-                updateHistoryAnsweredState(false);
-              }}
-            >
-              {isSubmitting ? '解除中...' : '紐づきを解除'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="btn btn-xs btn-warning"
+                data-testid="event-answer-link-unlink"
+                disabled={isSubmitting}
+                onClick={async () => {
+                  if (!window.confirm('このイベントの回答紐づきを解除しますか？')) return;
+                  setIsSubmitting(true);
+                  const result =
+                    await unlinkMyParticipantAnswerByEventPublicToken(eventPublicToken);
+                  setIsSubmitting(false);
+                  setMessage(result.message);
+                  if (!result.success) return;
+                  onLinkedParticipantIdChange(null);
+                  updateHistoryAnsweredState(false);
+                }}
+              >
+                {isSubmitting ? '解除中...' : '紐づきを解除'}
+              </button>
+              <span className="text-xs text-gray-500">この操作で回答データは削除されません。</span>
+            </div>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <select
-                className="select select-bordered select-sm w-full sm:max-w-xs"
+                className="select select-bordered select-xs w-full sm:max-w-xs"
                 data-testid="event-answer-link-select"
                 value={selectedParticipantId}
                 onChange={(event) => setSelectedParticipantId(event.target.value)}
@@ -121,7 +134,7 @@ export default function EventAnswerLinkEditor({
               </select>
               <button
                 type="button"
-                className="btn btn-sm btn-primary"
+                className="btn btn-xs btn-primary"
                 data-testid="event-answer-link-link"
                 disabled={!selectedParticipantId || isSubmitting}
                 onClick={async () => {
@@ -159,6 +172,6 @@ export default function EventAnswerLinkEditor({
       )}
 
       {message && <p className="mt-2 text-xs text-gray-600">{message}</p>}
-    </div>
+    </section>
   );
 }
