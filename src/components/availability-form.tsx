@@ -1118,9 +1118,9 @@ export default function AvailabilityForm({
               <p>各曜日の予定を入力してください。</p>
             </div>
 
-            <div className="bg-base-200 border-base-300 rounded-lg border p-3 shadow-sm">
+            <div className="bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
               <h3 className="mb-3 text-lg font-bold">曜日一括入力</h3>
-              <div className="matrix-container mb-3 touch-none overflow-hidden">
+              <div className="matrix-container -mx-1 mb-2 touch-none overflow-hidden sm:mx-0 sm:mb-3">
                 <table
                   className="table-xs border-base-300 table w-full table-fixed border-collapse border text-center"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1129,13 +1129,13 @@ export default function AvailabilityForm({
                 >
                   <thead>
                     <tr className="bg-base-200">
-                      <th className="border-base-300 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                      <th className="border-base-300 w-10 border px-0.5 py-2 text-center md:w-14 md:px-2 md:py-3">
                         時間
                       </th>
                       {Object.keys(weekdaySelections).map((day) => (
                         <th
                           key={day}
-                          className="border-base-300 border px-0.5 py-1 text-center md:px-1 md:py-2"
+                          className="border-base-300 border px-0 py-0 text-center md:px-1 md:py-2"
                         >
                           <span className="text-xs font-semibold md:text-sm">{day}</span>
                         </th>
@@ -1178,7 +1178,7 @@ export default function AvailabilityForm({
                                 return (
                                   <td
                                     key={`${day}-${timeSlot}`}
-                                    className="border-base-300 border p-0.5 md:p-1"
+                                    className="border-base-300 border p-0 md:p-1"
                                     data-day={day}
                                     data-time-slot={timeSlot}
                                     data-selection-key={matrixKey}
@@ -1187,7 +1187,7 @@ export default function AvailabilityForm({
                                     })}
                                   >
                                     <div
-                                      className={`mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${
+                                      className={`flex aspect-square w-full items-center justify-center rounded-md text-xs font-semibold leading-none md:aspect-auto md:h-10 md:text-sm ${
                                         daySchedule.timeSlots[timeSlot]
                                           ? 'bg-success text-success-content'
                                           : 'bg-base-100 text-base-content/80'
@@ -1244,7 +1244,7 @@ export default function AvailabilityForm({
 
         {currentStep === heatmapStep && (
           <section className="space-y-4" data-testid="availability-step-heatmap">
-            <div className="bg-base-200 rounded-lg p-3 text-sm">
+            <div className="bg-base-200 rounded-lg p-1 text-sm sm:p-3">
               <p>表で予定を確認・修正してください。</p>
               {insertedAccountDatesLabel && (
                 <p className="text-base-content/60 mt-1 text-xs">
@@ -1265,7 +1265,7 @@ export default function AvailabilityForm({
             )}
 
             <div
-              className="table-container-mobile -mx-2 select-none overflow-x-auto overscroll-contain sm:mx-0"
+              className="table-container-mobile -mx-3 select-none overflow-x-auto overscroll-contain sm:mx-0"
               style={{
                 overscrollBehaviorY: 'contain',
                 touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x',
@@ -1275,13 +1275,13 @@ export default function AvailabilityForm({
               <table className="table-xs border-base-300 table w-full min-w-0 table-fixed border-collapse border text-center">
                 <thead className="sticky top-0 z-20">
                   <tr className="bg-base-200">
-                    <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                    <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-10 border px-0.5 py-2 text-center md:w-14 md:px-2 md:py-3">
                       <span className="text-xs">時間</span>
                     </th>
                     {heatmapData.dates.map((date) => (
                       <th
                         key={date.dateKey}
-                        className="border-base-300 heatmap-cell-mobile border px-0.5 py-1 text-center md:px-1 md:py-2"
+                        className="border-base-300 heatmap-cell-mobile border px-0 py-0 text-center md:px-1 md:py-2"
                       >
                         <div className="flex flex-col items-center leading-tight">
                           <span className="text-xs font-semibold md:text-sm">
@@ -1327,13 +1327,13 @@ export default function AvailabilityForm({
                           return (
                             <td
                               key={`${date.dateKey}-${timeSlot}`}
-                              className="border-base-300 border p-0.5 md:p-1"
+                              className="border-base-300 border p-0 md:p-1"
                               data-date-id={dateId}
                               data-time-slot={timeSlot}
                             >
                               {dateId ? (
                                 <div
-                                  className={`mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold transition-colors duration-150 md:aspect-auto md:h-10 md:w-full md:text-sm ${className} ${
+                                  className={`flex aspect-square w-full items-center justify-center rounded-md text-xs font-semibold leading-none transition-colors duration-150 md:aspect-auto md:h-10 md:text-sm ${className} ${
                                     isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
                                   }`}
                                   data-date-id={dateId}
@@ -1355,7 +1355,7 @@ export default function AvailabilityForm({
                                       : '-'}
                                 </div>
                               ) : (
-                                <div className="bg-base-200/30 text-base-content/30 mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm">
+                                <div className="bg-base-200/30 text-base-content/30 flex aspect-square w-full items-center justify-center rounded-md text-xs font-semibold leading-none md:aspect-auto md:h-10 md:text-sm">
                                   <span>-</span>
                                 </div>
                               )}
@@ -1373,7 +1373,10 @@ export default function AvailabilityForm({
                         </span>
                       </th>
                       {heatmapData.dates.map((date) => (
-                        <td key={`${date.dateKey}-endtime`} className="border-base-300 border p-0" />
+                        <td
+                          key={`${date.dateKey}-endtime`}
+                          className="border-base-300 border p-0"
+                        />
                       ))}
                     </tr>
                   )}
