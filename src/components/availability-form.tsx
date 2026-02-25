@@ -1069,15 +1069,7 @@ export default function AvailabilityForm({
             </div>
 
             {!isAuthenticated && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleSignInAndContinue}
-                  data-testid="availability-login-continue"
-                >
-                  ログインして進む
-                </button>
+              <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
                   className="btn btn-outline"
@@ -1085,6 +1077,14 @@ export default function AvailabilityForm({
                   data-testid="availability-guest-continue"
                 >
                   ログインせずに進む
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSignInAndContinue}
+                  data-testid="availability-login-continue"
+                >
+                  ログインして進む
                 </button>
               </div>
             )}
