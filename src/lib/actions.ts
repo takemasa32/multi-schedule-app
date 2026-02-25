@@ -1243,6 +1243,54 @@ export async function linkMyParticipantAnswerById({
 }
 
 /**
+ * 指定したイベントの回答紐づけを解除する
+ */
+export async function unlinkMyParticipantAnswerByEventPublicToken(
+  eventPublicToken: string,
+): Promise<{ success: boolean; message: string }> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: 'ログインが必要です' };
+  }
+
+  if (!eventPublicToken) {
+    return { success: false, message: 'イベントが不正です' };
+  }
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('public_token', eventPublicToken)
+      .maybeSingle();
+
+    if (eventError || !event?.id) {
+      return { success: false, message: '対象イベントが見つかりません' };
+    }
+
+    const linkResult = await upsertUserEventLink({
+      userId,
+      eventId: event.id,
+      participantId: null,
+    });
+
+    if (!linkResult.success) {
+      return {
+        success: false,
+        message: linkResult.message ?? '回答紐づけの解除に失敗しました',
+      };
+    }
+
+    return { success: true, message: '回答の紐づけを解除しました' };
+  } catch (error) {
+    console.error('回答紐づけ解除エラー:', error);
+    return { success: false, message: '回答紐づけの解除に失敗しました' };
+  }
+}
+
+/**
  * ログインユーザーに紐づく、このイベントの参加者IDを取得する
  */
 export async function getMyLinkedParticipantIdForEvent(eventId: string): Promise<string | null> {
