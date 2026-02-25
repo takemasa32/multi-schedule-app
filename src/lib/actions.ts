@@ -1170,7 +1170,7 @@ export async function fetchUnlinkedAnswerCandidates(): Promise<UnlinkedAnswerCan
 export async function linkMyParticipantAnswerById({
   eventId,
   participantId,
-  confirmNameMismatch = false,
+  confirmNameMismatch: _confirmNameMismatch,
 }: {
   eventId: string;
   participantId: string;
@@ -1178,7 +1178,6 @@ export async function linkMyParticipantAnswerById({
 }): Promise<{ success: boolean; message: string; requiresConfirmation?: boolean }> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
-  const accountName = session?.user?.name?.trim() ?? '';
   if (!userId) {
     return { success: false, message: 'ログインが必要です' };
   }
@@ -1215,16 +1214,6 @@ export async function linkMyParticipantAnswerById({
       return {
         success: false,
         message: 'この回答はすでに別アカウントに紐づいています',
-      };
-    }
-
-    const participantName = participant.name?.trim() ?? '';
-    if (accountName && participantName && accountName !== participantName && !confirmNameMismatch) {
-      return {
-        success: false,
-        message:
-          'アカウント名と異なる回答です。本人の回答であることを確認して、もう一度実行してください。',
-        requiresConfirmation: true,
       };
     }
 
