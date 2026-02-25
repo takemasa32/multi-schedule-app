@@ -69,23 +69,28 @@ export const authOptions: NextAuthOptions = {
                 credentials.devId === devLoginId &&
                 credentials.devPassword === devLoginPassword
               ) {
-                const client = await authPool.connect();
                 try {
+                  const client = await authPool.connect();
                   const email = `${devLoginId}@local.dev`;
-                  const existing = await client.query(
-                    'SELECT id, name, email FROM authjs.users WHERE email = $1',
-                    [email],
-                  );
-                  if ((existing.rowCount ?? 0) > 0) {
-                    return existing.rows[0];
+                  try {
+                    const existing = await client.query(
+                      'SELECT id, name, email FROM authjs.users WHERE email = $1',
+                      [email],
+                    );
+                    if ((existing.rowCount ?? 0) > 0) {
+                      return existing.rows[0];
+                    }
+                    const created = await client.query(
+                      'INSERT INTO authjs.users (name, email, \"emailVerified\") VALUES ($1, $2, now()) RETURNING id, name, email',
+                      ['開発ユーザー', email],
+                    );
+                    return created.rows[0];
+                  } finally {
+                    client.release();
                   }
-                  const created = await client.query(
-                    'INSERT INTO authjs.users (name, email, \"emailVerified\") VALUES ($1, $2, now()) RETURNING id, name, email',
-                    ['開発ユーザー', email],
-                  );
-                  return created.rows[0];
-                } finally {
-                  client.release();
+                } catch (error) {
+                  console.error('開発用ログインユーザー取得エラー:', error);
+                  return null;
                 }
               }
               return null;
