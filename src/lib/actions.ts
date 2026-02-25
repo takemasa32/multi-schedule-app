@@ -1283,12 +1283,15 @@ export async function fetchUnlinkedAnswerCandidates(): Promise<UnlinkedAnswerCan
 export async function linkMyParticipantAnswerById({
   eventId,
   participantId,
+  confirmNameMismatch = false,
 }: {
   eventId: string;
   participantId: string;
-}): Promise<{ success: boolean; message: string }> {
+  confirmNameMismatch?: boolean;
+}): Promise<{ success: boolean; message: string; requiresConfirmation?: boolean }> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
+  const accountName = session?.user?.name?.trim() ?? '';
   if (!userId) {
     return { success: false, message: 'ログインが必要です' };
   }
@@ -1301,7 +1304,7 @@ export async function linkMyParticipantAnswerById({
     const supabase = createSupabaseAdmin();
     const { data: participant, error: participantError } = await supabase
       .from('participants')
-      .select('id,event_id')
+      .select('id,event_id,name')
       .eq('id', participantId)
       .eq('event_id', eventId)
       .maybeSingle();
@@ -1310,11 +1313,51 @@ export async function linkMyParticipantAnswerById({
       return { success: false, message: '指定した回答が見つかりません' };
     }
 
-    await upsertUserEventLink({
+    const { data: existingLink, error: existingLinkError } = await supabase
+      .from('user_event_links')
+      .select('user_id')
+      .eq('participant_id', participantId)
+      .maybeSingle();
+
+    if (existingLinkError) {
+      console.error('既存紐づけ確認エラー:', existingLinkError);
+      return { success: false, message: '回答の確認に失敗しました' };
+    }
+
+    if (existingLink?.user_id && existingLink.user_id !== userId) {
+      return {
+        success: false,
+        message: 'この回答はすでに別アカウントに紐づいています',
+      };
+    }
+
+    const participantName = participant.name?.trim() ?? '';
+    if (accountName && participantName && accountName !== participantName && !confirmNameMismatch) {
+      return {
+        success: false,
+        message:
+          'アカウント名と異なる回答です。本人の回答であることを確認して、もう一度実行してください。',
+        requiresConfirmation: true,
+      };
+    }
+
+    const linkResult = await upsertUserEventLink({
       userId,
       eventId,
       participantId,
     });
+    if (!linkResult.success) {
+      if (linkResult.code === '23505') {
+        return {
+          success: false,
+          message: 'この回答はすでに別アカウントに紐づいています',
+        };
+      }
+      return {
+        success: false,
+        message: linkResult.message ?? '回答の紐づけに失敗しました',
+      };
+    }
 
     return { success: true, message: '回答をアカウントに紐づけました' };
   } catch (error) {

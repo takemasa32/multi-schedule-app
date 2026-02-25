@@ -1,10 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import AccountAnswerLinker from '@/components/account/account-answer-linker';
-import {
-  fetchUnlinkedAnswerCandidates,
-  linkMyParticipantAnswerById,
-} from '@/lib/actions';
+import { fetchUnlinkedAnswerCandidates, linkMyParticipantAnswerById } from '@/lib/actions';
 
 jest.mock('@/lib/actions', () => ({
   fetchUnlinkedAnswerCandidates: jest.fn(),
@@ -12,14 +9,7 @@ jest.mock('@/lib/actions', () => ({
 }));
 
 jest.mock('next/link', () => {
-  return function MockedLink({
-    href,
-    children,
-    ...rest
-  }: {
-    href: string;
-    children: ReactNode;
-  }) {
+  return function MockedLink({ href, children, ...rest }: { href: string; children: ReactNode }) {
     return (
       <a href={href} {...rest}>
         {children}
@@ -80,5 +70,49 @@ describe('AccountAnswerLinker', () => {
         participantId: 'participant-1',
       });
     });
+  });
+
+  it('名前不一致の確認が必要な場合は確認後に再実行する', async () => {
+    mockFetchUnlinkedAnswerCandidates.mockResolvedValue([
+      {
+        eventId: 'event-1',
+        publicToken: 'token-1',
+        title: 'テストイベント',
+        lastAccessedAt: '2026-02-19T10:00:00.000Z',
+        participants: [
+          {
+            id: 'participant-1',
+            name: '別名ユーザー',
+            createdAt: '2026-02-19T09:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+    mockLinkMyParticipantAnswerById
+      .mockResolvedValueOnce({
+        success: false,
+        message: 'アカウント名と異なる回答です。',
+        requiresConfirmation: true,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: '回答をアカウントに紐づけました',
+      });
+    const confirmMock = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<AccountAnswerLinker />);
+    expect(await screen.findByTestId('account-answer-linker')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('answer-linker-link-event-1'));
+    await waitFor(() => {
+      expect(mockLinkMyParticipantAnswerById).toHaveBeenCalledTimes(2);
+    });
+    expect(mockLinkMyParticipantAnswerById).toHaveBeenNthCalledWith(2, {
+      eventId: 'event-1',
+      participantId: 'participant-1',
+      confirmNameMismatch: true,
+    });
+
+    confirmMock.mockRestore();
   });
 });

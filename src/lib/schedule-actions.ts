@@ -282,7 +282,11 @@ const buildUserAvailabilitySyncPreview = async (
 const splitToHourlyRanges = (start: string, end: string): Array<{ start: string; end: string }> => {
   const startDate = toComparableDate(start);
   const endDate = toComparableDate(end);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
+  if (
+    Number.isNaN(startDate.getTime()) ||
+    Number.isNaN(endDate.getTime()) ||
+    startDate >= endDate
+  ) {
     return [];
   }
 
@@ -535,7 +539,7 @@ export async function upsertUserEventLink({
   userId: string;
   eventId: string;
   participantId?: string | null;
-}): Promise<void> {
+}): Promise<{ success: boolean; code?: string; message?: string }> {
   const supabase = createSupabaseAdmin();
   const { error } = await supabase.from('user_event_links').upsert(
     {
@@ -549,7 +553,9 @@ export async function upsertUserEventLink({
 
   if (error) {
     console.error('ユーザーイベント紐付けの更新に失敗しました:', error);
+    return { success: false, code: error.code, message: error.message };
   }
+  return { success: true };
 }
 
 export async function upsertUserScheduleBlocks({
@@ -613,7 +619,20 @@ export async function saveAvailabilityOverrides({
   overrideDateIds: string[];
   selectedDateIds: string[];
 }): Promise<void> {
-  if (overrideDateIds.length === 0) return;
+  const supabase = createSupabaseAdmin();
+
+  if (overrideDateIds.length === 0) {
+    const { error: clearError } = await supabase
+      .from('user_event_availability_overrides')
+      .delete()
+      .eq('user_id', userId)
+      .eq('event_id', eventId);
+    if (clearError) {
+      console.error('上書き情報の削除に失敗しました:', clearError);
+    }
+    return;
+  }
+
   const selectedSet = new Set(selectedDateIds);
   const payload = overrideDateIds.map((dateId) => ({
     user_id: userId,
@@ -624,13 +643,42 @@ export async function saveAvailabilityOverrides({
     updated_at: new Date().toISOString(),
   }));
 
-  const supabase = createSupabaseAdmin();
-  const { error } = await supabase
+  const { error: upsertError } = await supabase
     .from('user_event_availability_overrides')
     .upsert(payload, { onConflict: 'user_id,event_id,event_date_id' });
 
-  if (error) {
-    console.error('上書き情報の保存に失敗しました:', error);
+  if (upsertError) {
+    console.error('上書き情報の保存に失敗しました:', upsertError);
+    return;
+  }
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from('user_event_availability_overrides')
+    .select('event_date_id')
+    .eq('user_id', userId)
+    .eq('event_id', eventId);
+
+  if (existingError) {
+    console.error('上書き情報の取得に失敗しました:', existingError);
+    return;
+  }
+
+  const overrideIdSet = new Set(overrideDateIds);
+  const staleDateIds = (existingRows ?? [])
+    .map((row) => row.event_date_id)
+    .filter((dateId) => !overrideIdSet.has(dateId));
+
+  if (staleDateIds.length === 0) return;
+
+  const { error: deleteError } = await supabase
+    .from('user_event_availability_overrides')
+    .delete()
+    .eq('user_id', userId)
+    .eq('event_id', eventId)
+    .in('event_date_id', staleDateIds);
+
+  if (deleteError) {
+    console.error('不要な上書き情報の削除に失敗しました:', deleteError);
   }
 }
 

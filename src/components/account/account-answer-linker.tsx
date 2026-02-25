@@ -130,10 +130,24 @@ export default function AccountAnswerLinker() {
                   onClick={async () => {
                     if (!selectedId) return;
                     setLinkingEventId(candidate.eventId);
-                    const result = await linkMyParticipantAnswerById({
+                    let result = await linkMyParticipantAnswerById({
                       eventId: candidate.eventId,
                       participantId: selectedId,
                     });
+                    if (result.requiresConfirmation) {
+                      const confirmed = window.confirm(
+                        `${result.message}\n\n紐づけを続ける場合は「OK」を押してください。`,
+                      );
+                      if (confirmed) {
+                        result = await linkMyParticipantAnswerById({
+                          eventId: candidate.eventId,
+                          participantId: selectedId,
+                          confirmNameMismatch: true,
+                        });
+                      } else {
+                        result = { success: false, message: '紐づけをキャンセルしました' };
+                      }
+                    }
                     setLinkingEventId(null);
                     setMessageMap((prev) => ({
                       ...prev,
