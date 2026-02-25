@@ -6,14 +6,12 @@ import { EventHistoryItem, getEventHistory, clearEventHistory, setEventHistory }
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
 import { signIn, useSession } from 'next-auth/react';
 import { clearServerEventHistory, syncEventHistory } from '@/lib/event-history-actions';
-import { unlinkMyParticipantAnswerByEventPublicToken } from '@/lib/actions';
 
 interface EventHistoryProps {
   maxDisplay?: number;
   showClearButton?: boolean;
   title?: string;
   withProvider?: boolean;
-  enableAnswerLinkEdit?: boolean;
 }
 
 export default function EventHistory({
@@ -21,27 +19,16 @@ export default function EventHistory({
   showClearButton = true,
   title = 'イベント閲覧履歴',
   withProvider = true,
-  enableAnswerLinkEdit = false,
 }: EventHistoryProps) {
   if (!withProvider) {
     return (
-      <EventHistoryInner
-        maxDisplay={maxDisplay}
-        showClearButton={showClearButton}
-        title={title}
-        enableAnswerLinkEdit={enableAnswerLinkEdit}
-      />
+      <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />
     );
   }
 
   return (
     <FavoriteEventsProvider>
-      <EventHistoryInner
-        maxDisplay={maxDisplay}
-        showClearButton={showClearButton}
-        title={title}
-        enableAnswerLinkEdit={enableAnswerLinkEdit}
-      />
+      <EventHistoryInner maxDisplay={maxDisplay} showClearButton={showClearButton} title={title} />
     </FavoriteEventsProvider>
   );
 }
@@ -50,14 +37,10 @@ function EventHistoryInner({
   maxDisplay = 5,
   showClearButton = true,
   title = '過去のイベント',
-  enableAnswerLinkEdit = false,
 }: EventHistoryProps) {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
   const { favorites, addFavorite, removeFavorite } = useFavoriteEvents();
   const { status } = useSession();
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [unlinkingEventId, setUnlinkingEventId] = useState<string | null>(null);
-  const [messageMap, setMessageMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // ストレージの変更を監視する
@@ -125,33 +108,18 @@ function EventHistoryInner({
     }
   };
 
-  // アカウントに紐づいた回答が1件でもある場合のみ編集導線を表示する。
-  const hasLinkedAnswers = history.some((event) => event.answeredByMe);
-
   return (
     <div className="mb-4 mt-8">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-lg font-medium">{title}</h3>
-        <div className="flex items-center gap-2">
-          {enableAnswerLinkEdit && hasLinkedAnswers && (
-            <button
-              type="button"
-              className="btn btn-xs btn-outline"
-              onClick={() => setIsEditMode((prev) => !prev)}
-              data-testid="event-history-answer-edit-toggle"
-            >
-              {isEditMode ? '編集を終了' : '回答紐づきを編集'}
-            </button>
-          )}
-          {showClearButton && history.length > 0 && (
-            <button
-              onClick={handleClearHistory}
-              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              履歴をクリア
-            </button>
-          )}
-        </div>
+        {showClearButton && history.length > 0 && (
+          <button
+            onClick={handleClearHistory}
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            履歴をクリア
+          </button>
+        )}
       </div>
 
       {status !== 'authenticated' && (
@@ -192,65 +160,26 @@ function EventHistoryInner({
                       </span>
                     )}
                   </p>
-                  {messageMap[event.id] && (
-                    <p className="mt-1 text-xs text-gray-500">{messageMap[event.id]}</p>
-                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {enableAnswerLinkEdit && isEditMode && event.answeredByMe && (
-                    <button
-                      type="button"
-                      className="btn btn-xs btn-warning"
-                      data-testid={`event-history-unlink-${event.id}`}
-                      disabled={unlinkingEventId === event.id}
-                      onClick={async () => {
-                        const confirmed =
-                          window.confirm('このイベントの回答紐づきを解除しますか？');
-                        if (!confirmed) return;
-                        setUnlinkingEventId(event.id);
-                        const result = await unlinkMyParticipantAnswerByEventPublicToken(event.id);
-                        setUnlinkingEventId(null);
-                        setMessageMap((prev) => ({ ...prev, [event.id]: result.message }));
-                        if (!result.success) return;
-
-                        // 紐づけ解除後はローカル履歴上の回答済み状態も即時更新する。
-                        const nextHistory = history.map((item) =>
-                          item.id === event.id
-                            ? {
-                                ...item,
-                                answeredByMe: false,
-                                myParticipantName: null,
-                              }
-                            : item,
-                        );
-                        setHistory(nextHistory);
-                        setEventHistory(nextHistory);
-                      }}
-                    >
-                      {unlinkingEventId === event.id ? '解除中...' : '紐づきを解除'}
-                    </button>
-                  )}
-
-                  <button
-                    className={`btn btn-xs ${
-                      isFavorite ? 'btn-outline btn-error' : 'btn-outline btn-primary'
-                    }`}
-                    title={isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}
-                    onClick={() => {
-                      if (isFavorite) {
-                        removeFavorite(event.id);
-                      } else {
-                        addFavorite({
-                          id: event.id,
-                          title: event.title,
-                          lastAccessed: event.createdAt,
-                        });
-                      }
-                    }}
-                  >
-                    {isFavorite ? '解除' : '☆追加'}
-                  </button>
-                </div>
+                <button
+                  className={`btn btn-xs ${
+                    isFavorite ? 'btn-outline btn-error' : 'btn-outline btn-primary'
+                  }`}
+                  title={isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}
+                  onClick={() => {
+                    if (isFavorite) {
+                      removeFavorite(event.id);
+                    } else {
+                      addFavorite({
+                        id: event.id,
+                        title: event.title,
+                        lastAccessed: event.createdAt,
+                      });
+                    }
+                  }}
+                >
+                  {isFavorite ? '解除' : '☆追加'}
+                </button>
               </li>
             );
           })}
