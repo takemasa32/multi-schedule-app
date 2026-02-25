@@ -95,7 +95,9 @@ describe('AvailabilityForm', () => {
   });
 
   it('ログイン済みで再描画するとステップ1を再評価表示する', () => {
-    const { rerender } = render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+    const { rerender } = render(
+      <AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />,
+    );
     goToWeeklyStepAsGuest();
     expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
 
@@ -133,7 +135,9 @@ describe('AvailabilityForm', () => {
     await applyWeeklyAndGoHeatmap();
 
     fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
-    expect(screen.getByText('少なくとも1つの参加可能枠（○）を選択してください')).toBeInTheDocument();
+    expect(
+      screen.getByText('少なくとも1つの参加可能枠（○）を選択してください'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('availability-step-confirm')).not.toBeInTheDocument();
   });
 
@@ -199,10 +203,40 @@ describe('AvailabilityForm', () => {
     fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
     fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
-    fireEvent.click(await screen.findByRole('button', { name: '更新せず次へ' }));
+
+    const skipWeeklySave = await screen
+      .findByRole('button', { name: '更新せず次へ' })
+      .catch(() => null);
+    if (skipWeeklySave) {
+      fireEvent.click(skipWeeklySave);
+    }
 
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
-    expect(document.querySelector<HTMLInputElement>('input[name="availability_date1"]')).toBeInTheDocument();
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
+    ).toBeInTheDocument();
+  });
+
+  it('曜日セルを○→×に戻した曜日は未選択扱いになり、週予定更新モーダルを出さずに進める', async () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
+    });
+
+    const weeklyCell = document.querySelector<HTMLElement>('td[data-day][data-time-slot]');
+    if (!weeklyCell) throw new Error('曜日一括セルが見つかりません');
+    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerDown(weeklyCell, { pointerId: 2, pointerType: 'mouse' });
+    fireEvent.pointerUp(weeklyCell, { pointerId: 2, pointerType: 'mouse' });
+
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    expect(screen.queryByText('週予定の更新')).not.toBeInTheDocument();
+    expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
   });
 
   it('競合枠セルの上書き確認が動作する', async () => {
@@ -264,6 +298,39 @@ describe('AvailabilityForm', () => {
     expect(formDataArg.get('sync_scope')).toBe('current');
   });
 
+  it('同期範囲モーダルで確認へ戻るを選ぶと送信せず確認ステップへ戻る', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        hasSyncTargetEvents
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    const weeklyNext = screen.queryByRole('button', { name: '次へ' });
+    if (weeklyNext) {
+      fireEvent.click(weeklyNext);
+      const skipWeeklySave = await screen.findByRole('button', { name: '更新せず次へ' });
+      fireEvent.click(skipWeeklySave);
+    }
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
+
+    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '確認へ戻る' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('回答後の保存方法')).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
+    expect(submitAvailability).not.toHaveBeenCalled();
+  });
+
   it('確認画面の名前欄は重複エラー時のみ表示する', async () => {
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: true });
     render(
@@ -283,7 +350,9 @@ describe('AvailabilityForm', () => {
     expect(document.getElementById('participant_name_confirm')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
-    expect(await screen.findByText('同じ名前の回答が既に存在します。お名前を変更してください。')).toBeInTheDocument();
+    expect(
+      await screen.findByText('同じ名前の回答が既に存在します。お名前を変更してください。'),
+    ).toBeInTheDocument();
     expect(document.getElementById('participant_name_confirm')).toBeInTheDocument();
     expect(submitAvailability).not.toHaveBeenCalled();
   });

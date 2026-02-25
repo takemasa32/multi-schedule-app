@@ -169,9 +169,21 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
   const isAuthenticated =
     status === 'authenticated' || (status === 'loading' && initialIsAuthenticated);
   const currentStep = ACCOUNT_TOUR_STEPS[currentStepIndex];
-  const progressPercent = Math.round(
-    ((currentStepIndex + 1) / ACCOUNT_TOUR_STEPS.length) * 100,
-  );
+
+  const visibleStepIndexes = useMemo(() => {
+    if (!isOpen || typeof document === 'undefined') return [];
+    return ACCOUNT_TOUR_STEPS.flatMap((step, index) =>
+      document.querySelector(step.target) ? [index] : [],
+    );
+  }, [currentStepIndex, isOpen]);
+  const visibleStepCount =
+    visibleStepIndexes.length > 0 ? visibleStepIndexes.length : ACCOUNT_TOUR_STEPS.length;
+  const currentVisibleStepIndex = visibleStepIndexes.indexOf(currentStepIndex);
+  const currentVisibleStepNumber =
+    currentVisibleStepIndex >= 0
+      ? currentVisibleStepIndex + 1
+      : Math.min(currentStepIndex + 1, visibleStepCount);
+  const progressPercent = Math.round((currentVisibleStepNumber / visibleStepCount) * 100);
 
   const refreshRect = useCallback(
     (index: number) => {
@@ -296,7 +308,7 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
     };
   }, [currentStep.placement, highlightRect]);
 
-  const currentStepPositionText = `${currentStepIndex + 1} / ${ACCOUNT_TOUR_STEPS.length}`;
+  const currentStepPositionText = `${currentVisibleStepNumber} / ${visibleStepCount}`;
   const highlightViewportRect =
     highlightRect && typeof window !== 'undefined'
       ? {
@@ -371,7 +383,7 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
             aria-label="アカウントページの使い方"
             data-testid="account-tour-dialog"
           >
-            <div className="h-1 w-full bg-gradient-to-r from-primary via-info to-success" />
+            <div className="from-primary via-info to-success h-1 w-full bg-gradient-to-r" />
             <div className="space-y-4 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -393,7 +405,7 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
 
               <div>
                 <p className="text-base font-semibold">{currentStep.title}</p>
-                <p className="text-base-content/70 mt-1.5 leading-relaxed text-sm">
+                <p className="text-base-content/70 mt-1.5 text-sm leading-relaxed">
                   {currentStep.description}
                 </p>
               </div>
@@ -420,7 +432,7 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
                   </button>
                   <button
                     type="button"
-                    className="btn btn-sm btn-primary shadow-lg shadow-primary/30"
+                    className="btn btn-sm btn-primary shadow-primary/30 shadow-lg"
                     onClick={() => moveStep(1)}
                     data-testid="account-tour-next"
                   >

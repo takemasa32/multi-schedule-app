@@ -5,10 +5,7 @@ import {
   fetchUserScheduleTemplates,
   upsertWeeklyTemplatesFromWeekdaySelections,
 } from '@/lib/schedule-actions';
-import {
-  submitAvailability,
-  checkParticipantExists,
-} from '@/lib/actions';
+import { submitAvailability, checkParticipantExists } from '@/lib/actions';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
@@ -237,12 +234,14 @@ export default function AvailabilityForm({
             return;
           }
           changed = true;
+          const nextTimeSlots = {
+            ...schedule.timeSlots,
+            [slot]: value,
+          };
           next[weekday] = {
-            selected: value ? true : schedule.selected,
-            timeSlots: {
-              ...schedule.timeSlots,
-              [slot]: value,
-            },
+            // 全セルが false に戻った曜日は未選択として扱い、意図しない保存対象化を防ぐ。
+            selected: Object.values(nextTimeSlots).some(Boolean),
+            timeSlots: nextTimeSlots,
           };
         });
         return changed ? next : prev;
@@ -472,6 +471,11 @@ export default function AvailabilityForm({
     [handleFormAction, pendingSyncFormData],
   );
 
+  const handleCloseSyncScopeConfirm = useCallback(() => {
+    setShowSyncConfirm(false);
+    setPendingSyncFormData(null);
+  }, []);
+
   const handleSignInAndContinue = useCallback(() => {
     if (typeof window === 'undefined') return;
     const callbackUrl = `${window.location.pathname}${window.location.search}`;
@@ -502,15 +506,7 @@ export default function AvailabilityForm({
       }
       setCurrentStep(confirmStep);
     }
-  }, [
-    confirmStep,
-    currentStep,
-    heatmapStep,
-    isNewMode,
-    name,
-    selectedDates,
-    weeklyStep,
-  ]);
+  }, [confirmStep, currentStep, heatmapStep, isNewMode, name, selectedDates, weeklyStep]);
 
   const handlePrevStep = useCallback(() => {
     setError(null);
@@ -529,7 +525,7 @@ export default function AvailabilityForm({
       setCurrentStep(heatmapStep);
       return;
     }
-    setCurrentStep((prev) => (Math.max(prev - 1, 1) as WizardStep));
+    setCurrentStep((prev) => Math.max(prev - 1, 1) as WizardStep);
   }, [confirmStep, currentStep, heatmapStep, isNewMode, weeklyStep]);
 
   const uniqueDateKeys = useMemo(() => {
@@ -1108,7 +1104,10 @@ export default function AvailabilityForm({
                     <tr className="bg-base-200">
                       <th className="border-base-300 border px-1 py-2 text-center text-sm">時間</th>
                       {Object.keys(weekdaySelections).map((day) => (
-                        <th key={day} className="border-base-300 border px-1 py-2 text-center text-sm">
+                        <th
+                          key={day}
+                          className="border-base-300 border px-1 py-2 text-center text-sm"
+                        >
                           {day}
                         </th>
                       ))}
@@ -1188,7 +1187,7 @@ export default function AvailabilityForm({
             <div className="bg-base-200 rounded-lg p-3 text-sm">
               <p>表で予定を確認・修正してください。</p>
               {insertedAccountDatesLabel && (
-                <p className="mt-1 text-xs text-base-content/60">
+                <p className="text-base-content/60 mt-1 text-xs">
                   アカウント予定を反映済み（{insertedAccountDatesLabel}）
                 </p>
               )}
@@ -1228,7 +1227,9 @@ export default function AvailabilityForm({
                           <span className="text-xs font-semibold md:text-sm">
                             {date.formattedDate.split('(')[0]}
                           </span>
-                          <span className="text-xs text-gray-500">({date.formattedDate.split('(')[1]}</span>
+                          <span className="text-xs text-gray-500">
+                            ({date.formattedDate.split('(')[1]}
+                          </span>
                         </div>
                       </th>
                     ))}
@@ -1260,7 +1261,8 @@ export default function AvailabilityForm({
                           const dateId = heatmapData.dateMap[date.dateKey]?.[timeSlot];
                           const { className, status } = getCellStyle(dateId);
                           const isConflict = dateId ? lockedDateIdSet.has(dateId) : false;
-                          const isLocked = Boolean(dateId) && isConflict && !overrideDateIdSet.has(dateId);
+                          const isLocked =
+                            Boolean(dateId) && isConflict && !overrideDateIdSet.has(dateId);
 
                           return (
                             <td
@@ -1285,7 +1287,11 @@ export default function AvailabilityForm({
                                   }}
                                   title={isConflict ? '確定イベントと重複しています' : undefined}
                                 >
-                                  {status === 'available' ? '○' : status === 'unavailable' ? '×' : '-'}
+                                  {status === 'available'
+                                    ? '○'
+                                    : status === 'unavailable'
+                                      ? '×'
+                                      : '-'}
                                 </div>
                               ) : (
                                 <div className="bg-base-200/30 text-base-content/30 mx-auto flex aspect-square w-7 items-center justify-center rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm">
@@ -1323,7 +1329,10 @@ export default function AvailabilityForm({
             <div>
               {showNameInputOnDuplicate && (
                 <div className="mb-4">
-                  <label htmlFor="participant_name_confirm" className="mb-1 block text-sm font-medium">
+                  <label
+                    htmlFor="participant_name_confirm"
+                    className="mb-1 block text-sm font-medium"
+                  >
                     お名前 <span className="text-error">*</span>
                   </label>
                   <input
@@ -1363,7 +1372,11 @@ export default function AvailabilityForm({
               <button type="button" className="btn btn-outline" onClick={handlePrevStep}>
                 戻る
               </button>
-              <button type="submit" className="btn btn-primary" disabled={isSubmitting || isCheckingName}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSubmitting || isCheckingName}
+              >
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-sm mr-2"></span>
@@ -1384,63 +1397,69 @@ export default function AvailabilityForm({
           </section>
         )}
 
-            {/* 同期範囲の確認ダイアログ */}
-            {showSyncConfirm && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
-                  <h3 className="mb-4 text-lg font-bold">回答後の保存方法</h3>
-                  <p className="mb-6 text-sm text-gray-600">
-                    この回答をアカウント予定に保存し、他イベントへの反映も実行しますか？
-                  </p>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSyncScopeChoice('current')}
-                      className="btn btn-outline"
-                    >
-                      このイベントのみ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSyncScopeChoice('all')}
-                      className="btn btn-primary"
-                    >
-                      アカウント予定に保存して反映
-                    </button>
-                  </div>
-                </div>
+        {/* 同期範囲の確認ダイアログ */}
+        {showSyncConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-bold">回答後の保存方法</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                この回答をアカウント予定に保存し、他イベントへの反映も実行しますか？
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseSyncScopeConfirm}
+                  className="btn btn-ghost"
+                >
+                  確認へ戻る
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSyncScopeChoice('current')}
+                  className="btn btn-outline"
+                >
+                  このイベントのみ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSyncScopeChoice('all')}
+                  className="btn btn-primary"
+                >
+                  アカウント予定に保存して反映
+                </button>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {showWeeklySaveConfirm && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
-                  <h3 className="mb-4 text-lg font-bold">週予定の更新</h3>
-                  <p className="mb-6 text-sm text-gray-600">
-                    曜日一括入力の変更をアカウントの週予定にも反映しますか？
-                  </p>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      onClick={proceedToHeatmap}
-                      disabled={isSavingWeeklyTemplates}
-                    >
-                      更新せず次へ
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => void handleSaveWeeklyAndProceed()}
-                      disabled={isSavingWeeklyTemplates}
-                    >
-                      {isSavingWeeklyTemplates ? '更新中...' : '更新して次へ'}
-                    </button>
-                  </div>
-                </div>
+        {showWeeklySaveConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-bold">週予定の更新</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                曜日一括入力の変更をアカウントの週予定にも反映しますか？
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={proceedToHeatmap}
+                  disabled={isSavingWeeklyTemplates}
+                >
+                  更新せず次へ
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => void handleSaveWeeklyAndProceed()}
+                  disabled={isSavingWeeklyTemplates}
+                >
+                  {isSavingWeeklyTemplates ? '更新中...' : '更新して次へ'}
+                </button>
               </div>
-            )}
-
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
