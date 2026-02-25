@@ -43,6 +43,13 @@ async function dumpPageHtml(page: Page, label: string) {
   console.log(label, html);
 }
 
+async function proceedAsGuest(page: Page) {
+  await page.getByRole('button', { name: 'ログインせずに進む' }).click();
+  const continueAsGuestButton = page.getByTestId('availability-guest-confirm-continue');
+  await expect(continueAsGuestButton).toBeVisible();
+  await continueAsGuestButton.click();
+}
+
 let eventAdminUrl: string;
 let eventPublicUrl: string;
 let participantName: string;
@@ -109,7 +116,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await participantPage.waitForURL(/\/input/);
     participantName = `E2E参加者${Date.now()}`;
     await participantPage.getByLabel('お名前').fill(participantName);
-    await participantPage.getByRole('button', { name: 'ログインせずに進む' }).click();
+    await proceedAsGuest(participantPage);
     await participantPage.getByRole('button', { name: '次へ' }).click();
     const dateDivs = participantPage.locator('div[data-date-id]');
     await dateDivs.first().click();
@@ -194,7 +201,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await page.getByRole('link', { name: '新しく回答する' }).click();
     await page.waitForURL(/\/input$/);
     await page.getByLabel('お名前').fill('週表示参加者');
-    await page.getByRole('button', { name: 'ログインせずに進む' }).click();
+    await proceedAsGuest(page);
     await page.locator('td[data-day="月"][data-time-slot]').first().click();
     await page.getByRole('button', { name: '次へ' }).click();
     await page.getByRole('button', { name: '確認へ進む' }).click();
