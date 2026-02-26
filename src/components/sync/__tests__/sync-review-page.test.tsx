@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import SyncReviewPage from '@/components/sync/sync-review-page';
 import {
@@ -80,9 +80,9 @@ describe('SyncReviewPage', () => {
   });
 
   it('最後のイベントを適用して0件になったら自動遷移する', async () => {
-    mockFetchUserAvailabilitySyncPreview
-      .mockResolvedValueOnce([createPreviewEvent('other-event', '対象イベント')])
-      .mockResolvedValueOnce([createPreviewEvent('current', '現在イベント')]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      createPreviewEvent('other-event', '対象イベント'),
+    ]);
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
@@ -92,6 +92,7 @@ describe('SyncReviewPage', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/event/public-token');
     });
+    expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
   });
 
   it('適用失敗時はメッセージを表示してページに残る', async () => {
@@ -123,5 +124,55 @@ describe('SyncReviewPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '再読み込み' })).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('複数イベントをほぼ同時に適用しても競合せず最終的に自動遷移する', async () => {
+    let resolveFirst: (() => void) | null = null;
+    let resolveSecond: (() => void) | null = null;
+
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      createPreviewEvent('event-1', '対象イベント1'),
+      createPreviewEvent('event-2', '対象イベント2'),
+    ]);
+    mockApplyUserAvailabilitySyncForEvent.mockImplementation(({ eventId }: { eventId: string }) => {
+      return new Promise((resolve) => {
+        const responder = () => resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
+        if (eventId === 'event-1') {
+          resolveFirst = responder;
+          return;
+        }
+        resolveSecond = responder;
+      });
+    });
+
+    render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
+
+    const applyButton1 = await screen.findByTestId('sync-review-apply-event-1');
+    const applyButton2 = await screen.findByTestId('sync-review-apply-event-2');
+    fireEvent.click(applyButton1);
+    fireEvent.click(applyButton2);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('適用中...')).toHaveLength(2);
+    });
+
+    await act(async () => {
+      resolveSecond?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('sync-review-event-event-2')).not.toBeInTheDocument();
+      expect(screen.getByTestId('sync-review-event-event-1')).toBeInTheDocument();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveFirst?.();
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/event/public-token');
+    });
+    expect(mockApplyUserAvailabilitySyncForEvent).toHaveBeenCalledTimes(2);
   });
 });

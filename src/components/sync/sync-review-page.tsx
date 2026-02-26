@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import WeekNavigationBar from '@/components/week-navigation-bar';
 import {
   applyUserAvailabilitySyncForEvent,
@@ -114,6 +114,50 @@ const buildInitialSyncPreviewWeekPageMap = (
     events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]),
   );
 
+const reconcileEventAfterApply = ({
+  event,
+  selectedAvailabilities,
+  overwriteProtected,
+}: {
+  event: UserAvailabilitySyncPreviewEvent;
+  selectedAvailabilities: Record<string, boolean>;
+  overwriteProtected: boolean;
+}): UserAvailabilitySyncPreviewEvent => {
+  const dates = event.dates.map((row) => {
+    const requested =
+      row.eventDateId in selectedAvailabilities
+        ? selectedAvailabilities[row.eventDateId]
+        : row.desiredAvailability;
+
+    const nextCurrentAvailability =
+      row.isProtected && !overwriteProtected ? row.currentAvailability : requested;
+    const nextWillChange = nextCurrentAvailability !== row.desiredAvailability;
+
+    return {
+      ...row,
+      currentAvailability: nextCurrentAvailability,
+      willChange: nextWillChange,
+    };
+  });
+
+  const total = dates.filter((row) => row.willChange).length;
+
+  return {
+    ...event,
+    dates,
+    changes: {
+      total,
+      availableToUnavailable: dates.filter(
+        (row) => row.willChange && row.currentAvailability && !row.desiredAvailability,
+      ).length,
+      unavailableToAvailable: dates.filter(
+        (row) => row.willChange && !row.currentAvailability && row.desiredAvailability,
+      ).length,
+      protected: dates.filter((row) => row.willChange && row.isProtected).length,
+    },
+  };
+};
+
 export default function SyncReviewPage({ publicToken, currentEventId }: SyncReviewPageProps) {
   const router = useRouter();
   const [syncPreviewEvents, setSyncPreviewEvents] = useState<UserAvailabilitySyncPreviewEvent[]>([]);
@@ -126,7 +170,8 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   const [syncMessageMap, setSyncMessageMap] = useState<Record<string, string>>({});
   const [syncPreviewError, setSyncPreviewError] = useState<string | null>(null);
   const [isSyncPreviewLoading, setIsSyncPreviewLoading] = useState(true);
-  const [syncApplyingEventId, setSyncApplyingEventId] = useState<string | null>(null);
+  const [syncApplyingEventIds, setSyncApplyingEventIds] = useState<Set<string>>(new Set());
+  const syncApplyingEventIdsRef = useRef<Set<string>>(new Set());
 
   const backToEventPath = useMemo(() => `/event/${publicToken}`, [publicToken]);
 
@@ -168,19 +213,40 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   }, [loadSyncPreview]);
 
   useEffect(() => {
-    if (!isSyncPreviewLoading && !syncPreviewError && syncPreviewEvents.length === 0) {
+    if (
+      !isSyncPreviewLoading &&
+      !syncPreviewError &&
+      syncPreviewEvents.length === 0 &&
+      syncApplyingEventIds.size === 0
+    ) {
       router.replace(backToEventPath);
     }
-  }, [backToEventPath, isSyncPreviewLoading, router, syncPreviewError, syncPreviewEvents.length]);
+  }, [
+    backToEventPath,
+    isSyncPreviewLoading,
+    router,
+    syncApplyingEventIds.size,
+    syncPreviewError,
+    syncPreviewEvents.length,
+  ]);
 
   const handleApplyForEvent = useCallback(
     async (eventId: string) => {
-      setSyncApplyingEventId(eventId);
+      if (syncApplyingEventIdsRef.current.has(eventId)) return;
+
+      syncApplyingEventIdsRef.current.add(eventId);
+      setSyncApplyingEventIds((prev) => {
+        const next = new Set(prev);
+        next.add(eventId);
+        return next;
+      });
       try {
+        const selectedAvailabilities = syncCellSelectionMap[eventId] ?? {};
+        const overwriteProtected = syncOverwriteMap[eventId] ?? false;
         const result = await applyUserAvailabilitySyncForEvent({
           eventId,
-          selectedAvailabilities: syncCellSelectionMap[eventId] ?? {},
-          overwriteProtected: syncOverwriteMap[eventId] ?? false,
+          selectedAvailabilities,
+          overwriteProtected,
           allowFinalized: syncAllowFinalizedMap[eventId] ?? false,
         });
 
@@ -194,13 +260,54 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
           [eventId]: result.message,
         }));
         if (result.success) {
-          await loadSyncPreview();
+          setSyncPreviewEvents((prev) =>
+            prev.flatMap((event) => {
+              if (event.eventId !== eventId) return [event];
+              const reconciled = reconcileEventAfterApply({
+                event,
+                selectedAvailabilities,
+                overwriteProtected,
+              });
+              return reconciled.changes.total > 0 ? [reconciled] : [];
+            }),
+          );
+          setSyncCellSelectionMap((prev) => {
+            const next = { ...prev };
+            delete next[eventId];
+            return next;
+          });
+          setSyncPreviewWeekPageMap((prev) => {
+            const next = { ...prev };
+            delete next[eventId];
+            return next;
+          });
+          setSyncOverwriteMap((prev) => {
+            const next = { ...prev };
+            delete next[eventId];
+            return next;
+          });
+          setSyncAllowFinalizedMap((prev) => {
+            const next = { ...prev };
+            delete next[eventId];
+            return next;
+          });
         }
       } finally {
-        setSyncApplyingEventId(null);
+        syncApplyingEventIdsRef.current.delete(eventId);
+        setSyncApplyingEventIds((prev) => {
+          const next = new Set(prev);
+          next.delete(eventId);
+          return next;
+        });
       }
     },
-    [backToEventPath, loadSyncPreview, router, syncAllowFinalizedMap, syncCellSelectionMap, syncOverwriteMap],
+    [
+      backToEventPath,
+      router,
+      syncAllowFinalizedMap,
+      syncCellSelectionMap,
+      syncOverwriteMap,
+    ],
   );
 
   if (isSyncPreviewLoading) {
@@ -241,7 +348,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
             Math.max(dateBuckets.length - 1, 0),
           );
           const visibleDates = dateBuckets[currentWeekPage] ?? [];
-          const isUpdating = syncApplyingEventId === event.eventId;
+          const isUpdating = syncApplyingEventIds.has(event.eventId);
           const selection = syncCellSelectionMap[event.eventId] ?? {};
           const weekPeriodLabel =
             visibleDates.length > 0
