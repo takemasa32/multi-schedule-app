@@ -106,7 +106,6 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             top: `${tooltip.y + 10}px`,
             left: `${tooltip.x + 10}px`,
             zIndex: 1000,
-            backgroundColor: 'white',
             borderRadius: '8px',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
             padding: '12px',
@@ -148,7 +147,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             </div>
           )}
           {hasNoParticipants ? (
-            <div className="py-2 text-center text-base-content/60">
+            <div className="py-2 text-center text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-1 h-5 w-5"

@@ -60,7 +60,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
         </div>
         <div className="px-2 pb-2">
           {hasNoParticipants ? (
-            <div className="py-4 text-center text-base-content/60">
+            <div className="py-4 text-center text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-2 h-6 w-6"
