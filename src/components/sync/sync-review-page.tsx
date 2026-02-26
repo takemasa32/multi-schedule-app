@@ -206,7 +206,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   if (isSyncPreviewLoading) {
     return (
       <div className="py-8" data-testid="sync-review-page">
-        <p className="text-sm text-gray-500">反映対象を確認しています...</p>
+        <p className="text-sm text-base-content/60">反映対象を確認しています...</p>
       </div>
     );
   }
@@ -220,7 +220,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
         </Link>
       </div>
 
-      <p className="mb-4 text-sm text-gray-500">
+      <p className="mb-4 text-sm text-base-content/60">
         反映対象イベントごとに変更内容を確認し、「この変更を適用」で更新できます。
       </p>
       {syncPreviewError && (
@@ -328,7 +328,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
                                   day: 'numeric',
                                 })}
                               </span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-base-content/60">
                                 ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
                               </span>
                             </div>
@@ -446,7 +446,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
               </div>
 
               {syncMessageMap[event.eventId] && (
-                <p className="mt-2 text-xs text-gray-600">{syncMessageMap[event.eventId]}</p>
+                <p className="mt-2 text-xs text-base-content/70">{syncMessageMap[event.eventId]}</p>
               )}
             </div>
           );
