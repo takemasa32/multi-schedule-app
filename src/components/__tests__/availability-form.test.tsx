@@ -437,6 +437,35 @@ describe('AvailabilityForm', () => {
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
   });
 
+  it('編集モードで曜日セルを○→×にした場合はヒートマップの選択にも反映される', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="edit"
+        isAuthenticated={false}
+        initialParticipant={{ id: 'p1', name: '既存ユーザー' }}
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+
+    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
+    const weeklyCell = document.querySelector<HTMLElement>('td[data-day="月"][data-time-slot]');
+    if (!weeklyCell) throw new Error('曜日一括セルが見つかりません');
+    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const heatmapSection = await screen.findByTestId('availability-step-heatmap');
+    expect(heatmapSection).toBeInTheDocument();
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
+    ).not.toBeInTheDocument();
+    const date1Cell = heatmapSection.querySelector<HTMLElement>('[data-selection-key="date1"]');
+    expect(date1Cell).not.toBeNull();
+    expect(date1Cell).toHaveTextContent('×');
+  });
+
   it('競合枠セルの上書き確認が動作する', async () => {
     const confirmMock = jest.spyOn(window, 'confirm').mockReturnValue(true);
     render(

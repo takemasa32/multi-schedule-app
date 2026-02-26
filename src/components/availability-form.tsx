@@ -823,8 +823,6 @@ export default function AvailabilityForm({
 
     // 選択された曜日と時間帯のデータを処理
     Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
-      if (!daySchedule.selected) return; // 選択されていない曜日はスキップ
-
       // 全イベント日程をループして、選択された曜日に該当する日程を更新
       eventDates.forEach((date) => {
         const dateObj = new Date(date.start_time);
@@ -844,7 +842,9 @@ export default function AvailabilityForm({
           // 時間帯ごとの設定がある場合のみ適用する
           // 週入力の選択を優先（既存の選択を上書き）
           if (daySchedule.timeSlots[timeKey] !== undefined) {
-            newSelectedDates[date.id] = daySchedule.timeSlots[timeKey];
+            newSelectedDates[date.id] = daySchedule.selected
+              ? daySchedule.timeSlots[timeKey]
+              : false;
           }
         }
       });
