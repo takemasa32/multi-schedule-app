@@ -11,7 +11,7 @@ import type { Participant } from '@/types/participant';
 import {
   calcTooltipPosition,
   buildDateTimeLabel,
-  fetchParticipantsByDate,
+  buildParticipantsByDateIndex,
 } from '../../lib/tooltip-utils';
 
 type EventDate = {
@@ -94,6 +94,10 @@ export default function AvailabilitySummary({
   const filteredAvailabilities = useMemo(
     () => availabilities.filter((a) => !excludedParticipantIds.includes(a.participant_id)),
     [availabilities, excludedParticipantIds],
+  );
+  const participantsByDateIndex = useMemo(
+    () => buildParticipantsByDateIndex(filteredParticipants, filteredAvailabilities),
+    [filteredParticipants, filteredAvailabilities],
   );
 
   // スクロール中かどうかを追跡するstate
@@ -243,11 +247,8 @@ export default function AvailabilitySummary({
 
   // ツールチップ表示処理（Pointerイベント）
   const handlePointerEnter = (event: React.PointerEvent<Element>, dateId: string) => {
-    const { availableParticipants, unavailableParticipants } = fetchParticipantsByDate(
-      filteredParticipants,
-      filteredAvailabilities,
-      dateId,
-    );
+    const availableParticipants = participantsByDateIndex.get(dateId)?.availableParticipants ?? [];
+    const unavailableParticipants = participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
     setTooltip({
@@ -272,11 +273,8 @@ export default function AvailabilitySummary({
     if (event.nativeEvent) {
       event.nativeEvent.stopImmediatePropagation();
     }
-    const { availableParticipants, unavailableParticipants } = fetchParticipantsByDate(
-      filteredParticipants,
-      filteredAvailabilities,
-      dateId,
-    );
+    const availableParticipants = participantsByDateIndex.get(dateId)?.availableParticipants ?? [];
+    const unavailableParticipants = participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     if (isMobile) {
       // モバイルは下部パネルで表示
@@ -367,10 +365,15 @@ export default function AvailabilitySummary({
 
   // 最大参加可能者数を算出（セルごとの availableCount の最大値）
   const maxAvailable = useMemo(() => {
+    const availableCountMap = new Map<string, number>();
+    filteredAvailabilities.forEach((availability) => {
+      if (!availability.availability) return;
+      const current = availableCountMap.get(availability.event_date_id) ?? 0;
+      availableCountMap.set(availability.event_date_id, current + 1);
+    });
+
     return eventDates.reduce((max, date) => {
-      const cnt = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability,
-      ).length;
+      const cnt = availableCountMap.get(date.id) ?? 0;
       return Math.max(max, cnt);
     }, 0);
   }, [eventDates, filteredAvailabilities]);
@@ -379,6 +382,22 @@ export default function AvailabilitySummary({
   const heatmapData = useMemo(() => {
     // 各日付×時間帯のセルデータを格納するマップ
     const cellMap = new Map<string, HeatmapCell>();
+    const summaryByDateId = new Map<string, { availableCount: number; unavailableCount: number }>();
+
+    filteredAvailabilities.forEach((availability) => {
+      const summary = summaryByDateId.get(availability.event_date_id) ?? {
+        availableCount: 0,
+        unavailableCount: 0,
+      };
+
+      if (availability.availability) {
+        summary.availableCount += 1;
+      } else {
+        summary.unavailableCount += 1;
+      }
+
+      summaryByDateId.set(availability.event_date_id, summary);
+    });
 
     // イベント日程をマップに変換
     eventDates.forEach((date) => {
@@ -414,12 +433,9 @@ export default function AvailabilitySummary({
       const slotKey = `${startTimeStr}-${endTimeStr}`;
       const key = `${dateStr}_${slotKey}`;
 
-      const availableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability,
-      ).length;
-      const unavailableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && !a.availability,
-      ).length;
+      const summary = summaryByDateId.get(date.id);
+      const availableCount = summary?.availableCount ?? 0;
+      const unavailableCount = summary?.unavailableCount ?? 0;
 
       const totalResponses = availableCount + unavailableCount;
       const availabilityRate = totalResponses > 0 ? availableCount / totalResponses : 0;

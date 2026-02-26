@@ -68,6 +68,11 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 - `minColoredCount` を props で受け取り、UI では「フィルター設定」アコーディオン + range スライダーで閾値を変更可能。値は `0〜maxAvailable` を 1 刻みで指定し、閾値未満のセルへは `filter: grayscale(1)` を適用する。現在値はバッジ表示し、文言も `〜人未満の時間帯をグレー表示` と同期。
 - モバイル操作では `onTouchStart/Move/End` で 10px 以上の移動をドラッグとみなし、`isDraggingRef` を立てることでスクロール中はツールチップを抑止する。`useDragScrollBlocker` から渡される `isDragging` も考慮し、スクロールジェスチャとセルタップ（ツールチップ表示）が競合しないようにしている。
 - ツールチップは `onPointerEnter/Leave/Up` で制御する。マウス環境ではホバー開始/終了で表示を切り替え、タッチ環境では PointerUp（タップ）で表示。スクロール検知中 (`isDragging === true`) や空セルではイベントを握り潰す。
+- モバイルの詳細表示は画面上部固定で表示し、`safe-area-inset-top` とヘッダー分余白を使って被りを回避する。
+- モバイル詳細表示は表示アニメーションを付けず、即時表示で情報確認を優先する。
+- `isMobile` 判定は Tailwind の `sm` 境界に合わせて `640px 未満` に統一し、JS 分岐と CSS レスポンシブが不一致にならないようにする。
+- PC ツールチップは表示後に実サイズを測定し、ビューポート内へ再配置する。表示内容が多い場合は `max-height` と内部スクロールでオーバーフローを防止する。
+- ホバー時の参加者抽出は都度検索ではなく、`dateId -> participants` の事前インデックス参照を利用して負荷を抑える。
 
 ## テスト
 

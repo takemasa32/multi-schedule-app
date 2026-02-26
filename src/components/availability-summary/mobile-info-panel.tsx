@@ -27,12 +27,15 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
       className="fixed left-0 right-0 z-50 px-2"
       style={{
         top: 'env(safe-area-inset-top, 0px)',
-        marginTop: '52px', // ヘッダー分の余白（必要に応じて調整）
+        marginTop: '52px',
         pointerEvents: 'auto',
       }}
     >
       <div
-        className="bg-base-100/95 border-primary animate-slideDown mx-auto w-full rounded-b-2xl border-b-4 shadow-2xl transition-all duration-200 sm:max-w-[560px]"
+        className="bg-base-100/95 border-primary mx-auto w-full rounded-b-2xl border-b-4 shadow-2xl sm:max-w-[560px]"
+        role="dialog"
+        aria-modal="false"
+        aria-label="回答詳細パネル"
         style={{
           maxHeight: '56vh',
           overflowY: 'auto',

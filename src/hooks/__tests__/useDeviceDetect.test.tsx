@@ -4,13 +4,13 @@ import { useDeviceDetect } from '../useDeviceDetect';
 describe('useDeviceDetect', () => {
   it('画面幅に応じてモバイル判定が切り替わる', () => {
     Object.defineProperty(window, 'innerWidth', {
-      value: 500,
+      value: 639,
       configurable: true,
     });
     const { result } = renderHook(() => useDeviceDetect());
     expect(result.current.isMobile).toBe(true);
     act(() => {
-      Object.defineProperty(window, 'innerWidth', { value: 800 });
+      Object.defineProperty(window, 'innerWidth', { value: 640 });
       window.dispatchEvent(new Event('resize'));
     });
     expect(result.current.isMobile).toBe(false);
