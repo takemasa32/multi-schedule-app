@@ -43,8 +43,14 @@ describe('AvailabilityForm', () => {
     eventDates,
   };
 
+
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(window, 'scrollTo', {
+      value: jest.fn(),
+      writable: true,
+      configurable: true,
+    });
     localStorage.clear();
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
     (submitAvailability as jest.Mock).mockResolvedValue({ success: true });
@@ -57,6 +63,7 @@ describe('AvailabilityForm', () => {
       updatedCount: 1,
     });
   });
+
 
   const goToWeeklyStepAsGuest = () => {
     fireEvent.change(screen.getByLabelText(/お名前/), {
@@ -87,6 +94,22 @@ describe('AvailabilityForm', () => {
     fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
 
     expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
+  });
+
+  it('確認画面への遷移時に回答ウィザード見出しまでスクロールする', async () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+    await applyWeeklyAndGoHeatmap();
+
+    const heatmapCell = document.querySelector<HTMLElement>('[data-selection-key="date1"]');
+    if (!heatmapCell) throw new Error('ヒートマップセルが見つかりません');
+    fireEvent.pointerDown(heatmapCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(heatmapCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+
+    expect(await screen.findByTestId('availability-step-confirm')).toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
   });
 
   it('未ログイン導線の文言を表示する', () => {
