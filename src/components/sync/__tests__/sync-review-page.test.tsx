@@ -112,4 +112,16 @@ describe('SyncReviewPage', () => {
     expect(await screen.findByText('イベント更新に失敗しました')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it('反映対象の取得失敗時は0件扱いでリダイレクトせず、再試行導線を表示する', async () => {
+    mockFetchUserAvailabilitySyncPreview.mockRejectedValue(new Error('network failed'));
+
+    render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
+
+    expect(
+      await screen.findByText('反映対象の取得に失敗しました。時間をおいて再度お試しください。'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '再読み込み' })).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });

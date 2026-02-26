@@ -124,6 +124,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   const [syncOverwriteMap, setSyncOverwriteMap] = useState<Record<string, boolean>>({});
   const [syncAllowFinalizedMap, setSyncAllowFinalizedMap] = useState<Record<string, boolean>>({});
   const [syncMessageMap, setSyncMessageMap] = useState<Record<string, string>>({});
+  const [syncPreviewError, setSyncPreviewError] = useState<string | null>(null);
   const [isSyncPreviewLoading, setIsSyncPreviewLoading] = useState(true);
   const [syncApplyingEventId, setSyncApplyingEventId] = useState<string | null>(null);
 
@@ -131,6 +132,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
 
   const loadSyncPreview = useCallback(async () => {
     setIsSyncPreviewLoading(true);
+    setSyncPreviewError(null);
     try {
       const preview = await fetchUserAvailabilitySyncPreview();
       const filteredPreview = preview.filter((event) => event.eventId !== currentEventId);
@@ -153,6 +155,9 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
       setSyncOverwriteMap(Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])));
       setSyncAllowFinalizedMap(Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])));
       setSyncMessageMap({});
+    } catch (error) {
+      console.error('反映対象取得エラー:', error);
+      setSyncPreviewError('反映対象の取得に失敗しました。時間をおいて再度お試しください。');
     } finally {
       setIsSyncPreviewLoading(false);
     }
@@ -163,10 +168,10 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   }, [loadSyncPreview]);
 
   useEffect(() => {
-    if (!isSyncPreviewLoading && syncPreviewEvents.length === 0) {
+    if (!isSyncPreviewLoading && !syncPreviewError && syncPreviewEvents.length === 0) {
       router.replace(backToEventPath);
     }
-  }, [backToEventPath, isSyncPreviewLoading, router, syncPreviewEvents.length]);
+  }, [backToEventPath, isSyncPreviewLoading, router, syncPreviewError, syncPreviewEvents.length]);
 
   const handleApplyForEvent = useCallback(
     async (eventId: string) => {
@@ -218,6 +223,14 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
       <p className="mb-4 text-sm text-gray-500">
         反映対象イベントごとに変更内容を確認し、「この変更を適用」で更新できます。
       </p>
+      {syncPreviewError && (
+        <div className="alert alert-warning mb-4">
+          <span>{syncPreviewError}</span>
+          <button type="button" className="btn btn-xs btn-outline" onClick={() => void loadSyncPreview()}>
+            再読み込み
+          </button>
+        </div>
+      )}
 
       <div className="space-y-3">
         {syncPreviewEvents.map((event) => {
