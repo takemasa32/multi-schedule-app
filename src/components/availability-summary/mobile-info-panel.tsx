@@ -42,7 +42,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
       >
         {/* ドラッグバー風アクセント＋タイトル＋閉じる */}
         <div className="bg-base-100/95 sticky top-0 z-10 flex flex-col items-center px-2 pb-1 pt-2">
-          <div className="mb-1 h-1 w-10 rounded-full bg-gray-300" />
+          <div className="mb-1 h-1 w-10 rounded-full bg-base-300" />
           <div className="flex min-h-8 w-full items-center justify-between">
             {(dateLabel || timeLabel) && (
               <div className="text-base-content max-w-[70vw] truncate text-base font-bold">
@@ -61,7 +61,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
         </div>
         <div className="px-2 pb-2">
           {hasNoParticipants ? (
-            <div className="py-4 text-center text-gray-500">
+            <div className="py-4 text-center text-base-content/60">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-2 h-6 w-6"
@@ -91,7 +91,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                       <li key={`avail-${idx}`} className="mb-0.5 truncate">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -109,7 +109,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                       <li key={`unavail-${idx}`} className="mb-0.5 truncate">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}

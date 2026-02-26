@@ -148,7 +148,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             </div>
           )}
           {hasNoParticipants ? (
-            <div className="py-2 text-center text-gray-500">
+            <div className="py-2 text-center text-base-content/60">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-1 h-5 w-5"
@@ -178,7 +178,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                       <li key={`avail-${idx}`} className="mb-0.5">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -196,7 +196,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                       <li key={`unavail-${idx}`} className="mb-0.5">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -205,7 +205,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
               )}
               {tooltip.availableParticipants.length === 0 &&
                 tooltip.unavailableParticipants.length > 0 && (
-                  <div className="mt-2 border-t border-gray-200 pt-2 text-sm text-gray-500">
+                  <div className="mt-2 border-t border-base-300 pt-2 text-sm text-base-content/60">
                     <p>参加可能な方はいません</p>
                   </div>
                 )}

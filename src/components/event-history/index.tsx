@@ -146,7 +146,7 @@ function EventHistoryInner({
           {showClearButton && history.length > 0 && (
             <button
               onClick={handleClearHistory}
-              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="text-sm text-base-content/60 hover:text-base-content/80"
             >
               履歴をクリア
             </button>
@@ -155,7 +155,7 @@ function EventHistoryInner({
       </div>
 
       {status !== 'authenticated' && (
-        <div className="mb-2 text-xs text-gray-500">
+        <div className="mb-2 text-xs text-base-content/60">
           <span>ログインすると履歴を同期できます。</span>
           <button
             onClick={() => void signIn('google')}
@@ -179,7 +179,7 @@ function EventHistoryInner({
                   >
                     {event.title}
                   </Link>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-xs text-base-content/60">
                     {formatTimestamp(event.createdAt)}
                     {event.isCreatedByMe && (
                       <span className="bg-primary/20 text-primary ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium">
@@ -193,7 +193,7 @@ function EventHistoryInner({
                     )}
                   </p>
                   {messageMap[event.id] && (
-                    <p className="mt-1 text-xs text-gray-500">{messageMap[event.id]}</p>
+                    <p className="mt-1 text-xs text-base-content/60">{messageMap[event.id]}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
