@@ -133,6 +133,35 @@ describe('AccountScheduleTemplates', () => {
     await screen.findByRole('heading', { name: '予定一括管理' });
   });
 
+  it('予定一括管理の読み込み中は空データ文言を表示しない', async () => {
+    mockUseSession.mockReturnValue({ status: 'loading' });
+    let resolveTemplates: ((value: { manual: never[]; learned: never[] }) => void) | null = null;
+    let resolveBlocks: ((value: never[]) => void) | null = null;
+
+    mockFetchUserScheduleTemplates.mockReturnValue(
+      new Promise((resolve) => {
+        resolveTemplates = resolve;
+      }),
+    );
+    mockFetchUserScheduleBlocks.mockReturnValue(
+      new Promise((resolve) => {
+        resolveBlocks = resolve;
+      }),
+    );
+
+    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+
+    expect(screen.getByText('予定データを読み込んでいます...')).toBeInTheDocument();
+    expect(screen.queryByText('予定データはまだありません。')).not.toBeInTheDocument();
+
+    resolveTemplates?.({ manual: [], learned: [] });
+    resolveBlocks?.([]);
+
+    await waitFor(() => {
+      expect(screen.getByText('予定データはまだありません。')).toBeInTheDocument();
+    });
+  });
+
   it('編集して更新するとテンプレを保存できる', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleTemplates.mockResolvedValue({
@@ -356,6 +385,9 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
+    await waitFor(() => {
+      expect(screen.queryByText('予定データを読み込んでいます...')).not.toBeInTheDocument();
+    });
     fireEvent.click(screen.getByTestId('dated-edit'));
     fireEvent.click(
       screen.getByRole('button', {
@@ -443,6 +475,9 @@ describe('AccountScheduleTemplates', () => {
       render(<AccountScheduleTemplates />);
 
       await screen.findByRole('heading', { name: '予定一括管理' });
+      await waitFor(() => {
+        expect(screen.queryByText('予定データを読み込んでいます...')).not.toBeInTheDocument();
+      });
       fireEvent.click(screen.getByTestId('dated-edit'));
       fireEvent.click(
         screen.getByRole('button', {

@@ -262,7 +262,7 @@ export default function AccountScheduleTemplates({
   const [manualTemplates, setManualTemplates] = useState<ScheduleTemplate[]>([]);
   const [learnedTemplates, setLearnedTemplates] = useState<ScheduleTemplate[]>([]);
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
-  const [isLoading, setIsLoading] = useState(initialIsAuthenticated);
+  const [isLoading, setIsLoading] = useState(initialIsAuthenticated || status === 'authenticated');
   const [activeTab, setActiveTab] = useState<ActiveTab>('dated');
 
   const [weeklyEditing, setWeeklyEditing] = useState(false);
@@ -296,14 +296,17 @@ export default function AccountScheduleTemplates({
   const loadAll = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoading(true);
-    const [templateData, blocksData] = await Promise.all([
-      fetchUserScheduleTemplates(),
-      fetchUserScheduleBlocks(),
-    ]);
-    setManualTemplates(templateData.manual);
-    setLearnedTemplates(templateData.learned);
-    setScheduleBlocks(blocksData);
-    setIsLoading(false);
+    try {
+      const [templateData, blocksData] = await Promise.all([
+        fetchUserScheduleTemplates(),
+        fetchUserScheduleBlocks(),
+      ]);
+      setManualTemplates(templateData.manual);
+      setLearnedTemplates(templateData.learned);
+      setScheduleBlocks(blocksData);
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -1053,6 +1056,7 @@ export default function AccountScheduleTemplates({
                   setDatedEditing(true);
                   setDatedMessage(null);
                 }}
+                disabled={isLoading}
                 data-testid="dated-edit"
                 data-tour-id="account-dated-edit"
               >
@@ -1061,7 +1065,9 @@ export default function AccountScheduleTemplates({
             )}
           </div>
 
-          {blockCalendarData.dateKeys.length === 0 ? (
+          {isLoading ? (
+            <p className="text-sm text-base-content/60">予定データを読み込んでいます...</p>
+          ) : blockCalendarData.dateKeys.length === 0 ? (
             <p className="text-sm text-base-content/60">予定データはまだありません。</p>
           ) : (
             <>
