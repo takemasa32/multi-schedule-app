@@ -19,6 +19,7 @@ const DARK_THEME_NAMES = new Set([
 ]);
 const HEATMAP_CELL_RADIUS = '0.4rem';
 const HEATMAP_JOIN_BLEED_PX = 1;
+const HEATMAP_FADE_TRANSITION = 'background-color 220ms ease, filter 220ms ease, color 220ms ease';
 
 /**
  * テーマ名からダークテーマかどうかを判定する
@@ -133,6 +134,7 @@ type HeatmapCellVisual = {
   unavailableCount: number;
   hasData: boolean;
   hasResponses: boolean;
+  isPastColumnGrayscale: boolean;
   lineColor: string;
   lineTone: 'none' | 'neutral' | 'primary' | 'past';
   boundarySignature: string;
@@ -405,10 +407,10 @@ const buildCellShapeMap = ({
         joinsBottom,
         joinsLeft,
         joinsRight,
-        raisedTopVisual: shouldRaiseTop ? top ?? null : null,
-        raisedBottomVisual: shouldRaiseBottom ? bottom ?? null : null,
-        raisedLeftVisual: shouldRaiseLeft ? left ?? null : null,
-        raisedRightVisual: shouldRaiseRight ? right ?? null : null,
+        raisedTopVisual: shouldRaiseTop ? (top ?? null) : null,
+        raisedBottomVisual: shouldRaiseBottom ? (bottom ?? null) : null,
+        raisedLeftVisual: shouldRaiseLeft ? (left ?? null) : null,
+        raisedRightVisual: shouldRaiseRight ? (right ?? null) : null,
       });
     });
   });
@@ -685,18 +687,22 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           );
         }
         const filter = filterValues.length > 0 ? filterValues.join(' ') : 'none';
-        const backgroundImage = backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined;
+        const backgroundImage =
+          backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined;
         const cellStyle = {
           backgroundColor,
           backgroundImage,
           filter,
+          transition: HEATMAP_FADE_TRANSITION,
         } as React.CSSProperties;
         const lineColor = (() => {
           if (!hasData) {
             return 'transparent';
           }
           if (!hasResponses) {
-            return (isDarkTheme ?? false) ? 'rgba(148, 163, 184, 0.24)' : 'rgba(148, 163, 184, 0.48)';
+            return (isDarkTheme ?? false)
+              ? 'rgba(148, 163, 184, 0.24)'
+              : 'rgba(148, 163, 184, 0.48)';
           }
           if (shouldApplyPastGrayscale) {
             return (isDarkTheme ?? false) ? 'rgba(80, 88, 104, 0.58)' : 'rgba(126, 139, 161, 0.58)';
@@ -737,6 +743,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           unavailableCount,
           hasData,
           hasResponses,
+          isPastColumnGrayscale: shouldDimPastColumn,
           lineColor,
           lineTone,
           boundarySignature,
@@ -828,7 +835,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <p className="hidden px-1 text-right text-[11px] text-base-content/60 sm:block">
+      <p className="text-base-content/60 hidden px-1 text-right text-[11px] sm:block">
         ドラッグで左右スクロール
       </p>
       <div
@@ -843,7 +850,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         <table className="w-full min-w-[400px] border-separate border-spacing-0 text-center sm:min-w-[680px]">
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
-              <th className="bg-base-200 border-base-300 sticky left-0 top-0 z-30 isolate min-w-[50px] border-r px-1 py-1 text-left text-xs sm:min-w-[64px] sm:px-1.5 sm:py-2 sm:text-sm">
+              <th className="bg-base-200 border-base-300 sticky left-0 top-0 isolate z-30 min-w-[50px] border-r px-1 py-1 text-left text-xs sm:min-w-[64px] sm:px-1.5 sm:py-2 sm:text-sm">
                 時間
               </th>
               {uniqueDates.map((dateInfo, index, arr) => {
@@ -871,6 +878,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         backgroundColor: pastColumnPalette.headerBaseColor,
                         backgroundImage: `linear-gradient(180deg, ${pastColumnPalette.headerGradientTop} 0%, ${pastColumnPalette.headerGradientBottom} 100%)`,
                         color: pastColumnPalette.headerTextColor,
+                        transition: HEATMAP_FADE_TRANSITION,
                       }
                     : undefined;
                 return (
@@ -884,7 +892,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                   >
                     <span className="flex flex-col items-center leading-tight sm:hidden">
                       <span className="text-[11px] font-semibold">{mobileMonthDay}</span>
-                      <span className="text-[9px] text-base-content/70">{mobileWeekday}</span>
+                      <span className="text-base-content/70 text-[9px]">{mobileWeekday}</span>
                     </span>
                     <span className="hidden sm:inline">
                       {optimizedDisplay.yearMonth && (
@@ -903,7 +911,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           <tbody>
             {/* スペーサー：最初の時間ラベルがヘッダーに隠れるのを防ぐ */}
             <tr>
-              <td className="bg-base-200 border-base-300 sticky left-0 z-20 isolate h-3 border-r sm:h-4"></td>
+              <td className="bg-base-200 border-base-300 sticky left-0 isolate z-20 h-3 border-r sm:h-4"></td>
             </tr>
             {uniqueTimeSlots.map((timeSlot, rowIndex) => {
               // 時間表示をコンパクトに整形（先頭ゼロを削除）
@@ -914,7 +922,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
               return (
                 <tr key={timeSlot.slotKey}>
                   <td
-                    className="bg-base-200 border-base-300 sticky left-0 z-20 isolate whitespace-nowrap border-r py-1 pl-1 pr-0.5 text-left text-xs font-medium sm:py-1.5 sm:pl-1.5 sm:pr-1 sm:text-sm"
+                    className="bg-base-200 border-base-300 sticky left-0 isolate z-20 whitespace-nowrap border-r py-1 pl-1 pr-0.5 text-left text-xs font-medium sm:py-1.5 sm:pl-1.5 sm:pr-1 sm:text-sm"
                     aria-label={`${formattedStartTime}〜${formattedEndTime}`}
                   >
                     <span
@@ -935,11 +943,12 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                     const visual = cellVisuals.get(key);
                     if (!visual) return null;
                     const cellShape = cellShapeMap.get(key);
-                    const cornerClass =
+                    const rawCornerClass =
                       cellShape?.cornerClass ?? `rounded-[${HEATMAP_CELL_RADIUS}]`;
-                    const cornerStyle = cellShape?.cornerStyle ?? { borderRadius: HEATMAP_CELL_RADIUS };
+                    const rawCornerStyle = cellShape?.cornerStyle ?? {
+                      borderRadius: HEATMAP_CELL_RADIUS,
+                    };
                     const joinsTop = cellShape?.joinsTop ?? false;
-                    const shouldFillWrapperBackground = cornerClass === 'rounded-none';
                     const raisedTopVisual = cellShape?.raisedTopVisual ?? null;
                     const raisedBottomVisual = cellShape?.raisedBottomVisual ?? null;
                     const raisedLeftVisual = cellShape?.raisedLeftVisual ?? null;
@@ -951,10 +960,37 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       unavailableCount,
                       hasData,
                       hasResponses,
+                      isPastColumnGrayscale,
                       cellStyle,
                       countTextClass,
                       unavailableTextClass,
                     } = visual;
+                    // 過去日程グレー表示の列は回答有無に関わらず境界を直線で見せる
+                    const shouldUseStraightPastBoundary = isPastColumnGrayscale;
+                    const cornerClass = shouldUseStraightPastBoundary
+                      ? 'rounded-none'
+                      : rawCornerClass;
+                    const cornerStyle = shouldUseStraightPastBoundary
+                      ? {
+                          borderTopLeftRadius: '0px',
+                          borderTopRightRadius: '0px',
+                          borderBottomLeftRadius: '0px',
+                          borderBottomRightRadius: '0px',
+                        }
+                      : rawCornerStyle;
+                    const shouldFillWrapperBackground = cornerClass === 'rounded-none';
+                    const effectiveRaisedTopVisual = shouldUseStraightPastBoundary
+                      ? null
+                      : raisedTopVisual;
+                    const effectiveRaisedBottomVisual = shouldUseStraightPastBoundary
+                      ? null
+                      : raisedBottomVisual;
+                    const effectiveRaisedLeftVisual = shouldUseStraightPastBoundary
+                      ? null
+                      : raisedLeftVisual;
+                    const effectiveRaisedRightVisual = shouldUseStraightPastBoundary
+                      ? null
+                      : raisedRightVisual;
                     const topNeighborKey =
                       rowIndex > 0
                         ? getHeatmapCellKey(dateInfo.date, uniqueTimeSlots[rowIndex - 1].slotKey)
@@ -968,6 +1004,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           backgroundColor: cellStyle.backgroundColor,
                           backgroundImage: cellStyle.backgroundImage,
                           filter: cellStyle.filter,
+                          transition: HEATMAP_FADE_TRANSITION,
                         }
                       : undefined;
                     const shouldRenderJoinBleed = shouldRenderJoinBleedOnTop({
@@ -988,16 +1025,15 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         }
                       : undefined;
                     // 境界ごとの重ね塗りを避けるため、背景抜け防止は縦方向（上辺）のみを担当する
-                    const joinBleedTopStyle =
-                      joinBleedBaseStyle
-                        ? {
-                            ...joinBleedBaseStyle,
-                            top: `-${HEATMAP_JOIN_BLEED_PX}px`,
-                            left: '0px',
-                            right: '0px',
-                            height: `${HEATMAP_JOIN_BLEED_PX}px`,
-                          }
-                        : null;
+                    const joinBleedTopStyle = joinBleedBaseStyle
+                      ? {
+                          ...joinBleedBaseStyle,
+                          top: `-${HEATMAP_JOIN_BLEED_PX}px`,
+                          left: '0px',
+                          right: '0px',
+                          height: `${HEATMAP_JOIN_BLEED_PX}px`,
+                        }
+                      : null;
                     const cellSurfaceStyle = shouldFillWrapperBackground
                       ? {
                           ...cornerStyle,
@@ -1047,51 +1083,59 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                             className="relative h-full min-h-8 w-full overflow-hidden sm:min-h-9"
                             style={wrapperStyle}
                           >
-                            {raisedTopVisual && (
+                            {effectiveRaisedTopVisual && (
                               <div
                                 aria-hidden="true"
                                 className="pointer-events-none absolute inset-x-0 top-0"
                                 style={{
                                   height: `calc(${HEATMAP_CELL_RADIUS} + 1px)`,
-                                  backgroundColor: raisedTopVisual.cellStyle.backgroundColor,
-                                  backgroundImage: raisedTopVisual.cellStyle.backgroundImage,
-                                  filter: raisedTopVisual.cellStyle.filter,
+                                  backgroundColor:
+                                    effectiveRaisedTopVisual.cellStyle.backgroundColor,
+                                  backgroundImage:
+                                    effectiveRaisedTopVisual.cellStyle.backgroundImage,
+                                  filter: effectiveRaisedTopVisual.cellStyle.filter,
                                 }}
                               />
                             )}
-                            {raisedBottomVisual && (
+                            {effectiveRaisedBottomVisual && (
                               <div
                                 aria-hidden="true"
                                 className="pointer-events-none absolute inset-x-0 bottom-0"
                                 style={{
                                   height: `calc(${HEATMAP_CELL_RADIUS} + 1px)`,
-                                  backgroundColor: raisedBottomVisual.cellStyle.backgroundColor,
-                                  backgroundImage: raisedBottomVisual.cellStyle.backgroundImage,
-                                  filter: raisedBottomVisual.cellStyle.filter,
+                                  backgroundColor:
+                                    effectiveRaisedBottomVisual.cellStyle.backgroundColor,
+                                  backgroundImage:
+                                    effectiveRaisedBottomVisual.cellStyle.backgroundImage,
+                                  filter: effectiveRaisedBottomVisual.cellStyle.filter,
                                 }}
                               />
                             )}
-                            {raisedLeftVisual && (
+                            {effectiveRaisedLeftVisual && (
                               <div
                                 aria-hidden="true"
                                 className="pointer-events-none absolute inset-y-0 left-0"
                                 style={{
                                   width: `calc(${HEATMAP_CELL_RADIUS} + 1px)`,
-                                  backgroundColor: raisedLeftVisual.cellStyle.backgroundColor,
-                                  backgroundImage: raisedLeftVisual.cellStyle.backgroundImage,
-                                  filter: raisedLeftVisual.cellStyle.filter,
+                                  backgroundColor:
+                                    effectiveRaisedLeftVisual.cellStyle.backgroundColor,
+                                  backgroundImage:
+                                    effectiveRaisedLeftVisual.cellStyle.backgroundImage,
+                                  filter: effectiveRaisedLeftVisual.cellStyle.filter,
                                 }}
                               />
                             )}
-                            {raisedRightVisual && (
+                            {effectiveRaisedRightVisual && (
                               <div
                                 aria-hidden="true"
                                 className="pointer-events-none absolute inset-y-0 right-0"
                                 style={{
                                   width: `calc(${HEATMAP_CELL_RADIUS} + 1px)`,
-                                  backgroundColor: raisedRightVisual.cellStyle.backgroundColor,
-                                  backgroundImage: raisedRightVisual.cellStyle.backgroundImage,
-                                  filter: raisedRightVisual.cellStyle.filter,
+                                  backgroundColor:
+                                    effectiveRaisedRightVisual.cellStyle.backgroundColor,
+                                  backgroundImage:
+                                    effectiveRaisedRightVisual.cellStyle.backgroundImage,
+                                  filter: effectiveRaisedRightVisual.cellStyle.filter,
                                 }}
                               />
                             )}
@@ -1113,7 +1157,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                                   <span className="sr-only">回答なし</span>
                                   <span
                                     aria-hidden="true"
-                                    className="text-xs text-base-content/50 sm:text-sm"
+                                    className="text-base-content/50 text-xs sm:text-sm"
                                   >
                                     0
                                   </span>
@@ -1125,10 +1169,13 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex min-h-8 h-full w-full items-center justify-center sm:min-h-9">
+                          <div className="flex h-full min-h-8 w-full items-center justify-center sm:min-h-9">
                             {/* イベント未設定セルも中央揃えで視認性を統一 */}
                             <span className="sr-only">イベント未設定</span>
-                            <span aria-hidden="true" className="text-xs text-base-content/40 sm:text-sm">
+                            <span
+                              aria-hidden="true"
+                              className="text-base-content/40 text-xs sm:text-sm"
+                            >
                               -
                             </span>
                           </div>
@@ -1149,7 +1196,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 }
                 return (
                   <tr className="h-0">
-                    <td className="bg-base-200 border-base-300 sticky left-0 z-20 isolate whitespace-nowrap border-r py-1 pl-1 pr-0.5 text-left text-xs font-medium sm:py-1.5 sm:pl-1.5 sm:pr-1 sm:text-sm">
+                    <td className="bg-base-200 border-base-300 sticky left-0 isolate z-20 whitespace-nowrap border-r py-1 pl-1 pr-0.5 text-left text-xs font-medium sm:py-1.5 sm:pl-1.5 sm:pr-1 sm:text-sm">
                       <span
                         style={{
                           position: 'absolute',
