@@ -89,7 +89,7 @@ describe('HeatmapView', () => {
     expect(zero.closest('td')).toBeTruthy();
   });
 
-  it('過去日程をグレースケール表示してもボーダー装飾を追加しない', () => {
+  it('過去日程をグレースケール表示しても外側ボーダー装飾を追加しない', () => {
     const heatmapData = new Map<
       string,
       {

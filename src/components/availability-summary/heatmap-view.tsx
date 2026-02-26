@@ -17,7 +17,7 @@ const DARK_THEME_NAMES = new Set([
   'luxury',
   'lofi',
 ]);
-const HEATMAP_CELL_RADIUS = '0.2rem';
+const HEATMAP_CELL_RADIUS = '0.4rem';
 
 /**
  * テーマ名からダークテーマかどうかを判定する
@@ -132,6 +132,8 @@ type HeatmapCellVisual = {
   unavailableCount: number;
   hasData: boolean;
   hasResponses: boolean;
+  lineColor: string;
+  lineTone: 'none' | 'neutral' | 'primary' | 'past';
   cellStyle: React.CSSProperties;
   countTextClass: string;
   unavailableTextClass: string;
@@ -334,6 +336,25 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           backgroundImage,
           filter,
         } as React.CSSProperties;
+        const lineColor = (() => {
+          if (!hasData) {
+            return 'transparent';
+          }
+          if (!hasResponses) {
+            return (isDarkTheme ?? false) ? 'rgba(148, 163, 184, 0.24)' : 'rgba(148, 163, 184, 0.48)';
+          }
+          if (shouldApplyPastGrayscale) {
+            return (isDarkTheme ?? false) ? 'rgba(80, 88, 104, 0.58)' : 'rgba(126, 139, 161, 0.58)';
+          }
+          return `rgba(var(--p-rgb, 87, 13, 248), ${Math.min(opacityValue + 0.16, 1)})`;
+        })();
+        const lineTone: HeatmapCellVisual['lineTone'] = !hasData
+          ? 'none'
+          : !hasResponses
+            ? 'neutral'
+            : shouldApplyPastGrayscale
+              ? 'past'
+              : 'primary';
 
         const countTextBaseClass = 'text-xs font-bold sm:text-base';
         const countTextClass = shouldApplyPastGrayscale
@@ -356,6 +377,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           unavailableCount,
           hasData,
           hasResponses,
+          lineColor,
+          lineTone,
           cellStyle,
           countTextClass,
           unavailableTextClass,
@@ -379,6 +402,63 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     uniqueDates,
     uniqueTimeSlots,
   ]);
+
+  const boundaryLineColorMap = useMemo(() => {
+    const boundaryMap = new Map<string, string>();
+    const resolveBoundaryColor = (current: HeatmapCellVisual, top?: HeatmapCellVisual) => {
+      if (!top) return 'transparent';
+      if (current.joinKey !== null && current.joinKey === top.joinKey) {
+        return 'transparent';
+      }
+
+      const pair = [current.lineTone, top.lineTone];
+      // 同トーン同士は境界線を出さない
+      if (current.lineTone === top.lineTone) {
+        return 'transparent';
+      }
+      // 色付きセル同士（primary/past）の境界は線を省略して連続性を優先
+      if (
+        ['primary', 'past'].includes(current.lineTone) &&
+        ['primary', 'past'].includes(top.lineTone)
+      ) {
+        return 'transparent';
+      }
+      // 明確に差が大きい境界（紫系セルと白/未回答セル）は線を省略
+      if (
+        (pair.includes('primary') && pair.includes('neutral')) ||
+        (pair.includes('primary') && pair.includes('none'))
+      ) {
+        return 'transparent';
+      }
+      if (pair.includes('primary')) {
+        return (isDarkTheme ?? false)
+          ? 'rgba(var(--p-rgb, 99, 102, 241), 0.88)'
+          : 'rgba(var(--p-rgb, 99, 102, 241), 0.78)';
+      }
+      if (pair.includes('past')) {
+        return (isDarkTheme ?? false) ? 'rgba(100, 116, 139, 0.52)' : 'rgba(148, 163, 184, 0.56)';
+      }
+      if (pair.includes('neutral')) {
+        return (isDarkTheme ?? false) ? 'rgba(100, 116, 139, 0.34)' : 'rgba(148, 163, 184, 0.44)';
+      }
+      return 'transparent';
+    };
+
+    uniqueTimeSlots.forEach((timeSlot, rowIndex) => {
+      uniqueDates.forEach((dateInfo) => {
+        const key = `${dateInfo.date}_${timeSlot.slotKey}`;
+        const current = cellVisuals.get(key);
+        if (!current) return;
+
+        const topKey =
+          rowIndex > 0 ? `${dateInfo.date}_${uniqueTimeSlots[rowIndex - 1].slotKey}` : null;
+        const top = topKey ? cellVisuals.get(topKey) : undefined;
+        boundaryMap.set(key, resolveBoundaryColor(current, top));
+      });
+    });
+
+    return boundaryMap;
+  }, [cellVisuals, isDarkTheme, uniqueDates, uniqueTimeSlots]);
 
   const cellCornerClassMap = useMemo(() => {
     const cornerMap = new Map<string, string>();
@@ -448,7 +528,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <table className="table-xs table w-full min-w-[400px] border-collapse text-center sm:min-w-[680px] sm:table">
+        <table className="w-full min-w-[400px] border-collapse text-center sm:min-w-[680px]">
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
               <th className="bg-base-200 sticky left-0 top-0 z-30 min-w-[56px] p-1.5 text-left text-xs sm:min-w-[72px] sm:p-2 sm:text-sm">
@@ -553,13 +633,22 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       countTextClass,
                       unavailableTextClass,
                     } = visual;
+                    const boundaryLineColor =
+                      boundaryLineColorMap.get(key) ?? visual.lineColor;
+                    const hasBoundaryLine = boundaryLineColor !== 'transparent';
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
                     return (
                       <td
                         key={key}
                         data-col-index={colIndex}
-                        className={`relative cursor-pointer p-0 align-middle ${
+                        style={{
+                          padding: 0,
+                          borderTopWidth: hasBoundaryLine ? '1px' : '0px',
+                          borderTopStyle: 'solid',
+                          borderTopColor: hasBoundaryLine ? boundaryLineColor : 'transparent',
+                        }}
+                        className={`relative cursor-pointer p-0 align-top ${
                           isSelected ? 'border-success border-2' : ''
                         }`}
                         onPointerEnter={(e) => {
@@ -580,8 +669,13 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       >
                         {hasData ? (
                           <div
-                            style={cellStyle}
-                            className={`flex h-full min-h-9 flex-col items-center justify-center overflow-hidden sm:min-h-10 ${cornerClass}`}
+                            style={{
+                              ...cellStyle,
+                              boxShadow: isSelected
+                                ? '0 0 0 2px rgba(var(--su-rgb, 22, 163, 74), 0.75)'
+                                : undefined,
+                            }}
+                            className={`flex h-full min-h-8 w-full flex-col items-center justify-center overflow-hidden sm:min-h-9 ${cornerClass}`}
                           >
                             {hasResponses ? (
                               <>
@@ -608,7 +702,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                             )}
                           </div>
                         ) : (
-                          <div className="flex min-h-9 h-full w-full items-center justify-center sm:min-h-10">
+                          <div className="flex min-h-8 h-full w-full items-center justify-center sm:min-h-9">
                             {/* イベント未設定セルも中央揃えで視認性を統一 */}
                             <span className="sr-only">イベント未設定</span>
                             <span aria-hidden="true" className="text-xs text-base-content/40 sm:text-sm">
