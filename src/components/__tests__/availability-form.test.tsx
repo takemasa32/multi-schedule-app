@@ -196,6 +196,33 @@ describe('AvailabilityForm', () => {
     ).toBeInTheDocument();
   });
 
+  it('ログイン時の週予定取得中は空状態文言を出さず、完了まで次へを無効化する', async () => {
+    let resolveTemplates:
+      | ((value: { manual: []; learned: [] }) => void)
+      | null = null;
+    (fetchUserScheduleTemplates as jest.Mock).mockImplementation(
+      () =>
+        new Promise<{ manual: []; learned: [] }>((resolve) => {
+          resolveTemplates = resolve;
+        }),
+    );
+
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    expect(await screen.findByText('アカウント予定を読み込んでいます。')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '予定を読み込み中...' })).toBeDisabled();
+    expect(screen.queryByText('利用可能な時間帯がありません')).not.toBeInTheDocument();
+
+    resolveTemplates?.({ manual: [], learned: [] });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '予定を読み込み中...' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled();
+  });
+
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
     const multiSlotEventDates = [
       {
