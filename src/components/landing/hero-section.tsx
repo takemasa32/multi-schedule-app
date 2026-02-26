@@ -16,8 +16,8 @@ export default function HeroSection() {
       >
         <defs>
           <linearGradient id="hero-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2563EB" />
-            <stop offset="100%" stopColor="#38BDF8" />
+            <stop offset="0%" stopColor="#6366F1" />
+            <stop offset="100%" stopColor="#818CF8" />
           </linearGradient>
         </defs>
         <circle cx="160" cy="160" r="160" fill="url(#hero-grad)" />
@@ -29,8 +29,8 @@ export default function HeroSection() {
       >
         <defs>
           <linearGradient id="hero-grad2" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#06B6D4" />
-            <stop offset="100%" stopColor="#2563EB" />
+            <stop offset="0%" stopColor="#A78BFA" />
+            <stop offset="100%" stopColor="#6366F1" />
           </linearGradient>
         </defs>
         <circle cx="110" cy="110" r="110" fill="url(#hero-grad2)" />

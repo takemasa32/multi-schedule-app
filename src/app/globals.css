@@ -112,52 +112,6 @@ body {
   }
 }
 
-/* Heatmap Colors */
-@layer components {
-  .heatmap-0 {
-    @apply bg-base-200;
-  }
-  .heatmap-1 {
-    @apply bg-base-100;
-  }
-  .heatmap-2 {
-    @apply bg-base-100 text-primary/30;
-  }
-  .heatmap-3 {
-    @apply bg-primary/10;
-  }
-  .heatmap-4 {
-    @apply bg-primary/20;
-  }
-  .heatmap-5 {
-    @apply bg-primary/30;
-  }
-  .heatmap-6 {
-    @apply bg-primary/50;
-  }
-  .heatmap-7 {
-    @apply bg-primary/70;
-  }
-  .heatmap-8 {
-    @apply bg-primary/80;
-  }
-  .heatmap-9 {
-    @apply bg-primary/90;
-  }
-  .heatmap-10 {
-    @apply bg-primary;
-  }
-
-  /* 高い値のヒートマップ色はテキストを白に */
-  .heatmap-6,
-  .heatmap-7,
-  .heatmap-8,
-  .heatmap-9,
-  .heatmap-10 {
-    @apply text-white;
-  }
-}
-
 /* アニメーション定義 */
 @keyframes fadeIn {
   from {

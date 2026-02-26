@@ -20,20 +20,20 @@ import FavoriteToggle from '../favorite-toggle';
 const TEST_EVENT = { id: 'test-1234', title: 'テストイベント' };
 
 describe('お気に入りイベント機能', () => {
-  it('お気に入り追加・削除が一覧に即時反映される', () => {
+  it('お気に入り追加・削除が一覧に即時反映される', async () => {
     render(
       <FavoriteEventsProvider>
         <FavoriteToggle eventId={TEST_EVENT.id} title={TEST_EVENT.title} />
         <FavoriteEvents />
       </FavoriteEventsProvider>,
     );
-    // 初期状態: お気に入りなし
-    expect(screen.getByText('お気に入りイベントはありません。'));
+    // 初期同期後: お気に入りなし
+    expect(await screen.findByText('お気に入りイベントはありません。')).toBeInTheDocument();
     // 追加
     fireEvent.click(screen.getByRole('button', { name: 'お気に入り登録' }));
     expect(screen.getByText(TEST_EVENT.title)).toBeInTheDocument();
     // 解除（「お気に入り解除」ボタンをクリック）
     fireEvent.click(screen.getByRole('button', { name: 'お気に入り解除' }));
-    expect(screen.getByText('お気に入りイベントはありません。'));
+    expect(await screen.findByText('お気に入りイベントはありません。')).toBeInTheDocument();
   });
 });

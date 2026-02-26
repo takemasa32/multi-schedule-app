@@ -1,4 +1,5 @@
 import { formatDate, formatTime } from '../components/availability-summary/date-utils';
+import type { Participant, ParticipantSummary } from '@/types/participant';
 
 /**
  * ツールチップの座標を画面端で調整する
@@ -22,7 +23,7 @@ export function calcTooltipPosition(
   const adjustedX = windowWidth - x < width ? Math.max(x - width, 10) : x;
 
   // モバイルでは少し上にずらして親要素に隠れないように
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
   const adjustedY = isMobile
     ? Math.max(y - 80, 10) // モバイルではより上に表示
     : Math.min(y, windowHeight - height); // デスクトップでは下端調整
@@ -53,9 +54,65 @@ export function buildDateTimeLabel(eventDates: EventDate[], dateId: string) {
 }
 
 /**
- * 参加可否リストを取得
+ * 日付IDごとの参加可否リストを構築
  */
-import type { Participant, ParticipantSummary } from '@/types/participant';
+export function buildParticipantsByDateIndex(
+  participants: Participant[],
+  availabilities: {
+    participant_id: string;
+    event_date_id: string;
+    availability: boolean;
+  }[],
+): Map<
+  string,
+  {
+    availableParticipants: ParticipantSummary[];
+    unavailableParticipants: ParticipantSummary[];
+  }
+> {
+  const participantMap = new Map(
+    participants.map((participant) => [
+      participant.id,
+      {
+        name: participant.name,
+        comment: participant.comment,
+      },
+    ]),
+  );
+
+  const dateMap = new Map<
+    string,
+    {
+      availableParticipants: ParticipantSummary[];
+      unavailableParticipants: ParticipantSummary[];
+    }
+  >();
+
+  availabilities.forEach((availability) => {
+    const participant = participantMap.get(availability.participant_id);
+    if (!participant) return;
+
+    const current = dateMap.get(availability.event_date_id) ?? {
+      availableParticipants: [],
+      unavailableParticipants: [],
+    };
+
+    if (availability.availability) {
+      current.availableParticipants.push(participant);
+    } else {
+      current.unavailableParticipants.push(participant);
+    }
+
+    dateMap.set(availability.event_date_id, current);
+  });
+
+  return dateMap;
+}
+
+/**
+ * 参加可否リストを取得
+ * @deprecated ホバー性能改善のため、可能な限り事前に `buildParticipantsByDateIndex` を利用する
+ */
 
 export function fetchParticipantsByDate(
   participants: Participant[],
@@ -66,22 +123,8 @@ export function fetchParticipantsByDate(
   }[],
   dateId: string,
 ) {
-  const availableParticipants: ParticipantSummary[] = [];
-  const unavailableParticipants: ParticipantSummary[] = [];
-  participants.forEach((participant) => {
-    const a = availabilities.find(
-      (av) => av.participant_id === participant.id && av.event_date_id === dateId,
-    );
-    if (a?.availability === true)
-      availableParticipants.push({
-        name: participant.name,
-        comment: participant.comment,
-      });
-    else if (a?.availability === false)
-      unavailableParticipants.push({
-        name: participant.name,
-        comment: participant.comment,
-      });
-  });
+  const index = buildParticipantsByDateIndex(participants, availabilities);
+  const availableParticipants = index.get(dateId)?.availableParticipants ?? [];
+  const unavailableParticipants = index.get(dateId)?.unavailableParticipants ?? [];
   return { availableParticipants, unavailableParticipants };
 }

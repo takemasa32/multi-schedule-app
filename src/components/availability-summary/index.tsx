@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback, useEffect, useId } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Tooltip, TooltipState } from './tooltip';
-import ListView from './list-view';
 import HeatmapView from './heatmap-view';
-import DetailedView from './detailed-view';
-import { formatDate, formatTime, getDateString } from './date-utils';
+import { getDateString } from './date-utils';
 import useDragScrollBlocker from '../../hooks/useDragScrollBlocker';
 import { useDeviceDetect } from '../../hooks/useDeviceDetect';
 import MobileInfoPanel from './mobile-info-panel';
@@ -13,7 +11,7 @@ import type { Participant } from '@/types/participant';
 import {
   calcTooltipPosition,
   buildDateTimeLabel,
-  fetchParticipantsByDate,
+  buildParticipantsByDateIndex,
 } from '../../lib/tooltip-utils';
 
 type EventDate = {
@@ -60,8 +58,6 @@ type AvailabilitySummaryProps = {
   myParticipantId?: string | null;
 };
 
-// type ViewMode = "list" | "heatmap" | "detailed";
-
 /**
  * イベントの参加可能状況を表示するコンポーネント
  */
@@ -70,15 +66,9 @@ export default function AvailabilitySummary({
   participants,
   availabilities,
   finalizedDateIds = [],
-  onShowParticipantForm,
-  publicToken,
   excludedParticipantIds = [],
-  testIdPrefix,
   minColoredCount = 1,
-  myParticipantId = null,
 }: AvailabilitySummaryProps) {
-  // viewModeは内部でuseState管理
-  const [viewMode, setViewMode] = useState<'list' | 'heatmap' | 'detailed'>('heatmap');
   // 色付けの最小人数を保持
   const [minColored, setMinColored] = useState<number>(minColoredCount);
   // 過去日程をグレースケール表示するかの設定（初期値はオン）
@@ -104,6 +94,10 @@ export default function AvailabilitySummary({
   const filteredAvailabilities = useMemo(
     () => availabilities.filter((a) => !excludedParticipantIds.includes(a.participant_id)),
     [availabilities, excludedParticipantIds],
+  );
+  const participantsByDateIndex = useMemo(
+    () => buildParticipantsByDateIndex(filteredParticipants, filteredAvailabilities),
+    [filteredParticipants, filteredAvailabilities],
   );
 
   // スクロール中かどうかを追跡するstate
@@ -138,18 +132,6 @@ export default function AvailabilitySummary({
 
   // ツールチップ表示のためのポータル用参照
   const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
-  const internalId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  const tabTestIdBase = useMemo(() => {
-    if (testIdPrefix) {
-      return `${testIdPrefix}-availability-tab`;
-    }
-    return `availability-tab-${internalId}`;
-  }, [testIdPrefix, internalId]);
-  const buildTabTestId = useCallback(
-    (key: 'heatmap' | 'detailed' | 'list') => `${tabTestIdBase}-${key}`,
-    [tabTestIdBase],
-  );
-
   // コンポーネントマウント時にポータル要素を作成
   useMemo(() => {
     if (typeof document !== 'undefined') {
@@ -263,68 +245,10 @@ export default function AvailabilitySummary({
       });
   }, [eventDates]);
 
-  // 集計計算: 日程ごとの参加可能者数
-  const summary = useMemo(() => {
-    return eventDates.map((date) => {
-      const availableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability,
-      ).length;
-      const unavailableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && !a.availability,
-      ).length;
-
-      // ヒートマップの色の強さを計算
-      const totalResponses = availableCount + unavailableCount;
-
-      // 少人数でもより明確な差が出るように計算方法を変更
-      let heatmapLevel = 0;
-      if (totalResponses > 0) {
-        // 参加可能な人数に基づいてレベルを計算（単純な割合でなく）
-        if (availableCount > 0) {
-          // 参加可能な人がいる場合、最低でも色がつくようにする
-          const rate = availableCount / Math.max(1, totalResponses);
-          // 2人だとしても、1人と2人で明確な差をつける
-          heatmapLevel = Math.max(2, Math.floor(rate * 10) + 1);
-        }
-      }
-
-      return {
-        dateId: date.id,
-        startTime: date.start_time,
-        endTime: date.end_time,
-        label: date.label,
-        availableCount,
-        unavailableCount,
-        heatmapLevel,
-        availabilityRate: totalResponses > 0 ? availableCount / totalResponses : 0,
-        formattedDate: formatDate(date.start_time),
-        formattedTime: `${formatTime(
-          date.start_time,
-          eventDates,
-        )}〜${formatTime(date.end_time, eventDates)}`,
-        isSelected: finalizedDateIds?.includes(date.id) || false,
-      };
-    });
-  }, [eventDates, filteredAvailabilities, finalizedDateIds]);
-
-  // 参加者が参加可能かどうかを判定
-  const isParticipantAvailable = useCallback(
-    (participantId: string, dateId: string) => {
-      const availability = filteredAvailabilities.find(
-        (a) => a.participant_id === participantId && a.event_date_id === dateId,
-      );
-      return availability ? availability.availability : null;
-    },
-    [filteredAvailabilities],
-  );
-
   // ツールチップ表示処理（Pointerイベント）
   const handlePointerEnter = (event: React.PointerEvent<Element>, dateId: string) => {
-    const { availableParticipants, unavailableParticipants } = fetchParticipantsByDate(
-      filteredParticipants,
-      filteredAvailabilities,
-      dateId,
-    );
+    const availableParticipants = participantsByDateIndex.get(dateId)?.availableParticipants ?? [];
+    const unavailableParticipants = participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
     setTooltip({
@@ -349,11 +273,8 @@ export default function AvailabilitySummary({
     if (event.nativeEvent) {
       event.nativeEvent.stopImmediatePropagation();
     }
-    const { availableParticipants, unavailableParticipants } = fetchParticipantsByDate(
-      filteredParticipants,
-      filteredAvailabilities,
-      dateId,
-    );
+    const availableParticipants = participantsByDateIndex.get(dateId)?.availableParticipants ?? [];
+    const unavailableParticipants = participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     if (isMobile) {
       // モバイルは下部パネルで表示
@@ -444,10 +365,15 @@ export default function AvailabilitySummary({
 
   // 最大参加可能者数を算出（セルごとの availableCount の最大値）
   const maxAvailable = useMemo(() => {
+    const availableCountMap = new Map<string, number>();
+    filteredAvailabilities.forEach((availability) => {
+      if (!availability.availability) return;
+      const current = availableCountMap.get(availability.event_date_id) ?? 0;
+      availableCountMap.set(availability.event_date_id, current + 1);
+    });
+
     return eventDates.reduce((max, date) => {
-      const cnt = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability,
-      ).length;
+      const cnt = availableCountMap.get(date.id) ?? 0;
       return Math.max(max, cnt);
     }, 0);
   }, [eventDates, filteredAvailabilities]);
@@ -456,6 +382,22 @@ export default function AvailabilitySummary({
   const heatmapData = useMemo(() => {
     // 各日付×時間帯のセルデータを格納するマップ
     const cellMap = new Map<string, HeatmapCell>();
+    const summaryByDateId = new Map<string, { availableCount: number; unavailableCount: number }>();
+
+    filteredAvailabilities.forEach((availability) => {
+      const summary = summaryByDateId.get(availability.event_date_id) ?? {
+        availableCount: 0,
+        unavailableCount: 0,
+      };
+
+      if (availability.availability) {
+        summary.availableCount += 1;
+      } else {
+        summary.unavailableCount += 1;
+      }
+
+      summaryByDateId.set(availability.event_date_id, summary);
+    });
 
     // イベント日程をマップに変換
     eventDates.forEach((date) => {
@@ -491,12 +433,9 @@ export default function AvailabilitySummary({
       const slotKey = `${startTimeStr}-${endTimeStr}`;
       const key = `${dateStr}_${slotKey}`;
 
-      const availableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && a.availability,
-      ).length;
-      const unavailableCount = filteredAvailabilities.filter(
-        (a) => a.event_date_id === date.id && !a.availability,
-      ).length;
+      const summary = summaryByDateId.get(date.id);
+      const availableCount = summary?.availableCount ?? 0;
+      const unavailableCount = summary?.unavailableCount ?? 0;
 
       const totalResponses = availableCount + unavailableCount;
       const availabilityRate = totalResponses > 0 ? availableCount / totalResponses : 0;
@@ -515,34 +454,6 @@ export default function AvailabilitySummary({
 
     return cellMap;
   }, [eventDates, filteredAvailabilities, finalizedDateIds]);
-
-  // 参加者の回答データを取得して編集用に整形する
-  const getParticipantAvailabilities = useCallback(
-    (participantId: string) => {
-      const result: Record<string, boolean> = {};
-
-      eventDates.forEach((date) => {
-        // 該当する参加者の回答を検索
-        const response = filteredAvailabilities.find(
-          (a) => a.participant_id === participantId && a.event_date_id === date.id,
-        );
-
-        // 回答が見つかれば、その値を使用。なければデフォルトでfalse
-        result[date.id] = response ? response.availability : false;
-      });
-
-      return result;
-    },
-    [eventDates, filteredAvailabilities],
-  );
-
-  // 参加者の編集ボタンがクリックされたときの処理
-  const handleEditClick = (participantId: string, participantName: string) => {
-    if (onShowParticipantForm) {
-      const participantAvailabilities = getParticipantAvailabilities(participantId);
-      onShowParticipantForm(participantId, participantName, participantAvailabilities);
-    }
-  };
 
   // ツールチップが直前に開かれたかを追跡するref
   const justOpenedTooltipRef = useRef<boolean>(false);
@@ -604,85 +515,28 @@ export default function AvailabilitySummary({
 
   return (
     <div
-      className="bg-base-100 availability-summary mb-8 rounded-lg border shadow-sm transition-all"
+      className="bg-base-100 availability-summary mb-6 rounded-lg border shadow-sm transition-all sm:mb-8"
       ref={containerRef}
       onScroll={handleScroll}
       onClick={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
-      <div className="p-2 sm:p-4">
-        <h2 className="mb-2 text-xl font-bold sm:mb-4">みんなの回答状況</h2>
-
-        {/* 表示切り替えタブ */}
-        <div className="tabs tabs-boxed bg-base-300 mb-2 space-x-4 rounded-lg p-1 sm:mb-4">
-          <a
-            className={`tab transition-all ${
-              viewMode === 'heatmap'
-                ? 'tab-active bg-primary text-primary-content px-2 font-medium'
-                : 'text-base-content'
-            }`}
-            data-testid={buildTabTestId('heatmap')}
-            onClick={() => setViewMode('heatmap')}
-          >
-            ヒートマップ
-          </a>
-          <a
-            className={`tab transition-all ${
-              viewMode === 'detailed'
-                ? 'tab-active bg-primary text-primary-content px-2 font-medium'
-                : 'text-base-content'
-            }`}
-            data-testid={buildTabTestId('detailed')}
-            onClick={() => setViewMode('detailed')}
-          >
-            個別
-          </a>
-          <a
-            className={`tab transition-all ${
-              viewMode === 'list'
-                ? 'tab-active bg-primary text-primary-content px-2 font-medium'
-                : 'text-base-content'
-            }`}
-            data-testid={buildTabTestId('list')}
-            onClick={() => setViewMode('list')}
-          >
-            リスト
-          </a>
-        </div>
-
-        {/* リスト表示モード */}
-        {viewMode === 'list' && <ListView summary={summary} eventDates={eventDates} />}
-
-        {/* ヒートマップ表示モード */}
-        {viewMode === 'heatmap' && (
-          <HeatmapView
-            uniqueDates={uniqueDates}
-            uniqueTimeSlots={uniqueTimeSlots}
-            heatmapData={heatmapData}
-            maxAvailable={maxAvailable}
-            onPointerTooltipStart={isMobile ? () => {} : handlePointerEnter}
-            onPointerTooltipEnd={isMobile ? () => {} : handlePointerEnd}
-            onPointerTooltipClick={handlePointerClick}
-            isDragging={isDragging}
-            minColoredCount={minColored}
-            onMinColoredCountChange={setMinColored}
-            isPastEventGrayscaleEnabled={isPastEventGrayscale}
-            onPastEventGrayscaleToggle={setIsPastEventGrayscale}
-          />
-        )}
-
-        {/* 詳細表示モード（個人ごとの回答詳細） */}
-        {viewMode === 'detailed' && (
-          <DetailedView
-            eventDates={eventDates}
-            participants={filteredParticipants}
-            isParticipantAvailable={isParticipantAvailable}
-            finalizedDateIds={finalizedDateIds}
-            onEditClick={onShowParticipantForm ? handleEditClick : undefined}
-            publicToken={publicToken}
-            myParticipantId={myParticipantId}
-          />
-        )}
+      <div className="p-3 sm:p-5">
+        <h2 className="mb-3 text-lg font-bold sm:mb-4 sm:text-xl">みんなの回答状況</h2>
+        <HeatmapView
+          uniqueDates={uniqueDates}
+          uniqueTimeSlots={uniqueTimeSlots}
+          heatmapData={heatmapData}
+          maxAvailable={maxAvailable}
+          onPointerTooltipStart={isMobile ? () => {} : handlePointerEnter}
+          onPointerTooltipEnd={isMobile ? () => {} : handlePointerEnd}
+          onPointerTooltipClick={handlePointerClick}
+          isDragging={isDragging}
+          minColoredCount={minColored}
+          onMinColoredCountChange={setMinColored}
+          isPastEventGrayscaleEnabled={isPastEventGrayscale}
+          onPastEventGrayscaleToggle={setIsPastEventGrayscale}
+        />
       </div>
       {/* PCのみツールチップ */}
       {!isMobile && <Tooltip tooltip={tooltip} portalElement={tooltipPortalRef.current} />}

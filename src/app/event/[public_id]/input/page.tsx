@@ -86,11 +86,11 @@ export default async function EventPage({ params, searchParams }: EventPageProps
       <div className="mb-8">
         <h2 className="mb-4 text-2xl font-bold">{pageTitle}</h2>
         {isEditMode ? (
-          <p className="mb-4 text-gray-600">
+          <p className="mb-4 text-base-content/70">
             「{existingParticipant?.name}」さんの回答を編集しています。
           </p>
         ) : (
-          <p className="mb-4 text-gray-600">あなたの名前と参加可能な日程を入力してください。</p>
+          <p className="mb-4 text-base-content/70">あなたの名前と参加可能な日程を入力してください。</p>
         )}
       </div>
 
@@ -119,7 +119,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
       <div className="mt-6">
         <a
           href={`/event/${public_id}`}
-          className="flex items-center text-blue-600 hover:text-blue-800"
+          className="flex items-center text-primary hover:text-primary/80"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

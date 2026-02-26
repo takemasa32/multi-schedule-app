@@ -375,7 +375,7 @@ export default function FinalizeEventSection({
                   全ての選択日程で参加可能: {getParticipantsForAllSelectedDates().length}人
                 </p>
                 {getParticipantsForAllSelectedDates().length > 0 && (
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-base-content/70">
                     {getParticipantsForAllSelectedDates().join(', ')}
                   </p>
                 )}

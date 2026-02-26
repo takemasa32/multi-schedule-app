@@ -24,28 +24,30 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
 
   return (
     <div
-      className="fixed left-0 right-0 z-50"
+      className="fixed left-0 right-0 z-50 px-2"
       style={{
         top: 'env(safe-area-inset-top, 0px)',
-        marginTop: '56px', // ヘッダー分の余白（必要に応じて調整）
+        marginTop: '52px',
         pointerEvents: 'auto',
       }}
     >
       <div
-        className="bg-base-100/95 border-primary animate-slideDown mx-auto rounded-b-2xl border-b-4 shadow-2xl transition-all duration-200"
+        className="bg-base-100/95 border-primary mx-auto w-full rounded-b-2xl border-b-4 shadow-2xl sm:max-w-[560px]"
+        role="dialog"
+        aria-modal="false"
+        aria-label="回答詳細パネル"
         style={{
-          maxHeight: '50vh', // 画面の半分まで
+          maxHeight: '56vh',
           overflowY: 'auto',
           boxShadow: '0 8px 32px 0 rgba(31,41,55,0.25)',
-          width: '96%',
         }}
       >
         {/* ドラッグバー風アクセント＋タイトル＋閉じる */}
         <div className="bg-base-100/95 sticky top-0 z-10 flex flex-col items-center px-2 pb-1 pt-2">
-          <div className="mb-1 h-1 w-10 rounded-full bg-gray-300" />
+          <div className="mb-1 h-1 w-10 rounded-full bg-base-300" />
           <div className="flex min-h-8 w-full items-center justify-between">
             {(dateLabel || timeLabel) && (
-              <div className="text-base-content max-w-[70vw] truncate text-base font-bold">
+              <div className="text-base-content max-w-[68vw] truncate text-sm font-bold sm:max-w-[460px] sm:text-base">
                 {dateLabel} {timeLabel}
               </div>
             )}
@@ -61,7 +63,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
         </div>
         <div className="px-2 pb-2">
           {hasNoParticipants ? (
-            <div className="py-4 text-center text-gray-500">
+            <div className="py-4 text-center text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-2 h-6 w-6"
@@ -91,7 +93,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                       <li key={`avail-${idx}`} className="mb-0.5 truncate">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -109,7 +111,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                       <li key={`unavail-${idx}`} className="mb-0.5 truncate">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}

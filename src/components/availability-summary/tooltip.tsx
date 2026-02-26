@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import type { ParticipantSummary } from '@/types/participant';
 
@@ -25,11 +25,19 @@ interface TooltipProps {
   portalElement: HTMLDivElement | null;
 }
 
+const VIEWPORT_PADDING = 8;
+const TOOLTIP_OFFSET = 10;
+
 /**
  * 参加者情報を表示するツールチップコンポーネント
  */
 export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(portalElement);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number }>({
+    x: tooltip.x + TOOLTIP_OFFSET,
+    y: tooltip.y + TOOLTIP_OFFSET,
+  });
   // 自動非表示タイマー用ref
   const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
   // タッチ操作中フラグ
@@ -79,6 +87,50 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
   const hasNoParticipants =
     tooltip.availableParticipants.length === 0 && tooltip.unavailableParticipants.length === 0;
 
+  const updateTooltipPosition = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const tooltipEl = tooltipRef.current;
+    if (!tooltipEl) {
+      setPosition({ x: tooltip.x + TOOLTIP_OFFSET, y: tooltip.y + TOOLTIP_OFFSET });
+      return;
+    }
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const rect = tooltipEl.getBoundingClientRect();
+    const width = Math.min(rect.width, viewportWidth - VIEWPORT_PADDING * 2);
+    const height = Math.min(rect.height, viewportHeight - VIEWPORT_PADDING * 2);
+
+    let nextX = tooltip.x + TOOLTIP_OFFSET;
+    let nextY = tooltip.y + TOOLTIP_OFFSET;
+
+    if (nextX + width > viewportWidth - VIEWPORT_PADDING) {
+      nextX = Math.max(VIEWPORT_PADDING, viewportWidth - width - VIEWPORT_PADDING);
+    }
+    if (nextY + height > viewportHeight - VIEWPORT_PADDING) {
+      nextY = Math.max(VIEWPORT_PADDING, viewportHeight - height - VIEWPORT_PADDING);
+    }
+
+    setPosition((prev) => {
+      if (Math.abs(prev.x - nextX) < 1 && Math.abs(prev.y - nextY) < 1) {
+        return prev;
+      }
+      return { x: nextX, y: nextY };
+    });
+  }, [tooltip.x, tooltip.y]);
+
+  useEffect(() => {
+    if (!tooltip.show) return;
+    const rafId = window.requestAnimationFrame(updateTooltipPosition);
+    window.addEventListener('resize', updateTooltipPosition, { passive: true });
+    window.addEventListener('scroll', updateTooltipPosition, { passive: true, capture: true });
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateTooltipPosition);
+      window.removeEventListener('scroll', updateTooltipPosition, true);
+    };
+  }, [tooltip.show, updateTooltipPosition]);
+
   // ツールチップ自体へのポインターイベントハンドラ
   const handleTooltipPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
@@ -101,16 +153,18 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
     <>
       {createPortal(
         <div
+          ref={tooltipRef}
           style={{
             position: 'fixed',
-            top: `${tooltip.y + 10}px`,
-            left: `${tooltip.x + 10}px`,
+            top: `${position.y}px`,
+            left: `${position.x}px`,
             zIndex: 1000,
-            backgroundColor: 'white',
             borderRadius: '8px',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
             padding: '12px',
-            maxWidth: '300px',
+            maxWidth: 'min(320px, calc(100vw - 16px))',
+            maxHeight: 'min(70vh, 420px)',
+            overflowY: 'auto',
             fontSize: '14px',
           }}
           className="bg-base-100 border-base-300 rounded-lg border p-3 shadow-lg"
@@ -148,7 +202,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             </div>
           )}
           {hasNoParticipants ? (
-            <div className="py-2 text-center text-gray-500">
+            <div className="py-2 text-center text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-1 h-5 w-5"
@@ -178,7 +232,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                       <li key={`avail-${idx}`} className="mb-0.5">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -196,7 +250,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                       <li key={`unavail-${idx}`} className="mb-0.5">
                         {p.name}
                         {p.comment && (
-                          <div className="break-words text-xs text-gray-500">{p.comment}</div>
+                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
                         )}
                       </li>
                     ))}
@@ -205,7 +259,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
               )}
               {tooltip.availableParticipants.length === 0 &&
                 tooltip.unavailableParticipants.length > 0 && (
-                  <div className="mt-2 border-t border-gray-200 pt-2 text-sm text-gray-500">
+                  <div className="mt-2 border-t border-base-300 pt-2 text-sm text-base-content/60">
                     <p>参加可能な方はいません</p>
                   </div>
                 )}

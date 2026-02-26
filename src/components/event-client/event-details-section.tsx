@@ -69,7 +69,7 @@ export default function EventDetailsSection({
           {/* 参加者名リスト（表示/非表示トグル） */}
           {participants.length > 0 && (
             <div className="border-base-200 mb-2 flex flex-wrap items-center gap-2 border-b px-4 py-2">
-              <span className="mr-2 text-sm text-gray-500">表示選択:</span>
+              <span className="mr-2 text-sm text-base-content/60">表示選択:</span>
               {participants.map((p) => (
                 <button
                   key={p.id}
@@ -113,7 +113,7 @@ export default function EventDetailsSection({
       <div className="card bg-base-100 border-base-200 my-8 border shadow-md">
         <div className="card-body">
           <h2 className="mb-2 text-xl font-bold">イベント管理・修正</h2>
-          <p className="mb-4 text-sm text-gray-500">
+          <p className="mb-4 text-sm text-base-content/60">
             主催者向け：
             <br />
             日程の確定や候補日程の追加・修正を行えます。

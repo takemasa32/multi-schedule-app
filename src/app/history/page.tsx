@@ -129,7 +129,7 @@ export default function HistoryPage() {
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-gray-500">{history.length}件のイベント履歴があります</p>
+              <p className="text-sm text-base-content/60">{history.length}件のイベント履歴があります</p>
               <button onClick={handleClearHistory} className="btn btn-outline btn-sm">
                 すべての履歴を削除
               </button>
@@ -147,7 +147,7 @@ export default function HistoryPage() {
                         >
                           {event.title}
                         </Link>
-                        <p className="mt-1 text-sm text-gray-500">{formatDate(event.createdAt)}</p>
+                        <p className="mt-1 text-sm text-base-content/60">{formatDate(event.createdAt)}</p>
                       </div>
 
                       <div className="flex items-center space-x-2">

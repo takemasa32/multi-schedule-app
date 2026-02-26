@@ -28,6 +28,7 @@ export interface FavoriteEvent {
  */
 interface FavoriteEventsContextType {
   favorites: FavoriteEvent[];
+  isHydrated: boolean;
   addFavorite: (event: FavoriteEvent) => void;
   removeFavorite: (id: string) => void;
   refreshFavorites: () => void;
@@ -68,9 +69,11 @@ function setFavoriteEventsToStorage(events: FavoriteEvent[]) {
  */
 export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<FavoriteEvent[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     setFavorites(getFavoriteEventsFromStorage());
+    setIsHydrated(true);
   }, []);
 
   /**
@@ -106,7 +109,7 @@ export const FavoriteEventsProvider = ({ children }: { children: ReactNode }) =>
 
   return (
     <FavoriteEventsContext.Provider
-      value={{ favorites, addFavorite, removeFavorite, refreshFavorites }}
+      value={{ favorites, isHydrated, addFavorite, removeFavorite, refreshFavorites }}
     >
       {children}
     </FavoriteEventsContext.Provider>

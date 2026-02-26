@@ -58,7 +58,7 @@ export default function EventOpenForm({
           開く
         </button>
       </form>
-      <p className="mt-1 text-xs text-gray-500">{description}</p>
+      <p className="mt-1 text-xs text-base-content/60">{description}</p>
       {error && <p className="text-error mt-1 text-sm">{error}</p>}
     </section>
   );

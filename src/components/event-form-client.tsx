@@ -402,12 +402,12 @@ export default function EventFormClient() {
               name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-base-300 px-3 py-2 shadow-sm focus:border-primary focus:ring-primary"
               disabled={isPending}
               placeholder="例：〇〇の日程調整"
               aria-describedby="title-hint"
             />
-            <p id="title-hint" className="mt-1 text-xs text-gray-500">
+            <p id="title-hint" className="mt-1 text-xs text-base-content/60">
               イベントの目的や内容が分かるタイトルを入力してください（必須）
             </p>
           </div>
@@ -422,13 +422,13 @@ export default function EventFormClient() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               data-testid="event-description-input"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-base-300 px-3 py-2 shadow-sm focus:border-primary focus:ring-primary"
               rows={3}
               disabled={isPending}
               placeholder="（任意）備考や注意事項があれば記入してください。"
               aria-describedby="description-hint"
             />
-            <p id="description-hint" className="mt-1 text-xs text-gray-500">
+            <p id="description-hint" className="mt-1 text-xs text-base-content/60">
               （任意）イベントの詳細や参加者へのメッセージを記入できます
             </p>
           </div>
@@ -448,7 +448,7 @@ export default function EventFormClient() {
 
       {currentStep === 2 && step2SubStep === 'mode' && (
         <div className="space-y-4" data-testid="create-step-2-mode">
-          <p className="text-xs text-gray-500">作成方法を選択してください。</p>
+          <p className="text-xs text-base-content/60">作成方法を選択してください。</p>
           <div role="radiogroup" aria-label="入力方式" className="grid gap-4 md:grid-cols-2">
             <label
               className={`card cursor-pointer border transition-all ${
@@ -472,10 +472,10 @@ export default function EventFormClient() {
                     {inputMode === 'auto' && <span className="badge badge-primary">選択中</span>}
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-base-content/70">
                   期間と時間帯を入力すると候補枠を自動生成します。
                 </p>
-                <div className="mt-3 text-xs text-gray-500">
+                <div className="mt-3 text-xs text-base-content/60">
                   <p>向いている人: まとめて候補枠を作りたい方</p>
                   <p>できること: 期間内の時間枠を一括生成</p>
                   <p>所要感: 1〜2分</p>
@@ -501,8 +501,8 @@ export default function EventFormClient() {
                   <h3 className="text-lg font-semibold">手動で選択</h3>
                   {inputMode === 'manual' && <span className="badge badge-primary">選択中</span>}
                 </div>
-                <p className="mt-2 text-sm text-gray-600">カレンダー表で候補枠を直接選びます。</p>
-                <div className="mt-3 text-xs text-gray-500">
+                <p className="mt-2 text-sm text-base-content/70">カレンダー表で候補枠を直接選びます。</p>
+                <div className="mt-3 text-xs text-base-content/60">
                   <p>向いている人: 候補枠を細かく調整したい方</p>
                   <p>できること: 表をドラッグして柔軟に選択</p>
                   <p>所要感: 2〜3分</p>
@@ -524,7 +524,7 @@ export default function EventFormClient() {
 
       {currentStep === 2 && step2SubStep === 'settings' && (
         <div className="space-y-6" data-testid="create-step-2-settings">
-          <p className="text-sm text-gray-500">候補日程の期間と時間帯を設定してください。</p>
+          <p className="text-sm text-base-content/60">候補日程の期間と時間帯を設定してください。</p>
 
           <div className="space-y-2">
             <h3 className="text-base font-semibold">候補日程の設定</h3>
@@ -543,7 +543,7 @@ export default function EventFormClient() {
                 {...autoInitialProps}
               />
             )}
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-base-content/60">
               日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
             </p>
           </div>
@@ -561,7 +561,7 @@ export default function EventFormClient() {
 
       {currentStep === 2 && step2SubStep === 'calendar' && inputMode === 'manual' && (
         <div className="space-y-6" data-testid="create-step-2-calendar">
-          <p className="text-sm text-gray-500">カレンダーで日程候補を選択してください。</p>
+          <p className="text-sm text-base-content/60">カレンダーで日程候補を選択してください。</p>
 
           <ManualTimeSlotPicker
             onTimeSlotsChange={handleTimeSlotsChange}
@@ -585,7 +585,7 @@ export default function EventFormClient() {
         <div className="space-y-6" data-testid="create-step-3">
           <div className="border-base-300 bg-base-100 rounded-md border p-4">
             <div className="text-sm font-semibold">入力内容の確認</div>
-            <div className="mt-3 grid gap-2 text-sm text-gray-700">
+            <div className="mt-3 grid gap-2 text-sm text-base-content/80">
               <div>
                 <span className="font-semibold">タイトル:</span> {title || '未入力'}
               </div>
