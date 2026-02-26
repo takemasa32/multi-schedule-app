@@ -160,11 +160,12 @@ export default function DateRangePicker({
         nextTime.setMinutes(nextTime.getMinutes() + intervalMinutes);
 
         // 次の時間が終了時間を超えないようにする
-        const slotEndTime =
-          nextTime > endTime
-            ? defaultEndTime === '24:00'
-              ? '24:00'
-              : format(endTime, 'HH:mm')
+        const reaches24HourEnd =
+          defaultEndTime === '24:00' && nextTime.getTime() >= endTime.getTime();
+        const slotEndTime = reaches24HourEnd
+          ? '24:00'
+          : nextTime > endTime
+            ? format(endTime, 'HH:mm')
             : format(nextTime, 'HH:mm');
 
         newTimeSlots.push({

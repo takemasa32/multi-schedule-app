@@ -167,6 +167,46 @@ describe('createEvent', () => {
     expect(result.message).toMatch(/候補日程/);
   });
 
+  it('同日 22:00-00:00 は翌日 00:00 終了に補正して保存する', async () => {
+    const rpcMock = jest.fn(() =>
+      Promise.resolve({
+        data: [
+          {
+            event_id: 'eventid',
+            public_token: 'ZyxwvU987654',
+            admin_token: '123e4567-e89b-12d3-a456-426614174001',
+          },
+        ],
+        error: null,
+      }),
+    );
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (_table: string) => createSupabaseChainMock({ data: [], error: null }),
+      rpc: rpcMock,
+    }));
+
+    const formData = new FormData();
+    formData.set('title', '深夜枠テスト');
+    formData.append('startDates', '2026-03-10');
+    formData.append('startTimes', '22:00');
+    formData.append('endDates', '2026-03-10');
+    formData.append('endTimes', '00:00');
+
+    const result = await createEvent(formData);
+    expect(result.success).toBe(true);
+    expect(rpcMock).toHaveBeenCalledWith(
+      'create_event_with_dates',
+      expect.objectContaining({
+        p_event_dates: [
+          {
+            start_time: '2026-03-10 22:00:00',
+            end_time: '2026-03-11 00:00:00',
+          },
+        ],
+      }),
+    );
+  });
+
   it('DBエラー時はエラーメッセージが返る', async () => {
     const formData = new FormData();
     formData.set('title', 'テストイベント');
@@ -560,6 +600,31 @@ describe('addEventDates', () => {
 
     const result = await addEventDates(formData);
     expect(result.success).toBe(true);
+  });
+
+  it('同日 22:00-00:00 指定は翌日 00:00 に補正して追加する', async () => {
+    const rpcMock = jest.fn(() => Promise.resolve({ data: null, error: null }));
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({
+      from: (_table: string) => createSupabaseChainMock(),
+      rpc: rpcMock,
+    }));
+
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.append('start', '2026-03-10 22:00:00');
+    formData.append('end', '2026-03-10 00:00:00');
+
+    const result = await addEventDates(formData);
+    expect(result.success).toBe(true);
+    expect(rpcMock).toHaveBeenCalledWith('add_event_dates_safe', {
+      p_event_id: 'eventid',
+      p_event_dates: [
+        {
+          start_time: '2026-03-10 22:00:00',
+          end_time: '2026-03-11 00:00:00',
+        },
+      ],
+    });
   });
 
   it('既存日程と重複する場合はエラー', async () => {

@@ -49,6 +49,30 @@ describe('DateRangePicker', () => {
     });
   });
 
+  test('22:00-24:00 の最終枠は 23:00-24:00 で生成される', async () => {
+    const handleChange = jest.fn();
+    render(<DateRangePicker onTimeSlotsChange={handleChange} allowPastDates />);
+
+    const startInput = screen
+      .getAllByLabelText(/開始日/)
+      .find((el) => el instanceof HTMLInputElement && el.type === 'date') as HTMLInputElement;
+    const endInput = screen
+      .getAllByLabelText(/終了日/)
+      .find((el) => el instanceof HTMLInputElement && el.type === 'date') as HTMLInputElement;
+    fireEvent.change(startInput, { target: { value: '2099-01-01' } });
+    fireEvent.change(endInput, { target: { value: '2099-01-01' } });
+    fireEvent.change(screen.getByLabelText('各日の開始時刻'), { target: { value: '22:00' } });
+    fireEvent.change(screen.getByLabelText('各日の終了時刻'), { target: { value: '00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: '1h' }));
+
+    await waitFor(() => {
+      const latestCall = handleChange.mock.calls[handleChange.mock.calls.length - 1]?.[0] ?? [];
+      expect(latestCall).toHaveLength(2);
+      expect(latestCall[0]).toMatchObject({ startTime: '22:00', endTime: '23:00' });
+      expect(latestCall[1]).toMatchObject({ startTime: '23:00', endTime: '24:00' });
+    });
+  });
+
   test('時間枠の長さが固定されている場合は変更できない', () => {
     render(
       <DateRangePicker
