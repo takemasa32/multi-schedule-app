@@ -36,7 +36,7 @@ module.exports = {
     themes: [
       {
         light: {
-          primary: '#4f46e5',
+          primary: '#6366f1',
           'primary-focus': '#4338ca',
           'primary-content': '#ffffff',
           secondary: '#9333ea',
@@ -54,30 +54,6 @@ module.exports = {
           success: '#10b981',
           warning: '#F59E0B',
           error: '#ef4444',
-        },
-      },
-      {
-        daysynth: {
-          /* カラーパレット */
-          primary: '#2563EB',
-          'primary-content': '#ffffff',
-          secondary: '#38BDF8',
-          'secondary-content': '#1E293B',
-          accent: '#06B6D4',
-          'accent-content': '#ffffff',
-          neutral: '#F1F5F9',
-          'neutral-content': '#334155',
-          'base-100': '#ffffff',
-          'base-200': '#F8FAFC',
-          'base-300': '#F1F5F9',
-          'base-content': '#1E293B',
-          info: '#3B82F6',
-          success: '#10B981',
-          warning: '#F59E0B',
-          error: '#EF4444',
-          /* 追加トークン例 */
-          '--rounded-btn': '0.5rem', // ボタン角丸 8px
-          '--rounded-box': '1rem', // コンテナ角丸 16px
         },
       },
       {
@@ -101,7 +77,7 @@ module.exports = {
         },
       },
     ],
-    // デフォルトテーマを daysynth に設定
-    defaultTheme: 'daysynth',
+    // デフォルトテーマを light に設定
+    defaultTheme: 'light',
   },
 };

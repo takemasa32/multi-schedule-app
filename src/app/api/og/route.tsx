@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
   // グラデーション背景
   const gradientBg = {
-    background: 'linear-gradient(135deg, #6366f1 0%, #2563eb 60%, #38bdf8 100%)',
+    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #818cf8 100%)',
   };
 
   // 半透明の円形アクセント
@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
               left: 0,
               width: '100%',
               height: 12,
-              background: '#2563eb',
+              background: '#6366f1',
             }}
           />
           {circleAccent}

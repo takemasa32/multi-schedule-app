@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja" suppressHydrationWarning>
       <body className="bg-base-100 flex min-h-screen flex-col">
         <AuthSessionProvider>
-          <ThemeProvider attribute="data-theme" defaultTheme="daysynth" enableSystem={false}>
+          <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem={true}>
             <Header />
             <GoogleAnalytics />
             <ExternalBrowserBanner />

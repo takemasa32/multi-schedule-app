@@ -46,7 +46,7 @@ const evaluateDarkThemeByName = (themeName: string | null | undefined): boolean 
     return true;
   }
 
-  if (tokens.some((token) => token === 'light' || token === 'cupcake' || token === 'daysynth')) {
+  if (tokens.some((token) => token === 'light' || token === 'cupcake')) {
     return false;
   }
 

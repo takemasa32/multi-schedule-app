@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 
 export default function ThemeSwitcher() {
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   // useEffectはクライアントサイドでのみ実行
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function ThemeSwitcher() {
   }
 
   const toggleTheme = () => {
-    if (theme === 'dark') {
+    if (resolvedTheme === 'dark') {
       setTheme('light');
     } else {
       setTheme('dark');
@@ -31,7 +31,7 @@ export default function ThemeSwitcher() {
       className="btn btn-sm btn-ghost btn-circle"
       aria-label="テーマ切り替え"
     >
-      {theme === 'dark' ? (
+      {resolvedTheme === 'dark' ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5"
