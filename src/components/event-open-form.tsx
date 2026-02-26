@@ -39,7 +39,7 @@ export default function EventOpenForm({
       setError('有効なイベントIDまたはURLを入力してください');
       return;
     }
-    window.location.href = `/event/${id}`;
+    window.location.assign(`/event/${id}`);
   };
 
   return (

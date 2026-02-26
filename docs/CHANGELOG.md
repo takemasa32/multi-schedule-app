@@ -2,6 +2,9 @@
 
 ## 2026-02-26
 
+- Jest を v30 系（`jest` / `jest-environment-jsdom` / `@types/jest`）へ更新し、Node.js v24 環境でも `jest` 実行が完走する状態に改善。
+- CI の Jest 実行コマンドを `npm run test:ci -- --coverage` に統一し、ローカル/CIの実行経路差異を縮小。
+- `EventOpenForm` の遷移処理を `window.location.assign` に変更し、JSDOM v30 で失敗していたテストを互換な検証へ更新。
 - イベント作成（`createEvent`）で `22:00-24:00` が内部的に `22:00-00:00` として送られた場合でも、サーバー側で翌日 `00:00` 終了へ補正して保存するよう修正。
 - イベント日程追加（`addEventDates`）にも同じ補正ロジックを適用し、同日 `00:00` 終了や `24:00` 指定が混在しても `start_time < end_time` を満たす値で保存されるよう統一。
 - `DateRangePicker` の `24:00` 終端生成を調整し、`22:00-24:00` の最終枠が `23:00-24:00` で出力されるよう修正。

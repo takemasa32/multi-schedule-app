@@ -33,4 +33,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-20-
       - run: npm ci
-      - run: npx jest --coverage
+      - run: npm run test:ci -- --coverage
