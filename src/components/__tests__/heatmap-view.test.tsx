@@ -467,7 +467,7 @@ describe('HeatmapView', () => {
     expect(pastVisual?.style.backgroundImage).toBe(futureVisual?.style.backgroundImage);
   });
 
-  it('上に載るセルは下角丸と下地レイヤーを適用する', () => {
+  it('段差レイヤー無効時は縦方向でも下地レイヤーを描画しない', () => {
     document.documentElement.removeAttribute('data-theme');
     const layeredDates = [
       {
@@ -532,18 +532,14 @@ describe('HeatmapView', () => {
     const topCount = screen.getByText('2', { selector: 'span' });
     const topVisualLayer = topCount.closest('div[class*="z-10"]') as HTMLDivElement | null;
     expect(topVisualLayer).toBeTruthy();
-    expect(topVisualLayer?.className).toContain('rounded-bl-[0.4rem]');
-    expect(topVisualLayer?.className).toContain('rounded-br-[0.4rem]');
+    expect(topVisualLayer?.className).not.toContain('rounded-bl-[0.4rem]');
+    expect(topVisualLayer?.className).not.toContain('rounded-br-[0.4rem]');
 
     const cellContainer = topVisualLayer?.parentElement;
     const bottomUnderlay = cellContainer?.querySelector(
       'div.pointer-events-none.absolute.inset-x-0.bottom-0',
     ) as HTMLDivElement | null;
-    expect(bottomUnderlay).toBeTruthy();
-    expect(bottomUnderlay?.style.backgroundColor).not.toBe('');
-    expect(bottomUnderlay?.style.backgroundColor).not.toBe(
-      topVisualLayer?.style.backgroundColor ?? '',
-    );
+    expect(bottomUnderlay).toBeFalsy();
 
     // ライトテーマでは、色の濃淡差があっても有色セル同士の境界で補正レイヤーを描画する
     const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
@@ -556,7 +552,7 @@ describe('HeatmapView', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('ダークテーマでは色差がある有色セル境界に補正レイヤーを描画しない', () => {
+  it('ダークテーマでは色差がある有色セル境界に上辺補正レイヤーを描画する', () => {
     document.documentElement.setAttribute('data-theme', 'night');
     const layeredDates = [
       {
@@ -624,11 +620,11 @@ describe('HeatmapView', () => {
     expect(secondRowCell).toBeTruthy();
     expect(secondRowCell?.style.borderTopWidth).toBe('0px');
     const secondRowTopBleed = secondRowCell?.querySelector('div.heatmap-join-bleed-top');
-    expect(secondRowTopBleed).toBeFalsy();
+    expect(secondRowTopBleed).toBeTruthy();
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('縦連結の中央セルが上下より多い場合は四隅を角丸にする', () => {
+  it('段差レイヤー無効時は縦連結の中央セルを角丸化しない', () => {
     const layeredDates = [
       {
         date: '2025-10-18',
@@ -707,10 +703,7 @@ describe('HeatmapView', () => {
     const middleCount = screen.getByText('3', { selector: 'span' });
     const middleVisualLayer = middleCount.closest('div[class*="z-10"]') as HTMLDivElement | null;
     expect(middleVisualLayer).toBeTruthy();
-    expect(middleVisualLayer?.className).toContain('rounded-tl-[0.4rem]');
-    expect(middleVisualLayer?.className).toContain('rounded-tr-[0.4rem]');
-    expect(middleVisualLayer?.className).toContain('rounded-bl-[0.4rem]');
-    expect(middleVisualLayer?.className).toContain('rounded-br-[0.4rem]');
+    expect(middleVisualLayer?.className).toContain('rounded-none');
 
     const cellContainer = middleVisualLayer?.parentElement;
     const topUnderlay = cellContainer?.querySelector(
@@ -719,11 +712,11 @@ describe('HeatmapView', () => {
     const bottomUnderlay = cellContainer?.querySelector(
       'div.pointer-events-none.absolute.inset-x-0.bottom-0',
     ) as HTMLDivElement | null;
-    expect(topUnderlay).toBeTruthy();
-    expect(bottomUnderlay).toBeTruthy();
+    expect(topUnderlay).toBeFalsy();
+    expect(bottomUnderlay).toBeFalsy();
   });
 
-  it('横連結中に下方向だけ載る場合は片側の下角のみ丸くなる', () => {
+  it('段差レイヤー無効時は横連結中でも下方向の角丸を付けない', () => {
     const dates = [
       {
         date: '2025-10-18',
@@ -807,11 +800,11 @@ describe('HeatmapView', () => {
     const targetCount = screen.getAllByText('3', { selector: 'span' })[0];
     const targetVisualLayer = targetCount.closest('div[class*="z-10"]') as HTMLDivElement | null;
     expect(targetVisualLayer).toBeTruthy();
-    expect(targetVisualLayer?.className).toContain('rounded-bl-[0.4rem]');
+    expect(targetVisualLayer?.className).not.toContain('rounded-bl-[0.4rem]');
     expect(targetVisualLayer?.className).not.toContain('rounded-br-[0.4rem]');
   });
 
-  it('上下のみ段差を付けるため左右の重なりレイヤーを描画しない', () => {
+  it('段差レイヤー無効時は上下左右の重なりレイヤーを描画しない', () => {
     const dates = [
       {
         date: '2025-10-18',
@@ -945,7 +938,7 @@ describe('HeatmapView', () => {
     const leftUnderlay = targetCell?.querySelector(
       'div.pointer-events-none.absolute.inset-y-0.left-0',
     ) as HTMLDivElement | null;
-    expect(topUnderlay).toBeTruthy();
+    expect(topUnderlay).toBeFalsy();
     expect(leftUnderlay).toBeFalsy();
   });
 
