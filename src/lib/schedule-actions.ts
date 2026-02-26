@@ -1508,9 +1508,10 @@ export async function upsertWeeklyTemplatesFromWeekdaySelections({
     if (deleteError) {
       console.error('週次テンプレ整理エラー:', deleteError);
       return {
-        success: false,
+        // upsert 自体は成功しているため、整理失敗は警告として扱う。
+        success: true,
         message:
-          '週ごとの用事は保存されましたが整理に失敗しました。時間をおいてページを再読み込みしてください。',
+          '週ごとの用事は保存されましたが、一部の古いデータの整理に失敗しました。時間をおいてページを再読み込みしてください。',
         updatedCount: payload.length,
       };
     }
