@@ -254,25 +254,22 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
   return (
     <div
-      className="fade-in"
+      className="fade-in space-y-2 sm:space-y-3"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="bg-base-100 mb-2 p-1 text-xs sm:p-2 sm:text-sm">
-        <span className="font-medium">色が濃いほど参加可能な人が多い時間帯です</span>
-      </div>
       <div
-        className="overflow-x-auto"
+        className="bg-base-100 border-base-300 overflow-x-auto rounded-lg border"
         ref={tableRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <table className="table-xs table w-full min-w-[360px] border-collapse text-center sm:table">
+        <table className="table-xs table w-full min-w-[400px] border-collapse text-center sm:min-w-[680px] sm:table">
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
-              <th className="bg-base-200 sticky left-0 top-0 z-30 min-w-[48px] p-1 text-left text-xs sm:p-2 sm:text-sm">
+              <th className="bg-base-200 sticky left-0 top-0 z-30 min-w-[56px] p-1.5 text-left text-xs sm:min-w-[72px] sm:p-2 sm:text-sm">
                 時間
               </th>
               {uniqueDates.map((dateInfo, index, arr) => {
@@ -299,7 +296,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                   <th
                     key={dateInfo.date}
                     data-date-index={index}
-                    className={`bg-base-200 sticky top-0 z-20 min-w-[44px] p-1 text-center text-xs sm:min-w-[80px] sm:px-2 sm:py-3 sm:text-sm ${
+                    className={`bg-base-200 sticky top-0 z-20 min-w-[52px] p-1 text-center text-xs sm:min-w-[96px] sm:px-2 sm:py-3 sm:text-sm ${
                       isPastDate ? 'text-base-content/70' : 'text-base-content'
                     }`}
                     style={headerStyle}
@@ -330,14 +327,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
               return (
                 <tr key={timeSlot.slotKey}>
                   <td
-                    className="bg-base-100 sticky left-0 z-10 whitespace-nowrap p-1 text-left text-xs font-medium sm:px-2 sm:text-sm"
+                    className="bg-base-100 sticky left-0 z-10 whitespace-nowrap p-1.5 text-left text-xs font-medium sm:px-2 sm:text-sm"
                     aria-label={`${formattedStartTime}〜${formattedEndTime}`}
                   >
                     <span
                       style={{
                         position: 'absolute',
                         top: 0, // 上辺を基準にする
-                        left: '0.5rem',
+                        left: '0.375rem',
                         transform: 'translateY(-50%)', // 高さの半分だけ上に移動
                         backgroundColor:
                           'var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))',
@@ -439,7 +436,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       <td
                         key={key}
                         style={cellStyle}
-                        className={`relative cursor-pointer p-0 transition-all sm:p-1 ${
+                        className={`relative cursor-pointer p-0 align-middle transition-all sm:p-1 ${
                           isSelected ? 'border-success border-2' : ''
                         }`}
                         onPointerEnter={(e) => {
@@ -459,7 +456,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         }}
                       >
                         {hasData ? (
-                          <div className="flex h-full flex-col items-center justify-center">
+                          <div className="flex min-h-9 h-full flex-col items-center justify-center sm:min-h-10">
                             {hasResponses ? (
                               <>
                                 <span className={countTextClass}>{availableCount}</span>
@@ -483,7 +480,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                             )}
                           </div>
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center">
+                          <div className="flex min-h-9 h-full w-full items-center justify-center sm:min-h-10">
                             {/* イベント未設定セルも中央揃えで視認性を統一 */}
                             <span className="sr-only">イベント未設定</span>
                             <span aria-hidden="true" className="text-xs text-base-content/40 sm:text-sm">
@@ -507,12 +504,12 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                 }
                 return (
                   <tr className="h-0">
-                    <td className="bg-base-100 sticky left-0 z-10 whitespace-nowrap p-1 text-left text-xs font-medium sm:px-2 sm:text-sm">
+                    <td className="bg-base-100 sticky left-0 z-10 whitespace-nowrap p-1.5 text-left text-xs font-medium sm:px-2 sm:text-sm">
                       <span
                         style={{
                           position: 'absolute',
                           top: 0,
-                          left: '0.5rem',
+                          left: '0.375rem',
                           transform: 'translateY(-50%)',
                           backgroundColor:
                             'var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity,1)))',
@@ -533,37 +530,20 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         </table>
       </div>
 
-      {/* 色の凡例とフィルター設定を統合したUI */}
-      {/* 色の凡例 */}
-      <div className="flex items-center justify-center gap-1 text-xs sm:gap-2 sm:text-sm">
-        <span className="text-base-content/70">少ない</span>
-        <div className="flex">
-          {Array.from({ length: 11 }).map((_, i) => {
-            const opacity = (20 + i * 8) / 100; // 0.2～1.0の値
-            return (
-              <div
-                key={i}
-                style={{
-                  backgroundColor: `rgba(var(--p-rgb, 87, 13, 248), ${opacity})`,
-                  border: '1px solid #e5e7eb',
-                }}
-                className="h-2 w-2 sm:h-4 sm:w-4"
-              />
-            );
-          })}
-        </div>
-        <span className="text-base-content/70">多い</span>
-      </div>
-      <div className="bg-base-100 mt-2 rounded-lg border p-2 sm:mt-3 sm:p-3">
+      <div className="bg-base-100 rounded-lg border p-2 sm:p-3">
         <div className="flex flex-col gap-3">
           {/* スライダーによるフィルター設定 */}
           {onMinColoredCountChange && (
             <details className="from-base-200/50 to-base-300/30 border-base-300/50 group collapse rounded-lg border bg-gradient-to-r">
-              <summary className="collapse-title relative flex min-h-0 cursor-pointer items-center justify-between px-3 py-1">
-                <div className="flex items-center gap-2">
+              <summary className="collapse-title relative flex min-h-0 cursor-pointer items-center justify-between gap-2 px-3 py-1.5 sm:py-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 pr-5 sm:pr-6">
                   <div className="bg-primary h-2 w-2 rounded-full"></div>
-                  <span className="text-base-content text-sm font-semibold">フィルター設定</span>
-                  <div className="badge badge-primary badge-sm">{minColoredCount}人以上</div>
+                  <span className="text-base-content text-sm font-semibold leading-tight">
+                    フィルター設定
+                  </span>
+                  <div className="badge badge-primary badge-sm whitespace-nowrap">
+                    {minColoredCount}人以上
+                  </div>
                 </div>
                 {/* 開閉マークを右上に絶対配置 */}
                 <span

@@ -37,7 +37,7 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 - `getCellProps(key, options)` をインタラクション要素にスプレッドして利用
 - 共通で `data-selection-key` 属性を付与し、ロジック層が DOM → key を逆引き
 - 手動選択/週次入力は `disabled` オプションで編集不可モードを制御
-- イベント回答ページではビュー切替（リスト/テーブル/ヒートマップ）すべて同一コントローラを使用
+- イベント回答ページはヒートマップUIを中心に同一コントローラを使用
 - 手動選択 UI では週単位で整列したキー配列を生成し、回答 UI と同様に連続範囲ドラッグを適用
 - イベント管理ページの「候補日程の追加」手動モードでも同コンポーネントを共有し、既存日程のキーは `disabledSlotKeys` 経由で渡して重複選択を抑止する。
 - `ManualTimeSlotPicker` / `DateRangePicker` は `forcedIntervalMinutes` を受け取ると時間枠の長さを固定し、既存イベントのインターバルを維持したまま追加候補を生成する。
@@ -65,7 +65,6 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 - 旧実装で利用していた `heatmapLevel` はデータ構造上は保持するが、描画時は `availableCount / maxAvailable` の比率から不透明度を算出する。`0.2` を最低値として `Math.round(raw / 5) * 5` で 5% 刻みに丸め、`rgba(var(--p-rgb), opacity)` で単色グラデーションを実現する。
 - `totalResponses === 0` のセルは数値 `0` を表示しつつ背景色は透明（回答なし）とし、視覚的には空欄に近い扱い。スクリーンリーダー向けに `回答なし` の sr-only テキストを併記する。
 - 選択中のセルは `border-success` + 角ステータスドットを描画し、主催者が確定候補を把握しやすくする。
-- 色の凡例は 11 段（0.20〜1.00、0.08 刻み）を横に並べ、実際の `rgba` スケールと齟齬が出ないよう `var(--p-rgb)` を利用した同一ロジックで生成する。
 - `minColoredCount` を props で受け取り、UI では「フィルター設定」アコーディオン + range スライダーで閾値を変更可能。値は `0〜maxAvailable` を 1 刻みで指定し、閾値未満のセルへは `filter: grayscale(1)` を適用する。現在値はバッジ表示し、文言も `〜人未満の時間帯をグレー表示` と同期。
 - モバイル操作では `onTouchStart/Move/End` で 10px 以上の移動をドラッグとみなし、`isDraggingRef` を立てることでスクロール中はツールチップを抑止する。`useDragScrollBlocker` から渡される `isDragging` も考慮し、スクロールジェスチャとセルタップ（ツールチップ表示）が競合しないようにしている。
 - ツールチップは `onPointerEnter/Leave/Up` で制御する。マウス環境ではホバー開始/終了で表示を切り替え、タッチ環境では PointerUp（タップ）で表示。スクロール検知中 (`isDragging === true`) や空セルではイベントを握り潰す。
