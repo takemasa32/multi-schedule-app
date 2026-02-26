@@ -128,6 +128,8 @@ export default function AvailabilityForm({
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
+  const wizardTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const previousStepRef = useRef<WizardStep | null>(null);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -339,6 +341,20 @@ export default function AvailabilityForm({
     });
     hasAutoFillAppliedRef.current = true;
   }, [autoFillAvailabilities, isAuthenticated, isNewMode]);
+
+  useEffect(() => {
+    if (previousStepRef.current === null) {
+      previousStepRef.current = currentStep;
+      return;
+    }
+    if (previousStepRef.current === currentStep) return;
+    previousStepRef.current = currentStep;
+    if (!wizardTitleRef.current) return;
+
+    // ステップ遷移時はウィザード見出しまで戻し、次にやることを認識しやすくする。
+    const titleTop = wizardTitleRef.current.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: Math.max(0, titleTop - 16), behavior: 'smooth' });
+  }, [currentStep]);
 
   // フォーム送信前のバリデーション用
   const validateForm = async () => {
@@ -1033,7 +1049,7 @@ export default function AvailabilityForm({
 
   return (
     <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
-      <h2 className="mb-3 text-xl font-bold">
+      <h2 ref={wizardTitleRef} className="mb-3 text-xl font-bold">
         {mode === 'edit' ? `${initialParticipant?.name ?? '回答'}の編集` : '回答ウィザード'}
       </h2>
       <div className="mb-2 overflow-x-auto">
