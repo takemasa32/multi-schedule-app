@@ -2,6 +2,7 @@
   "name": "multi-schedule-app",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -83,6 +84,7 @@
     "tar": "7.5.6"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=20.9.0",
+    "npm": ">=10 <11"
   }
 }

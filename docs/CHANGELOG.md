@@ -2,6 +2,8 @@
 
 ## 2026-02-26
 
+- CI の `npm ci` が `Missing: preact@10.11.3 from lock file` で失敗する問題を修正。`package-lock.json` を npm 10 系で再生成し、`@auth/core` 配下の `preact@10.11.3` 解決情報を含む形式に更新。
+- 依存解決の再現性向上のため `package.json` に `packageManager: npm@10.8.2` を追加し、ローカルと CI の lockfile 生成差分を抑制。
 - Jest を v30 系（`jest` / `jest-environment-jsdom` / `@types/jest`）へ更新し、Node.js v24 環境でも `jest` 実行が完走する状態に改善。
 - CI の Jest 実行コマンドを `npm run test:ci -- --coverage` に統一し、ローカル/CIの実行経路差異を縮小。
 - `EventOpenForm` の遷移処理を `window.location.assign` に変更し、JSDOM v30 で失敗していたテストを互換な検証へ更新。
