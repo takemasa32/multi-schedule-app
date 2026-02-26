@@ -207,6 +207,53 @@ const shouldRaiseOverNeighbor = (
 };
 
 /**
+ * セルが有色（回答あり）かどうかを判定する
+ * @param visual セル見た目情報
+ * @returns 有色セルならtrue
+ */
+const isColoredCellVisual = (visual: HeatmapCellVisual | undefined): boolean => {
+  return visual !== undefined && visual.hasData && visual.hasResponses;
+};
+
+/**
+ * 上辺の背景抜け補正を描画するか判定する
+ * @param isDarkTheme ダークテーマかどうか
+ * @param hasBoundaryLine 境界線が表示されるか
+ * @param current 現在セルの見た目情報
+ * @param top 上側セルの見た目情報
+ * @param joinsTop 上側セルと連結するか
+ * @param isTopRaisedOverCurrent 上側セルが現在セルより上に載るか
+ * @returns 補正を描画するならtrue
+ */
+const shouldRenderJoinBleedOnTop = ({
+  isDarkTheme,
+  hasBoundaryLine,
+  current,
+  top,
+  joinsTop,
+  isTopRaisedOverCurrent,
+}: {
+  isDarkTheme: boolean;
+  hasBoundaryLine: boolean;
+  current: HeatmapCellVisual;
+  top: HeatmapCellVisual | undefined;
+  joinsTop: boolean;
+  isTopRaisedOverCurrent: boolean;
+}): boolean => {
+  if (hasBoundaryLine) {
+    return false;
+  }
+
+  // ライトテーマでは有色セル同士の境界を優先して補正
+  if (!isDarkTheme) {
+    return isColoredCellVisual(current) && isColoredCellVisual(top);
+  }
+
+  // ダークテーマでは従来通り、連結中かつ上載りでない境界のみ補正
+  return current.hasData && joinsTop && !isTopRaisedOverCurrent;
+};
+
+/**
  * 角丸連結状態からセルの角丸クラスを解決する
  * @param joinsTop 上側セルと連結するか
  * @param joinsBottom 下側セルと連結するか
@@ -923,17 +970,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           filter: cellStyle.filter,
                         }
                       : undefined;
-                    const hasColoredTopNeighbor =
-                      hasData &&
-                      hasResponses &&
-                      topVisual !== undefined &&
-                      topVisual.hasData &&
-                      topVisual.hasResponses;
-                    const isLightTheme = !(isDarkTheme ?? false);
-                    // ライトテーマのみ、色差があっても有色セル同士の上辺で背景抜け補正を優先する
-                    const shouldRenderJoinBleed = isLightTheme
-                      ? hasColoredTopNeighbor && !hasBoundaryLine
-                      : hasData && joinsTop && !isTopRaisedOverCurrent && !hasBoundaryLine;
+                    const shouldRenderJoinBleed = shouldRenderJoinBleedOnTop({
+                      isDarkTheme: isDarkTheme ?? false,
+                      hasBoundaryLine,
+                      current: visual,
+                      top: topVisual,
+                      joinsTop,
+                      isTopRaisedOverCurrent,
+                    });
                     const joinBleedBaseStyle = shouldRenderJoinBleed
                       ? {
                           backgroundColor:

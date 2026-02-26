@@ -72,7 +72,7 @@ export default function AvailabilitySummary({
   // 色付けの最小人数を保持
   const [minColored, setMinColored] = useState<number>(minColoredCount);
   // 過去日程をグレースケール表示するかの設定（初期値はオン）
-  const [isPastEventGrayscale, setIsPastEventGrayscale] = useState<boolean>(false);
+  const [isPastEventGrayscale, setIsPastEventGrayscale] = useState<boolean>(true);
   // useDeviceDetectは必ずトップレベルで呼び出す
   const { isMobile } = useDeviceDetect();
   // ツールチップの状態

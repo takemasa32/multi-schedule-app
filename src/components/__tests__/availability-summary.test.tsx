@@ -73,7 +73,7 @@ describe('AvailabilitySummary', () => {
       />,
     );
 
-    const grayCells = container.querySelectorAll('td[style*="grayscale(1)"]');
+    const grayCells = container.querySelectorAll('[style*="grayscale(1)"]');
     expect(grayCells.length).toBeGreaterThan(0);
   });
 
