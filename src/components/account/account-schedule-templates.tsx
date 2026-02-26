@@ -122,10 +122,9 @@ const resolveDatedBlockDateTimeRange = ({
   const startDate = new Date(`${dateKey}T00:00:00`);
   const endDate = new Date(startDate);
   const normalizedEndTime = endTime === '24:00' ? '00:00' : endTime;
-  const treatAsEndOfDay = endTime === '24:00';
 
   // 終了時刻が開始時刻より前、または24:00指定なら翌日終了として扱う。
-  if (treatAsEndOfDay || toMinutes(normalizedEndTime) < toMinutes(startTime)) {
+  if (endTime === '24:00' || toMinutes(normalizedEndTime) < toMinutes(startTime)) {
     endDate.setDate(endDate.getDate() + 1);
   }
 
