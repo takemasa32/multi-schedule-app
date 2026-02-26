@@ -6,6 +6,8 @@
 - アプリのデフォルトテーマを `light` に変更し、ThemeSwitcher（light/dark）との整合を改善。
 - アプリのデフォルトテーマを `system`（OS/ブラウザ設定準拠）に変更し、初回表示の見た目をユーザー環境に合わせるよう改善。
 - 主色 `#6366f1` 基準は維持しつつ、テーマ構成の重複を解消して保守性を向上。
+- カラーパレットの可読性を改善し、`accent/info/success/warning` の `*-content` を濃色へ統一、`error`（light）を `#DC2626` へ調整してコントラストを改善。
+- `dark` テーマの `secondary-content` を濃色へ変更し、薄色背景との文字コントラスト不足を改善。
 - CI の `npm ci` が `Missing: preact@10.11.3 from lock file` で失敗する問題を修正。`package-lock.json` を npm 10 系で再生成し、`@auth/core` 配下の `preact@10.11.3` 解決情報を含む形式に更新。
 - 依存解決の再現性向上のため `package.json` に `packageManager: npm@10.8.2` を追加し、ローカルと CI の lockfile 生成差分を抑制。
 - Jest を v30 系（`jest` / `jest-environment-jsdom` / `@types/jest`）へ更新し、Node.js v24 環境でも `jest` 実行が完走する状態に改善。
