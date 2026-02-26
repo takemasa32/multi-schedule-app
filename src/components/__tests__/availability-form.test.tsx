@@ -142,6 +142,37 @@ describe('AvailabilityForm', () => {
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
   });
 
+  it('未ログイン時の曜日一括入力では入力案内文言を表示する', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+    goToWeeklyStepAsGuest();
+    expect(screen.getByText('各曜日の予定を入力してください。')).toBeInTheDocument();
+  });
+
+  it('ログイン済みかつ週テンプレありの曜日一括入力では確認案内文言を表示する', async () => {
+    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
+      manual: [
+        {
+          weekday: 1,
+          start_time: '09:00:00',
+          end_time: '10:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    expect(
+      await screen.findByText('各曜日の予定を反映しました。変更がないか確認してください。'),
+    ).toBeInTheDocument();
+  });
+
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
     const multiSlotEventDates = [
       {

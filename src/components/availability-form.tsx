@@ -124,6 +124,7 @@ export default function AvailabilityForm({
   );
   const [isSavingWeeklyTemplates, setIsSavingWeeklyTemplates] = useState(false);
   const [hasWeekdayEdits, setHasWeekdayEdits] = useState(false);
+  const [hasManualWeeklyTemplates, setHasManualWeeklyTemplates] = useState(false);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
@@ -316,6 +317,7 @@ export default function AvailabilityForm({
     setCurrentStep(1);
     setWeekdayInitialized(false);
     setHasWeekdayEdits(false);
+    setHasManualWeeklyTemplates(false);
     hasAutoFillAppliedRef.current = false;
   }, [mode, eventId]);
 
@@ -730,6 +732,7 @@ export default function AvailabilityForm({
     const selectedWeekdaysByTemplate = new Set<WeekDay>();
     if (isAuthenticated) {
       const templateData = await fetchUserScheduleTemplates();
+      setHasManualWeeklyTemplates(templateData.manual.length > 0);
       templateData.manual.forEach((template) => {
         const weekday = ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as
           | WeekDay
@@ -738,6 +741,8 @@ export default function AvailabilityForm({
         const key = `${weekday}_${toWeeklyTemplateSlotKey(template.start_time, template.end_time)}`;
         templateWeekdayMap.set(key, template.availability);
       });
+    } else {
+      setHasManualWeeklyTemplates(false);
     }
 
     // 既存の選択データがある場合、曜日ごとに振り分ける
@@ -1009,6 +1014,12 @@ export default function AvailabilityForm({
     const label = stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
     return `ステップ${currentStep}: ${label}`;
   }, [currentStep, stepLabels]);
+  const weeklyStepLeadMessage = useMemo(() => {
+    if (isAuthenticated && hasManualWeeklyTemplates) {
+      return '各曜日の予定を反映しました。変更がないか確認してください。';
+    }
+    return '各曜日の予定を入力してください。';
+  }, [hasManualWeeklyTemplates, isAuthenticated]);
   const weekdayTimeSlots = useMemo(() => {
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
@@ -1122,7 +1133,7 @@ export default function AvailabilityForm({
         {showWeeklyStep && weeklyStep !== null && currentStep === weeklyStep && (
           <section className="space-y-4" data-testid="availability-step-weekly">
             <div className="bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
-              <p>各曜日の予定を入力してください。</p>
+              <p>{weeklyStepLeadMessage}</p>
             </div>
 
             <div className="bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
