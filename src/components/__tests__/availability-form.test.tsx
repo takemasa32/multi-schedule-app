@@ -196,6 +196,33 @@ describe('AvailabilityForm', () => {
     ).toBeInTheDocument();
   });
 
+  it('ログイン時の週予定取得中は空状態文言を出さず、完了まで次へを無効化する', async () => {
+    let resolveTemplates:
+      | ((value: { manual: []; learned: [] }) => void)
+      | null = null;
+    (fetchUserScheduleTemplates as jest.Mock).mockImplementation(
+      () =>
+        new Promise<{ manual: []; learned: [] }>((resolve) => {
+          resolveTemplates = resolve;
+        }),
+    );
+
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    expect(await screen.findByText('アカウント予定を読み込んでいます。')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '予定を読み込み中...' })).toBeDisabled();
+    expect(screen.queryByText('利用可能な時間帯がありません')).not.toBeInTheDocument();
+
+    resolveTemplates?.({ manual: [], learned: [] });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '予定を読み込み中...' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled();
+  });
+
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
     const multiSlotEventDates = [
       {
@@ -523,6 +550,40 @@ describe('AvailabilityForm', () => {
     });
     const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
     expect(formDataArg.get('sync_scope')).toBe('current');
+    expect(formDataArg.get('sync_defer')).toBeNull();
+  });
+
+  it('最終送信時に同期範囲モーダルから sync_scope=all と sync_defer=true で送信できる', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        hasSyncTargetEvents
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    const weeklyNext = screen.queryByRole('button', { name: '次へ' });
+    if (weeklyNext) {
+      fireEvent.click(weeklyNext);
+      const saveWeekly = await screen.findByRole('button', { name: '更新せず次へ' });
+      fireEvent.click(saveWeekly);
+    }
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
+
+    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'アカウント予定に保存して反映' }));
+    await waitFor(() => {
+      expect(submitAvailability).toHaveBeenCalled();
+    });
+    const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
+    expect(formDataArg.get('sync_scope')).toBe('all');
+    expect(formDataArg.get('sync_defer')).toBe('true');
   });
 
   it('同期範囲モーダルで確認へ戻るを選ぶと送信せず確認ステップへ戻る', async () => {

@@ -151,8 +151,14 @@ describe('upsertWeeklyTemplatesFromWeekdaySelections', () => {
   });
 
   it('終了が 00:00 の時間帯は 24:00 に正規化して保存する', async () => {
+    const selectSecondEqMock = jest.fn().mockResolvedValue({ data: [], error: null });
+    const selectFirstEqMock = jest.fn().mockReturnValue({ eq: selectSecondEqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectFirstEqMock });
     const upsertMock = jest.fn().mockResolvedValue({ error: null });
-    const fromMock = jest.fn().mockReturnValue({ upsert: upsertMock });
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ upsert: upsertMock });
     mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
 
     const result = await upsertWeeklyTemplatesFromWeekdaySelections({
@@ -180,5 +186,113 @@ describe('upsertWeeklyTemplatesFromWeekdaySelections', () => {
       ],
       { onConflict: 'user_id,weekday,start_time,end_time,source' },
     );
+    expect(selectFirstEqMock).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(selectSecondEqMock).toHaveBeenCalledWith('source', 'manual');
+  });
+
+  it('重複・重なりを圧縮し、不要な既存テンプレ行を削除する', async () => {
+    const existingRows = [
+      {
+        id: 'old-1',
+        weekday: 1,
+        start_time: '08:00:00',
+        end_time: '09:00:00',
+        availability: false,
+      },
+    ];
+    const selectSecondEqMock = jest.fn().mockResolvedValue({ data: existingRows, error: null });
+    const selectFirstEqMock = jest.fn().mockReturnValue({ eq: selectSecondEqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectFirstEqMock });
+
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const deleteInMock = jest.fn().mockResolvedValue({ error: null });
+    const deleteSecondEqMock = jest.fn().mockReturnValue({ in: deleteInMock });
+    const deleteFirstEqMock = jest.fn().mockReturnValue({ eq: deleteSecondEqMock });
+    const deleteMock = jest.fn().mockReturnValue({ eq: deleteFirstEqMock });
+
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ upsert: upsertMock })
+      .mockReturnValueOnce({ delete: deleteMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: [
+        {
+          weekday: 1,
+          startTime: '08:00',
+          endTime: '10:00',
+          availability: false,
+        },
+      ],
+    });
+
+    expect(result).toEqual({ success: true, updatedCount: 1 });
+    expect(upsertMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          user_id: 'user-1',
+          weekday: 1,
+          start_time: '08:00',
+          end_time: '10:00',
+          availability: false,
+          source: 'manual',
+        }),
+      ],
+      { onConflict: 'user_id,weekday,start_time,end_time,source' },
+    );
+    expect(deleteFirstEqMock).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(deleteSecondEqMock).toHaveBeenCalledWith('source', 'manual');
+    expect(deleteInMock).toHaveBeenCalledWith('id', ['old-1']);
+  });
+
+  it('不要行整理に失敗しても upsert 成功時は警告付きで success=true を返す', async () => {
+    const existingRows = [
+      {
+        id: 'old-1',
+        weekday: 1,
+        start_time: '08:00:00',
+        end_time: '09:00:00',
+        availability: false,
+      },
+    ];
+    const selectSecondEqMock = jest.fn().mockResolvedValue({ data: existingRows, error: null });
+    const selectFirstEqMock = jest.fn().mockReturnValue({ eq: selectSecondEqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectFirstEqMock });
+
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const deleteInMock = jest.fn().mockResolvedValue({ error: { message: 'delete failed' } });
+    const deleteSecondEqMock = jest.fn().mockReturnValue({ in: deleteInMock });
+    const deleteFirstEqMock = jest.fn().mockReturnValue({ eq: deleteSecondEqMock });
+    const deleteMock = jest.fn().mockReturnValue({ eq: deleteFirstEqMock });
+
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ upsert: upsertMock })
+      .mockReturnValueOnce({ delete: deleteMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: [
+        {
+          weekday: 1,
+          startTime: '08:00',
+          endTime: '10:00',
+          availability: false,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: true,
+      message:
+        '週ごとの用事は保存されましたが、一部の古いデータの整理に失敗しました。時間をおいてページを再読み込みしてください。',
+      updatedCount: 1,
+    });
+    expect(deleteInMock).toHaveBeenCalledWith('id', ['old-1']);
   });
 });

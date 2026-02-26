@@ -46,6 +46,13 @@ type TemplateCell = {
   availability: boolean;
 };
 
+type TemplateRange = {
+  weekday: number;
+  startMinutes: number;
+  endMinutes: number;
+  availability: boolean;
+};
+
 type BlockCell = {
   id?: string;
   availability: boolean;
@@ -108,6 +115,20 @@ const parseBlockCellKey = (
 const toMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
+};
+
+const parseTemplateRangeMinutes = (
+  startTime: string,
+  endTime: string,
+): { startMinutes: number; endMinutes: number } | null => {
+  const normalizedStart = normalizeTime(startTime);
+  const normalizedEnd = normalizeTime(endTime);
+  const startMinutes = toMinutes(normalizedStart);
+  const endMinutes = toMinutes(normalizedEnd);
+  if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes)) return null;
+  const normalizedEndMinutes = endMinutes === 0 && startMinutes > 0 ? 24 * 60 : endMinutes;
+  if (startMinutes >= normalizedEndMinutes) return null;
+  return { startMinutes, endMinutes: normalizedEndMinutes };
 };
 
 const resolveDatedBlockDateTimeRange = ({
@@ -362,10 +383,43 @@ export default function AccountScheduleTemplates({
     return Array.from(slotSet).sort(compareTimeSlotRange);
   }, [manualTemplates, learnedTemplates]);
 
-  const weeklyDisplayTimeSlots = useMemo(
-    () => (weeklyTimeSlots.length > 0 ? weeklyTimeSlots : DEFAULT_WEEKLY_TIME_SLOTS),
-    [weeklyTimeSlots],
-  );
+  const weeklyTemplateRanges = useMemo(() => {
+    const manualRanges: TemplateRange[] = [];
+    const learnedRanges: TemplateRange[] = [];
+    const parseAndPush = (template: ScheduleTemplate, target: TemplateRange[]) => {
+      const parsed = parseTemplateRangeMinutes(template.start_time, template.end_time);
+      if (!parsed) return;
+      target.push({
+        weekday: template.weekday,
+        startMinutes: parsed.startMinutes,
+        endMinutes: parsed.endMinutes,
+        availability: template.availability,
+      });
+    };
+    manualTemplates.forEach((template) => parseAndPush(template, manualRanges));
+    learnedTemplates.forEach((template) => parseAndPush(template, learnedRanges));
+    return { manualRanges, learnedRanges };
+  }, [learnedTemplates, manualTemplates]);
+
+  const weeklyDisplayTimeSlots = useMemo(() => {
+    if (weeklyTimeSlots.length === 0) return DEFAULT_WEEKLY_TIME_SLOTS;
+    const boundaries = new Set<number>();
+    [...manualTemplates, ...learnedTemplates].forEach((template) => {
+      const parsed = parseTemplateRangeMinutes(template.start_time, template.end_time);
+      if (!parsed) return;
+      boundaries.add(parsed.startMinutes);
+      boundaries.add(parsed.endMinutes);
+    });
+    const sorted = Array.from(boundaries).sort((a, b) => a - b);
+    const slots: string[] = [];
+    for (let i = 0; i < sorted.length - 1; i += 1) {
+      const start = sorted[i];
+      const end = sorted[i + 1];
+      if (end <= start) continue;
+      slots.push(`${toTimeString(start)}-${toTimeString(end)}`);
+    }
+    return slots.length > 0 ? slots : weeklyTimeSlots;
+  }, [learnedTemplates, manualTemplates, weeklyTimeSlots]);
 
   const blockCalendarData = useMemo(() => {
     const dateKeys = new Set<string>();
@@ -559,10 +613,37 @@ export default function AccountScheduleTemplates({
     (key: string): CellState => {
       if (weeklyEditing && key in weeklyDraftMap) return weeklyDraftMap[key];
       const value = mergedTemplateMap[key];
-      if (!value) return 'empty';
-      return value.availability ? 'available' : 'unavailable';
+      if (value) return value.availability ? 'available' : 'unavailable';
+
+      const parsed = parseTemplateCellKey(key);
+      if (!parsed) return 'empty';
+
+      const startMinutes = toMinutes(parsed.startTime);
+      const endMinutes = parsed.endTime === '24:00' ? 24 * 60 : toMinutes(parsed.endTime);
+      if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes) || startMinutes >= endMinutes) {
+        return 'empty';
+      }
+
+      const resolveFromRanges = (ranges: TemplateRange[]): CellState | null => {
+        const covered = ranges.filter(
+          (range) =>
+            range.weekday === parsed.weekday &&
+            range.startMinutes <= startMinutes &&
+            endMinutes <= range.endMinutes,
+        );
+        if (covered.length === 0) return null;
+        const hasAvailable = covered.some((range) => range.availability);
+        const hasUnavailable = covered.some((range) => !range.availability);
+        if (hasAvailable && hasUnavailable) return 'empty';
+        return hasAvailable ? 'available' : 'unavailable';
+      };
+
+      const manualResolved = resolveFromRanges(weeklyTemplateRanges.manualRanges);
+      if (manualResolved) return manualResolved;
+      const learnedResolved = resolveFromRanges(weeklyTemplateRanges.learnedRanges);
+      return learnedResolved ?? 'empty';
     },
-    [mergedTemplateMap, weeklyDraftMap, weeklyEditing],
+    [mergedTemplateMap, weeklyDraftMap, weeklyEditing, weeklyTemplateRanges],
   );
 
   const getBlockCellState = useCallback(

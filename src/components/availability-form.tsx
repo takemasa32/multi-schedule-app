@@ -123,6 +123,9 @@ export default function AvailabilityForm({
     [],
   );
   const [isSavingWeeklyTemplates, setIsSavingWeeklyTemplates] = useState(false);
+  const [isLoadingWeeklyTemplates, setIsLoadingWeeklyTemplates] = useState(false);
+  const [isCheckingWeeklyTemplateChanges, setIsCheckingWeeklyTemplateChanges] = useState(false);
+  const [weeklyTemplateLoadError, setWeeklyTemplateLoadError] = useState<string | null>(null);
   const [hasWeekdayEdits, setHasWeekdayEdits] = useState(false);
   const [hasManualWeeklyTemplates, setHasManualWeeklyTemplates] = useState(false);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
@@ -320,6 +323,9 @@ export default function AvailabilityForm({
     setWeekdayInitialized(false);
     setHasWeekdayEdits(false);
     setHasManualWeeklyTemplates(false);
+    setIsLoadingWeeklyTemplates(false);
+    setIsCheckingWeeklyTemplateChanges(false);
+    setWeeklyTemplateLoadError(null);
     hasAutoFillAppliedRef.current = false;
   }, [mode, eventId]);
 
@@ -446,6 +452,9 @@ export default function AvailabilityForm({
   const handleFormAction = useCallback(
     async (formData: FormData): Promise<void> => {
       try {
+        const syncScope = (formData.get('sync_scope') as string) ?? 'current';
+        const shouldOpenSyncReview =
+          syncScope === 'all' && (formData.get('sync_defer') as string) === 'true';
         formData.set('override_date_ids', JSON.stringify(overrideDateIds));
         // 編集モードの場合、既存の参加者IDを追加
         if (mode === 'edit' && initialParticipant?.id) {
@@ -455,9 +464,11 @@ export default function AvailabilityForm({
         const response = await submitAvailability(formData);
 
         if (response.success) {
-          // 入力ページの場合は元の確認ページに戻る
+          // 同期確認が必要な場合は専用ページへ遷移し、それ以外は結果ページへ戻る。
           if (typeof window !== 'undefined') {
-            window.location.href = `/event/${publicToken}`;
+            window.location.href = shouldOpenSyncReview
+              ? `/event/${publicToken}/input/sync-review`
+              : `/event/${publicToken}`;
           }
         } else {
           setError(response.message || '送信に失敗しました');
@@ -489,6 +500,11 @@ export default function AvailabilityForm({
     (scope: 'current' | 'all') => {
       if (!pendingSyncFormData) return;
       pendingSyncFormData.set('sync_scope', scope);
+      if (scope === 'all') {
+        pendingSyncFormData.set('sync_defer', 'true');
+      } else {
+        pendingSyncFormData.delete('sync_defer');
+      }
       setShowSyncConfirm(false);
       setIsSubmitting(true);
       void handleFormAction(pendingSyncFormData);
@@ -724,6 +740,9 @@ export default function AvailabilityForm({
 
   // 週入力モード用の時間帯スロットを初期化する関数
   const initializeWeekdayTimeSlots = useCallback(async () => {
+    setIsLoadingWeeklyTemplates(isAuthenticated);
+    setWeeklyTemplateLoadError(null);
+
     // 全ての時間帯を収集
     const timeSlots: Record<string, boolean> = {};
 
@@ -744,9 +763,46 @@ export default function AvailabilityForm({
       日: { ...timeSlots },
     };
 
+    const buildSelections = (selectedWeekdaysByTemplate: Set<WeekDay>) => {
+      const updatedSelections = {} as Record<WeekDay, WeekDaySchedule>;
+      (Object.keys(weekdayData) as WeekDay[]).forEach((day) => {
+        const weekday = day as WeekDay;
+        // テンプレの該当行がある曜日、または少なくとも1つ選択されている曜日を選択済みにする。
+        const hasSelection =
+          selectedWeekdaysByTemplate.has(weekday) ||
+          Object.values(weekdayData[weekday]).some((val) => val);
+
+        updatedSelections[weekday] = {
+          selected: hasSelection,
+          timeSlots: weekdayData[weekday],
+        };
+      });
+      return updatedSelections;
+    };
+
+    const baseSelectedWeekdays = new Set<WeekDay>();
+    eventDates.forEach((date) => {
+      const dateObj = new Date(date.start_time);
+      const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
+      const timeKey = getTimeKey(date.start_time, date.end_time);
+      if (selectedDates[date.id]) {
+        weekdayData[weekday][timeKey] = true;
+        baseSelectedWeekdays.add(weekday);
+      }
+    });
+
+    // 取得中でも空状態を見せないよう、まずはイベント枠ベースで表示する。
+    setWeekdaySelections(buildSelections(baseSelectedWeekdays));
+
+    if (!isAuthenticated) {
+      setHasManualWeeklyTemplates(false);
+      setIsLoadingWeeklyTemplates(false);
+      return;
+    }
+
     const templateWeekdayMap = new Map<string, boolean>();
-    const selectedWeekdaysByTemplate = new Set<WeekDay>();
-    if (isAuthenticated) {
+    const selectedWeekdaysByTemplate = new Set<WeekDay>(baseSelectedWeekdays);
+    try {
       const templateData = await fetchUserScheduleTemplates();
       setHasManualWeeklyTemplates(templateData.manual.length > 0);
       templateData.manual.forEach((template) => {
@@ -757,42 +813,26 @@ export default function AvailabilityForm({
         const key = `${weekday}_${toWeeklyTemplateSlotKey(template.start_time, template.end_time)}`;
         templateWeekdayMap.set(key, template.availability);
       });
-    } else {
+      eventDates.forEach((date) => {
+        const dateObj = new Date(date.start_time);
+        const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
+        const timeKey = getTimeKey(date.start_time, date.end_time);
+        const templateKey = `${weekday}_${timeKey}`;
+        if (templateWeekdayMap.has(templateKey)) {
+          weekdayData[weekday][timeKey] = templateWeekdayMap.get(templateKey) ?? false;
+          selectedWeekdaysByTemplate.add(weekday);
+        }
+      });
+      setWeekdaySelections(buildSelections(selectedWeekdaysByTemplate));
+    } catch (err) {
+      console.error('週予定テンプレ取得エラー:', err);
       setHasManualWeeklyTemplates(false);
+      setWeeklyTemplateLoadError(
+        'アカウントの週予定を取得できませんでした。手入力で続行できます。',
+      );
+    } finally {
+      setIsLoadingWeeklyTemplates(false);
     }
-
-    // 既存の選択データがある場合、曜日ごとに振り分ける
-    eventDates.forEach((date) => {
-      const dateObj = new Date(date.start_time);
-      const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
-      const timeKey = getTimeKey(date.start_time, date.end_time);
-      const templateKey = `${weekday}_${timeKey}`;
-      if (templateWeekdayMap.has(templateKey)) {
-        weekdayData[weekday][timeKey] = templateWeekdayMap.get(templateKey) ?? false;
-        selectedWeekdaysByTemplate.add(weekday);
-      }
-
-      if (selectedDates[date.id]) {
-        weekdayData[weekday][timeKey] = true;
-      }
-    });
-
-    // 各曜日に時間帯スロットを設定
-    const updatedSelections = {} as Record<WeekDay, WeekDaySchedule>;
-    (Object.keys(weekdayData) as WeekDay[]).forEach((day) => {
-      const weekday = day as WeekDay;
-      // テンプレの該当行がある曜日、または少なくとも1つ選択されている曜日を選択済みにする。
-      const hasSelection =
-        selectedWeekdaysByTemplate.has(weekday) ||
-        Object.values(weekdayData[weekday]).some((val) => val);
-
-      updatedSelections[weekday] = {
-        selected: hasSelection,
-        timeSlots: weekdayData[weekday],
-      };
-    });
-
-    setWeekdaySelections(updatedSelections);
   }, [eventDates, getTimeKey, isAuthenticated, selectedDates]);
 
   useEffect(() => {
@@ -928,6 +968,9 @@ export default function AvailabilityForm({
   }, [heatmapStep]);
 
   const handleProceedFromWeeklyStep = useCallback(async () => {
+    if (isLoadingWeeklyTemplates || isCheckingWeeklyTemplateChanges) {
+      return;
+    }
     setError(null);
     applyWeekdaySelections();
 
@@ -947,22 +990,32 @@ export default function AvailabilityForm({
       return;
     }
 
-    const templates = await fetchUserScheduleTemplates();
-    const changed = hasWeeklyTemplateChanges(payload, templates.manual);
-    if (!changed) {
-      setCurrentStep(heatmapStep);
-      return;
-    }
+    setIsCheckingWeeklyTemplateChanges(true);
+    try {
+      const templates = await fetchUserScheduleTemplates();
+      const changed = hasWeeklyTemplateChanges(payload, templates.manual);
+      if (!changed) {
+        setCurrentStep(heatmapStep);
+        return;
+      }
 
-    setPendingWeeklyTemplates(payload);
-    setShowWeeklySaveConfirm(true);
+      setPendingWeeklyTemplates(payload);
+      setShowWeeklySaveConfirm(true);
+    } catch (err) {
+      console.error('週予定差分確認エラー:', err);
+      setError('週予定の確認に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      setIsCheckingWeeklyTemplateChanges(false);
+    }
   }, [
     applyWeekdaySelections,
     buildWeeklyTemplatePayload,
     hasWeekdayEdits,
     hasWeeklyTemplateChanges,
     heatmapStep,
+    isCheckingWeeklyTemplateChanges,
     isAuthenticated,
+    isLoadingWeeklyTemplates,
   ]);
 
   const handleSaveWeeklyAndProceed = useCallback(async () => {
@@ -1031,11 +1084,14 @@ export default function AvailabilityForm({
     return `ステップ${currentStep}: ${label}`;
   }, [currentStep, stepLabels]);
   const weeklyStepLeadMessage = useMemo(() => {
+    if (isAuthenticated && isLoadingWeeklyTemplates) {
+      return 'アカウント予定を読み込んでいます。';
+    }
     if (isAuthenticated && hasManualWeeklyTemplates) {
       return '各曜日の予定を反映しました。変更がないか確認してください。';
     }
     return '各曜日の予定を入力してください。';
-  }, [hasManualWeeklyTemplates, isAuthenticated]);
+  }, [hasManualWeeklyTemplates, isAuthenticated, isLoadingWeeklyTemplates]);
   const weekdayTimeSlots = useMemo(() => {
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
@@ -1150,6 +1206,15 @@ export default function AvailabilityForm({
           <section className="space-y-4" data-testid="availability-step-weekly">
             <div className="bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
               <p>{weeklyStepLeadMessage}</p>
+              {isAuthenticated && isLoadingWeeklyTemplates && (
+                <p className="text-base-content/70 mt-2 flex items-center gap-2 text-xs">
+                  <span className="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                  週予定を取得中です。読み込み完了までお待ちください。
+                </p>
+              )}
+              {weeklyTemplateLoadError && (
+                <p className="text-warning mt-2 text-xs">{weeklyTemplateLoadError}</p>
+              )}
             </div>
 
             <div className="bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
@@ -1217,7 +1282,10 @@ export default function AvailabilityForm({
                                     data-time-slot={timeSlot}
                                     data-selection-key={matrixKey}
                                     {...weekdaySelectionController.getCellProps(matrixKey, {
-                                      disabled: !isWeekdayModeActive,
+                                      disabled:
+                                        !isWeekdayModeActive ||
+                                        isLoadingWeeklyTemplates ||
+                                        isCheckingWeeklyTemplateChanges,
                                     })}
                                   >
                                     <div
@@ -1269,8 +1337,13 @@ export default function AvailabilityForm({
                 type="button"
                 className="btn btn-primary"
                 onClick={() => void handleProceedFromWeeklyStep()}
+                disabled={isLoadingWeeklyTemplates || isCheckingWeeklyTemplateChanges}
               >
-                次へ
+                {isLoadingWeeklyTemplates
+                  ? '予定を読み込み中...'
+                  : isCheckingWeeklyTemplateChanges
+                    ? '差分を確認中...'
+                    : '次へ'}
               </button>
             </div>
           </section>
