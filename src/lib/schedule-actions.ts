@@ -76,6 +76,81 @@ export type UserAvailabilitySyncPreviewEvent = {
   dates: SyncPreviewDateRow[];
 };
 
+const toLocalDateTimeString = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(
+    date.getMinutes(),
+  ).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+
+const normalizeManualBlockRange = ({
+  startTime,
+  endTime,
+}: {
+  startTime: string;
+  endTime: string;
+}): { startTime: string; endTime: string } => {
+  const startDate = toComparableDate(startTime);
+  const endDate = toComparableDate(endTime);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return { startTime, endTime };
+  }
+
+  const isSameDay =
+    startDate.getFullYear() === endDate.getFullYear() &&
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getDate() === endDate.getDate();
+  const isMidnightEnd =
+    endDate.getHours() === 0 &&
+    endDate.getMinutes() === 0 &&
+    endDate.getSeconds() === 0 &&
+    endDate.getMilliseconds() === 0;
+
+  // 同日 00:00 終了は「その日の終わり（翌日00:00）」として補正する。
+  if (isSameDay && isMidnightEnd && endDate <= startDate) {
+    const adjustedEnd = new Date(endDate);
+    adjustedEnd.setDate(adjustedEnd.getDate() + 1);
+    return {
+      startTime: toLocalDateTimeString(startDate),
+      endTime: toLocalDateTimeString(adjustedEnd),
+    };
+  }
+
+  return { startTime, endTime };
+};
+
+const toTemplateTimeMinutes = (value: string): number | null => {
+  const matched = value.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!matched) return null;
+
+  const hours = Number(matched[1]);
+  const minutes = Number(matched[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  if (hours === 24 && minutes === 0) return 24 * 60;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+};
+
+const normalizeWeeklyTemplateRange = ({
+  startTime,
+  endTime,
+}: {
+  startTime: string;
+  endTime: string;
+}): { startTime: string; endTime: string } | null => {
+  const startMinutes = toTemplateTimeMinutes(startTime);
+  const endMinutes = toTemplateTimeMinutes(endTime);
+  if (startMinutes === null || endMinutes === null) return null;
+
+  const isMidnightEnd = endMinutes === 0 && startMinutes > 0;
+  const normalizedEndMinutes = isMidnightEnd ? 24 * 60 : endMinutes;
+  const normalizedEndTime = isMidnightEnd ? '24:00' : endTime;
+
+  if (startMinutes >= normalizedEndMinutes) return null;
+
+  return { startTime, endTime: normalizedEndTime };
+};
+
 const computeAutoFillWithPriority = ({
   start,
   end,
@@ -1073,7 +1148,16 @@ export async function upsertUserScheduleBlock({
     return { success: false, message: 'ログインが必要です' };
   }
 
-  if (!startTime || !endTime || startTime >= endTime) {
+  const normalizedRange = normalizeManualBlockRange({ startTime, endTime });
+  const startDate = toComparableDate(normalizedRange.startTime);
+  const endDate = toComparableDate(normalizedRange.endTime);
+  if (
+    !normalizedRange.startTime ||
+    !normalizedRange.endTime ||
+    Number.isNaN(startDate.getTime()) ||
+    Number.isNaN(endDate.getTime()) ||
+    startDate >= endDate
+  ) {
     return { success: false, message: '時間帯の指定が正しくありません' };
   }
 
@@ -1090,7 +1174,7 @@ export async function upsertUserScheduleBlock({
     }
   }
 
-  const ranges = splitToHourlyRanges(startTime, endTime);
+  const ranges = splitToHourlyRanges(normalizedRange.startTime, normalizedRange.endTime);
   if (ranges.length === 0) {
     return { success: false, message: '時間帯の指定が正しくありません' };
   }
@@ -1159,15 +1243,33 @@ export async function upsertWeeklyTemplatesFromWeekdaySelections({
     return { success: false, message: '保存対象の設定がありません', updatedCount: 0 };
   }
 
-  const normalized = templates.filter(
-    (row) =>
-      Number.isInteger(row.weekday) &&
-      row.weekday >= 0 &&
-      row.weekday <= 6 &&
-      row.startTime &&
-      row.endTime &&
-      row.startTime < row.endTime,
-  );
+  const normalized = templates.flatMap((row) => {
+    if (
+      !Number.isInteger(row.weekday) ||
+      row.weekday < 0 ||
+      row.weekday > 6 ||
+      !row.startTime ||
+      !row.endTime
+    ) {
+      return [];
+    }
+
+    const normalizedRange = normalizeWeeklyTemplateRange({
+      startTime: row.startTime,
+      endTime: row.endTime,
+    });
+    if (!normalizedRange) {
+      return [];
+    }
+
+    return [
+      {
+        ...row,
+        startTime: normalizedRange.startTime,
+        endTime: normalizedRange.endTime,
+      },
+    ];
+  });
   if (!normalized.length) {
     return { success: false, message: '曜日ごとの設定が不正です', updatedCount: 0 };
   }

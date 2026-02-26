@@ -29,6 +29,124 @@ export type CreateEventErrorResult = {
 
 export type CreateEventActionResult = CreateEventSuccessResult | CreateEventErrorResult;
 
+type ParsedClockTime = {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  is24HourEnd: boolean;
+};
+
+const toLocalDateTimeString = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(
+    date.getMinutes(),
+  ).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+
+const parseDateTimeParts = (value: string): { datePart: string; timePart: string } | null => {
+  const matched = value
+    .trim()
+    .match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+  if (!matched) return null;
+  return {
+    datePart: matched[1],
+    timePart: matched[2],
+  };
+};
+
+const parseClockTime = (value: string, allow24HourEnd: boolean): ParsedClockTime | null => {
+  const matched = value.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!matched) return null;
+
+  const hours = Number(matched[1]);
+  const minutes = Number(matched[2]);
+  const seconds = Number(matched[3] ?? '0');
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    Number.isNaN(seconds) ||
+    minutes < 0 ||
+    minutes > 59 ||
+    seconds < 0 ||
+    seconds > 59
+  ) {
+    return null;
+  }
+
+  if (hours === 24 && minutes === 0 && seconds === 0 && allow24HourEnd) {
+    return {
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      is24HourEnd: true,
+    };
+  }
+
+  if (hours < 0 || hours > 23) return null;
+  return {
+    hours,
+    minutes,
+    seconds,
+    is24HourEnd: false,
+  };
+};
+
+const createLocalDate = (datePart: string, clock: ParsedClockTime): Date | null => {
+  const matched = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!matched) return null;
+
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return null;
+
+  const date = new Date(year, month - 1, day, clock.hours, clock.minutes, clock.seconds, 0);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day ||
+    date.getHours() !== clock.hours ||
+    date.getMinutes() !== clock.minutes ||
+    date.getSeconds() !== clock.seconds
+  ) {
+    return null;
+  }
+
+  return date;
+};
+
+const normalizeWallClockDateTimeRange = ({
+  startDatePart,
+  startTimePart,
+  endDatePart,
+  endTimePart,
+}: {
+  startDatePart: string;
+  startTimePart: string;
+  endDatePart: string;
+  endTimePart: string;
+}): { startTime: string; endTime: string } | null => {
+  const startClock = parseClockTime(startTimePart, false);
+  const endClock = parseClockTime(endTimePart, true);
+  if (!startClock || !endClock) return null;
+
+  const startDate = createLocalDate(startDatePart, startClock);
+  const endDate = createLocalDate(endDatePart, endClock);
+  if (!startDate || !endDate) return null;
+
+  if (endClock.is24HourEnd) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+  if (endDate <= startDate) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+
+  return {
+    startTime: toLocalDateTimeString(startDate),
+    endTime: toLocalDateTimeString(endDate),
+  };
+};
+
 /**
  * 新しいイベントを作成して候補日程を登録する
  * create_event_with_dates RPC を利用してトランザクション処理を行う
@@ -92,25 +210,19 @@ export async function createEvent(formData: FormData): Promise<CreateEventAction
       }
     } else {
       for (let i = 0; i < startDates.length; i++) {
-        const startDateTimeStr = `${startDates[i]} ${startTimes[i]}:00`;
-
-        let endTimeFormatted = endTimes[i];
-        let endDateFormatted = endDates[i];
-
-        if (endTimes[i] === '24:00') {
-          endTimeFormatted = '00:00:00';
-          const endDateObj = new Date(endDates[i]);
-          endDateObj.setDate(endDateObj.getDate() + 1);
-          endDateFormatted = endDateObj.toISOString().split('T')[0];
-        } else {
-          endTimeFormatted = `${endTimes[i]}:00`;
+        const normalizedRange = normalizeWallClockDateTimeRange({
+          startDatePart: startDates[i],
+          startTimePart: startTimes[i],
+          endDatePart: endDates[i],
+          endTimePart: endTimes[i],
+        });
+        if (!normalizedRange) {
+          return { success: false, message: '候補日程の情報が正しくありません' };
         }
 
-        const endDateTimeStr = `${endDateFormatted} ${endTimeFormatted}`;
-
         timeslots.push({
-          start_time: startDateTimeStr,
-          end_time: endDateTimeStr,
+          start_time: normalizedRange.startTime,
+          end_time: normalizedRange.endTime,
         });
       }
     }
@@ -1218,10 +1330,40 @@ export async function addEventDates(formData: FormData) {
 
     const supabase = createSupabaseAdmin();
 
-    const dateEntries = starts.map((start, i) => ({
-      start_time: start,
-      end_time: ends[i],
-    }));
+    const dateEntries = starts
+      .map((start, i) => {
+        const startParts = parseDateTimeParts(start);
+        const endParts = parseDateTimeParts(ends[i]);
+        if (!startParts || !endParts) return null;
+
+        const normalizedRange = normalizeWallClockDateTimeRange({
+          startDatePart: startParts.datePart,
+          startTimePart: startParts.timePart,
+          endDatePart: endParts.datePart,
+          endTimePart: endParts.timePart,
+        });
+        if (!normalizedRange) return null;
+
+        return {
+          start_time: normalizedRange.startTime,
+          end_time: normalizedRange.endTime,
+        };
+      })
+      .filter(
+        (
+          row,
+        ): row is {
+          start_time: string;
+          end_time: string;
+        } => row !== null,
+      );
+
+    if (dateEntries.length !== starts.length) {
+      return {
+        success: false,
+        message: '日程の形式が正しくありません',
+      };
+    }
 
     const { error: addError } = await supabase.rpc('add_event_dates_safe', {
       p_event_id: eventId,

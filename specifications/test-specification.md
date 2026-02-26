@@ -59,7 +59,7 @@
   - `@ts-expect-error`には理由コメント必須
   - 実装・修正内容はコミット/PR 本文に明記
 - **実行方法**
-  - ユニットテスト: `npm run test:jest`
+  - ユニットテスト: `npm run test:unit`
   - E2E テスト: `npm run test:e2e:chrome`
 
 ---

@@ -1,5 +1,6 @@
 import { CircleUser } from 'lucide-react';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import AccountActions from '@/components/auth/account-actions';
 import AccountActivity from '@/components/account/account-activity';
 import AccountDeleteSection from '@/components/account/account-delete-section';
@@ -34,11 +35,14 @@ export default async function AccountPage() {
           <div className="flex items-center gap-4">
             <div className="bg-base-200 flex h-12 w-12 items-center justify-center rounded-full">
               {imageUrl ? (
-                <img
+                <Image
                   src={imageUrl}
                   alt={displayName}
+                  width={48}
+                  height={48}
                   className="h-12 w-12 rounded-full object-cover"
                   referrerPolicy="no-referrer"
+                  unoptimized
                 />
               ) : (
                 <CircleUser className="text-base-content/70 h-6 w-6" aria-hidden="true" />

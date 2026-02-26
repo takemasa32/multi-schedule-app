@@ -5,7 +5,7 @@ if (!window.HTMLFormElement.prototype.requestSubmit) {
 }
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AvailabilityForm from '../availability-form';
 
 jest.mock('@/lib/actions', () => ({
@@ -140,6 +140,137 @@ describe('AvailabilityForm', () => {
     goToWeeklyStepAsGuest();
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
+  });
+
+  it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
+    const multiSlotEventDates = [
+      {
+        id: 'date1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+      {
+        id: 'date2',
+        start_time: '2025-05-12T10:00:00.000Z',
+        end_time: '2025-05-12T11:00:00.000Z',
+      },
+    ];
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated={false}
+        eventDates={multiSlotEventDates}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+
+    const weeklySection = screen.getByTestId('availability-step-weekly');
+    const slotKeys = Array.from(
+      new Set(
+        Array.from(weeklySection.querySelectorAll<HTMLTableCellElement>('td[data-time-slot]'))
+          .map((cell) => cell.getAttribute('data-time-slot') ?? '')
+          .filter((slot): slot is string => slot.length > 0),
+      ),
+    ).sort();
+
+    expect(slotKeys.length).toBe(2);
+
+    const [firstStart, firstEnd] = slotKeys[0].split('-');
+    const [, lastEndRaw] = slotKeys[slotKeys.length - 1].split('-');
+    const toDisplayTime = (value: string) => value.replace(/^0/, '');
+    const lastEnd = lastEndRaw === '00:00' ? '24:00' : toDisplayTime(lastEndRaw);
+
+    expect(within(weeklySection).getByText(toDisplayTime(firstStart))).toBeInTheDocument();
+    expect(within(weeklySection).getByText(toDisplayTime(firstEnd))).toBeInTheDocument();
+    expect(within(weeklySection).getByText(lastEnd)).toBeInTheDocument();
+  });
+
+  it('予定確認・修正で時間区切りの最下段に終了時刻を表示する', async () => {
+    const multiSlotEventDates = [
+      {
+        id: 'date1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+      {
+        id: 'date2',
+        start_time: '2025-05-12T10:00:00.000Z',
+        end_time: '2025-05-12T11:00:00.000Z',
+      },
+    ];
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated={false}
+        eventDates={multiSlotEventDates}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const heatmapSection = await screen.findByTestId('availability-step-heatmap');
+    const slotKeys = Array.from(
+      new Set(
+        Array.from(heatmapSection.querySelectorAll<HTMLTableCellElement>('td[data-time-slot]'))
+          .map((cell) => cell.getAttribute('data-time-slot') ?? '')
+          .filter((slot): slot is string => slot.length > 0),
+      ),
+    ).sort();
+    const [, lastEndRaw] = slotKeys[slotKeys.length - 1].split('-');
+    const expectedLastEnd = lastEndRaw === '00:00' ? '24:00' : lastEndRaw.replace(/^0/, '');
+
+    expect(within(heatmapSection).getByText(expectedLastEnd)).toBeInTheDocument();
+  });
+
+  it('24:00終端の週テンプレは曜日一括入力の00:00終端枠へ反映される', async () => {
+    const midnightEventDates = [
+      {
+        id: 'midnight-date',
+        start_time: '2025-05-12T23:00:00',
+        end_time: '2025-05-13T00:00:00',
+      },
+    ];
+    const weekdayNumber = new Date(midnightEventDates[0].start_time).getDay();
+    const weekdayLabel = ['日', '月', '火', '水', '木', '金', '土'][weekdayNumber];
+
+    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
+      manual: [
+        {
+          weekday: weekdayNumber,
+          start_time: '23:00:00',
+          end_time: '24:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        uncoveredDayCount={1}
+        eventDates={midnightEventDates}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const weeklySection = await screen.findByTestId('availability-step-weekly');
+    const selectedCell = weeklySection.querySelector<HTMLDivElement>(
+      `td[data-day="${weekdayLabel}"][data-time-slot="23:00-00:00"] div`,
+    );
+
+    expect(selectedCell).not.toBeNull();
+    expect(selectedCell).toHaveTextContent('○');
   });
 
   it('ヒートマップで○が0件のままは確認へ進めない', async () => {

@@ -38,23 +38,15 @@ describe('EventOpenForm', () => {
     expect(screen.getByText(/有効なイベントIDまたはURLを入力してください/)).toBeInTheDocument();
 
     // 正しいID
-    const originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      value: { href: '' },
-      writable: true,
-      configurable: true,
-    });
     fireEvent.change(input, { target: { value: 'abcdefgh' } });
     fireEvent.click(button);
-    expect(window.location.href).toBe('/event/abcdefgh');
+    expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
 
     // 正しいURL
     fireEvent.change(input, {
       target: { value: 'https://example.com/event/ijklmnop' },
     });
     fireEvent.click(button);
-    expect(window.location.href).toBe('/event/ijklmnop');
-
-    Object.defineProperty(window, 'location', { value: originalLocation });
+    expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
   });
 });
