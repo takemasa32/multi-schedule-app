@@ -811,7 +811,7 @@ describe('HeatmapView', () => {
     expect(targetVisualLayer?.className).not.toContain('rounded-br-[0.4rem]');
   });
 
-  it('載り条件と連結条件の組み合わせで1つの角だけ丸くなる', () => {
+  it('上下のみ段差を付けるため左右の重なりレイヤーを描画しない', () => {
     const dates = [
       {
         date: '2025-10-18',
@@ -937,10 +937,7 @@ describe('HeatmapView', () => {
 
     const targetVisualLayer = targetCell?.querySelector('div[class*="z-10"]') as HTMLDivElement | null;
     expect(targetVisualLayer).toBeTruthy();
-    expect(targetVisualLayer?.className).toContain('rounded-tl-[0.4rem]');
-    expect(targetVisualLayer?.className).not.toContain('rounded-tr-[0.4rem]');
-    expect(targetVisualLayer?.className).not.toContain('rounded-bl-[0.4rem]');
-    expect(targetVisualLayer?.className).not.toContain('rounded-br-[0.4rem]');
+    expect(targetVisualLayer?.className).toContain('rounded-none');
 
     const topUnderlay = targetCell?.querySelector(
       'div.pointer-events-none.absolute.inset-x-0.top-0',
@@ -949,10 +946,10 @@ describe('HeatmapView', () => {
       'div.pointer-events-none.absolute.inset-y-0.left-0',
     ) as HTMLDivElement | null;
     expect(topUnderlay).toBeTruthy();
-    expect(leftUnderlay).toBeTruthy();
+    expect(leftUnderlay).toBeFalsy();
   });
 
-  it('1に囲まれた2セルで境界角が1つだけ発生する場合も角丸になる', () => {
+  it('左右方向は段差を付けないため境界角を作らない', () => {
     const dates = [
       {
         date: '2025-10-18',
@@ -1041,7 +1038,7 @@ describe('HeatmapView', () => {
 
     const targetVisualLayer = targetCell?.querySelector('div[class*="z-10"]') as HTMLDivElement | null;
     expect(targetVisualLayer).toBeTruthy();
-    expect(targetVisualLayer?.style.borderBottomLeftRadius).toBe('0.4rem');
+    expect(targetVisualLayer?.style.borderBottomLeftRadius).toBe('0px');
   });
 
   it('連結セル（rounded-none）は背景を二重塗りしない', () => {

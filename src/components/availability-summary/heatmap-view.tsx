@@ -379,8 +379,10 @@ const buildCellShapeMap = ({
 
       const shouldRaiseTop = shouldRaiseOverNeighbor(current, top);
       const shouldRaiseBottom = shouldRaiseOverNeighbor(current, bottom);
-      const shouldRaiseLeft = shouldRaiseOverNeighbor(current, left);
-      const shouldRaiseRight = shouldRaiseOverNeighbor(current, right);
+      // 左右方向の「上に載る」表現は重なりが多くなりやすく、色が濃く見えるため無効化する。
+      // 段差表現は上下方向のみに限定し、視認性を優先する。
+      const shouldRaiseLeft = false;
+      const shouldRaiseRight = false;
       if (shouldRaiseTop) {
         joinsTop = false;
       }
