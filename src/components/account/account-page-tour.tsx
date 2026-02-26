@@ -59,40 +59,40 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
   {
     id: 'profile',
     target: '[data-tour-id="account-profile-card"]',
-    title: 'アカウント基本情報',
+    title: 'アカウント情報',
     description:
-      'ここでログイン状態・表示名・メールアドレスを確認できます。右側のボタンからログアウトや連携解除を行えます。',
+      'ここで表示名とメールアドレスを確認できます。ログアウトや連携解除も行えます。',
     placement: 'bottom',
   },
   {
     id: 'schedule-overview',
     target: '[data-tour-id="account-schedule-templates"]',
-    title: 'マイ予定設定',
+    title: '予定の設定',
     description:
-      '予定の基本設定をまとめて管理するセクションです。タブを切り替えて「予定一括管理」と「週ごとの用事」を編集できます。',
+      'このエリアで予定をまとめて管理します。タブで「日付ごとの予定」と「曜日ごとの予定」を切り替えます。',
     placement: 'bottom',
   },
   {
     id: 'dated-edit',
     target: '[data-tour-id="account-dated-edit"]',
-    title: '予定一括管理の編集',
+    title: '日付ごとの予定を編集',
     description:
-      '「編集する」から日付ベースの予定を更新できます。更新後は下部の「回答イベントへの反映」で影響を確認できます。',
+      '「編集する」から日付ごとの予定を変更できます。変更内容は下の「回答イベントへの反映」で確認できます。',
     placement: 'bottom',
   },
   {
     id: 'weekly-tab',
     target: '[data-tour-id="account-tab-weekly"]',
-    title: '週ごとの用事タブ',
-    description: '曜日ごとの定型予定を管理したい場合は、こちらのタブへ切り替えて編集します。',
+    title: '曜日ごとの予定',
+    description: '毎週くり返す予定は、このタブで設定します。',
     placement: 'bottom',
   },
   {
     id: 'sync-section',
     target: '[data-tour-id="account-sync-section"]',
-    title: '回答イベントへの反映確認',
+    title: '回答イベントへの反映',
     description:
-      '予定一括管理の変更を既存回答へ反映する前に、イベントごとの差分を確認してから適用できます。',
+      '予定を変えたあと、どのイベントに反映されるか確認してから適用できます。',
     placement: 'top',
   },
   {
@@ -106,8 +106,8 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
   {
     id: 'tour-finish',
     target: '[data-testid="account-tour-open"]',
-    title: '使い方ツアーの再確認',
-    description: 'これで以上です。再度見たい場合には「使い方ツアー」から確認できます。',
+    title: 'ツアーは以上です',
+    description: 'もう一度見たいときは「使い方ツアー」を押してください。',
     placement: 'bottom',
   },
 ];
@@ -155,7 +155,9 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
   const [isOpen, setIsOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [highlightRect, setHighlightRect] = useState<HighlightRect | null>(null);
+  const [tooltipHeight, setTooltipHeight] = useState(0);
   const initialScrollYRef = useRef(0);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const isAuthenticated =
     status === 'authenticated' || (status === 'loading' && initialIsAuthenticated);
@@ -267,18 +269,36 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
     };
   }, [currentStepIndex, isOpen, refreshRect]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateTooltipHeight = () => {
+      const nextHeight = tooltipRef.current?.getBoundingClientRect().height ?? 0;
+      setTooltipHeight((prev) => (Math.abs(prev - nextHeight) < 1 ? prev : nextHeight));
+    };
+    const frame = window.requestAnimationFrame(updateTooltipHeight);
+    window.addEventListener('resize', updateTooltipHeight);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updateTooltipHeight);
+    };
+  }, [currentStepIndex, isOpen]);
+
   const tooltipStyle = useMemo(() => {
     if (!highlightRect) return undefined;
     if (typeof window === 'undefined') return undefined;
+    const safeViewportPadding = 12;
+    const maxHeight = Math.max(180, window.innerHeight - safeViewportPadding * 2);
+    const measuredTooltipHeight = tooltipHeight > 0 ? tooltipHeight : 260;
 
     const isMobile = window.innerWidth < 640;
     if (isMobile) {
       return {
         position: 'fixed' as const,
-        left: 12,
-        right: 12,
-        bottom: 12,
+        left: safeViewportPadding,
+        right: safeViewportPadding,
+        bottom: safeViewportPadding,
         width: 'auto',
+        maxHeight,
       };
     }
 
@@ -286,18 +306,21 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
     const topCandidate = highlightRect.top - window.scrollY - 16;
     const bottomCandidate = highlightRect.top - window.scrollY + highlightRect.height + 16;
     const useTop = currentStep.placement === 'top' || topCandidate > 240;
-    const top = useTop ? topCandidate - 170 : bottomCandidate;
+    const top = useTop ? topCandidate - measuredTooltipHeight : bottomCandidate;
+    const minTop = safeViewportPadding;
+    const maxTop = Math.max(minTop, window.innerHeight - measuredTooltipHeight - safeViewportPadding);
     return {
       position: 'fixed' as const,
       width,
-      top: clamp(top, 12, window.innerHeight - 220),
+      maxHeight,
+      top: clamp(top, minTop, maxTop),
       left: clamp(
         highlightRect.left - window.scrollX + highlightRect.width / 2 - width / 2,
-        12,
-        window.innerWidth - width - 12,
+        safeViewportPadding,
+        window.innerWidth - width - safeViewportPadding,
       ),
     };
-  }, [currentStep.placement, highlightRect]);
+  }, [currentStep.placement, highlightRect, tooltipHeight]);
 
   const currentStepPositionText = `${currentVisibleStepNumber} / ${visibleStepCount}`;
   const highlightViewportRect =
@@ -367,14 +390,15 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
           )}
 
           <div
-            className="bg-base-100/95 fixed z-50 overflow-hidden rounded-2xl border border-white/20 shadow-[0_24px_80px_rgba(10,18,32,0.42)] backdrop-blur-md"
+            ref={tooltipRef}
+            className="bg-base-100 fixed z-50 overflow-y-auto rounded-2xl border border-base-300 shadow-xl"
             style={tooltipStyle}
             role="dialog"
             aria-modal="true"
             aria-label="アカウントページの使い方"
             data-testid="account-tour-dialog"
           >
-            <div className="from-primary via-info to-success h-1 w-full bg-gradient-to-r" />
+            <div className="bg-primary h-1 w-full" />
             <div className="space-y-4 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -423,7 +447,7 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
                   </button>
                   <button
                     type="button"
-                    className="btn btn-sm btn-primary shadow-primary/30 shadow-lg"
+                    className="btn btn-sm btn-primary"
                     onClick={() => moveStep(1)}
                     data-testid="account-tour-next"
                   >

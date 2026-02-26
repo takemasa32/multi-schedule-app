@@ -38,7 +38,7 @@ describe('AccountPageTour', () => {
     expect(
       await screen.findByRole('dialog', { name: 'アカウントページの使い方' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('アカウント基本情報')).toBeInTheDocument();
+    expect(screen.getByText('アカウント情報')).toBeInTheDocument();
   });
 
   it('スキップ後は自動表示しないが再開ボタンで表示できる', async () => {
@@ -67,12 +67,12 @@ describe('AccountPageTour', () => {
     ).toBeInTheDocument();
   });
 
-  it('次のステップへ進むとマイ予定設定の説明を表示する', async () => {
+  it('次のステップへ進むと予定の設定の説明を表示する', async () => {
     renderWithTargets();
-    expect(await screen.findByText('アカウント基本情報')).toBeInTheDocument();
+    expect(await screen.findByText('アカウント情報')).toBeInTheDocument();
     expect(screen.getByText('1 / 7')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('account-tour-next'));
-    expect(await screen.findByText('マイ予定設定')).toBeInTheDocument();
+    expect(await screen.findByText('予定の設定')).toBeInTheDocument();
     expect(screen.getByText('2 / 7')).toBeInTheDocument();
   });
 

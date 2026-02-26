@@ -124,9 +124,12 @@ export default function AvailabilityForm({
   );
   const [isSavingWeeklyTemplates, setIsSavingWeeklyTemplates] = useState(false);
   const [hasWeekdayEdits, setHasWeekdayEdits] = useState(false);
+  const [hasManualWeeklyTemplates, setHasManualWeeklyTemplates] = useState(false);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
+  const wizardTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const previousStepRef = useRef<WizardStep | null>(null);
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -316,6 +319,7 @@ export default function AvailabilityForm({
     setCurrentStep(1);
     setWeekdayInitialized(false);
     setHasWeekdayEdits(false);
+    setHasManualWeeklyTemplates(false);
     hasAutoFillAppliedRef.current = false;
   }, [mode, eventId]);
 
@@ -337,6 +341,20 @@ export default function AvailabilityForm({
     });
     hasAutoFillAppliedRef.current = true;
   }, [autoFillAvailabilities, isAuthenticated, isNewMode]);
+
+  useEffect(() => {
+    if (previousStepRef.current === null) {
+      previousStepRef.current = currentStep;
+      return;
+    }
+    if (previousStepRef.current === currentStep) return;
+    previousStepRef.current = currentStep;
+    if (!wizardTitleRef.current) return;
+
+    // ステップ遷移時はウィザード見出しまで戻し、次にやることを認識しやすくする。
+    const titleTop = wizardTitleRef.current.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: Math.max(0, titleTop - 16), behavior: 'smooth' });
+  }, [currentStep]);
 
   // フォーム送信前のバリデーション用
   const validateForm = async () => {
@@ -730,6 +748,7 @@ export default function AvailabilityForm({
     const selectedWeekdaysByTemplate = new Set<WeekDay>();
     if (isAuthenticated) {
       const templateData = await fetchUserScheduleTemplates();
+      setHasManualWeeklyTemplates(templateData.manual.length > 0);
       templateData.manual.forEach((template) => {
         const weekday = ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as
           | WeekDay
@@ -738,6 +757,8 @@ export default function AvailabilityForm({
         const key = `${weekday}_${toWeeklyTemplateSlotKey(template.start_time, template.end_time)}`;
         templateWeekdayMap.set(key, template.availability);
       });
+    } else {
+      setHasManualWeeklyTemplates(false);
     }
 
     // 既存の選択データがある場合、曜日ごとに振り分ける
@@ -802,8 +823,6 @@ export default function AvailabilityForm({
 
     // 選択された曜日と時間帯のデータを処理
     Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
-      if (!daySchedule.selected) return; // 選択されていない曜日はスキップ
-
       // 全イベント日程をループして、選択された曜日に該当する日程を更新
       eventDates.forEach((date) => {
         const dateObj = new Date(date.start_time);
@@ -823,7 +842,9 @@ export default function AvailabilityForm({
           // 時間帯ごとの設定がある場合のみ適用する
           // 週入力の選択を優先（既存の選択を上書き）
           if (daySchedule.timeSlots[timeKey] !== undefined) {
-            newSelectedDates[date.id] = daySchedule.timeSlots[timeKey];
+            newSelectedDates[date.id] = daySchedule.selected
+              ? daySchedule.timeSlots[timeKey]
+              : false;
           }
         }
       });
@@ -1009,6 +1030,12 @@ export default function AvailabilityForm({
     const label = stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
     return `ステップ${currentStep}: ${label}`;
   }, [currentStep, stepLabels]);
+  const weeklyStepLeadMessage = useMemo(() => {
+    if (isAuthenticated && hasManualWeeklyTemplates) {
+      return '各曜日の予定を反映しました。変更がないか確認してください。';
+    }
+    return '各曜日の予定を入力してください。';
+  }, [hasManualWeeklyTemplates, isAuthenticated]);
   const weekdayTimeSlots = useMemo(() => {
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
@@ -1022,7 +1049,7 @@ export default function AvailabilityForm({
 
   return (
     <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
-      <h2 className="mb-3 text-xl font-bold">
+      <h2 ref={wizardTitleRef} className="mb-3 text-xl font-bold">
         {mode === 'edit' ? `${initialParticipant?.name ?? '回答'}の編集` : '回答ウィザード'}
       </h2>
       <div className="mb-2 overflow-x-auto">
@@ -1122,7 +1149,7 @@ export default function AvailabilityForm({
         {showWeeklyStep && weeklyStep !== null && currentStep === weeklyStep && (
           <section className="space-y-4" data-testid="availability-step-weekly">
             <div className="bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
-              <p>各曜日の予定を入力してください。</p>
+              <p>{weeklyStepLeadMessage}</p>
             </div>
 
             <div className="bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
