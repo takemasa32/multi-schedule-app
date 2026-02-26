@@ -5,14 +5,25 @@ import {
   addEventDates,
   getFinalizedDateIds,
 } from '@/lib/actions';
+import { getAuthSession } from '@/lib/auth';
+import { syncUserAvailabilities } from '@/lib/schedule-actions';
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase');
 jest.mock('@/lib/auth', () => ({
   getAuthSession: jest.fn(() => Promise.resolve(null)),
 }));
+jest.mock('@/lib/schedule-actions', () => ({
+  saveAvailabilityOverrides: jest.fn(() => Promise.resolve()),
+  syncUserAvailabilities: jest.fn(() => Promise.resolve()),
+  updateUserScheduleTemplatesFromBlocks: jest.fn(() => Promise.resolve()),
+  upsertUserEventLink: jest.fn(() => Promise.resolve({ success: true })),
+  upsertUserScheduleBlocks: jest.fn(() => Promise.resolve()),
+}));
 const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
 const mockedCreateSupabaseClient = createSupabaseClient as jest.Mock;
+const mockedGetAuthSession = getAuthSession as jest.Mock;
+const mockedSyncUserAvailabilities = syncUserAvailabilities as jest.Mock;
 
 jest.mock('@/lib/supabase', () => ({
   createSupabaseClient: jest.fn(() => ({ from: jest.fn() })),
@@ -229,6 +240,7 @@ describe('createEvent', () => {
 describe('submitAvailability', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue(null);
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => {
         if (table === 'events') {
@@ -415,6 +427,41 @@ describe('submitAvailability', () => {
     expect(insertChain.insert).toHaveBeenCalledWith(
       expect.objectContaining({ comment: 'コメントテスト' }),
     );
+  });
+
+  it('sync_scope=all かつ sync_defer=true の場合は即時同期しない', async () => {
+    mockedGetAuthSession.mockResolvedValue({ user: { id: 'user-1' } });
+
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('publicToken', 'pubtok');
+    formData.set('participant_name', 'テスト太郎');
+    formData.set('sync_scope', 'all');
+    formData.set('sync_defer', 'true');
+    formData.append('availability_date1', 'on');
+
+    const result = await submitAvailability(formData);
+    expect(result.success).toBe(true);
+    expect(mockedSyncUserAvailabilities).not.toHaveBeenCalled();
+  });
+
+  it('sync_scope=all かつ sync_defer未指定の場合は即時同期する', async () => {
+    mockedGetAuthSession.mockResolvedValue({ user: { id: 'user-1' } });
+
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('publicToken', 'pubtok');
+    formData.set('participant_name', 'テスト太郎');
+    formData.set('sync_scope', 'all');
+    formData.append('availability_date1', 'on');
+
+    const result = await submitAvailability(formData);
+    expect(result.success).toBe(true);
+    expect(mockedSyncUserAvailabilities).toHaveBeenCalledWith({
+      userId: 'user-1',
+      scope: 'all',
+      currentEventId: 'eventid',
+    });
   });
 });
 

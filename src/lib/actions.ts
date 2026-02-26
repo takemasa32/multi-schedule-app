@@ -543,6 +543,7 @@ export async function submitAvailability(formData: FormData) {
     const participantName = formData.get('participant_name') as string;
     const comment = (formData.get('comment') as string) || null;
     const syncScope = (formData.get('sync_scope') as string) === 'all' ? 'all' : 'current';
+    const shouldDeferSync = (formData.get('sync_defer') as string) === 'true';
     const overrideDateIdsRaw = formData.get('override_date_ids') as string | null;
     let overrideDateIds: string[] = [];
     if (overrideDateIdsRaw) {
@@ -736,7 +737,7 @@ export async function submitAvailability(formData: FormData) {
         selectedDateIds,
       });
 
-      if (syncScope === 'all') {
+      if (syncScope === 'all' && !shouldDeferSync) {
         await syncUserAvailabilities({
           userId: session.user.id,
           scope: 'all',

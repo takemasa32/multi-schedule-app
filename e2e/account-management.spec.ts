@@ -395,9 +395,14 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.getByLabel('利用規約を読み、同意します').check();
     await page.getByRole('button', { name: '回答を送信' }).click();
     await page.waitForTimeout(400);
-    const syncScopeButton = page.getByRole('button', { name: 'このイベントのみ' });
+    const syncScopeButton = page.getByRole('button', { name: 'アカウント予定に保存して反映' });
     if (await syncScopeButton.isVisible().catch(() => false)) {
-      await page.getByRole('button', { name: 'このイベントのみ' }).click();
+      await syncScopeButton.click();
+      await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}/input/sync-review`), {
+        timeout: 10000,
+      });
+      await page.getByRole('link', { name: 'イベント結果ページへ戻る' }).click();
+      await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}$`), { timeout: 10000 });
     }
 
     await expect
@@ -459,5 +464,10 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
         { timeout: 10000 },
       )
       .toBe(true);
+
+    await page.goto(`/event/${answerEvent.publicToken}/input/sync-review`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}$`), { timeout: 10000 });
   });
 });

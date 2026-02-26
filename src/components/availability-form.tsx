@@ -446,6 +446,9 @@ export default function AvailabilityForm({
   const handleFormAction = useCallback(
     async (formData: FormData): Promise<void> => {
       try {
+        const syncScope = (formData.get('sync_scope') as string) ?? 'current';
+        const shouldOpenSyncReview =
+          syncScope === 'all' && (formData.get('sync_defer') as string) === 'true';
         formData.set('override_date_ids', JSON.stringify(overrideDateIds));
         // 編集モードの場合、既存の参加者IDを追加
         if (mode === 'edit' && initialParticipant?.id) {
@@ -455,9 +458,11 @@ export default function AvailabilityForm({
         const response = await submitAvailability(formData);
 
         if (response.success) {
-          // 入力ページの場合は元の確認ページに戻る
+          // 同期確認が必要な場合は専用ページへ遷移し、それ以外は結果ページへ戻る。
           if (typeof window !== 'undefined') {
-            window.location.href = `/event/${publicToken}`;
+            window.location.href = shouldOpenSyncReview
+              ? `/event/${publicToken}/input/sync-review`
+              : `/event/${publicToken}`;
           }
         } else {
           setError(response.message || '送信に失敗しました');
@@ -489,6 +494,11 @@ export default function AvailabilityForm({
     (scope: 'current' | 'all') => {
       if (!pendingSyncFormData) return;
       pendingSyncFormData.set('sync_scope', scope);
+      if (scope === 'all') {
+        pendingSyncFormData.set('sync_defer', 'true');
+      } else {
+        pendingSyncFormData.delete('sync_defer');
+      }
       setShowSyncConfirm(false);
       setIsSubmitting(true);
       void handleFormAction(pendingSyncFormData);

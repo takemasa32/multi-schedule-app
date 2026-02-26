@@ -523,6 +523,40 @@ describe('AvailabilityForm', () => {
     });
     const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
     expect(formDataArg.get('sync_scope')).toBe('current');
+    expect(formDataArg.get('sync_defer')).toBeNull();
+  });
+
+  it('最終送信時に同期範囲モーダルから sync_scope=all と sync_defer=true で送信できる', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        hasSyncTargetEvents
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    const weeklyNext = screen.queryByRole('button', { name: '次へ' });
+    if (weeklyNext) {
+      fireEvent.click(weeklyNext);
+      const saveWeekly = await screen.findByRole('button', { name: '更新せず次へ' });
+      fireEvent.click(saveWeekly);
+    }
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
+
+    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'アカウント予定に保存して反映' }));
+    await waitFor(() => {
+      expect(submitAvailability).toHaveBeenCalled();
+    });
+    const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
+    expect(formDataArg.get('sync_scope')).toBe('all');
+    expect(formDataArg.get('sync_defer')).toBe('true');
   });
 
   it('同期範囲モーダルで確認へ戻るを選ぶと送信せず確認ステップへ戻る', async () => {
