@@ -182,6 +182,44 @@ describe('AccountScheduleTemplates', () => {
     });
   });
 
+  it('週テンプレに重複開始時刻の混在があっても時間行を分割して表示できる', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [
+        {
+          id: 'tpl-1',
+          weekday: 1,
+          start_time: '08:00:00',
+          end_time: '09:00:00',
+          availability: false,
+          source: 'manual',
+          sample_count: 1,
+        },
+        {
+          id: 'tpl-2',
+          weekday: 1,
+          start_time: '08:00:00',
+          end_time: '10:00:00',
+          availability: false,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('account-tab-weekly'));
+    await screen.findByRole('heading', { name: '週ごとの用事' });
+
+    expect(screen.getAllByText('8:00')).toHaveLength(1);
+    expect(screen.getByText('9:00')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '月 09:00-10:00' })).toHaveTextContent('×');
+  });
+
   it('予定一括管理をカレンダー表示できる', async () => {
     const range = createLocalTimeRange(9, 10);
     mockUseSession.mockReturnValue({ status: 'authenticated' });
@@ -203,8 +241,8 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
-    expect(screen.getByText(range.dateLabel)).toBeInTheDocument();
-    expect(screen.getByText('○')).toBeInTheDocument();
+    expect(await screen.findByText(range.dateLabel)).toBeInTheDocument();
+    expect(await screen.findByText('○')).toBeInTheDocument();
   });
 
   it('表示中の週が2時間単位のみなら2時間区切りで表示する', async () => {
@@ -238,6 +276,9 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
+    await waitFor(() => {
+      expect(screen.queryByText('予定データはまだありません。')).not.toBeInTheDocument();
+    });
 
     expect(
       screen.getByRole('button', { name: new RegExp(`${firstRange.dateKey} .*:.*-.*:.*$`) }),
@@ -279,6 +320,9 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
+    await waitFor(() => {
+      expect(screen.queryByText('予定データはまだありません。')).not.toBeInTheDocument();
+    });
     const datedTable = screen.getByRole('table');
     const endTimeRow = datedTable.querySelector('tbody tr.h-0');
     const endTimeLabel = endTimeRow?.querySelector('th span');
