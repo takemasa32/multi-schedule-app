@@ -179,10 +179,11 @@ describe('AvailabilityForm', () => {
 
     const [firstStart, firstEnd] = slotKeys[0].split('-');
     const [, lastEndRaw] = slotKeys[slotKeys.length - 1].split('-');
-    const lastEnd = lastEndRaw === '00:00' ? '24:00' : lastEndRaw;
+    const toDisplayTime = (value: string) => value.replace(/^0/, '');
+    const lastEnd = lastEndRaw === '00:00' ? '24:00' : toDisplayTime(lastEndRaw);
 
-    expect(within(weeklySection).getByText(firstStart)).toBeInTheDocument();
-    expect(within(weeklySection).getByText(firstEnd)).toBeInTheDocument();
+    expect(within(weeklySection).getByText(toDisplayTime(firstStart))).toBeInTheDocument();
+    expect(within(weeklySection).getByText(toDisplayTime(firstEnd))).toBeInTheDocument();
     expect(within(weeklySection).getByText(lastEnd)).toBeInTheDocument();
   });
 
