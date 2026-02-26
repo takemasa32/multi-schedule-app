@@ -225,6 +225,53 @@ describe('AvailabilityForm', () => {
     expect(within(heatmapSection).getByText(expectedLastEnd)).toBeInTheDocument();
   });
 
+  it('24:00終端の週テンプレは曜日一括入力の00:00終端枠へ反映される', async () => {
+    const midnightEventDates = [
+      {
+        id: 'midnight-date',
+        start_time: '2025-05-12T23:00:00',
+        end_time: '2025-05-13T00:00:00',
+      },
+    ];
+    const weekdayNumber = new Date(midnightEventDates[0].start_time).getDay();
+    const weekdayLabel = ['日', '月', '火', '水', '木', '金', '土'][weekdayNumber];
+
+    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
+      manual: [
+        {
+          weekday: weekdayNumber,
+          start_time: '23:00:00',
+          end_time: '24:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        uncoveredDayCount={1}
+        eventDates={midnightEventDates}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const weeklySection = await screen.findByTestId('availability-step-weekly');
+    const selectedCell = weeklySection.querySelector<HTMLDivElement>(
+      `td[data-day="${weekdayLabel}"][data-time-slot="23:00-00:00"] div`,
+    );
+
+    expect(selectedCell).not.toBeNull();
+    expect(selectedCell).toHaveTextContent('○');
+  });
+
   it('ヒートマップで○が0件のままは確認へ進めない', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();

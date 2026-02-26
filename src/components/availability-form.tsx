@@ -56,6 +56,13 @@ type WeeklyTemplatePayloadRow = {
   availability: boolean;
 };
 
+const toWeeklyTemplateSlotKey = (startTime: string, endTime: string): string => {
+  const normalizedStartTime = startTime.slice(0, 5);
+  const normalizedEndSource = endTime.slice(0, 5);
+  const normalizedEndTime = normalizedEndSource === '24:00' ? '00:00' : normalizedEndSource;
+  return `${normalizedStartTime}-${normalizedEndTime}`;
+};
+
 export default function AvailabilityForm({
   eventId,
   publicToken,
@@ -728,7 +735,7 @@ export default function AvailabilityForm({
           | WeekDay
           | undefined;
         if (!weekday) return;
-        const key = `${weekday}_${template.start_time.slice(0, 5)}-${template.end_time.slice(0, 5)}`;
+        const key = `${weekday}_${toWeeklyTemplateSlotKey(template.start_time, template.end_time)}`;
         templateWeekdayMap.set(key, template.availability);
       });
     }
@@ -879,12 +886,12 @@ export default function AvailabilityForm({
       const manualMap = new Map<string, boolean>();
       manualRows.forEach((row) => {
         manualMap.set(
-          `${row.weekday}_${row.start_time.slice(0, 5)}-${row.end_time.slice(0, 5)}`,
+          `${row.weekday}_${toWeeklyTemplateSlotKey(row.start_time, row.end_time)}`,
           row.availability,
         );
       });
       return payload.some((row) => {
-        const key = `${row.weekday}_${row.startTime}-${row.endTime}`;
+        const key = `${row.weekday}_${toWeeklyTemplateSlotKey(row.startTime, row.endTime)}`;
         const current = manualMap.get(key);
         return current === undefined || current !== row.availability;
       });

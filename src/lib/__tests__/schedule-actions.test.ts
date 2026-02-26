@@ -1,4 +1,8 @@
-import { saveAvailabilityOverrides, upsertUserScheduleBlock } from '@/lib/schedule-actions';
+import {
+  saveAvailabilityOverrides,
+  upsertUserScheduleBlock,
+  upsertWeeklyTemplatesFromWeekdaySelections,
+} from '@/lib/schedule-actions';
 import { getAuthSession } from '@/lib/auth';
 import { createSupabaseAdmin } from '@/lib/supabase';
 
@@ -135,5 +139,46 @@ describe('upsertUserScheduleBlock', () => {
       message: '時間帯の指定が正しくありません',
     });
     expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
+  });
+});
+
+describe('upsertWeeklyTemplatesFromWeekdaySelections', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({
+      user: { id: 'user-1' },
+    });
+  });
+
+  it('終了が 00:00 の時間帯は 24:00 に正規化して保存する', async () => {
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+    const fromMock = jest.fn().mockReturnValue({ upsert: upsertMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: [
+        {
+          weekday: 1,
+          startTime: '23:00',
+          endTime: '00:00',
+          availability: true,
+        },
+      ],
+    });
+
+    expect(result).toEqual({ success: true, updatedCount: 1 });
+    expect(upsertMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          user_id: 'user-1',
+          weekday: 1,
+          start_time: '23:00',
+          end_time: '24:00',
+          availability: true,
+          source: 'manual',
+        }),
+      ],
+      { onConflict: 'user_id,weekday,start_time,end_time,source' },
+    );
   });
 });

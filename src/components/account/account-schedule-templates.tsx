@@ -901,9 +901,9 @@ export default function AccountScheduleTemplates({
                       );
                     })}
                     {weeklyLastEndLabel && (
-                      <tr>
-                        <th className="bg-base-100 border-base-300 border px-1 py-1 text-right md:px-2">
-                          <span className="text-xs font-medium">
+                      <tr className="h-0">
+                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                          <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
                             {weeklyLastEndLabel === '00:00'
                               ? '24:00'
                               : weeklyLastEndLabel.replace(/^0/, '')}
@@ -1082,9 +1082,9 @@ export default function AccountScheduleTemplates({
                       </tr>
                     ))}
                     {datedLastEndLabel && (
-                      <tr>
-                        <th className="bg-base-100 border-base-300 border px-1 py-1 text-right md:px-2">
-                          <span className="text-xs font-medium">
+                      <tr className="h-0">
+                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                          <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
                             {datedLastEndLabel === '00:00'
                               ? '24:00'
                               : datedLastEndLabel.replace(/^0/, '')}

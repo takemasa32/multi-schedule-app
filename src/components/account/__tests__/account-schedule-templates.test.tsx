@@ -249,6 +249,46 @@ describe('AccountScheduleTemplates', () => {
     ).toBe(true);
   });
 
+  it('予定一括管理の最下段終了時刻は境界線上レイアウトで表示する', async () => {
+    const firstRange = createLocalTimeRange(9, 10);
+    const secondRange = createLocalTimeRange(10, 11);
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([
+      {
+        id: 'block-1',
+        start_time: firstRange.startIso,
+        end_time: firstRange.endIso,
+        availability: true,
+        source: 'event',
+        event_id: 'event-1',
+      },
+      {
+        id: 'block-2',
+        start_time: secondRange.startIso,
+        end_time: secondRange.endIso,
+        availability: true,
+        source: 'event',
+        event_id: 'event-1',
+      },
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    const datedTable = screen.getByRole('table');
+    const endTimeRow = datedTable.querySelector('tbody tr.h-0');
+    const endTimeLabel = endTimeRow?.querySelector('th span');
+
+    expect(endTimeRow).not.toBeNull();
+    expect(endTimeRow).toHaveClass('h-0');
+    expect(endTimeLabel).not.toBeNull();
+    expect(endTimeLabel).toHaveClass('absolute');
+  });
+
   it('予定一括管理の保存時は壁時計時刻で更新する', async () => {
     const range = createLocalTimeRange(9, 10);
     const startClock = range.startIso.slice(11, 16);
