@@ -187,28 +187,6 @@ const canJoinCellVisual = (
 };
 
 /**
- * 「上に載る」表現を適用するか判定する
- * @param current 現在セルの見た目情報
- * @param neighbor 隣接セルの見た目情報
- * @returns 上に載る表現を適用するならtrue
- */
-const shouldRaiseOverNeighbor = (
-  current: HeatmapCellVisual | undefined,
-  neighbor: HeatmapCellVisual | undefined,
-): boolean => {
-  if (!canJoinCellVisual(current, neighbor) || !current || !neighbor) {
-    return false;
-  }
-
-  return (
-    current.hasResponses &&
-    neighbor.hasResponses &&
-    current.availableCount > neighbor.availableCount &&
-    current.lineTone === neighbor.lineTone
-  );
-};
-
-/**
  * セルが有色（回答あり）かどうかを判定する
  * @param visual セル見た目情報
  * @returns 有色セルならtrue
@@ -377,10 +355,12 @@ const buildCellShapeMap = ({
       let joinsRight = canJoinCellVisual(current, right);
       let joinsBottom = canJoinCellVisual(current, bottom);
 
-      const shouldRaiseTop = shouldRaiseOverNeighbor(current, top);
-      const shouldRaiseBottom = shouldRaiseOverNeighbor(current, bottom);
-      const shouldRaiseLeft = shouldRaiseOverNeighbor(current, left);
-      const shouldRaiseRight = shouldRaiseOverNeighbor(current, right);
+      // 「上に載る」段差レイヤーは上下左右すべて無効化する。
+      // 重ね塗りによる色の濃化を抑え、セル単位の濃淡を素直に読み取れる見た目を優先する。
+      const shouldRaiseTop = false;
+      const shouldRaiseBottom = false;
+      const shouldRaiseLeft = false;
+      const shouldRaiseRight = false;
       if (shouldRaiseTop) {
         joinsTop = false;
       }
@@ -996,7 +976,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         ? getHeatmapCellKey(dateInfo.date, uniqueTimeSlots[rowIndex - 1].slotKey)
                         : null;
                     const topVisual = topNeighborKey ? cellVisuals.get(topNeighborKey) : undefined;
-                    const isTopRaisedOverCurrent = shouldRaiseOverNeighbor(topVisual, visual);
+                    // 段差レイヤーを無効化しているため、上セルが載る状態は常に発生しない。
+                    const isTopRaisedOverCurrent = false;
                     const boundaryLineColor = boundaryLineColorMap.get(key) ?? 'transparent';
                     const hasBoundaryLine = boundaryLineColor !== 'transparent';
                     const wrapperStyle = shouldFillWrapperBackground
