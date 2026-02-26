@@ -124,7 +124,9 @@ describe('HeatmapView', () => {
 
     expect(targetCell).toBeDefined();
     const cellElement = targetCell as HTMLTableCellElement;
-    const styleAttribute = cellElement.getAttribute('style') ?? '';
+    const visualLayer = cellElement.querySelector('div[style]') as HTMLDivElement | null;
+    expect(visualLayer).toBeTruthy();
+    const styleAttribute = visualLayer?.getAttribute('style') ?? '';
     expect(styleAttribute).toContain('background-color: rgba(148, 163, 184, 0.45)');
     expect(styleAttribute).not.toContain('box-shadow');
   });
@@ -171,7 +173,9 @@ describe('HeatmapView', () => {
 
       expect(targetCell).toBeDefined();
       const cellElement = targetCell as HTMLTableCellElement;
-      const backgroundColor = cellElement.style.backgroundColor;
+      const visualLayer = cellElement.querySelector('div[style]') as HTMLDivElement | null;
+      expect(visualLayer).toBeTruthy();
+      const backgroundColor = visualLayer?.style.backgroundColor ?? '';
 
       expect(backgroundColor).toContain('80, 88, 104');
       expect(backgroundColor).not.toContain('148, 163, 184');
@@ -288,7 +292,9 @@ describe('HeatmapView', () => {
         .find((cell) => cell.textContent?.trim() === '3');
       expect(targetCell).toBeDefined();
       const cellElement = targetCell as HTMLTableCellElement;
-      const styleAttribute = cellElement.getAttribute('style') ?? '';
+      const visualLayer = cellElement.querySelector('div[style]') as HTMLDivElement | null;
+      expect(visualLayer).toBeTruthy();
+      const styleAttribute = visualLayer?.getAttribute('style') ?? '';
       // ライトモードではグレー系（148, 163, 184）の色が使用される
       expect(styleAttribute).toContain('148, 163, 184');
       // ダーク系（80, 88, 104）は使用されない

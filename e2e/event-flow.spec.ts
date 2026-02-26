@@ -144,20 +144,11 @@ test.describe.serial('イベントE2Eフロー', () => {
       await backToSummaryBtn.click();
     }
 
-    // "個別" タブが表示されるまで待機
-    const individualTab = participantPage
-      .locator('[data-testid$="availability-tab-detailed"]')
-      .first();
-    await expect(individualTab).toBeVisible({ timeout: 15000 });
-    await individualTab.click();
-
-    // 新しく追加した参加者が表示されるまで待機
+    // 参加者バッジ（表示選択）に新規回答者が反映されるまで待機
     try {
-      await expect(
-        participantPage.getByRole('cell', {
-          name: new RegExp(participantName),
-        }),
-      ).toBeVisible({ timeout: 15000 });
+      await expect(participantPage.getByRole('button', { name: new RegExp(participantName) })).toBeVisible({
+        timeout: 15000,
+      });
     } catch (e) {
       await dumpPageHtml(participantPage, 'DEBUG: 参加者表示失敗 page.content()');
       throw e;
@@ -174,29 +165,14 @@ test.describe.serial('イベントE2Eフロー', () => {
     });
     // 参加者が1人以上いることを検証
     await page.waitForLoadState('networkidle');
-    const adminDetailedTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
-    await expect(adminDetailedTab).toBeVisible({ timeout: 10000 });
-    await adminDetailedTab.click();
     try {
-      await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({
+      await expect(page.getByRole('button', { name: new RegExp(participantName) })).toBeVisible({
         timeout: 10000,
       });
     } catch (e) {
       await dumpPageHtml(page, 'DEBUG: 3件目参加者表示失敗 page.content()');
       throw e;
     }
-    try {
-      await expect(page.locator('[data-testid$="availability-tab-detailed"]').first()).toBeVisible({
-        timeout: 10000,
-      });
-    } catch (e) {
-      await dumpPageHtml(page, 'DEBUG: page.content()');
-      throw e;
-    }
-    await page.locator('[data-testid$="availability-tab-detailed"]').first().click();
-    await expect(page.getByRole('cell', { name: new RegExp(participantName) })).toBeVisible({
-      timeout: 10000,
-    });
     await page.reload();
     await page.getByRole('link', { name: '新しく回答する' }).click();
     await page.waitForURL(/\/input$/);
@@ -221,13 +197,8 @@ test.describe.serial('イベントE2Eフロー', () => {
       await backToSummaryBtn.click();
     }
 
-    // "個別" タブが表示されるまで待機
-    const individualTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
-    await expect(individualTab).toBeVisible({ timeout: 15000 });
-    await individualTab.click();
-
-    // 新しく追加した参加者が表示されるまで待機
-    await expect(page.getByRole('cell', { name: /週表示参加者/ })).toBeVisible({
+    // 新しく追加した参加者が表示選択バッジへ反映されるまで待機
+    await expect(page.getByRole('button', { name: /週表示参加者/ })).toBeVisible({
       timeout: 20000,
     });
   });
@@ -262,13 +233,8 @@ test.describe.serial('イベントE2Eフロー', () => {
       await backToSummaryBtn.click();
     }
 
-    // "個別" タブが表示されるまで待機
-    const individualTab = page.locator('[data-testid$="availability-tab-detailed"]').first();
-    await expect(individualTab).toBeVisible({ timeout: 15000 });
-    await individualTab.click();
-
-    // 編集後も参加者が表示されることを確認
-    await expect(page.getByRole('cell', { name: new RegExp(participantNamePrefix) })).toBeVisible({
+    // 編集後も参加者が表示選択バッジに残ることを確認
+    await expect(page.getByRole('button', { name: new RegExp(participantNamePrefix) })).toBeVisible({
       timeout: 10000,
     });
   });

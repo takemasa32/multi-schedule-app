@@ -17,6 +17,7 @@ const DARK_THEME_NAMES = new Set([
   'luxury',
   'lofi',
 ]);
+const HEATMAP_CELL_RADIUS = '0.2rem';
 
 /**
  * テーマ名からダークテーマかどうかを判定する
@@ -123,6 +124,19 @@ interface HeatmapViewProps {
   /** 過去日程のグレースケール設定変更時のハンドラ */
   onPastEventGrayscaleToggle?: (enabled: boolean) => void;
 }
+
+type HeatmapCellVisual = {
+  dateId: string;
+  isSelected: boolean;
+  availableCount: number;
+  unavailableCount: number;
+  hasData: boolean;
+  hasResponses: boolean;
+  cellStyle: React.CSSProperties;
+  countTextClass: string;
+  unavailableTextClass: string;
+  joinKey: string | null;
+};
 
 /**
  * ヒートマップ表示モード
@@ -252,6 +266,174 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     isDraggingRef.current = false;
   };
 
+  const cellVisuals = useMemo(() => {
+    const visualMap = new Map<string, HeatmapCellVisual>();
+
+    uniqueTimeSlots.forEach((timeSlot) => {
+      uniqueDates.forEach((dateInfo) => {
+        const key = `${dateInfo.date}_${timeSlot.slotKey}`;
+        const cellData = heatmapData.get(key);
+        const isSelected = cellData?.isSelected || false;
+        const availableCount = cellData?.availableCount || 0;
+        const unavailableCount = cellData?.unavailableCount || 0;
+        const totalResponses = cellData?.totalResponses ?? 0;
+        const hasData = cellData !== undefined;
+        const hasResponses = totalResponses > 0;
+        const dateOnly = new Date(dateInfo.dateObj);
+        dateOnly.setHours(0, 0, 0, 0);
+        const isPastDate =
+          startOfToday !== null ? dateOnly.getTime() < startOfToday.getTime() : false;
+
+        const ratio = maxAvailable > 0 ? availableCount / maxAvailable : 0;
+        const raw = 20 + ratio * 80;
+        const opacity5 = Math.round(raw / 5) * 5;
+        const opacityValue = Math.min(Math.max(opacity5, 20), 100) / 100;
+
+        const shouldApplyPastGrayscale = hasData && isPastEventGrayscaleEnabled && isPastDate;
+        const shouldDimPastColumn = isPastDate;
+        const filterValues: string[] = [];
+        if (
+          hasData &&
+          hasResponses &&
+          (availableCount < minColoredCount || shouldApplyPastGrayscale)
+        ) {
+          filterValues.push('grayscale(1)');
+        }
+        const adjustedOpacity = shouldApplyPastGrayscale
+          ? (isDarkTheme ?? false)
+            ? Math.max(Math.min(opacityValue * 0.45, 0.32), 0.08)
+            : Math.max(Math.min(opacityValue * 0.55, 0.45), 0.18)
+          : opacityValue;
+        const pastBaseRgb = (isDarkTheme ?? false) ? '80, 88, 104' : '148, 163, 184';
+        const backgroundColor =
+          hasData && hasResponses
+            ? shouldApplyPastGrayscale
+              ? `rgba(${pastBaseRgb}, ${adjustedOpacity})`
+              : `rgba(var(--p-rgb, 87, 13, 248), ${adjustedOpacity})`
+            : 'transparent';
+        const overlayColor = shouldDimPastColumn
+          ? shouldApplyPastGrayscale
+            ? pastColumnPalette.emphasizedOverlay
+            : pastColumnPalette.baseOverlay
+          : null;
+        const backgroundLayers: string[] = [];
+        if (overlayColor) {
+          backgroundLayers.push(`linear-gradient(0deg, ${overlayColor}, ${overlayColor})`);
+        }
+        if (shouldDimPastColumn) {
+          backgroundLayers.push(
+            shouldApplyPastGrayscale
+              ? pastColumnPalette.columnBaseLayerMuted
+              : pastColumnPalette.columnBaseLayer,
+          );
+        }
+        const filter = filterValues.length > 0 ? filterValues.join(' ') : 'none';
+        const backgroundImage = backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined;
+        const cellStyle = {
+          backgroundColor,
+          backgroundImage,
+          filter,
+        } as React.CSSProperties;
+
+        const countTextBaseClass = 'text-xs font-bold sm:text-base';
+        const countTextClass = shouldApplyPastGrayscale
+          ? `${countTextBaseClass} ${(isDarkTheme ?? false) ? 'text-base-content/80' : 'text-base-content/60'}`
+          : `${countTextBaseClass}${opacityValue >= 0.6 ? ' text-white' : ' text-base-content'}`;
+        const unavailableTextClass = shouldApplyPastGrayscale
+          ? (isDarkTheme ?? false)
+            ? 'text-[10px] text-base-content/50 sm:text-xs'
+            : 'text-[10px] text-base-content/60 sm:text-xs'
+          : 'text-[10px] text-base-content/70 sm:text-xs';
+        const joinKey =
+          hasData && hasResponses
+            ? `${backgroundColor}|${backgroundImage ?? ''}|${filter}`
+            : null;
+
+        visualMap.set(key, {
+          dateId: cellData?.dateId ?? '',
+          isSelected,
+          availableCount,
+          unavailableCount,
+          hasData,
+          hasResponses,
+          cellStyle,
+          countTextClass,
+          unavailableTextClass,
+          joinKey,
+        });
+      });
+    });
+
+    return visualMap;
+  }, [
+    heatmapData,
+    isDarkTheme,
+    isPastEventGrayscaleEnabled,
+    maxAvailable,
+    minColoredCount,
+    pastColumnPalette.baseOverlay,
+    pastColumnPalette.columnBaseLayer,
+    pastColumnPalette.columnBaseLayerMuted,
+    pastColumnPalette.emphasizedOverlay,
+    startOfToday,
+    uniqueDates,
+    uniqueTimeSlots,
+  ]);
+
+  const cellCornerClassMap = useMemo(() => {
+    const cornerMap = new Map<string, string>();
+    const fallbackRadiusClass = `rounded-[${HEATMAP_CELL_RADIUS}]`;
+    const canJoin = (currentKey: string, neighborKey: string | null) => {
+      if (!neighborKey) return false;
+      const current = cellVisuals.get(currentKey);
+      const neighbor = cellVisuals.get(neighborKey);
+      return (
+        current !== undefined &&
+        neighbor !== undefined &&
+        current.joinKey !== null &&
+        current.joinKey === neighbor.joinKey
+      );
+    };
+
+    uniqueTimeSlots.forEach((timeSlot, rowIndex) => {
+      uniqueDates.forEach((dateInfo, colIndex) => {
+        const key = `${dateInfo.date}_${timeSlot.slotKey}`;
+        const current = cellVisuals.get(key);
+        if (!current || current.joinKey === null) {
+          cornerMap.set(key, fallbackRadiusClass);
+          return;
+        }
+
+        const topKey =
+          rowIndex > 0 ? `${dateInfo.date}_${uniqueTimeSlots[rowIndex - 1].slotKey}` : null;
+        const bottomKey =
+          rowIndex < uniqueTimeSlots.length - 1
+            ? `${dateInfo.date}_${uniqueTimeSlots[rowIndex + 1].slotKey}`
+            : null;
+        const leftKey =
+          colIndex > 0 ? `${uniqueDates[colIndex - 1].date}_${timeSlot.slotKey}` : null;
+        const rightKey =
+          colIndex < uniqueDates.length - 1
+            ? `${uniqueDates[colIndex + 1].date}_${timeSlot.slotKey}`
+            : null;
+
+        const joinsTop = canJoin(key, topKey);
+        const joinsBottom = canJoin(key, bottomKey);
+        const joinsLeft = canJoin(key, leftKey);
+        const joinsRight = canJoin(key, rightKey);
+
+        const classes: string[] = [];
+        if (!joinsTop && !joinsLeft) classes.push(`rounded-tl-[${HEATMAP_CELL_RADIUS}]`);
+        if (!joinsTop && !joinsRight) classes.push(`rounded-tr-[${HEATMAP_CELL_RADIUS}]`);
+        if (!joinsBottom && !joinsLeft) classes.push(`rounded-bl-[${HEATMAP_CELL_RADIUS}]`);
+        if (!joinsBottom && !joinsRight) classes.push(`rounded-br-[${HEATMAP_CELL_RADIUS}]`);
+        cornerMap.set(key, classes.length > 0 ? classes.join(' ') : 'rounded-none');
+      });
+    });
+
+    return cornerMap;
+  }, [cellVisuals, uniqueDates, uniqueTimeSlots]);
+
   return (
     <div
       className="fade-in space-y-2 sm:space-y-3"
@@ -278,6 +460,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                   index,
                   arr.map((d) => d.dateObj.toISOString()),
                 );
+                const mobileMonthDay = `${dateInfo.dateObj.getMonth() + 1}/${dateInfo.dateObj.getDate()}`;
+                const mobileWeekday = dateInfo.dateObj.toLocaleDateString('ja-JP', {
+                  weekday: 'short',
+                });
                 // 列ヘッダーでも過去日程かどうかを判定し、視覚的な強調を行う
                 // SSR時（startOfToday === null or isDarkTheme === null）はスタイルを適用しない
                 const dateOnly = new Date(dateInfo.dateObj);
@@ -296,18 +482,24 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                   <th
                     key={dateInfo.date}
                     data-date-index={index}
-                    className={`bg-base-200 sticky top-0 z-20 min-w-[52px] p-1 text-center text-xs sm:min-w-[96px] sm:px-2 sm:py-3 sm:text-sm ${
+                    className={`bg-base-200 sticky top-0 z-20 min-w-[48px] px-0.5 py-1 text-center text-xs sm:min-w-[96px] sm:px-2 sm:py-3 sm:text-sm ${
                       isPastDate ? 'text-base-content/70' : 'text-base-content'
                     }`}
                     style={headerStyle}
                   >
-                    {optimizedDisplay.yearMonth && (
-                      <>
-                        {optimizedDisplay.yearMonth}
-                        <br />
-                      </>
-                    )}
-                    {optimizedDisplay.day}
+                    <span className="flex flex-col items-center leading-tight sm:hidden">
+                      <span className="text-[11px] font-semibold">{mobileMonthDay}</span>
+                      <span className="text-[9px] text-base-content/70">{mobileWeekday}</span>
+                    </span>
+                    <span className="hidden sm:inline">
+                      {optimizedDisplay.yearMonth && (
+                        <>
+                          {optimizedDisplay.yearMonth}
+                          <br />
+                        </>
+                      )}
+                      {optimizedDisplay.day}
+                    </span>
                   </th>
                 );
               })}
@@ -344,124 +536,60 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       {formattedStartTime}
                     </span>
                   </td>
-                  {uniqueDates.map((dateInfo) => {
+                  {uniqueDates.map((dateInfo, colIndex) => {
                     const key = `${dateInfo.date}_${timeSlot.slotKey}`;
-                    const cellData = heatmapData.get(key);
-                    const isSelected = cellData?.isSelected || false;
-                    const availableCount = cellData?.availableCount || 0;
-                    const unavailableCount = cellData?.unavailableCount || 0;
-                    const totalResponses = cellData?.totalResponses ?? 0;
-                    const hasData = cellData !== undefined;
-                    const hasResponses = totalResponses > 0;
-                    const dateOnly = new Date(dateInfo.dateObj);
-                    dateOnly.setHours(0, 0, 0, 0);
-                    // SSR時（startOfToday === null）は過去判定しない
-                    const isPastDate =
-                      startOfToday !== null ? dateOnly.getTime() < startOfToday.getTime() : false;
-
-                    // テーマカラー単色スケール：最大参加者数に応じた不透明度
-                    const ratio = maxAvailable > 0 ? availableCount / maxAvailable : 0;
-
-                    // 不透明度を計算 - 5%刻みに丸める処理
-                    const raw = 20 + ratio * 80; // 20〜100 の実数
-                    const opacity5 = Math.round(raw / 5) * 5; // 5 の倍数へ丸め
-                    const opacityValue = Math.min(Math.max(opacity5, 20), 100) / 100; // 0.2〜1.0に変換
-
-                    // 過去日程グレースケール・色表示ロジック最適化
-                    const shouldApplyPastGrayscale =
-                      hasData && isPastEventGrayscaleEnabled && isPastDate;
-                    const shouldDimPastColumn = isPastDate;
-                    // グレースケール条件: minColoredCount未満 or 過去日程グレースケール
-                    const filterValues: string[] = [];
-                    if (
-                      hasData &&
-                      hasResponses &&
-                      (availableCount < minColoredCount || shouldApplyPastGrayscale)
-                    ) {
-                      filterValues.push('grayscale(1)');
-                    }
-                    // 過去日程はダーク/ライトで色・不透明度を調整
-                    const adjustedOpacity = shouldApplyPastGrayscale
-                      ? (isDarkTheme ?? false)
-                        ? Math.max(Math.min(opacityValue * 0.45, 0.32), 0.08)
-                        : Math.max(Math.min(opacityValue * 0.55, 0.45), 0.18)
-                      : opacityValue;
-                    const pastBaseRgb = (isDarkTheme ?? false) ? '80, 88, 104' : '148, 163, 184';
-                    const backgroundColor =
-                      hasData && hasResponses
-                        ? shouldApplyPastGrayscale
-                          ? `rgba(${pastBaseRgb}, ${adjustedOpacity})`
-                          : `rgba(var(--p-rgb, 87, 13, 248), ${adjustedOpacity})`
-                        : 'transparent';
-                    // 過去日程の列に控えめなオーバーレイを被せ、背景が途切れないようにする
-                    const overlayColor = shouldDimPastColumn
-                      ? shouldApplyPastGrayscale
-                        ? pastColumnPalette.emphasizedOverlay
-                        : pastColumnPalette.baseOverlay
-                      : null;
-                    // 過去列用の淡い下地レイヤーを合成
-                    const backgroundLayers: string[] = [];
-                    if (overlayColor) {
-                      backgroundLayers.push(
-                        `linear-gradient(0deg, ${overlayColor}, ${overlayColor})`,
-                      );
-                    }
-                    if (shouldDimPastColumn) {
-                      backgroundLayers.push(
-                        shouldApplyPastGrayscale
-                          ? pastColumnPalette.columnBaseLayerMuted
-                          : pastColumnPalette.columnBaseLayer,
-                      );
-                    }
-                    const cellStyle = {
-                      backgroundColor,
-                      backgroundImage:
-                        backgroundLayers.length > 0 ? backgroundLayers.join(', ') : undefined,
-                      filter: filterValues.length > 0 ? filterValues.join(' ') : 'none',
-                    } as React.CSSProperties;
-
-                    // テキスト色: グレースケール時はコントラスト重視
-                    const countTextBaseClass = 'text-xs font-bold sm:text-base';
-                    const countTextClass = shouldApplyPastGrayscale
-                      ? `${countTextBaseClass} ${(isDarkTheme ?? false) ? 'text-base-content/80' : 'text-base-content/60'}`
-                      : `${countTextBaseClass}${opacityValue >= 0.6 ? ' text-white' : ' text-base-content'}`;
-                    const unavailableTextClass = shouldApplyPastGrayscale
-                      ? (isDarkTheme ?? false)
-                        ? 'text-[10px] text-base-content/50 sm:text-xs'
-                        : 'text-[10px] text-base-content/60 sm:text-xs'
-                      : 'text-[10px] text-base-content/70 sm:text-xs';
+                    const visual = cellVisuals.get(key);
+                    if (!visual) return null;
+                    const cornerClass =
+                      cellCornerClassMap.get(key) ?? `rounded-[${HEATMAP_CELL_RADIUS}]`;
+                    const {
+                      dateId,
+                      isSelected,
+                      availableCount,
+                      unavailableCount,
+                      hasData,
+                      hasResponses,
+                      cellStyle,
+                      countTextClass,
+                      unavailableTextClass,
+                    } = visual;
 
                     // すべてのイベントハンドラを付与し、イベント内で分岐
                     return (
                       <td
                         key={key}
-                        style={cellStyle}
-                        className={`relative cursor-pointer p-0 align-middle transition-all sm:p-1 ${
+                        data-col-index={colIndex}
+                        className={`relative cursor-pointer p-0 align-middle ${
                           isSelected ? 'border-success border-2' : ''
                         }`}
                         onPointerEnter={(e) => {
                           if (!hasData || isDragging) return;
-                          onPointerTooltipStart?.(e, cellData?.dateId || '');
+                          onPointerTooltipStart?.(e, dateId);
                         }}
                         onPointerLeave={(e) => {
                           if (!hasData || isDragging) return;
-                          onPointerTooltipEnd?.(e, cellData?.dateId || '');
+                          onPointerTooltipEnd?.(e, dateId);
                         }}
                         /**
                          * セルのPointerUpでツールチップ表示（スマホはタップで即表示）
                          */
                         onPointerUp={(e) => {
                           if (!hasData || isDragging) return;
-                          onPointerTooltipClick?.(e, cellData?.dateId || '');
+                          onPointerTooltipClick?.(e, dateId);
                         }}
                       >
                         {hasData ? (
-                          <div className="flex min-h-9 h-full flex-col items-center justify-center sm:min-h-10">
+                          <div
+                            style={cellStyle}
+                            className={`flex h-full min-h-9 flex-col items-center justify-center overflow-hidden sm:min-h-10 ${cornerClass}`}
+                          >
                             {hasResponses ? (
                               <>
                                 <span className={countTextClass}>{availableCount}</span>
                                 {unavailableCount > 0 && (
-                                  <span className={unavailableTextClass}>({unavailableCount})</span>
+                                  <span className={`${unavailableTextClass} hidden sm:inline`}>
+                                    ({unavailableCount})
+                                  </span>
                                 )}
                               </>
                             ) : (
