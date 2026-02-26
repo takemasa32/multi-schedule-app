@@ -46,7 +46,7 @@ const evaluateDarkThemeByName = (themeName: string | null | undefined): boolean 
     return true;
   }
 
-  if (tokens.some((token) => token === 'light' || token === 'cupcake' || token === 'daysynth')) {
+  if (tokens.some((token) => token === 'light' || token === 'cupcake')) {
     return false;
   }
 
@@ -472,7 +472,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                                 <span className="sr-only">回答なし</span>
                                 <span
                                   aria-hidden="true"
-                                  className="text-xs text-gray-400 sm:text-sm"
+                                  className="text-xs text-base-content/50 sm:text-sm"
                                 >
                                   0
                                 </span>
@@ -486,7 +486,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           <div className="flex h-full w-full items-center justify-center">
                             {/* イベント未設定セルも中央揃えで視認性を統一 */}
                             <span className="sr-only">イベント未設定</span>
-                            <span aria-hidden="true" className="text-xs text-gray-300 sm:text-sm">
+                            <span aria-hidden="true" className="text-xs text-base-content/40 sm:text-sm">
                               -
                             </span>
                           </div>
@@ -536,7 +536,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
       {/* 色の凡例とフィルター設定を統合したUI */}
       {/* 色の凡例 */}
       <div className="flex items-center justify-center gap-1 text-xs sm:gap-2 sm:text-sm">
-        <span className="text-gray-600">少ない</span>
+        <span className="text-base-content/70">少ない</span>
         <div className="flex">
           {Array.from({ length: 11 }).map((_, i) => {
             const opacity = (20 + i * 8) / 100; // 0.2～1.0の値
@@ -552,7 +552,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
             );
           })}
         </div>
-        <span className="text-gray-600">多い</span>
+        <span className="text-base-content/70">多い</span>
       </div>
       <div className="bg-base-100 mt-2 rounded-lg border p-2 sm:mt-3 sm:p-3">
         <div className="flex flex-col gap-3">

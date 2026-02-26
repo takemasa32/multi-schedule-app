@@ -13,10 +13,14 @@ import Link from 'next/link';
 import { useFavoriteEvents } from '@/components/favorite-events-context';
 
 export default function FavoriteEvents() {
-  const { favorites, removeFavorite } = useFavoriteEvents();
+  const { favorites, isHydrated, removeFavorite } = useFavoriteEvents();
+
+  if (!isHydrated) {
+    return <p className="mt-2 text-sm text-base-content/60">お気に入りイベントを読み込んでいます...</p>;
+  }
 
   if (!favorites.length) {
-    return <p className="mt-2 text-sm text-gray-500">お気に入りイベントはありません。</p>;
+    return <p className="mt-2 text-sm text-base-content/60">お気に入りイベントはありません。</p>;
   }
 
   return (
@@ -31,7 +35,7 @@ export default function FavoriteEvents() {
               {ev.title || ev.id}
             </Link>
             {ev.lastAccessed && (
-              <span className="mt-1 block text-xs text-gray-400">
+              <span className="mt-1 block text-xs text-base-content/50">
                 最終アクセス: {new Date(ev.lastAccessed).toLocaleDateString()}
               </span>
             )}

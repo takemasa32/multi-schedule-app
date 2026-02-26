@@ -151,7 +151,7 @@ export default function EventFormSection({
               onLinkedParticipantIdChange={setLinkedParticipantId}
             />
           </div>
-          <p className="mb-4 text-sm text-gray-600">
+          <p className="mb-4 text-sm text-base-content/70">
             {event.is_finalized
               ? 'イベントは確定していますが、引き続き回答を更新できます。'
               : '以下のボタンから参加予定を入力してください。'}

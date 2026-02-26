@@ -344,7 +344,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
             ) : (
               <>
                 <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-600">追加方式</span>
+                  <span className="text-sm font-semibold text-base-content/70">追加方式</span>
                   <div className="btn-group">
                     <button
                       type="button"
@@ -364,7 +364,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-base-content/60">
                   {addMode === 'auto'
                     ? '既存日程と同じ時間割で期間を指定し、一括で候補日程を追加します。'
                     : 'カレンダー上で候補枠を個別に塗りつぶして追加します（既存日程は選択不可）。'}
@@ -466,7 +466,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                             )}
                           </div>
                         ) : (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-base-content/60">
                             期間と時間帯を設定すると生成結果が表示されます。
                           </p>
                         )}
@@ -517,7 +517,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                       initialEndDate={manualInitialDate}
                     />
                     {manualSlots.length === 0 ? (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-base-content/60">
                         カレンダーで追加したい枠を選択すると概要が表示されます。
                       </p>
                     ) : (
@@ -606,7 +606,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
                       </div>
                     ) : (
                       <>
-                        <p className="mb-2 text-sm text-gray-700">
+                        <p className="mb-2 text-sm text-base-content/80">
                           以下の日程を追加します。よろしいですか？
                         </p>
                         <ul className="mb-4 text-sm">

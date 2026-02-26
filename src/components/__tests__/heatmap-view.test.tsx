@@ -6,7 +6,7 @@ jest.mock('next-themes', () => {
   return {
     useTheme: () => {
       const themeAttr = document.documentElement.getAttribute('data-theme');
-      const resolved = themeAttr ?? 'daysynth';
+      const resolved = themeAttr ?? 'light';
       return {
         theme: resolved,
         resolvedTheme: resolved,
@@ -244,7 +244,7 @@ describe('HeatmapView', () => {
 
   describe('過去日程のグレースケール表示（ライトモード）', () => {
     beforeEach(() => {
-      document.documentElement.setAttribute('data-theme', 'daysynth');
+      document.documentElement.setAttribute('data-theme', 'light');
     });
 
     afterEach(() => {

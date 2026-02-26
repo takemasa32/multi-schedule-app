@@ -410,7 +410,7 @@ export default function DateRangePicker({
             onChange={handleStartDateChange}
             aria-label="開始日"
           />
-          <span className="join-item hidden items-center px-3 text-sm text-gray-500 sm:flex">
+          <span className="join-item hidden items-center px-3 text-sm text-base-content/60 sm:flex">
             〜
           </span>
           <input
@@ -422,7 +422,7 @@ export default function DateRangePicker({
             aria-label="終了日"
           />
         </div>
-        <div className="flex justify-between text-[11px] text-gray-500">
+        <div className="flex justify-between text-[11px] text-base-content/60">
           <span>開始日</span>
           <span className="sm:hidden">〜</span>
           <span>終了日</span>
@@ -459,7 +459,7 @@ export default function DateRangePicker({
             onChange={handleDefaultStartTimeChange}
             aria-label="各日の開始時刻"
           />
-          <span className="join-item hidden items-center px-3 text-sm text-gray-500 sm:flex">
+          <span className="join-item hidden items-center px-3 text-sm text-base-content/60 sm:flex">
             〜
           </span>
           <input
@@ -471,7 +471,7 @@ export default function DateRangePicker({
             aria-label="各日の終了時刻"
           />
         </div>
-        <div className="flex justify-between text-[11px] text-gray-500">
+        <div className="flex justify-between text-[11px] text-base-content/60">
           <span>開始時刻</span>
           <span className="sm:hidden">〜</span>
           <span>終了時刻</span>
@@ -484,7 +484,7 @@ export default function DateRangePicker({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h3 className="text-sm font-semibold">時間枠の長さ</h3>
-          <span className="text-xs text-gray-500">1枠の長さ</span>
+          <span className="text-xs text-base-content/60">1枠の長さ</span>
         </div>
         <div className="form-control w-full">
           <div className="flex items-center justify-between gap-2">
@@ -560,7 +560,7 @@ export default function DateRangePicker({
             </select>
           )}
           {isIntervalLocked && (
-            <span className="label-text-alt mt-1 text-gray-500">
+            <span className="label-text-alt mt-1 text-base-content/60">
               既存イベントの設定に合わせて固定されています
             </span>
           )}

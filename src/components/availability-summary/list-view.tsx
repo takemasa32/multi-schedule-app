@@ -54,13 +54,13 @@ const ListView: React.FC<ListViewProps> = ({
             >
               <td className="whitespace-nowrap">
                 <span className="text-xs font-medium sm:text-sm">{item.formattedDate}</span>
-                {item.label && <span className="ml-2 text-xs text-gray-500">{item.label}</span>}
+                {item.label && <span className="ml-2 text-xs text-base-content/60">{item.label}</span>}
                 {item.isSelected && <span className="badge badge-success badge-xs ml-2">確定</span>}
               </td>
               <td className="whitespace-nowrap text-xs sm:text-sm">
                 {/* 時間表示を最適化 - 先頭の0を削除してコンパクトに */}
                 {formatTime(item.startTime, eventDates).replace(/^0/, '')}
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-base-content/60">
                   {/* 終了時刻を矢印記号で簡潔に表示 */}→
                   {formatTime(item.endTime, eventDates).replace(/^0/, '')}
                 </span>

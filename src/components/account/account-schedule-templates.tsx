@@ -251,6 +251,50 @@ const buildInitialSyncPreviewWeekPageMap = (
     events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]),
   );
 
+const reconcileEventAfterApply = ({
+  event,
+  selectedAvailabilities,
+  overwriteProtected,
+}: {
+  event: UserAvailabilitySyncPreviewEvent;
+  selectedAvailabilities: Record<string, boolean>;
+  overwriteProtected: boolean;
+}): UserAvailabilitySyncPreviewEvent => {
+  const dates = event.dates.map((row) => {
+    const requested =
+      row.eventDateId in selectedAvailabilities
+        ? selectedAvailabilities[row.eventDateId]
+        : row.desiredAvailability;
+
+    const nextCurrentAvailability =
+      row.isProtected && !overwriteProtected ? row.currentAvailability : requested;
+    const nextWillChange = nextCurrentAvailability !== row.desiredAvailability;
+
+    return {
+      ...row,
+      currentAvailability: nextCurrentAvailability,
+      willChange: nextWillChange,
+    };
+  });
+
+  const total = dates.filter((row) => row.willChange).length;
+
+  return {
+    ...event,
+    dates,
+    changes: {
+      total,
+      availableToUnavailable: dates.filter(
+        (row) => row.willChange && row.currentAvailability && !row.desiredAvailability,
+      ).length,
+      unavailableToAvailable: dates.filter(
+        (row) => row.willChange && !row.currentAvailability && row.desiredAvailability,
+      ).length,
+      protected: dates.filter((row) => row.willChange && row.isProtected).length,
+    },
+  };
+};
+
 type AccountScheduleTemplatesProps = {
   initialIsAuthenticated?: boolean;
 };
@@ -262,7 +306,7 @@ export default function AccountScheduleTemplates({
   const [manualTemplates, setManualTemplates] = useState<ScheduleTemplate[]>([]);
   const [learnedTemplates, setLearnedTemplates] = useState<ScheduleTemplate[]>([]);
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
-  const [isLoading, setIsLoading] = useState(initialIsAuthenticated);
+  const [isLoading, setIsLoading] = useState(initialIsAuthenticated || status === 'authenticated');
   const [activeTab, setActiveTab] = useState<ActiveTab>('dated');
 
   const [weeklyEditing, setWeeklyEditing] = useState(false);
@@ -287,7 +331,9 @@ export default function AccountScheduleTemplates({
   const [syncMessageMap, setSyncMessageMap] = useState<Record<string, string>>({});
   const [isSyncPreviewLoading, setIsSyncPreviewLoading] = useState(false);
   const [syncPreviewMessage, setSyncPreviewMessage] = useState<string | null>(null);
-  const [syncApplyingEventId, setSyncApplyingEventId] = useState<string | null>(null);
+  const [syncApplyingEventIds, setSyncApplyingEventIds] = useState<Set<string>>(new Set());
+  const [hasLoadedSyncPreview, setHasLoadedSyncPreview] = useState(false);
+  const syncApplyingEventIdsRef = useRef<Set<string>>(new Set());
   const syncSectionRef = useRef<HTMLDivElement | null>(null);
 
   const isAuthenticated =
@@ -296,14 +342,17 @@ export default function AccountScheduleTemplates({
   const loadAll = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoading(true);
-    const [templateData, blocksData] = await Promise.all([
-      fetchUserScheduleTemplates(),
-      fetchUserScheduleBlocks(),
-    ]);
-    setManualTemplates(templateData.manual);
-    setLearnedTemplates(templateData.learned);
-    setScheduleBlocks(blocksData);
-    setIsLoading(false);
+    try {
+      const [templateData, blocksData] = await Promise.all([
+        fetchUserScheduleTemplates(),
+        fetchUserScheduleBlocks(),
+      ]);
+      setManualTemplates(templateData.manual);
+      setLearnedTemplates(templateData.learned);
+      setScheduleBlocks(blocksData);
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -322,28 +371,124 @@ export default function AccountScheduleTemplates({
 
   const loadSyncPreview = useCallback(async () => {
     setIsSyncPreviewLoading(true);
+    setHasLoadedSyncPreview(true);
     setSyncPreviewMessage(null);
-    const preview = await fetchUserAvailabilitySyncPreview();
-    setSyncPreviewEvents(preview);
-    setSyncCellSelectionMap(
-      Object.fromEntries(
-        preview.map((row) => [
-          row.eventId,
-          Object.fromEntries(row.dates.map((date) => [date.eventDateId, date.desiredAvailability])),
-        ]),
-      ),
-    );
-    setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(preview));
-    setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
-    setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
-    setSyncMessageMap({});
-    if (preview.length === 0) {
-      setSyncPreviewMessage(
-        '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+    try {
+      const preview = await fetchUserAvailabilitySyncPreview();
+      setSyncPreviewEvents(preview);
+      setSyncCellSelectionMap(
+        Object.fromEntries(
+          preview.map((row) => [
+            row.eventId,
+            Object.fromEntries(row.dates.map((date) => [date.eventDateId, date.desiredAvailability])),
+          ]),
+        ),
       );
+      setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(preview));
+      setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
+      setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
+      setSyncMessageMap({});
+      if (preview.length === 0) {
+        setSyncPreviewMessage(
+          '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+        );
+      }
+    } catch (error) {
+      console.error('反映対象取得エラー:', error);
+      setSyncPreviewMessage(
+        '反映対象の取得に失敗しました。時間をおいて再度お試しください。',
+      );
+    } finally {
+      setIsSyncPreviewLoading(false);
     }
-    setIsSyncPreviewLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (
+      !hasLoadedSyncPreview ||
+      isSyncPreviewLoading ||
+      syncApplyingEventIds.size > 0 ||
+      syncPreviewEvents.length > 0
+    ) {
+      return;
+    }
+    setSyncPreviewMessage(
+      '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+    );
+  }, [hasLoadedSyncPreview, isSyncPreviewLoading, syncApplyingEventIds.size, syncPreviewEvents.length]);
+
+  const handleApplySyncEvent = useCallback(
+    async (eventId: string) => {
+      if (syncApplyingEventIdsRef.current.has(eventId)) return;
+
+      syncApplyingEventIdsRef.current.add(eventId);
+      setSyncApplyingEventIds((prev) => {
+        const next = new Set(prev);
+        next.add(eventId);
+        return next;
+      });
+
+      try {
+        const selectedAvailabilities = syncCellSelectionMap[eventId] ?? {};
+        const overwriteProtected = syncOverwriteMap[eventId] ?? false;
+        const allowFinalized = syncAllowFinalizedMap[eventId] ?? false;
+
+        const result = await applyUserAvailabilitySyncForEvent({
+          eventId,
+          selectedAvailabilities,
+          overwriteProtected,
+          allowFinalized,
+        });
+
+        setSyncMessageMap((prev) => ({
+          ...prev,
+          [eventId]: result.message,
+        }));
+
+        if (!result.success) return;
+
+        setSyncPreviewEvents((prev) =>
+          prev.flatMap((event) => {
+            if (event.eventId !== eventId) return [event];
+            const reconciled = reconcileEventAfterApply({
+              event,
+              selectedAvailabilities,
+              overwriteProtected,
+            });
+            return reconciled.changes.total > 0 ? [reconciled] : [];
+          }),
+        );
+        setSyncCellSelectionMap((prev) => {
+          const next = { ...prev };
+          delete next[eventId];
+          return next;
+        });
+        setSyncPreviewWeekPageMap((prev) => {
+          const next = { ...prev };
+          delete next[eventId];
+          return next;
+        });
+        setSyncOverwriteMap((prev) => {
+          const next = { ...prev };
+          delete next[eventId];
+          return next;
+        });
+        setSyncAllowFinalizedMap((prev) => {
+          const next = { ...prev };
+          delete next[eventId];
+          return next;
+        });
+      } finally {
+        syncApplyingEventIdsRef.current.delete(eventId);
+        setSyncApplyingEventIds((prev) => {
+          const next = new Set(prev);
+          next.delete(eventId);
+          return next;
+        });
+      }
+    },
+    [syncAllowFinalizedMap, syncCellSelectionMap, syncOverwriteMap],
+  );
 
   const manualMap = useMemo(() => {
     const map: Record<string, TemplateCell> = {};
@@ -806,7 +951,7 @@ export default function AccountScheduleTemplates({
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-base-200 rounded-lg p-4 text-sm text-gray-500">
+      <div className="bg-base-200 rounded-lg p-4 text-sm text-base-content/60">
         ログインすると予定設定を管理できます。
       </div>
     );
@@ -821,7 +966,7 @@ export default function AccountScheduleTemplates({
       data-tour-id="account-schedule-templates"
     >
       <h3 className="mb-2 text-lg font-semibold">マイ予定設定</h3>
-      <p className="mb-4 text-sm text-gray-500">タブで表示対象を切り替えて編集できます。</p>
+      <p className="mb-4 text-sm text-base-content/60">タブで表示対象を切り替えて編集できます。</p>
 
       <div className="join mb-4">
         <button
@@ -890,11 +1035,11 @@ export default function AccountScheduleTemplates({
           </div>
 
           {isLoading ? (
-            <p className="text-sm text-gray-500">読み込み中...</p>
+            <p className="text-sm text-base-content/60">読み込み中...</p>
           ) : (
             <>
               {weeklyTimeSlots.length === 0 && (
-                <p className="mb-2 text-xs text-gray-500">
+                <p className="mb-2 text-xs text-base-content/60">
                   テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。
                 </p>
               )}
@@ -1012,7 +1157,7 @@ export default function AccountScheduleTemplates({
               )}
             </>
           )}
-          <div className="mt-2 text-xs text-gray-500">凡例: ○=可 / ×=不可 / -=未設定</div>
+          <div className="mt-2 text-xs text-base-content/60">凡例: ○=可 / ×=不可 / -=未設定</div>
           {weeklyMessage && <p className="text-info mt-2 text-sm">{weeklyMessage}</p>}
         </div>
       ) : (
@@ -1053,6 +1198,7 @@ export default function AccountScheduleTemplates({
                   setDatedEditing(true);
                   setDatedMessage(null);
                 }}
+                disabled={isLoading}
                 data-testid="dated-edit"
                 data-tour-id="account-dated-edit"
               >
@@ -1061,8 +1207,10 @@ export default function AccountScheduleTemplates({
             )}
           </div>
 
-          {blockCalendarData.dateKeys.length === 0 ? (
-            <p className="text-sm text-gray-500">予定データはまだありません。</p>
+          {isLoading ? (
+            <p className="text-sm text-base-content/60">予定データを読み込んでいます...</p>
+          ) : blockCalendarData.dateKeys.length === 0 ? (
+            <p className="text-sm text-base-content/60">予定データはまだありません。</p>
           ) : (
             <>
               <div className="mb-2">
@@ -1095,7 +1243,7 @@ export default function AccountScheduleTemplates({
                                   day: 'numeric',
                                 })}
                               </span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-base-content/60">
                                 ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
                               </span>
                             </div>
@@ -1193,7 +1341,7 @@ export default function AccountScheduleTemplates({
               )}
             </>
           )}
-          <div className="mt-2 text-xs text-gray-500">凡例: ○=可 / ×=不可 / -=未設定</div>
+          <div className="mt-2 text-xs text-base-content/60">凡例: ○=可 / ×=不可 / -=未設定</div>
           {datedMessage && <p className="text-info mt-2 text-sm">{datedMessage}</p>}
 
           <div
@@ -1214,10 +1362,10 @@ export default function AccountScheduleTemplates({
                 {isSyncPreviewLoading ? '確認中...' : '変更内容を確認'}
               </button>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-base-content/60">
               予定一括管理の変更が、過去・未来を含む回答済みイベントへどう反映されるかを確認できます。
             </p>
-            {syncPreviewMessage && <p className="text-sm text-gray-500">{syncPreviewMessage}</p>}
+            {syncPreviewMessage && <p className="text-sm text-base-content/60">{syncPreviewMessage}</p>}
 
             <div className="space-y-3">
               {syncPreviewEvents.map((event) => {
@@ -1228,7 +1376,7 @@ export default function AccountScheduleTemplates({
                   Math.max(dateBuckets.length - 1, 0),
                 );
                 const visibleDates = dateBuckets[currentWeekPage] ?? [];
-                const isUpdating = syncApplyingEventId === event.eventId;
+                const isUpdating = syncApplyingEventIds.has(event.eventId);
                 const selection = syncCellSelectionMap[event.eventId] ?? {};
                 const weekPeriodLabel =
                   visibleDates.length > 0
@@ -1323,7 +1471,7 @@ export default function AccountScheduleTemplates({
                                         day: 'numeric',
                                       })}
                                     </span>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-base-content/60">
                                       ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
                                     </span>
                                   </div>
@@ -1439,29 +1587,13 @@ export default function AccountScheduleTemplates({
                         className="btn btn-sm btn-primary ml-auto"
                         disabled={isUpdating}
                         data-testid={`sync-apply-${event.eventId}`}
-                        onClick={async () => {
-                          setSyncApplyingEventId(event.eventId);
-                          const result = await applyUserAvailabilitySyncForEvent({
-                            eventId: event.eventId,
-                            selectedAvailabilities: syncCellSelectionMap[event.eventId] ?? {},
-                            overwriteProtected: syncOverwriteMap[event.eventId] ?? false,
-                            allowFinalized: syncAllowFinalizedMap[event.eventId] ?? false,
-                          });
-                          setSyncApplyingEventId(null);
-                          setSyncMessageMap((prev) => ({
-                            ...prev,
-                            [event.eventId]: result.message,
-                          }));
-                          if (result.success) {
-                            await loadSyncPreview();
-                          }
-                        }}
+                        onClick={() => void handleApplySyncEvent(event.eventId)}
                       >
                         {isUpdating ? '適用中...' : 'この変更を適用'}
                       </button>
                     </div>
                     {syncMessageMap[event.eventId] && (
-                      <p className="mt-2 text-xs text-gray-600">{syncMessageMap[event.eventId]}</p>
+                      <p className="mt-2 text-xs text-base-content/70">{syncMessageMap[event.eventId]}</p>
                     )}
                   </div>
                 );

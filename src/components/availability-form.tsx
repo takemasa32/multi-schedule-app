@@ -1394,7 +1394,7 @@ export default function AvailabilityForm({
                           <span className="text-xs font-semibold md:text-sm">
                             {date.formattedDate.split('(')[0]}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-base-content/60">
                             ({date.formattedDate.split('(')[1]}
                           </span>
                         </div>
@@ -1585,7 +1585,7 @@ export default function AvailabilityForm({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
               <h3 className="mb-4 text-lg font-bold">回答後の保存方法</h3>
-              <p className="mb-6 text-sm text-gray-600">
+              <p className="mb-6 text-sm text-base-content/70">
                 この回答をアカウント予定に保存し、他イベントへの反映も実行しますか？
               </p>
               <div className="flex flex-wrap justify-end gap-2">
@@ -1619,7 +1619,7 @@ export default function AvailabilityForm({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
               <h3 className="mb-4 text-lg font-bold">週予定の更新</h3>
-              <p className="mb-6 text-sm text-gray-600">
+              <p className="mb-6 text-sm text-base-content/70">
                 曜日一括入力の変更をアカウントの週予定にも反映しますか？
               </p>
               <div className="flex flex-wrap justify-end gap-2">

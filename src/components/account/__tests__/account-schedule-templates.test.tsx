@@ -96,6 +96,33 @@ const toWeekPeriodLabelFromIso = (iso: string) => {
   })}`;
 };
 
+const createSyncPreviewEvent = (eventId: string, title: string) => {
+  const range = createLocalTimeRange(9, 10);
+  return {
+    eventId,
+    publicToken: `${eventId}-token`,
+    title,
+    isFinalized: false,
+    changes: {
+      total: 1,
+      availableToUnavailable: 0,
+      unavailableToAvailable: 1,
+      protected: 0,
+    },
+    dates: [
+      {
+        eventDateId: `${eventId}-date-1`,
+        startTime: range.startIso,
+        endTime: range.endIso,
+        currentAvailability: false,
+        desiredAvailability: true,
+        willChange: true,
+        isProtected: false,
+      },
+    ],
+  };
+};
+
 describe('AccountScheduleTemplates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -131,6 +158,35 @@ describe('AccountScheduleTemplates', () => {
 
     expect(screen.queryByText('ログインすると予定設定を管理できます。')).not.toBeInTheDocument();
     await screen.findByRole('heading', { name: '予定一括管理' });
+  });
+
+  it('予定一括管理の読み込み中は空データ文言を表示しない', async () => {
+    mockUseSession.mockReturnValue({ status: 'loading' });
+    let resolveTemplates: ((value: { manual: never[]; learned: never[] }) => void) | null = null;
+    let resolveBlocks: ((value: never[]) => void) | null = null;
+
+    mockFetchUserScheduleTemplates.mockReturnValue(
+      new Promise((resolve) => {
+        resolveTemplates = resolve;
+      }),
+    );
+    mockFetchUserScheduleBlocks.mockReturnValue(
+      new Promise((resolve) => {
+        resolveBlocks = resolve;
+      }),
+    );
+
+    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+
+    expect(screen.getByText('予定データを読み込んでいます...')).toBeInTheDocument();
+    expect(screen.queryByText('予定データはまだありません。')).not.toBeInTheDocument();
+
+    resolveTemplates?.({ manual: [], learned: [] });
+    resolveBlocks?.([]);
+
+    await waitFor(() => {
+      expect(screen.getByText('予定データはまだありません。')).toBeInTheDocument();
+    });
   });
 
   it('編集して更新するとテンプレを保存できる', async () => {
@@ -356,6 +412,9 @@ describe('AccountScheduleTemplates', () => {
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
+    await waitFor(() => {
+      expect(screen.queryByText('予定データを読み込んでいます...')).not.toBeInTheDocument();
+    });
     fireEvent.click(screen.getByTestId('dated-edit'));
     fireEvent.click(
       screen.getByRole('button', {
@@ -443,6 +502,9 @@ describe('AccountScheduleTemplates', () => {
       render(<AccountScheduleTemplates />);
 
       await screen.findByRole('heading', { name: '予定一括管理' });
+      await waitFor(() => {
+        expect(screen.queryByText('予定データを読み込んでいます...')).not.toBeInTheDocument();
+      });
       fireEvent.click(screen.getByTestId('dated-edit'));
       fireEvent.click(
         screen.getByRole('button', {
@@ -605,5 +667,64 @@ describe('AccountScheduleTemplates', () => {
     expect(unavailableBadge).toHaveClass('badge-error');
     expect(screen.queryByText(/不可→可/)).not.toBeInTheDocument();
     expect(screen.queryByText(/保護/)).not.toBeInTheDocument();
+  });
+
+  it('回答イベントへの反映で複数イベントを同時適用しても競合せず全件再取得しない', async () => {
+    let resolveFirst: (() => void) | null = null;
+    let resolveSecond: (() => void) | null = null;
+
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      createSyncPreviewEvent('event-1', 'イベントA'),
+      createSyncPreviewEvent('event-2', 'イベントB'),
+    ]);
+    mockApplyUserAvailabilitySyncForEvent.mockImplementation(({ eventId }: { eventId: string }) => {
+      return new Promise((resolve) => {
+        const responder = () => resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
+        if (eventId === 'event-1') {
+          resolveFirst = responder;
+          return;
+        }
+        resolveSecond = responder;
+      });
+    });
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+    await screen.findByText('イベントA');
+    await screen.findByText('イベントB');
+
+    fireEvent.click(screen.getByTestId('sync-apply-event-1'));
+    fireEvent.click(screen.getByTestId('sync-apply-event-2'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('適用中...')).toHaveLength(2);
+    });
+
+    await act(async () => {
+      resolveSecond?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('イベントB')).not.toBeInTheDocument();
+      expect(screen.getByText('イベントA')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      resolveFirst?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('イベントA')).not.toBeInTheDocument();
+    });
+    expect(mockApplyUserAvailabilitySyncForEvent).toHaveBeenCalledTimes(2);
+    expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
   });
 });

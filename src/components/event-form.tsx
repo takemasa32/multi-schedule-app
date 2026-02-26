@@ -7,7 +7,7 @@ export default function EventForm() {
   return (
     <div className="mx-auto max-w-2xl p-0 md:p-4">
       <EventFormClient />
-      <div className="mt-4 text-sm text-gray-500">
+      <div className="mt-4 text-sm text-base-content/60">
         作成後、参加者に共有できるリンクが発行されます。
       </div>
     </div>
