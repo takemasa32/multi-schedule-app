@@ -244,7 +244,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.getByTestId('account-tour-open').first().click();
     await expect(tourDialog).toBeVisible();
     await page.getByTestId('account-tour-next').click();
-    await expect(tourDialog.getByText('マイ予定設定')).toBeVisible();
+    await expect(tourDialog.getByText('予定の設定')).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByTestId('account-tour-skip').click();
@@ -253,7 +253,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.getByTestId('account-tour-open').first().click();
     await expect(tourDialog).toBeVisible();
     await page.getByTestId('account-tour-next').click();
-    await expect(tourDialog.getByText('マイ予定設定')).toBeVisible();
+    await expect(tourDialog.getByText('予定の設定')).toBeVisible();
   });
 
   test('/account では未ログイン回答の紐づけセクションを表示しない', async ({
