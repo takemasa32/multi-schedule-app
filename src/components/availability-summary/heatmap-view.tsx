@@ -827,7 +827,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
       >
-        <table className="w-full min-w-[400px] border-separate border-spacing-0 text-center sm:min-w-[680px]">
+        <table className="table-fixed w-full min-w-[400px] border-separate border-spacing-0 text-center sm:min-w-[680px]">
+          {/* 日付列が少ない時でも時間列だけが不自然に伸びないよう、先頭列幅を固定する */}
+          <colgroup>
+            <col className="w-[50px] sm:w-[64px]" />
+            {uniqueDates.map((dateInfo) => (
+              <col key={`${dateInfo.date}-col`} />
+            ))}
+          </colgroup>
           <thead className="sticky top-0 z-20">
             <tr className="bg-base-200">
               <th className="bg-base-200 border-base-300 sticky left-0 top-0 isolate z-30 min-w-[50px] border-r px-1 py-1 text-left text-xs sm:min-w-[64px] sm:px-1.5 sm:py-2 sm:text-sm">
