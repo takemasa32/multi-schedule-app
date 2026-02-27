@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 2026-02-27
+
+- イベント取得（`getEvent`）を request-scope キャッシュ化し、`/event/[public_id]` 系ページでの重複DB参照を削減。表示時の `last_accessed_at` 更新も廃止し、読み取り時の不要writeを解消。
+- 回答送信処理を新RPC `submit_availability_bundle` ベースへ変更し、参加者更新・回答保存・紐づけ更新・予定反映・override更新・最終アクセス更新を1回で整合的に実行するよう改善。
+- `submitAvailability` は既存シグネチャ互換を維持しつつ内部実装を刷新。`sync_scope=all` + defer挙動は維持し、回答完了体感を優先。
+- `submitAvailability` の成功レスポンスに任意 `warningCodes` を追加し、非必須後処理（履歴同期/紐づけ更新）の失敗を警告としてUIへ伝播できるよう改善。
+- 同期プレビュー取得（`fetchUserAvailabilitySyncPreview`）をイベント単位逐次取得から一括取得へ変更し、N+1クエリを解消。`excludeEventId` / `targetEventIds` の任意オプションを追加。
+- `/event/[public_id]/input/sync-review` は `excludeEventId` を使ったサーバー側除外へ変更し、不要データ取得を削減。
+- `/account` の保存処理をバッチ化。週次は単発 `upsertWeeklyTemplatesFromWeekdaySelections`、日付ブロックは新規 `saveUserScheduleBlockChanges` で1回保存へ統一。
+- `upsertWeeklyTemplatesFromWeekdaySelections` に `allowClear?: boolean` を追加。既定では `templates=[]` をエラー扱いへ戻し、全削除は明示指定時のみ可能にして互換性を維持。
+- 回答画面の送信後遷移とログイン遷移を `window.location.href` から `router.replace/push` へ変更し、フルリロード依存を削減。
+- 履歴同期を `upsert_event_access_histories_bulk` で一括化し、`syncEventHistory` の逐次RPCループを廃止。
+- `upsert_event_access_histories_bulk` は部分失敗耐性を追加し、`processed_count / skipped_count` を返すよう改善。スキップ発生時は警告ログを出力。
+- 閲覧時の `last_accessed_at` 更新を `touch_event_last_accessed_if_stale` RPC で復元し、実ページ描画時のみ間引き更新する方式に変更。
+- 非破壊DB最適化として、`participants(event_id, created_at)` と `event_dates(event_id, start_time)` の追加インデックスを導入。
+- `test:e2e:chrome:public` はサーバー自動起動付きへ変更し、認証付きE2Eは前提テーブル不足時に理由付きskipできるよう改善。
+- `package.json` のテスト系スクリプトを整理し、重複していた `e2e:*` 系とブラウザ別補助スクリプトを削減。日常運用向けに `test:e2e:chrome` / `test:e2e:chrome:public` / `test:e2e:auth` / `test:e2e` / `test:e2e:debug` へ集約。
+- 体感最適化方針と公開API変更を `docs/architecture/performance-latency-improvements.md` に追加。
+
 ## 2026-02-26
 
 - 回答状況ヒートマップのテーブルに `colgroup` と固定レイアウトを導入し、日付列が少ないケースでも時間列だけが過度に広がらないよう修正。

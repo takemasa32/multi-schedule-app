@@ -11,6 +11,7 @@
 - [回答ウィザード設計メモ](docs/architecture/answer-wizard.md)
 - [アカウント予定連携の設計](docs/architecture/account-schedule.md)
 - [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
+- [体感最適化と整合性担保](docs/architecture/performance-latency-improvements.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
@@ -213,19 +214,13 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 
 - イベント作成 → リンク共有 → 参加者回答 → 主催者確定 → カレンダー連携
 - 認証ありフロー（`/account`、予定一括管理、回答紐づけ、ツアー）を含む回帰確認
-- サーバー・Supabase 同時起動、ヘッドレス実行、HTML レポート出力
+- 公開フロー/認証フローを分けた実行と、自動サーバー起動付き検証
 
 ### 使用方法
 
-- **通常の e2e テスト実行**
-  `npm run e2e`
-  - Next.js サーバー・Supabase ローカル環境・Playwright テストを並列で自動起動します。
-  - テストはヘッドレスモードで実行され、結果は HTML レポートとして `playwright-report/` ディレクトリに出力されます。
-
 - **Chromium向けの推奨実行（公開フロー + 認証フロー）**
   `npm run test:e2e:chrome`
-  - `test:e2e:chrome:public`（公開フロー）と `test:e2e:auth`（認証必須フロー）を並列実行します。
-  - 認証フローは `playwright.auth.config.ts` を使い、`http://localhost:3201` で検証します。
+  - `test:e2e:chrome:public`（公開フロー）と `test:e2e:auth`（認証必須フロー）を順次実行します。
 
 - **公開フローのみ実行（`@auth-required` を除外）**
   `npm run test:e2e:chrome:public`
@@ -235,17 +230,11 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
   - 内部で `ENABLE_DEV_LOGIN` などの必要な環境変数を設定し、ビルド済みサーバーを `:3201` で起動して実行します。
   - DB接続（`SUPABASE_DB_URL`）とローカル環境の準備が必要です。
 
-- **開発モードでの e2e テスト実行**
-  `npm run e2e:dev`
-  - Next.js を開発モードで起動し、テストを実行します。
+- **開発サーバー起動済みで Playwright のみ実行**
+  `npm run test:e2e`
 
-- **ヘッドレスモードでの e2e テスト実行**
-  `npm run e2e:headless`
-  - 完全ヘッドレスでテストを実行します。
-
-- **CI 用（簡易レポート）**
-  `npm run e2e:ci`
-  - CI/CD での利用を想定した簡易レポート出力です。
+- **デバッグ実行（headed + debug）**
+  `npm run test:e2e:debug`
 
 - **テストレポートの確認**
   テスト実行後、以下のコマンドで HTML レポートをブラウザで確認できます。
@@ -260,5 +249,4 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 ---
 
 **補足:**
-`package.json` には `test:e2e` スクリプトも定義されています。開発サーバーを別途起動した状態で e2e テストだけを実行したい場合に `npm run test:e2e` を利用できます。
-本番ビルドやサーバー起動から自動で行う場合は、上記の `npm run e2e` などを使用してください。
+テストスクリプトは保守性のため最小構成に整理しています。E2E は `test:e2e:chrome` / `test:e2e:chrome:public` / `test:e2e:auth` / `test:e2e` / `test:e2e:debug` のみを提供します。

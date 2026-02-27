@@ -5,14 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   applyUserAvailabilitySyncForEvent,
-  createManualScheduleTemplate,
   fetchUserAvailabilitySyncPreview,
   fetchUserScheduleBlocks,
   fetchUserScheduleTemplates,
-  removeScheduleTemplate,
-  removeUserScheduleBlock,
+  saveUserScheduleBlockChanges,
   type UserAvailabilitySyncPreviewEvent,
-  upsertUserScheduleBlock,
+  upsertWeeklyTemplatesFromWeekdaySelections,
 } from '@/lib/schedule-actions';
 import { toComparableDate } from '@/lib/schedule-utils';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
@@ -369,7 +367,7 @@ export default function AccountScheduleTemplates({
     };
   }, [datedMessage]);
 
-  const loadSyncPreview = useCallback(async () => {
+  const loadSyncPreview = useCallback(async (): Promise<UserAvailabilitySyncPreviewEvent[]> => {
     setIsSyncPreviewLoading(true);
     setHasLoadedSyncPreview(true);
     setSyncPreviewMessage(null);
@@ -393,11 +391,13 @@ export default function AccountScheduleTemplates({
           '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
         );
       }
+      return preview;
     } catch (error) {
       console.error('反映対象取得エラー:', error);
       setSyncPreviewMessage(
         '反映対象の取得に失敗しました。時間をおいて再度お試しください。',
       );
+      return [];
     } finally {
       setIsSyncPreviewLoading(false);
     }
@@ -813,50 +813,80 @@ export default function AccountScheduleTemplates({
   const saveWeekly = async () => {
     setWeeklyMessage(null);
     setWeeklySaving(true);
-    const operations: Array<() => Promise<{ success: boolean; message?: string }>> = [];
+    const nextManualMap = new Map<
+      string,
+      { weekday: number; startTime: string; endTime: string; availability: boolean }
+    >(
+      Object.entries(manualMap).flatMap(([key, cell]) => {
+        if (!cell) return [];
+        const parsed = parseTemplateCellKey(key);
+        if (!parsed) return [];
+        return [
+          [
+            key,
+            {
+              weekday: parsed.weekday,
+              startTime: parsed.startTime,
+              endTime: parsed.endTime,
+              availability: cell.availability,
+            },
+          ] as const,
+        ];
+      }),
+    );
 
-    Object.keys(weeklyDraftMap).forEach((key) => {
+    Object.entries(weeklyDraftMap).forEach(([key, draft]) => {
       const parsed = parseTemplateCellKey(key);
       if (!parsed) return;
       const manualCell = manualMap[key];
       const learnedCell = learnedMap[key];
-      const draft = weeklyDraftMap[key];
 
       if (draft === 'empty') {
-        if (manualCell?.id) {
-          operations.push(() => removeScheduleTemplate(manualCell.id!));
-        }
+        nextManualMap.delete(key);
         return;
       }
 
       const nextAvailability = draft === 'available';
-      if (manualCell && manualCell.availability === nextAvailability) return;
-      if (!manualCell && learnedCell && learnedCell.availability === nextAvailability) return;
+      if (!manualCell && learnedCell && learnedCell.availability === nextAvailability) {
+        nextManualMap.delete(key);
+        return;
+      }
 
-      operations.push(() =>
-        createManualScheduleTemplate({
-          weekday: parsed.weekday,
-          startTime: parsed.startTime,
-          endTime: parsed.endTime,
-          availability: nextAvailability,
-        }),
-      );
+      nextManualMap.set(key, {
+        weekday: parsed.weekday,
+        startTime: parsed.startTime,
+        endTime: parsed.endTime,
+        availability: nextAvailability,
+      });
     });
 
-    if (operations.length === 0) {
+    const currentManualMap = new Map(
+      Object.entries(manualMap).flatMap(([key, cell]) => {
+        if (!cell) return [];
+        return [[key, cell.availability] as const];
+      }),
+    );
+    const isUnchanged =
+      currentManualMap.size === nextManualMap.size &&
+      Array.from(nextManualMap.entries()).every(
+        ([key, value]) => currentManualMap.get(key) === value.availability,
+      );
+
+    if (isUnchanged) {
       setWeeklyMessage('変更はありません');
       setWeeklySaving(false);
       setWeeklyEditing(false);
       return;
     }
 
-    for (const operation of operations) {
-      const result = await operation();
-      if (!result.success) {
-        setWeeklyMessage(result.message ?? '週ごとの用事の更新に失敗しました');
-        setWeeklySaving(false);
-        return;
-      }
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: Array.from(nextManualMap.values()),
+      allowClear: nextManualMap.size === 0,
+    });
+    if (!result.success) {
+      setWeeklyMessage(result.message ?? '週ごとの用事の更新に失敗しました');
+      setWeeklySaving(false);
+      return;
     }
 
     setWeeklySaving(false);
@@ -868,7 +898,13 @@ export default function AccountScheduleTemplates({
   const saveDated = async () => {
     setDatedMessage(null);
     setDatedSaving(true);
-    const operations: Array<() => Promise<{ success: boolean; message?: string }>> = [];
+    const upserts: Array<{
+      startTime: string;
+      endTime: string;
+      availability: boolean;
+      replaceBlockId?: string;
+    }> = [];
+    const deleteIds: string[] = [];
 
     Object.keys(datedDraftMap).forEach((key) => {
       const parsed = parseBlockCellKey(key);
@@ -879,7 +915,7 @@ export default function AccountScheduleTemplates({
 
       if (draft === 'empty') {
         if (current?.id) {
-          operations.push(() => removeUserScheduleBlock(current.id!));
+          deleteIds.push(current.id);
         }
         return;
       }
@@ -892,60 +928,40 @@ export default function AccountScheduleTemplates({
         endTime: parsed.endTime,
       });
 
-      operations.push(() =>
-        upsertUserScheduleBlock({
-          startTime: dateTimeRange.startDateTime,
-          endTime: dateTimeRange.endDateTime,
-          availability: nextAvailability,
-          replaceBlockId: current?.id,
-        }),
-      );
+      upserts.push({
+        startTime: dateTimeRange.startDateTime,
+        endTime: dateTimeRange.endDateTime,
+        availability: nextAvailability,
+        replaceBlockId: current?.id,
+      });
     });
 
-    if (operations.length === 0) {
+    if (upserts.length === 0 && deleteIds.length === 0) {
       setDatedMessage('変更はありません');
       setDatedSaving(false);
       setDatedEditing(false);
       return;
     }
 
-    for (const operation of operations) {
-      const result = await operation();
-      if (!result.success) {
-        setDatedMessage(result.message ?? '日付ブロックの更新に失敗しました');
-        setDatedSaving(false);
-        return;
-      }
+    const result = await saveUserScheduleBlockChanges({
+      upserts,
+      deleteIds,
+    });
+    if (!result.success) {
+      setDatedMessage(result.message ?? '日付ブロックの更新に失敗しました');
+      setDatedSaving(false);
+      return;
     }
 
     setDatedSaving(false);
     setDatedEditing(false);
     setDatedMessage(DATED_UPDATE_SUCCESS_MESSAGE);
-    await loadAll();
-    const preview = await fetchUserAvailabilitySyncPreview();
+    const [, preview] = await Promise.all([loadAll(), loadSyncPreview()]);
     if (preview.length > 0) {
-      setSyncPreviewEvents(preview);
-      setSyncCellSelectionMap(
-        Object.fromEntries(
-          preview.map((row) => [
-            row.eventId,
-            Object.fromEntries(
-              row.dates.map((date) => [date.eventDateId, date.desiredAvailability]),
-            ),
-          ]),
-        ),
-      );
-      setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(preview));
-      setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
-      setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
       setSyncPreviewMessage('変更のあるイベントを下で確認できます');
       requestAnimationFrame(() => {
         syncSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
-    } else {
-      setSyncPreviewMessage(
-        '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
-      );
     }
   };
 

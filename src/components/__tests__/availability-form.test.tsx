@@ -16,6 +16,12 @@ jest.mock('@/lib/schedule-actions', () => ({
   upsertWeeklyTemplatesFromWeekdaySelections: jest.fn(),
   fetchUserScheduleTemplates: jest.fn(),
 }));
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+  }),
+}));
 
 import { submitAvailability, checkParticipantExists } from '@/lib/actions';
 import { upsertWeeklyTemplatesFromWeekdaySelections } from '@/lib/schedule-actions';

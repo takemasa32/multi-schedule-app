@@ -443,10 +443,11 @@ test.describe.serial('イベントE2Eフロー', () => {
     await addSection2.click();
 
     // 日付文字列を生成
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate() + 1).padStart(2, '0'); // 明日
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 14); // 他シナリオと競合しにくい日付
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
     // 日程追加セクションを展開
     const addSection = page.getByText('詳細な日程追加', { exact: false });
@@ -475,18 +476,46 @@ test.describe.serial('イベントE2Eフロー', () => {
     const visibleEndTimeInput = details.locator('input[aria-label="各日の終了時刻"]:visible');
     await visibleStartTimeInput.fill('09:00');
     await visibleEndTimeInput.fill('10:00');
-    // 追加ボタン押下
-    await page.getByRole('button', { name: /日程を追加/ }).click();
+    await expect(details.getByText('生成された日程概要')).toBeVisible({ timeout: 5000 });
+    // 追加ボタン押下（詳細追加セクション内のボタンに限定）
+    const addDateButton = details.locator('button', { hasText: '日程を追加' });
+    await expect(addDateButton).toBeVisible({ timeout: 5000 });
+    await expect(addDateButton).toBeEnabled({ timeout: 5000 });
+    await addDateButton.click({ force: true });
     // 確認モーダルのOKボタン押下
-    await page.getByRole('button', { name: /^追加する$/ }).click();
+    const confirmAddButton = page.getByRole('button', { name: /^追加する$/ });
+    await expect(confirmAddButton).toBeVisible({ timeout: 5000 });
+    await confirmAddButton.click({ force: true });
+    const successAlert = page.getByTestId('event-date-add-success');
+    await expect(successAlert).toBeVisible({ timeout: 10000 });
+    await expect(successAlert).toBeHidden({ timeout: 10000 });
 
     // 同じ日程を再度追加し、重複エラーを検証
-    await page.getByLabel('開始日', { exact: true }).fill(dateStr);
-    await page.getByLabel('終了日', { exact: true }).fill(dateStr);
-    await page.getByLabel('各日の開始時刻', { exact: true }).fill('09:00');
-    await page.getByLabel('各日の終了時刻', { exact: true }).fill('10:00');
-    await page.getByRole('button', { name: /日程を追加/ }).click();
-    await page.getByRole('button', { name: /^追加する$/ }).click();
+    const autoModeButton = page.getByRole('button', { name: '期間ベース' });
+    await expect(autoModeButton).toBeVisible({ timeout: 5000 });
+    if (await autoModeButton.isEnabled()) {
+      await autoModeButton.click({ force: true });
+    }
+    const detailsSummaryAfterRefresh = page.locator('summary', {
+      hasText: '詳細な日程追加',
+    });
+    await expect(detailsSummaryAfterRefresh).toBeVisible({ timeout: 5000 });
+    const detailsAfterRefresh = detailsSummaryAfterRefresh.locator('..');
+    if (!(await detailsAfterRefresh.evaluate((el) => (el as HTMLDetailsElement).open))) {
+      await detailsSummaryAfterRefresh.click({ force: true });
+    }
+    await detailsAfterRefresh.locator('input[aria-label="開始日"]:visible').fill(dateStr);
+    await detailsAfterRefresh.locator('input[aria-label="終了日"]:visible').fill(dateStr);
+    await detailsAfterRefresh.locator('input[aria-label="各日の開始時刻"]:visible').fill('09:00');
+    await detailsAfterRefresh.locator('input[aria-label="各日の終了時刻"]:visible').fill('10:00');
+    const addDateButtonAfterRefresh = detailsAfterRefresh.locator('button', {
+      hasText: '日程を追加',
+    });
+    await expect(addDateButtonAfterRefresh).toBeVisible({ timeout: 5000 });
+    await expect(addDateButtonAfterRefresh).toBeEnabled({ timeout: 5000 });
+    await addDateButtonAfterRefresh.click({ force: true });
+    await expect(confirmAddButton).toBeVisible({ timeout: 5000 });
+    await confirmAddButton.click({ force: true });
     const duplicateAlert = page.getByTestId('event-date-add-error');
     await expect(duplicateAlert).toBeVisible({ timeout: 5000 });
     await expect(duplicateAlert).toContainText(/重複/);

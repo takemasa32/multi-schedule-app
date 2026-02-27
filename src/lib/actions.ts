@@ -7,13 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { generatePublicToken } from './token';
 import { revalidatePath } from 'next/cache';
 import { getAuthSession } from '@/lib/auth';
-import {
-  saveAvailabilityOverrides,
-  syncUserAvailabilities,
-  updateUserScheduleTemplatesFromBlocks,
-  upsertUserEventLink,
-  upsertUserScheduleBlocks,
-} from '@/lib/schedule-actions';
+import { cache } from 'react';
+import { syncUserAvailabilities, upsertUserEventLink } from '@/lib/schedule-actions';
 
 export type CreateEventSuccessResult = {
   success: true;
@@ -28,6 +23,19 @@ export type CreateEventErrorResult = {
 };
 
 export type CreateEventActionResult = CreateEventSuccessResult | CreateEventErrorResult;
+
+export type SubmitAvailabilityWarningCode = 'POST_SYNC_PARTIAL_FAILURE';
+
+export type SubmitAvailabilityActionResult =
+  | {
+      success: true;
+      message: string;
+      warningCodes?: SubmitAvailabilityWarningCode[];
+    }
+  | {
+      success: false;
+      message: string;
+    };
 
 type ParsedClockTime = {
   hours: number;
@@ -356,6 +364,21 @@ export async function getParticipantById(participantId: string, eventId: string)
  * @throws {EventFetchError} Supabase からの取得に失敗した場合
  */
 export async function getEvent(publicToken: string) {
+  return getCachedEvent(publicToken);
+}
+
+/**
+ * 公開トークンからイベント情報を取得する内部関数
+ * 同一リクエスト内の重複取得を避けるため、cache()でラップして利用する。
+ *
+ * @param {string} publicToken - イベントの公開トークン
+ * @returns {Promise<Database['public']['Tables']['events']['Row']>} イベント情報
+ * @throws {EventNotFoundError} イベントが存在しない場合
+ * @throws {EventFetchError} Supabase からの取得に失敗した場合
+ */
+const fetchEventByPublicToken = async (
+  publicToken: string,
+): Promise<Database['public']['Tables']['events']['Row']> => {
   const supabase = createSupabaseAdmin();
 
   // イベントを取得
@@ -379,13 +402,34 @@ export async function getEvent(publicToken: string) {
     throw new EventNotFoundError();
   }
 
-  // 最終閲覧時刻を更新
-  await supabase
-    .from('events')
-    .update({ last_accessed_at: new Date().toISOString() })
-    .eq('id', data.id);
-
   return data;
+};
+
+const getCachedEvent = cache(fetchEventByPublicToken);
+
+/**
+ * イベントの最終アクセス時刻を、一定時間以上経過している場合のみ更新する
+ *
+ * @param {string} publicToken - イベントの公開トークン
+ * @param {number} minIntervalMinutes - 更新間隔（分）
+ * @returns {Promise<void>} 更新処理の完了
+ */
+export async function touchEventLastAccessedIfStale(
+  publicToken: string,
+  minIntervalMinutes = 15,
+): Promise<void> {
+  if (!publicToken) return;
+
+  const supabase = createSupabaseAdmin();
+  const { error } = await supabase.rpc('touch_event_last_accessed_if_stale', {
+    p_public_token: publicToken,
+    p_accessed_at: new Date().toISOString(),
+    p_min_interval_minutes: minIntervalMinutes,
+  });
+
+  if (error) {
+    console.error('イベント最終アクセス更新エラー:', error);
+  }
 }
 
 /**
@@ -536,7 +580,9 @@ export async function getEventDates(eventId: string): Promise<EventDate[]> {
 /**
  * 参加者の回答を保存するアクション
  */
-export async function submitAvailability(formData: FormData) {
+export async function submitAvailability(
+  formData: FormData,
+): Promise<SubmitAvailabilityActionResult> {
   try {
     const eventId = formData.get('eventId') as string;
     const publicToken = formData.get('publicToken') as string;
@@ -555,90 +601,14 @@ export async function submitAvailability(formData: FormData) {
       }
     }
 
-    // 編集モードの場合、既存の参加者IDが提供される
-    const participantId = formData.get('participantId') as string | null;
-
     if (!eventId || !publicToken || !participantName) {
       return { success: false, message: '必須項目が未入力です' };
     }
 
-    const supabase = createSupabaseAdmin();
-
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('id')
-      .eq('public_token', publicToken)
-      .eq('id', eventId)
-      .single();
-
-    if (eventError || !event) {
-      return { success: false, message: 'イベントが見つかりません' };
-    }
-
-    let existingParticipantId = participantId;
-    let isNewParticipant = false;
-
-    if (existingParticipantId) {
-      const { data: currentParticipant } = await supabase
-        .from('participants')
-        .select('name')
-        .eq('id', existingParticipantId)
-        .maybeSingle();
-      if (currentParticipant) {
-        const updateData: { name?: string; comment: string | null } = {
-          comment,
-        };
-        if (currentParticipant.name !== participantName) {
-          updateData.name = participantName;
-        }
-        const { error: updateError } = await supabase
-          .from('participants')
-          .update(updateData)
-          .eq('id', existingParticipantId);
-        if (updateError) {
-          console.error('Participant update error:', updateError);
-          return { success: false, message: '参加者情報の更新に失敗しました' };
-        }
-      }
-    }
-
-    if (!existingParticipantId) {
-      const { data: existingParticipant } = await supabase
-        .from('participants')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('name', participantName)
-        .maybeSingle();
-
-      if (existingParticipant) {
-        existingParticipantId = existingParticipant.id;
-        await supabase.from('participants').update({ comment }).eq('id', existingParticipantId);
-      } else {
-        const responseToken = uuidv4();
-        const { data: newParticipant, error: participantError } = await supabase
-          .from('participants')
-          .insert({
-            event_id: eventId,
-            name: participantName,
-            response_token: responseToken,
-            comment,
-          })
-          .select('id')
-          .single();
-
-        if (participantError || !newParticipant) {
-          console.error('Participant creation error:', participantError);
-          return { success: false, message: '参加者登録に失敗しました' };
-        }
-
-        existingParticipantId = newParticipant.id;
-        isNewParticipant = true;
-      }
-    }
+    // 編集モードの場合、既存の参加者IDが提供される
+    const participantId = formData.get('participantId') as string | null;
 
     const availabilityEntries = [] as Array<{
-      event_id: string;
-      participant_id: string;
       event_date_id: string;
       availability: boolean;
     }>;
@@ -647,8 +617,6 @@ export async function submitAvailability(formData: FormData) {
       if (key.startsWith('availability_')) {
         const dateId = key.replace('availability_', '');
         availabilityEntries.push({
-          event_id: eventId,
-          participant_id: existingParticipantId!,
           event_date_id: dateId,
           availability: value === 'on',
         });
@@ -662,88 +630,55 @@ export async function submitAvailability(formData: FormData) {
       };
     }
 
-    if (!isNewParticipant) {
-      const { error: transactionError } = await supabase.rpc('update_participant_availability', {
-        p_participant_id: existingParticipantId,
-        p_event_id: eventId,
-        p_availabilities: availabilityEntries.map((entry) => ({
-          event_date_id: entry.event_date_id,
-          availability: entry.availability,
-        })),
-      });
+    const session = await getAuthSession();
+    const userId = session?.user?.id ?? null;
+    const supabase = createSupabaseAdmin();
+    const { data: bundleData, error: bundleError } = await supabase.rpc('submit_availability_bundle', {
+      p_event_id: eventId,
+      p_public_token: publicToken,
+      p_participant_id: participantId,
+      p_participant_name: participantName,
+      p_comment: comment,
+      p_availabilities: availabilityEntries,
+      p_user_id: userId,
+      p_override_date_ids: overrideDateIds,
+    });
 
-      if (transactionError) {
-        console.error('Availability transaction error:', transactionError);
-        return {
-          success: false,
-          message: '回答の更新に失敗しました。既存データは保持されています。',
-        };
+    if (bundleError) {
+      console.error('回答送信RPCエラー:', bundleError);
+      if (bundleError.message.includes('イベントが見つかりません')) {
+        return { success: false, message: 'イベントが見つかりません' };
       }
-    } else {
-      const { error: availabilityError } = await supabase
-        .from('availabilities')
-        .insert(availabilityEntries);
-      if (availabilityError) {
-        console.error('Availability submission error:', availabilityError);
-        return { success: false, message: '回答の保存に失敗しました' };
+      if (bundleError.message.includes('参加者情報の更新に失敗')) {
+        return { success: false, message: '参加者情報の更新に失敗しました' };
       }
+      return {
+        success: false,
+        message: '回答の保存に失敗しました。時間をおいて再度お試しください。',
+      };
     }
 
-    await supabase
-      .from('events')
-      .update({ last_accessed_at: new Date().toISOString() })
-      .eq('id', eventId);
+    const bundleResult = Array.isArray(bundleData) ? bundleData[0] : bundleData;
+    if (!bundleResult?.success) {
+      return {
+        success: false,
+        message:
+          typeof bundleResult?.message === 'string'
+            ? bundleResult.message
+            : '回答の保存に失敗しました。時間をおいて再度お試しください。',
+      };
+    }
 
-    const session = await getAuthSession();
-    if (session?.user?.id) {
-      const selectedDateIds = availabilityEntries
-        .filter((entry) => entry.availability)
-        .map((entry) => entry.event_date_id);
+    const persistedParticipantId =
+      typeof bundleResult.participant_id === 'string' ? bundleResult.participant_id : null;
+    const eventTitle = typeof bundleResult.event_title === 'string' ? bundleResult.event_title : null;
 
-      const { data: allEventDates, error: allDatesError } = await supabase
-        .from('event_dates')
-        .select('id,start_time,end_time')
-        .eq('event_id', eventId);
-
-      if (allDatesError) {
-        console.error('イベント日程取得エラー:', allDatesError);
-      }
-
-      await upsertUserEventLink({
-        userId: session.user.id,
-        eventId,
-        participantId: existingParticipantId,
+    if (userId && syncScope === 'all' && !shouldDeferSync) {
+      await syncUserAvailabilities({
+        userId,
+        scope: 'all',
+        currentEventId: eventId,
       });
-
-      if (allEventDates) {
-        await upsertUserScheduleBlocks({
-          userId: session.user.id,
-          eventId,
-          eventDates: allEventDates,
-          selectedDateIds,
-        });
-
-        await updateUserScheduleTemplatesFromBlocks({
-          userId: session.user.id,
-          eventDates: allEventDates,
-          selectedDateIds,
-        });
-      }
-
-      await saveAvailabilityOverrides({
-        userId: session.user.id,
-        eventId,
-        overrideDateIds,
-        selectedDateIds,
-      });
-
-      if (syncScope === 'all' && !shouldDeferSync) {
-        await syncUserAvailabilities({
-          userId: session.user.id,
-          scope: 'all',
-          currentEventId: eventId,
-        });
-      }
     }
 
     try {
@@ -754,9 +689,96 @@ export async function submitAvailability(formData: FormData) {
       }
     }
 
+    type NonCriticalTaskResult = {
+      task: 'event_history' | 'user_event_link';
+      success: boolean;
+      message?: string;
+      detail?: unknown;
+    };
+
+    const nonCriticalTasks: Array<Promise<NonCriticalTaskResult>> = [];
+    if (userId && eventTitle) {
+      nonCriticalTasks.push(
+        (async () => {
+          try {
+            const { error } = await supabase.rpc('upsert_event_access_history', {
+              p_user_id: userId,
+              p_event_public_token: publicToken,
+              p_event_title: eventTitle,
+              p_is_created_by_me: false,
+              p_accessed_at: new Date().toISOString(),
+            });
+            if (error) {
+              return {
+                task: 'event_history',
+                success: false,
+                message: 'イベント履歴同期に失敗しました',
+                detail: error,
+              } satisfies NonCriticalTaskResult;
+            }
+            return { task: 'event_history', success: true } satisfies NonCriticalTaskResult;
+          } catch (error) {
+            return {
+              task: 'event_history',
+              success: false,
+              message: 'イベント履歴同期で例外が発生しました',
+              detail: error,
+            } satisfies NonCriticalTaskResult;
+          }
+        })(),
+      );
+    }
+
+    if (userId && persistedParticipantId) {
+      nonCriticalTasks.push(
+        (async () => {
+          try {
+            const result = await upsertUserEventLink({
+              userId,
+              eventId,
+              participantId: persistedParticipantId,
+            });
+            if (!result.success) {
+              return {
+                task: 'user_event_link',
+                success: false,
+                message: result.message || 'イベント紐づけ更新に失敗しました',
+                detail: result,
+              } satisfies NonCriticalTaskResult;
+            }
+            return { task: 'user_event_link', success: true } satisfies NonCriticalTaskResult;
+          } catch (error) {
+            return {
+              task: 'user_event_link',
+              success: false,
+              message: 'イベント紐づけ更新で例外が発生しました',
+              detail: error,
+            } satisfies NonCriticalTaskResult;
+          }
+        })(),
+      );
+    }
+
+    const warningCodes: SubmitAvailabilityWarningCode[] = [];
+    if (nonCriticalTasks.length > 0) {
+      const results = await Promise.all(nonCriticalTasks);
+      const failedTasks = results.filter((result) => !result.success);
+      failedTasks.forEach((result) => {
+        console.error('回答送信後の非必須更新に失敗しました:', {
+          task: result.task,
+          message: result.message,
+          detail: result.detail,
+        });
+      });
+      if (failedTasks.length > 0) {
+        warningCodes.push('POST_SYNC_PARTIAL_FAILURE');
+      }
+    }
+
     return {
       success: true,
       message: '回答を送信しました。ありがとうございます！',
+      ...(warningCodes.length > 0 ? { warningCodes } : {}),
     };
   } catch (err) {
     console.error('Error in submitAvailability:', err);

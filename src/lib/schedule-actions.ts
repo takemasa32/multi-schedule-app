@@ -361,9 +361,39 @@ const computeAutoFillWithPriority = ({
   });
 };
 
-const buildUserAvailabilitySyncPreview = async (
+type SyncPreviewBuildOptions = {
+  targetEventIds?: string[];
+  excludeEventId?: string;
+};
+
+type SyncPreviewLink = {
+  event_id: string;
+  participant_id: string;
+};
+
+type SyncPreviewContext = {
+  links: SyncPreviewLink[];
+  eventsMap: Map<
+    string,
+    {
+      id: string;
+      title: string;
+      public_token: string;
+      is_finalized: boolean;
+    }
+  >;
+  blocks: ScheduleBlock[];
+  templates: ScheduleTemplate[];
+  busyIntervals: Array<{ event_id: string; start_time: string; end_time: string }>;
+  eventDatesByEventId: Map<string, EventDateRange[]>;
+  protectedDateIdsByEventId: Map<string, Set<string>>;
+  currentAvailabilitiesByParticipantId: Map<string, Map<string, boolean>>;
+};
+
+const buildSyncPreviewContext = async (
   userId: string,
-): Promise<UserAvailabilitySyncPreviewEvent[]> => {
+  options?: SyncPreviewBuildOptions,
+): Promise<SyncPreviewContext> => {
   const supabase = createSupabaseAdmin();
 
   const { data: allLinks, error: linkError } = await supabase
@@ -373,13 +403,50 @@ const buildUserAvailabilitySyncPreview = async (
 
   if (linkError || !allLinks) {
     console.error('イベント紐付け取得エラー:', linkError);
-    return [];
+    return {
+      links: [],
+      eventsMap: new Map(),
+      blocks: [],
+      templates: [],
+      busyIntervals: [],
+      eventDatesByEventId: new Map(),
+      protectedDateIdsByEventId: new Map(),
+      currentAvailabilitiesByParticipantId: new Map(),
+    };
   }
 
-  const links = allLinks.filter((row) => Boolean(row.participant_id));
-  if (links.length === 0) return [];
+  const targetSet =
+    options?.targetEventIds && options.targetEventIds.length > 0
+      ? new Set(options.targetEventIds)
+      : null;
+  const links = allLinks
+    .filter(
+      (
+        row,
+      ): row is {
+        event_id: string;
+        participant_id: string;
+      } => Boolean(row.event_id) && Boolean(row.participant_id),
+    )
+    .filter((row) => !targetSet || targetSet.has(row.event_id))
+    .filter((row) => (options?.excludeEventId ? row.event_id !== options.excludeEventId : true));
 
-  const allEventIds = allLinks.map((row) => row.event_id);
+  if (links.length === 0) {
+    return {
+      links: [],
+      eventsMap: new Map(),
+      blocks: [],
+      templates: [],
+      busyIntervals: [],
+      eventDatesByEventId: new Map(),
+      protectedDateIdsByEventId: new Map(),
+      currentAvailabilitiesByParticipantId: new Map(),
+    };
+  }
+
+  const allEventIds = Array.from(new Set(allLinks.map((row) => row.event_id).filter(Boolean)));
+  const scopedEventIds = Array.from(new Set(links.map((row) => row.event_id)));
+  const scopedParticipantIds = Array.from(new Set(links.map((row) => row.participant_id)));
 
   const { data: blocks } = await supabase
     .from('user_schedule_blocks')
@@ -414,55 +481,98 @@ const buildUserAvailabilitySyncPreview = async (
       Boolean(row),
     );
 
-  const { data: eventsData } = await supabase
+  const { data: eventsData, error: eventsError } = await supabase
     .from('events')
     .select('id,title,public_token,is_finalized')
-    .in(
-      'id',
-      links.map((row) => row.event_id),
-    );
+    .in('id', scopedEventIds);
+  if (eventsError) {
+    console.error('イベント情報取得エラー:', eventsError);
+  }
   const eventsMap = new Map((eventsData ?? []).map((row) => [row.id, row]));
+
+  const { data: allEventDates, error: datesError } = await supabase
+    .from('event_dates')
+    .select('id,event_id,start_time,end_time')
+    .in('event_id', scopedEventIds)
+    .order('start_time', { ascending: true });
+  if (datesError) {
+    console.error('イベント日程取得エラー:', datesError);
+  }
+  const eventDatesByEventId = new Map<string, EventDateRange[]>();
+  (allEventDates ?? []).forEach((row) => {
+    const current = eventDatesByEventId.get(row.event_id) ?? [];
+    current.push({
+      id: row.id,
+      start_time: row.start_time,
+      end_time: row.end_time,
+    });
+    eventDatesByEventId.set(row.event_id, current);
+  });
+
+  const { data: overrides, error: overridesError } = await supabase
+    .from('user_event_availability_overrides')
+    .select('event_id,event_date_id')
+    .eq('user_id', userId)
+    .in('event_id', scopedEventIds);
+  if (overridesError) {
+    console.error('上書き情報取得エラー:', overridesError);
+  }
+  const protectedDateIdsByEventId = new Map<string, Set<string>>();
+  (overrides ?? []).forEach((row) => {
+    const set = protectedDateIdsByEventId.get(row.event_id) ?? new Set<string>();
+    set.add(row.event_date_id);
+    protectedDateIdsByEventId.set(row.event_id, set);
+  });
+
+  const { data: currentAvailabilities, error: currentAvailabilitiesError } = await supabase
+    .from('availabilities')
+    .select('participant_id,event_date_id,availability')
+    .in('participant_id', scopedParticipantIds);
+  if (currentAvailabilitiesError) {
+    console.error('現在回答取得エラー:', currentAvailabilitiesError);
+  }
+  const currentAvailabilitiesByParticipantId = new Map<string, Map<string, boolean>>();
+  (currentAvailabilities ?? []).forEach((row) => {
+    const map = currentAvailabilitiesByParticipantId.get(row.participant_id) ?? new Map();
+    map.set(row.event_date_id, row.availability);
+    currentAvailabilitiesByParticipantId.set(row.participant_id, map);
+  });
+
+  return {
+    links,
+    eventsMap,
+    blocks: (blocks ?? []) as ScheduleBlock[],
+    templates: (templates ?? []) as ScheduleTemplate[],
+    busyIntervals,
+    eventDatesByEventId,
+    protectedDateIdsByEventId,
+    currentAvailabilitiesByParticipantId,
+  };
+};
+
+const buildUserAvailabilitySyncPreview = async (
+  userId: string,
+  options?: SyncPreviewBuildOptions,
+): Promise<UserAvailabilitySyncPreviewEvent[]> => {
+  const context = await buildSyncPreviewContext(userId, options);
+  if (context.links.length === 0) return [];
 
   const previewEvents: UserAvailabilitySyncPreviewEvent[] = [];
 
-  for (const link of links) {
-    const participantId = link.participant_id;
-    if (!participantId) continue;
-
-    const eventInfo = eventsMap.get(link.event_id);
+  for (const link of context.links) {
+    const eventInfo = context.eventsMap.get(link.event_id);
     if (!eventInfo) continue;
-
-    const { data: eventDates, error: datesError } = await supabase
-      .from('event_dates')
-      .select('id,start_time,end_time')
-      .eq('event_id', link.event_id)
-      .order('start_time', { ascending: true });
-
-    if (datesError || !eventDates) {
-      console.error('イベント日程取得エラー:', datesError);
-      continue;
-    }
-
-    const { data: overrides } = await supabase
-      .from('user_event_availability_overrides')
-      .select('event_date_id')
-      .eq('user_id', userId)
-      .eq('event_id', link.event_id);
-    const protectedSet = new Set((overrides ?? []).map((row) => row.event_date_id));
-
-    const { data: currentAvailabilities } = await supabase
-      .from('availabilities')
-      .select('event_date_id,availability')
-      .eq('participant_id', participantId);
-    const currentMap = new Map(
-      (currentAvailabilities ?? []).map((row) => [row.event_date_id, row.availability]),
-    );
+    const eventDates = context.eventDatesByEventId.get(link.event_id) ?? [];
+    if (eventDates.length === 0) continue;
+    const protectedSet = context.protectedDateIdsByEventId.get(link.event_id) ?? new Set<string>();
+    const currentMap =
+      context.currentAvailabilitiesByParticipantId.get(link.participant_id) ?? new Map<string, boolean>();
 
     const dates: SyncPreviewDateRow[] = eventDates.map((date) => {
       const currentAvailability = currentMap.get(date.id) ?? false;
 
       let desiredAvailability = currentAvailability;
-      const hasBusyOverlap = busyIntervals.some((busy) => {
+      const hasBusyOverlap = context.busyIntervals.some((busy) => {
         if (busy.event_id === link.event_id) return false;
         return isRangeOverlapping(
           { start: new Date(date.start_time), end: new Date(date.end_time) },
@@ -476,8 +586,8 @@ const buildUserAvailabilitySyncPreview = async (
         const auto = computeAutoFillWithPriority({
           start: date.start_time,
           end: date.end_time,
-          blocks: (blocks ?? []) as ScheduleBlock[],
-          templates: (templates ?? []) as ScheduleTemplate[],
+          blocks: context.blocks,
+          templates: context.templates,
         });
         if (auto !== null) {
           desiredAvailability = auto;
@@ -968,6 +1078,8 @@ export async function syncUserAvailabilities({
   if (links.length === 0) return;
 
   const allEventIds = (allLinks ?? []).map((link) => link.event_id);
+  const targetEventIds = Array.from(new Set(links.map((link) => link.event_id)));
+  const participantIds = Array.from(new Set(links.map((link) => link.participant_id)));
 
   const { data: blocks } = await supabase
     .from('user_schedule_blocks')
@@ -1002,37 +1114,61 @@ export async function syncUserAvailabilities({
       Boolean(row),
     );
 
+  const { data: eventDatesRows, error: eventDatesError } = await supabase
+    .from('event_dates')
+    .select('id,event_id,start_time,end_time')
+    .in('event_id', targetEventIds);
+  if (eventDatesError) {
+    console.error('イベント日程取得エラー:', eventDatesError);
+    return;
+  }
+  const eventDatesByEventId = new Map<string, EventDateRange[]>();
+  (eventDatesRows ?? []).forEach((row) => {
+    const current = eventDatesByEventId.get(row.event_id) ?? [];
+    current.push({
+      id: row.id,
+      start_time: row.start_time,
+      end_time: row.end_time,
+    });
+    eventDatesByEventId.set(row.event_id, current);
+  });
+
+  const { data: overridesRows, error: overridesError } = await supabase
+    .from('user_event_availability_overrides')
+    .select('event_id,event_date_id,availability')
+    .eq('user_id', userId)
+    .in('event_id', targetEventIds);
+  if (overridesError) {
+    console.error('上書き情報取得エラー:', overridesError);
+  }
+  const overrideMapByEventId = new Map<string, Map<string, boolean>>();
+  (overridesRows ?? []).forEach((row) => {
+    const map = overrideMapByEventId.get(row.event_id) ?? new Map<string, boolean>();
+    map.set(row.event_date_id, row.availability);
+    overrideMapByEventId.set(row.event_id, map);
+  });
+
+  const { data: currentAvailabilitiesRows, error: currentAvailabilitiesError } = await supabase
+    .from('availabilities')
+    .select('participant_id,event_date_id,availability')
+    .in('participant_id', participantIds);
+  if (currentAvailabilitiesError) {
+    console.error('現在回答取得エラー:', currentAvailabilitiesError);
+  }
+  const currentAvailabilitiesByParticipantId = new Map<string, Set<string>>();
+  (currentAvailabilitiesRows ?? []).forEach((row) => {
+    if (!row.availability) return;
+    const set = currentAvailabilitiesByParticipantId.get(row.participant_id) ?? new Set<string>();
+    set.add(row.event_date_id);
+    currentAvailabilitiesByParticipantId.set(row.participant_id, set);
+  });
+
   for (const link of links) {
-    const { data: eventDates, error: datesError } = await supabase
-      .from('event_dates')
-      .select('id,start_time,end_time')
-      .eq('event_id', link.event_id);
+    const eventDates = eventDatesByEventId.get(link.event_id) ?? [];
+    if (eventDates.length === 0) continue;
 
-    if (datesError || !eventDates) {
-      console.error('イベント日程取得エラー:', datesError);
-      continue;
-    }
-
-    const { data: overrides } = await supabase
-      .from('user_event_availability_overrides')
-      .select('event_date_id,availability')
-      .eq('user_id', userId)
-      .eq('event_id', link.event_id);
-
-    const overrideMap = new Map(
-      (overrides ?? []).map((row) => [row.event_date_id, row.availability]),
-    );
-
-    const { data: currentAvailabilities } = await supabase
-      .from('availabilities')
-      .select('event_date_id,availability')
-      .eq('participant_id', link.participant_id);
-
-    const selectedSet = new Set(
-      (currentAvailabilities ?? [])
-        .filter((row) => row.availability)
-        .map((row) => row.event_date_id),
-    );
+    const overrideMap = overrideMapByEventId.get(link.event_id) ?? new Map<string, boolean>();
+    const selectedSet = new Set(currentAvailabilitiesByParticipantId.get(link.participant_id) ?? []);
 
     eventDates.forEach((date) => {
       const override = overrideMap.get(date.id);
@@ -1088,13 +1224,13 @@ export async function syncUserAvailabilities({
   }
 }
 
-export async function fetchUserAvailabilitySyncPreview(): Promise<
+export async function fetchUserAvailabilitySyncPreview(options?: SyncPreviewBuildOptions): Promise<
   UserAvailabilitySyncPreviewEvent[]
 > {
   const session = await getAuthSession();
   const userId = session?.user?.id;
   if (!userId) return [];
-  return buildUserAvailabilitySyncPreview(userId);
+  return buildUserAvailabilitySyncPreview(userId, options);
 }
 
 export async function applyUserAvailabilitySyncForEvent({
@@ -1114,7 +1250,9 @@ export async function applyUserAvailabilitySyncForEvent({
     return { success: false, message: 'ログインが必要です', updatedCount: 0 };
   }
 
-  const previewEvents = await buildUserAvailabilitySyncPreview(userId);
+  const previewEvents = await buildUserAvailabilitySyncPreview(userId, {
+    targetEventIds: [eventId],
+  });
   const target = previewEvents.find((row) => row.eventId === eventId);
   if (!target) {
     return { success: true, message: 'このイベントに反映すべき変更はありません', updatedCount: 0 };
@@ -1370,6 +1508,121 @@ export async function upsertUserScheduleBlock({
   return { success: true };
 }
 
+/**
+ * 日付ブロックの変更を一括保存する
+ * クライアントからは1回のServer Action呼び出しで反映し、待ち時間を短縮する。
+ */
+export async function saveUserScheduleBlockChanges({
+  upserts,
+  deleteIds,
+}: {
+  upserts: Array<{
+    startTime: string;
+    endTime: string;
+    availability: boolean;
+    replaceBlockId?: string;
+  }>;
+  deleteIds: string[];
+}): Promise<{ success: boolean; message?: string; updatedCount: number }> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: 'ログインが必要です', updatedCount: 0 };
+  }
+
+  const supabase = createSupabaseAdmin();
+  const deleteTargetIds = new Set(deleteIds);
+  const payload: Array<{
+    user_id: string;
+    start_time: string;
+    end_time: string;
+    availability: boolean;
+    source: string;
+    event_id: string | null;
+    updated_at: string;
+  }> = [];
+
+  for (const row of upserts) {
+    if (row.replaceBlockId) {
+      deleteTargetIds.add(row.replaceBlockId);
+    }
+
+    const normalizedRange = normalizeManualBlockRange({
+      startTime: row.startTime,
+      endTime: row.endTime,
+    });
+    const startDate = toComparableDate(normalizedRange.startTime);
+    const endDate = toComparableDate(normalizedRange.endTime);
+    if (
+      !normalizedRange.startTime ||
+      !normalizedRange.endTime ||
+      Number.isNaN(startDate.getTime()) ||
+      Number.isNaN(endDate.getTime()) ||
+      startDate >= endDate
+    ) {
+      return {
+        success: false,
+        message: '時間帯の指定が正しくありません',
+        updatedCount: 0,
+      };
+    }
+
+    const ranges = splitToHourlyRanges(normalizedRange.startTime, normalizedRange.endTime);
+    if (ranges.length === 0) {
+      return {
+        success: false,
+        message: '時間帯の指定が正しくありません',
+        updatedCount: 0,
+      };
+    }
+
+    payload.push(
+      ...ranges.map((range) => ({
+        user_id: userId,
+        start_time: toWallClockUtcIso(range.start),
+        end_time: toWallClockUtcIso(range.end),
+        availability: row.availability,
+        source: 'manual',
+        event_id: null,
+        updated_at: new Date().toISOString(),
+      })),
+    );
+  }
+
+  const deleteIdList = Array.from(deleteTargetIds);
+  if (deleteIdList.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('user_schedule_blocks')
+      .delete()
+      .eq('user_id', userId)
+      .in('id', deleteIdList);
+    if (deleteError) {
+      console.error('予定ブロック一括削除エラー:', deleteError);
+      return {
+        success: false,
+        message: '予定ブロックの更新に失敗しました',
+        updatedCount: 0,
+      };
+    }
+  }
+
+  if (payload.length > 0) {
+    const { error: upsertError } = await supabase
+      .from('user_schedule_blocks')
+      .upsert(payload, { onConflict: 'user_id,start_time,end_time' });
+    if (upsertError) {
+      console.error('予定ブロック一括更新エラー:', upsertError);
+      return {
+        success: false,
+        message: '予定ブロックの更新に失敗しました',
+        updatedCount: 0,
+      };
+    }
+  }
+
+  return { success: true, updatedCount: payload.length };
+}
+
 export async function removeUserScheduleBlock(blockId: string): Promise<{ success: boolean }> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
@@ -1394,6 +1647,7 @@ export async function removeUserScheduleBlock(blockId: string): Promise<{ succes
 
 export async function upsertWeeklyTemplatesFromWeekdaySelections({
   templates,
+  allowClear = false,
 }: {
   templates: Array<{
     weekday: number;
@@ -1401,28 +1655,15 @@ export async function upsertWeeklyTemplatesFromWeekdaySelections({
     endTime: string;
     availability: boolean;
   }>;
+  allowClear?: boolean;
 }): Promise<{ success: boolean; message?: string; updatedCount: number }> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
   if (!userId) {
     return { success: false, message: 'ログインが必要です', updatedCount: 0 };
   }
-
-  if (!templates.length) {
+  if (!templates.length && !allowClear) {
     return { success: false, message: '保存対象の設定がありません', updatedCount: 0 };
-  }
-
-  const normalized = templates.flatMap((row) => {
-    const normalizedRow = normalizeWeeklyTemplateRow({
-      weekday: row.weekday,
-      startTime: row.startTime,
-      endTime: row.endTime,
-      availability: row.availability,
-    });
-    return normalizedRow ? [normalizedRow] : [];
-  });
-  if (!normalized.length) {
-    return { success: false, message: '曜日ごとの設定が不正です', updatedCount: 0 };
   }
 
   const supabase = createSupabaseAdmin();
@@ -1439,6 +1680,41 @@ export async function upsertWeeklyTemplatesFromWeekdaySelections({
       message: '週ごとの用事の取得に失敗しました。時間をおいて再試行してください。',
       updatedCount: 0,
     };
+  }
+
+  if (!templates.length) {
+    if (!existingRows || existingRows.length === 0) {
+      return { success: true, updatedCount: 0 };
+    }
+    const staleIds = existingRows.map((row) => row.id);
+    const { error: clearError } = await supabase
+      .from('user_schedule_templates')
+      .delete()
+      .eq('user_id', userId)
+      .eq('source', 'manual')
+      .in('id', staleIds);
+    if (clearError) {
+      console.error('週次テンプレ全削除エラー:', clearError);
+      return {
+        success: false,
+        message: '週ごとの用事の更新に失敗しました。再読み込み後にもう一度お試しください。',
+        updatedCount: 0,
+      };
+    }
+    return { success: true, updatedCount: 0 };
+  }
+
+  const normalized = templates.flatMap((row) => {
+    const normalizedRow = normalizeWeeklyTemplateRow({
+      weekday: row.weekday,
+      startTime: row.startTime,
+      endTime: row.endTime,
+      availability: row.availability,
+    });
+    return normalizedRow ? [normalizedRow] : [];
+  });
+  if (!normalized.length) {
+    return { success: false, message: '曜日ごとの設定が不正です', updatedCount: 0 };
   }
 
   const compacted = compactWeeklyTemplateRows({

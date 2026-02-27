@@ -1,5 +1,10 @@
 // src/app/event/[public_id]/page.tsx
-import { getEvent, getEventDates, getParticipantById } from '@/lib/actions';
+import {
+  getEvent,
+  getEventDates,
+  getParticipantById,
+  touchEventLastAccessedIfStale,
+} from '@/lib/actions';
 import { notFound } from 'next/navigation';
 import AvailabilityForm from '@/components/availability-form';
 import siteConfig from '@/lib/site-config';
@@ -16,6 +21,7 @@ export async function generateMetadata({
   let event;
   try {
     event = await getEvent(public_id);
+    await touchEventLastAccessedIfStale(public_id);
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       return {

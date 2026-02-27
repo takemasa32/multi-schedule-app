@@ -58,7 +58,7 @@ describe('SyncReviewPage', () => {
   });
 
   it('初回ロード時に差分イベントが0件ならイベント結果ページへ自動遷移する', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([createPreviewEvent('current', '現在イベント')]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([]);
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
@@ -69,7 +69,6 @@ describe('SyncReviewPage', () => {
 
   it('表示対象から現在イベントを除外できる', async () => {
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
-      createPreviewEvent('current', '現在イベント'),
       createPreviewEvent('other-event', '対象イベント'),
     ]);
 
@@ -77,6 +76,9 @@ describe('SyncReviewPage', () => {
 
     expect(await screen.findByTestId('sync-review-event-other-event')).toBeInTheDocument();
     expect(screen.queryByTestId('sync-review-event-current')).not.toBeInTheDocument();
+    expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledWith({
+      excludeEventId: 'current',
+    });
   });
 
   it('最後のイベントを適用して0件になったら自動遷移する', async () => {

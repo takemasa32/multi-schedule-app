@@ -14,6 +14,7 @@ import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 type SyncReviewPageProps = {
   publicToken: string;
   currentEventId: string;
+  syncWarning?: 'partial' | null;
 };
 
 const toLocalDateKey = (date: Date): string =>
@@ -158,7 +159,11 @@ const reconcileEventAfterApply = ({
   };
 };
 
-export default function SyncReviewPage({ publicToken, currentEventId }: SyncReviewPageProps) {
+export default function SyncReviewPage({
+  publicToken,
+  currentEventId,
+  syncWarning = null,
+}: SyncReviewPageProps) {
   const router = useRouter();
   const [syncPreviewEvents, setSyncPreviewEvents] = useState<UserAvailabilitySyncPreviewEvent[]>([]);
   const [syncCellSelectionMap, setSyncCellSelectionMap] = useState<
@@ -173,14 +178,18 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   const [syncApplyingEventIds, setSyncApplyingEventIds] = useState<Set<string>>(new Set());
   const syncApplyingEventIdsRef = useRef<Set<string>>(new Set());
 
-  const backToEventPath = useMemo(() => `/event/${publicToken}`, [publicToken]);
+  const backToEventPath = useMemo(
+    () => `/event/${publicToken}${syncWarning === 'partial' ? '?sync_warning=partial' : ''}`,
+    [publicToken, syncWarning],
+  );
 
   const loadSyncPreview = useCallback(async () => {
     setIsSyncPreviewLoading(true);
     setSyncPreviewError(null);
     try {
-      const preview = await fetchUserAvailabilitySyncPreview();
-      const filteredPreview = preview.filter((event) => event.eventId !== currentEventId);
+      const filteredPreview = await fetchUserAvailabilitySyncPreview({
+        excludeEventId: currentEventId,
+      });
 
       if (filteredPreview.length === 0) {
         router.replace(backToEventPath);

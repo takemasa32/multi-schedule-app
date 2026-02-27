@@ -11,6 +11,7 @@ import useScrollToError from '@/hooks/useScrollToError';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from './week-navigation-bar';
+import { useRouter } from 'next/navigation';
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -82,6 +83,7 @@ export default function AvailabilityForm({
   requireWeeklyStep: _requireWeeklyStep = false,
   hasAccountSeedData: _hasAccountSeedData = false,
 }: AvailabilityFormProps) {
+  const router = useRouter();
   const isNewMode = mode === 'new';
   const showWeeklyStep = !isAuthenticated || uncoveredDayCount > 0;
   const weeklyStep = showWeeklyStep ? ((isNewMode ? 2 : 1) as WizardStep) : null;
@@ -465,11 +467,13 @@ export default function AvailabilityForm({
 
         if (response.success) {
           // 同期確認が必要な場合は専用ページへ遷移し、それ以外は結果ページへ戻る。
-          if (typeof window !== 'undefined') {
-            window.location.href = shouldOpenSyncReview
-              ? `/event/${publicToken}/input/sync-review`
-              : `/event/${publicToken}`;
-          }
+          const hasPartialSyncWarning = response.warningCodes?.includes('POST_SYNC_PARTIAL_FAILURE');
+          const warningQuery = hasPartialSyncWarning ? '?sync_warning=partial' : '';
+          router.replace(
+            shouldOpenSyncReview
+              ? `/event/${publicToken}/input/sync-review${warningQuery}`
+              : `/event/${publicToken}${warningQuery}`,
+          );
         } else {
           setError(response.message || '送信に失敗しました');
         }
@@ -480,7 +484,7 @@ export default function AvailabilityForm({
         setIsSubmitting(false);
       }
     },
-    [initialParticipant?.id, mode, overrideDateIds, publicToken],
+    [initialParticipant?.id, mode, overrideDateIds, publicToken, router],
   );
 
   const promptSyncScope = useCallback(
@@ -521,8 +525,8 @@ export default function AvailabilityForm({
   const handleSignInAndContinue = useCallback(() => {
     if (typeof window === 'undefined') return;
     const callbackUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-  }, []);
+    router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  }, [router]);
 
   const handleNextStep = useCallback(() => {
     setError(null);

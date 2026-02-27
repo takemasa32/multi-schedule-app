@@ -117,19 +117,27 @@ export async function syncEventHistory(
   // ローカル履歴をサーバーへ反映してから最新を取得する
   const supabase = createSupabaseAdmin();
   const candidates = localHistory.filter(isValidHistoryItem).slice(0, EVENT_HISTORY_SYNC_MAX_ITEMS);
-
-  for (const item of candidates) {
-    const { error } = await supabase.rpc('upsert_event_access_history', {
+  if (candidates.length > 0) {
+    const { data, error } = await supabase.rpc('upsert_event_access_histories_bulk', {
       p_user_id: session.user.id,
-      p_event_public_token: item.id,
-      p_event_title: item.title,
-      p_is_created_by_me: item.isCreatedByMe,
-      p_accessed_at: item.createdAt,
+      p_items: candidates.map((item) => ({
+        event_public_token: item.id,
+        event_title: item.title,
+        is_created_by_me: item.isCreatedByMe,
+        accessed_at: item.createdAt,
+      })),
     });
-
     if (error) {
-      console.error('イベント履歴の同期に失敗しました:', error);
-      break;
+      console.error('イベント履歴の一括同期に失敗しました:', error);
+    } else {
+      const summary = Array.isArray(data) ? data[0] : data;
+      const skippedCount =
+        summary && typeof summary.skipped_count === 'number' ? summary.skipped_count : 0;
+      if (skippedCount > 0) {
+        console.warn('イベント履歴の一括同期でスキップが発生しました:', {
+          skippedCount,
+        });
+      }
     }
   }
 

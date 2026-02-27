@@ -1,4 +1,4 @@
-import { getEvent } from '../actions';
+import { getEvent, touchEventLastAccessedIfStale } from '../actions';
 import { createSupabaseAdmin } from '../supabase';
 import { EventNotFoundError, EventFetchError } from '../errors';
 
@@ -51,13 +51,12 @@ describe('getEvent', () => {
       data: { id: 'e1', public_token: 'tok' },
       error: null,
     });
-    const updateChain = createSupabaseChainMock({ data: null, error: null });
-    const fromMock = jest.fn().mockReturnValueOnce(selectChain).mockReturnValueOnce(updateChain);
+    const fromMock = jest.fn().mockReturnValueOnce(selectChain);
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
 
     const event = await getEvent('tok');
     expect(event.id).toBe('e1');
-    expect(fromMock).toHaveBeenCalledTimes(2);
+    expect(fromMock).toHaveBeenCalledTimes(1);
   });
 
   it('行が存在しない場合は EventNotFoundError', async () => {
@@ -75,12 +74,33 @@ describe('getEvent', () => {
       error: { code: '500', message: 'server error' },
     });
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
-    await expect(getEvent('tok')).rejects.toBeInstanceOf(EventFetchError);
+    await expect(getEvent('tok-error')).rejects.toBeInstanceOf(EventFetchError);
   });
 
   it('データが null の場合も EventNotFoundError', async () => {
     const chain = createSupabaseChainMock({ data: null, error: null });
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
-    await expect(getEvent('tok')).rejects.toBeInstanceOf(EventNotFoundError);
+    await expect(getEvent('tok-null')).rejects.toBeInstanceOf(EventNotFoundError);
+  });
+});
+
+describe('touchEventLastAccessedIfStale', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('指定トークンに対して stale 更新RPCを呼び出す', async () => {
+    const rpcMock = jest.fn().mockResolvedValue({ error: null });
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ rpc: rpcMock }));
+
+    await touchEventLastAccessedIfStale('tok');
+
+    expect(rpcMock).toHaveBeenCalledWith(
+      'touch_event_last_accessed_if_stale',
+      expect.objectContaining({
+        p_public_token: 'tok',
+        p_min_interval_minutes: 15,
+      }),
+    );
   });
 });

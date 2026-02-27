@@ -1,4 +1,4 @@
-import { getEvent } from '@/lib/actions';
+import { getEvent, touchEventLastAccessedIfStale } from '@/lib/actions';
 import { getEventDates } from '@/lib/actions';
 import { getParticipants } from '@/lib/actions';
 import { getAvailabilities } from '@/lib/actions';
@@ -19,10 +19,14 @@ import type {
   Availability,
 } from '@/components/event-client/event-details-section';
 import EventDetailsSectionSkeleton from '@/components/event-client/event-details-section-skeleton';
+import SyncWarningBanner from '@/components/sync/sync-warning-banner';
 
 interface EventPageProps {
   params: Promise<{
     public_id: string;
+  }>;
+  searchParams: Promise<{
+    sync_warning?: string;
   }>;
 }
 
@@ -87,12 +91,14 @@ export async function generateMetadata({
   };
 }
 
-export default async function EventPage({ params }: EventPageProps) {
+export default async function EventPage({ params, searchParams }: EventPageProps) {
   const { public_id } = await params;
+  const { sync_warning: syncWarning } = await searchParams;
 
   let event;
   try {
     event = await getEvent(public_id);
+    await touchEventLastAccessedIfStale(public_id);
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();
@@ -125,6 +131,7 @@ export default async function EventPage({ params }: EventPageProps) {
         </div>
       </div>
       <div className="fade-in pb-12">
+        {syncWarning === 'partial' && <SyncWarningBanner />}
         <SectionDivider title="イベント情報" />
         {/* 確実に揃っている情報は即時表示し、不要なスケルトンを避ける */}
         <div className="my-8">
