@@ -89,6 +89,15 @@ describe('HeatmapView', () => {
     expect(zero.closest('td')).toBeTruthy();
   });
 
+  it('日付列が少ない場合でも時間列の幅を固定する', () => {
+    const { container } = render(<HeatmapView {...baseProps} heatmapData={new Map()} />);
+    const timeCol = container.querySelector('colgroup col:first-child');
+
+    expect(timeCol).toBeTruthy();
+    expect(timeCol?.className).toContain('w-[50px]');
+    expect(timeCol?.className).toContain('sm:w-[64px]');
+  });
+
   it('境界色が同じ場合のみ水平線を表示する', () => {
     document.documentElement.setAttribute('data-theme', 'night');
     const dates = [
