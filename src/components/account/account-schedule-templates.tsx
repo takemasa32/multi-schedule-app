@@ -490,6 +490,35 @@ export default function AccountScheduleTemplates({
     [syncAllowFinalizedMap, syncCellSelectionMap, syncOverwriteMap],
   );
 
+  const handleCancelSyncEvent = useCallback((eventId: string) => {
+    setSyncPreviewEvents((prev) => prev.filter((event) => event.eventId !== eventId));
+    setSyncCellSelectionMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncPreviewWeekPageMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncOverwriteMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncAllowFinalizedMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncMessageMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+  }, []);
+
   const manualMap = useMemo(() => {
     const map: Record<string, TemplateCell> = {};
     manualTemplates.forEach((template) => {
@@ -1598,6 +1627,15 @@ export default function AccountScheduleTemplates({
                         </label>
                       )}
 
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        disabled={isUpdating}
+                        data-testid={`sync-cancel-${event.eventId}`}
+                        onClick={() => handleCancelSyncEvent(event.eventId)}
+                      >
+                        この変更をキャンセル
+                      </button>
                       <button
                         type="button"
                         className="btn btn-sm btn-primary ml-auto"

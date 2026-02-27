@@ -827,12 +827,12 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
       >
-        <table className="table-fixed w-full min-w-[400px] border-separate border-spacing-0 text-center sm:min-w-[680px]">
+        <table className="w-full min-w-[400px] table-fixed border-separate border-spacing-0 text-center sm:min-w-[680px]">
           {/* 日付列が少ない時でも時間列だけが不自然に伸びないよう、先頭列幅を固定する */}
           <colgroup>
             <col className="w-[50px] sm:w-[64px]" />
             {uniqueDates.map((dateInfo) => (
-              <col key={`${dateInfo.date}-col`} />
+              <col key={`${dateInfo.date}-col`} className="w-[44px] sm:w-[72px]" />
             ))}
           </colgroup>
           <thead className="sticky top-0 z-20">
@@ -1003,6 +1003,19 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       joinsTop,
                       isTopRaisedOverCurrent,
                     });
+                    const hasNonZeroRadius = (
+                      radius: React.CSSProperties['borderTopLeftRadius'] | undefined,
+                    ): boolean =>
+                      radius !== undefined &&
+                      radius !== null &&
+                      radius !== '0px' &&
+                      radius !== '0' &&
+                      radius !== 0;
+                    const hasRoundedTopEdge =
+                      hasNonZeroRadius(cornerStyle.borderTopLeftRadius) ||
+                      hasNonZeroRadius(cornerStyle.borderTopRightRadius) ||
+                      hasNonZeroRadius(cornerStyle.borderRadius);
+                    const shouldRenderTopBoundaryLine = hasBoundaryLine && !hasRoundedTopEdge;
                     const joinBleedBaseStyle = shouldRenderJoinBleed
                       ? {
                           backgroundColor:
@@ -1038,9 +1051,11 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                         data-col-index={colIndex}
                         style={{
                           padding: 0,
-                          borderTopWidth: hasBoundaryLine ? '1px' : '0px',
+                          borderTopWidth: shouldRenderTopBoundaryLine ? '1px' : '0px',
                           borderTopStyle: 'solid',
-                          borderTopColor: hasBoundaryLine ? boundaryLineColor : 'transparent',
+                          borderTopColor: shouldRenderTopBoundaryLine
+                            ? boundaryLineColor
+                            : 'transparent',
                         }}
                         className={`relative cursor-pointer p-0 align-top ${isSelected ? 'border-success border-2' : ''}`}
                         onPointerEnter={(e) => {

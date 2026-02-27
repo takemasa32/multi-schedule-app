@@ -319,6 +319,35 @@ export default function SyncReviewPage({
     ],
   );
 
+  const handleCancelForEvent = useCallback((eventId: string) => {
+    setSyncPreviewEvents((prev) => prev.filter((event) => event.eventId !== eventId));
+    setSyncCellSelectionMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncPreviewWeekPageMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncOverwriteMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncAllowFinalizedMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncMessageMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+  }, []);
+
   if (isSyncPreviewLoading) {
     return (
       <div className="py-8" data-testid="sync-review-page">
@@ -337,7 +366,7 @@ export default function SyncReviewPage({
       </div>
 
       <p className="mb-4 text-sm text-base-content/60">
-        反映対象イベントごとに変更内容を確認し、「この変更を適用」で更新できます。
+        反映対象イベントごとに変更内容を確認し、「この変更を適用」または「この変更をキャンセル」を選べます。
       </p>
       {syncPreviewError && (
         <div className="alert alert-warning mb-4">
@@ -550,6 +579,15 @@ export default function SyncReviewPage({
                   </label>
                 )}
 
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  disabled={isUpdating}
+                  data-testid={`sync-review-cancel-${event.eventId}`}
+                  onClick={() => handleCancelForEvent(event.eventId)}
+                >
+                  この変更をキャンセル
+                </button>
                 <button
                   type="button"
                   className="btn btn-sm btn-primary ml-auto"

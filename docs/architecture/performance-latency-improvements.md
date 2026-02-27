@@ -55,7 +55,7 @@
 
 ### 9. E2E実行基盤の安定化
 
-- `test:e2e:chrome:public` は実行時に自動で build/start/wait-on を行う。
+- `test:e2e:chrome:public` はサーバー自動起動を行わず、既存の `http://localhost:3000` を前提に Playwright のみ実行する。
 - 認証付きE2Eは `authjs.users` / `public.user_schedule_blocks` の存在を事前確認し、不足時は理由付きskipにする。
 
 ## 公開APIの変更

@@ -224,6 +224,7 @@ e2e テストは Playwright を使用しており、以下のようなテスト�
 
 - **公開フローのみ実行（`@auth-required` を除外）**
   `npm run test:e2e:chrome:public`
+  - サーバー自動起動は行わないため、事前に `http://localhost:3000` を起動してください。
 
 - **認証フローのみ実行**
   `npm run test:e2e:auth`

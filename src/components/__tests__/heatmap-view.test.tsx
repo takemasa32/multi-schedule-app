@@ -197,6 +197,78 @@ describe('HeatmapView', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
+  it('上辺に角丸があるセルでは水平線を表示しない', () => {
+    document.documentElement.setAttribute('data-theme', 'night');
+    const dates = [
+      {
+        date: '2025-10-18',
+        dateObj: new Date('2025-10-18T00:00:00.000Z'),
+      },
+    ];
+    const slots = [
+      {
+        slotKey: 'slot-10',
+        startTime: '10:00',
+        endTime: '11:00',
+        timeObj: new Date('2025-10-18T10:00:00.000Z'),
+        labels: ['10:00〜11:00'],
+      },
+      {
+        slotKey: 'slot-11',
+        startTime: '11:00',
+        endTime: '12:00',
+        timeObj: new Date('2025-10-18T11:00:00.000Z'),
+        labels: ['11:00〜12:00'],
+      },
+    ];
+    const heatmapData = new Map<
+      string,
+      {
+        dateId: string;
+        availableCount: number;
+        unavailableCount: number;
+        heatmapLevel: number;
+        isSelected: boolean;
+        totalResponses: number;
+      }
+    >();
+    // 上セルは可、下セルは未回答にして連結されないため、下セル上辺に角丸が付く
+    heatmapData.set('2025-10-18_slot-10', {
+      dateId: '2025-10-18',
+      availableCount: 2,
+      unavailableCount: 0,
+      heatmapLevel: 0,
+      isSelected: false,
+      totalResponses: 2,
+    });
+    heatmapData.set('2025-10-18_slot-11', {
+      dateId: '2025-10-18',
+      availableCount: 0,
+      unavailableCount: 0,
+      heatmapLevel: 0,
+      isSelected: false,
+      totalResponses: 0,
+    });
+
+    const { container } = render(
+      <HeatmapView
+        {...baseProps}
+        uniqueDates={dates}
+        uniqueTimeSlots={slots}
+        heatmapData={heatmapData}
+        maxAvailable={2}
+      />,
+    );
+    const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
+    expect(secondRow).toBeTruthy();
+    const targetCell = secondRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
+    expect(targetCell).toBeTruthy();
+    expect(targetCell?.style.borderTopWidth).toBe('0px');
+    document.documentElement.removeAttribute('data-theme');
+  });
+
   it('境界線色が同じでもセル見た目が異なる場合は水平線を表示しない', () => {
     const dates = [
       {
@@ -260,12 +332,14 @@ describe('HeatmapView', () => {
     );
     const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(secondRow).toBeTruthy();
-    const targetCell = secondRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const targetCell = secondRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(targetCell).toBeTruthy();
     expect(targetCell?.style.borderTopWidth).toBe('0px');
   });
 
-  it('回答0セル同士（neutral）の境界には水平線を表示する', () => {
+  it('回答0セル同士（neutral）で上辺に角丸がある場合は水平線を表示しない', () => {
     const dates = [
       {
         date: '2025-10-18',
@@ -328,10 +402,11 @@ describe('HeatmapView', () => {
 
     const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(secondRow).toBeTruthy();
-    const targetCell = secondRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const targetCell = secondRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(targetCell).toBeTruthy();
-    expect(targetCell?.style.borderTopWidth).toBe('1px');
-    expect(targetCell?.style.borderTopColor).not.toBe('transparent');
+    expect(targetCell?.style.borderTopWidth).toBe('0px');
   });
 
   it('ライトモードでは色付きセル（primary）の境界に水平線を表示しない', () => {
@@ -397,7 +472,9 @@ describe('HeatmapView', () => {
     );
     const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(secondRow).toBeTruthy();
-    const targetCell = secondRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const targetCell = secondRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(targetCell).toBeTruthy();
     expect(targetCell?.style.borderTopWidth).toBe('0px');
   });
@@ -553,7 +630,9 @@ describe('HeatmapView', () => {
     // ライトテーマでは、色の濃淡差があっても有色セル同士の境界で補正レイヤーを描画する
     const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(secondRow).toBeTruthy();
-    const secondRowCell = secondRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const secondRowCell = secondRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(secondRowCell).toBeTruthy();
     expect(secondRowCell?.style.borderTopWidth).toBe('0px');
     const secondRowTopBleed = secondRowCell?.querySelector('div.heatmap-join-bleed-top');
@@ -625,7 +704,9 @@ describe('HeatmapView', () => {
 
     const secondRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(secondRow).toBeTruthy();
-    const secondRowCell = secondRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const secondRowCell = secondRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(secondRowCell).toBeTruthy();
     expect(secondRowCell?.style.borderTopWidth).toBe('0px');
     const secondRowTopBleed = secondRowCell?.querySelector('div.heatmap-join-bleed-top');
@@ -934,10 +1015,14 @@ describe('HeatmapView', () => {
 
     const targetRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(targetRow).toBeTruthy();
-    const targetCell = targetRow?.querySelector('td[data-col-index="1"]') as HTMLTableCellElement | null;
+    const targetCell = targetRow?.querySelector(
+      'td[data-col-index="1"]',
+    ) as HTMLTableCellElement | null;
     expect(targetCell).toBeTruthy();
 
-    const targetVisualLayer = targetCell?.querySelector('div[class*="z-10"]') as HTMLDivElement | null;
+    const targetVisualLayer = targetCell?.querySelector(
+      'div[class*="z-10"]',
+    ) as HTMLDivElement | null;
     expect(targetVisualLayer).toBeTruthy();
     expect(targetVisualLayer?.className).toContain('rounded-none');
 
@@ -1035,10 +1120,14 @@ describe('HeatmapView', () => {
 
     const targetRow = container.querySelector('td[aria-label="10:00〜11:00"]')?.closest('tr');
     expect(targetRow).toBeTruthy();
-    const targetCell = targetRow?.querySelector('td[data-col-index="1"]') as HTMLTableCellElement | null;
+    const targetCell = targetRow?.querySelector(
+      'td[data-col-index="1"]',
+    ) as HTMLTableCellElement | null;
     expect(targetCell).toBeTruthy();
 
-    const targetVisualLayer = targetCell?.querySelector('div[class*="z-10"]') as HTMLDivElement | null;
+    const targetVisualLayer = targetCell?.querySelector(
+      'div[class*="z-10"]',
+    ) as HTMLDivElement | null;
     expect(targetVisualLayer).toBeTruthy();
     expect(targetVisualLayer?.style.borderBottomLeftRadius).toBe('0px');
   });
@@ -1121,7 +1210,9 @@ describe('HeatmapView', () => {
 
     const middleRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(middleRow).toBeTruthy();
-    const middleCell = middleRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const middleCell = middleRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(middleCell).toBeTruthy();
 
     const wrapper = middleCell?.querySelector('div.relative.h-full') as HTMLDivElement | null;
@@ -1215,10 +1306,14 @@ describe('HeatmapView', () => {
 
     const middleRow = container.querySelector('td[aria-label="11:00〜12:00"]')?.closest('tr');
     expect(middleRow).toBeTruthy();
-    const middleCell = middleRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const middleCell = middleRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(middleCell).toBeTruthy();
 
-    const topBleed = middleCell?.querySelector('div.heatmap-join-bleed-top') as HTMLDivElement | null;
+    const topBleed = middleCell?.querySelector(
+      'div.heatmap-join-bleed-top',
+    ) as HTMLDivElement | null;
     const bottomBleed = middleCell?.querySelector(
       'div.heatmap-join-bleed-bottom',
     ) as HTMLDivElement | null;
@@ -1324,7 +1419,9 @@ describe('HeatmapView', () => {
 
     const targetRow = container.querySelector('td[aria-label="10:00〜11:00"]')?.closest('tr');
     expect(targetRow).toBeTruthy();
-    const targetCell = targetRow?.querySelector('td[data-col-index="0"]') as HTMLTableCellElement | null;
+    const targetCell = targetRow?.querySelector(
+      'td[data-col-index="0"]',
+    ) as HTMLTableCellElement | null;
     expect(targetCell).toBeTruthy();
 
     const surfaceLayer = targetCell?.querySelector('div.relative.z-10') as HTMLDivElement | null;

@@ -97,6 +97,22 @@ describe('SyncReviewPage', () => {
     expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
   });
 
+  it('最後のイベントをキャンセルして0件になったら自動遷移する', async () => {
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      createPreviewEvent('other-event', '対象イベント'),
+    ]);
+
+    render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
+
+    const cancelButton = await screen.findByTestId('sync-review-cancel-other-event');
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/event/public-token');
+    });
+    expect(mockApplyUserAvailabilitySyncForEvent).not.toHaveBeenCalled();
+  });
+
   it('適用失敗時はメッセージを表示してページに残る', async () => {
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
       createPreviewEvent('other-event', '対象イベント'),

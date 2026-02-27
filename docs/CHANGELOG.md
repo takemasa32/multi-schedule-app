@@ -18,6 +18,12 @@
 - `test:e2e:chrome:public` はサーバー自動起動付きへ変更し、認証付きE2Eは前提テーブル不足時に理由付きskipできるよう改善。
 - `package.json` のテスト系スクリプトを整理し、重複していた `e2e:*` 系とブラウザ別補助スクリプトを削減。日常運用向けに `test:e2e:chrome` / `test:e2e:chrome:public` / `test:e2e:auth` / `test:e2e` / `test:e2e:debug` へ集約。
 - 体感最適化方針と公開API変更を `docs/architecture/performance-latency-improvements.md` に追加。
+- 回答状況ヒートマップのセル上辺罫線を調整し、上辺に角丸が存在するセルでは水平線を描画しないよう修正。
+- `test:e2e:chrome:public` から build/start/wait-on と `fuser -k 3000/tcp` を削除し、既存 `http://localhost:3000` 前提で Playwright のみ実行する構成へ簡略化。
+- 回答状況ヒートマップの日付列幅を `colgroup` で明示し、日付列数が多い場合でもヘッダー文字が潰れて見える表示崩れを修正。
+- イベント閲覧時の `last_accessed_at` 更新を RPC 呼び出しからサーバー側の通常クエリへ切り替え、`PGRST202` に依存しない更新経路へ修正。
+- `src/lib/supabase.ts` に `server-only` を追加し、クライアントバンドルから Supabase クライアント生成モジュールを取り込めないよう制約を強化。
+- `use client` ファイルが `@/lib/supabase` / `@supabase/supabase-js` を直接 import していないことを検証する非同期テストを追加し、DB直アクセスの再発を防止。
 
 ## 2026-02-26
 
@@ -107,6 +113,7 @@
 - 週予定保存時のエラーメッセージを具体化し、取得失敗・更新失敗・整理失敗で再試行行動が分かる文言へ改善。
 - 回答送信時に `アカウント予定に保存して反映` を選択した場合は、`sync_defer=true` で保存し、直後に `/event/{public_id}/input/sync-review` でイベント別差分確認を行うフローへ変更。
 - `sync-review` では現在イベントを除外した差分イベントのみを表示し、イベント単位で `この変更を適用` できるよう追加。
+- `sync-review` と `/account` の回答イベント反映プレビューで、イベント単位の `この変更をキャンセル` を追加。適用せずに対象イベントを除外できるよう改善。
 - `sync-review` の対象が0件の場合（初回表示時 / 最後の適用後）はページ表示をスキップし、`/event/{public_id}` へ自動遷移する仕様を追加。
 - 回答画面の `回答後の保存方法` モーダル文言は変更せず、送信後の遷移制御のみ更新。
 

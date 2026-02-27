@@ -421,14 +421,34 @@ export async function touchEventLastAccessedIfStale(
   if (!publicToken) return;
 
   const supabase = createSupabaseAdmin();
-  const { error } = await supabase.rpc('touch_event_last_accessed_if_stale', {
-    p_public_token: publicToken,
-    p_accessed_at: new Date().toISOString(),
-    p_min_interval_minutes: minIntervalMinutes,
-  });
+  const now = new Date();
+  const { data: eventRow, error: fetchError } = await supabase
+    .from('events')
+    .select('id,last_accessed_at')
+    .eq('public_token', publicToken)
+    .maybeSingle();
+  if (fetchError) {
+    console.error('イベント最終アクセス取得エラー:', fetchError);
+    return;
+  }
+  if (!eventRow) {
+    return;
+  }
 
-  if (error) {
-    console.error('イベント最終アクセス更新エラー:', error);
+  const lastAccessedTime = eventRow.last_accessed_at
+    ? new Date(eventRow.last_accessed_at).getTime()
+    : null;
+  const minIntervalMs = Math.max(minIntervalMinutes, 0) * 60 * 1000;
+  if (lastAccessedTime !== null && now.getTime() - lastAccessedTime < minIntervalMs) {
+    return;
+  }
+
+  const { error: updateError } = await supabase
+    .from('events')
+    .update({ last_accessed_at: now.toISOString() })
+    .eq('id', eventRow.id);
+  if (updateError) {
+    console.error('イベント最終アクセス更新エラー:', updateError);
   }
 }
 
@@ -633,16 +653,19 @@ export async function submitAvailability(
     const session = await getAuthSession();
     const userId = session?.user?.id ?? null;
     const supabase = createSupabaseAdmin();
-    const { data: bundleData, error: bundleError } = await supabase.rpc('submit_availability_bundle', {
-      p_event_id: eventId,
-      p_public_token: publicToken,
-      p_participant_id: participantId,
-      p_participant_name: participantName,
-      p_comment: comment,
-      p_availabilities: availabilityEntries,
-      p_user_id: userId,
-      p_override_date_ids: overrideDateIds,
-    });
+    const { data: bundleData, error: bundleError } = await supabase.rpc(
+      'submit_availability_bundle',
+      {
+        p_event_id: eventId,
+        p_public_token: publicToken,
+        p_participant_id: participantId,
+        p_participant_name: participantName,
+        p_comment: comment,
+        p_availabilities: availabilityEntries,
+        p_user_id: userId,
+        p_override_date_ids: overrideDateIds,
+      },
+    );
 
     if (bundleError) {
       console.error('回答送信RPCエラー:', bundleError);
@@ -671,7 +694,8 @@ export async function submitAvailability(
 
     const persistedParticipantId =
       typeof bundleResult.participant_id === 'string' ? bundleResult.participant_id : null;
-    const eventTitle = typeof bundleResult.event_title === 'string' ? bundleResult.event_title : null;
+    const eventTitle =
+      typeof bundleResult.event_title === 'string' ? bundleResult.event_title : null;
 
     if (userId && syncScope === 'all' && !shouldDeferSync) {
       await syncUserAvailabilities({

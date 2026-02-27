@@ -737,4 +737,34 @@ describe('AccountScheduleTemplates', () => {
     expect(mockApplyUserAvailabilitySyncForEvent).toHaveBeenCalledTimes(2);
     expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
   });
+
+  it('回答イベントへの反映でキャンセルしたイベントは一覧から除外される', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      createSyncPreviewEvent('event-1', 'イベントA'),
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+    await screen.findByText('イベントA');
+
+    fireEvent.click(screen.getByTestId('sync-cancel-event-1'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('イベントA')).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(
+        '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+      ),
+    ).toBeInTheDocument();
+    expect(mockApplyUserAvailabilitySyncForEvent).not.toHaveBeenCalled();
+  });
 });

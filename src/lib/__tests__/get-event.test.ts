@@ -89,18 +89,43 @@ describe('touchEventLastAccessedIfStale', () => {
     jest.clearAllMocks();
   });
 
-  it('指定トークンに対して stale 更新RPCを呼び出す', async () => {
-    const rpcMock = jest.fn().mockResolvedValue({ error: null });
-    mockedCreateSupabaseAdmin.mockImplementation(() => ({ rpc: rpcMock }));
+  it('更新間隔を超えていれば最終アクセス時刻を更新する', async () => {
+    const maybeSingleMock = jest.fn().mockResolvedValue({
+      data: { id: 'event-1', last_accessed_at: '2000-01-01T00:00:00.000Z' },
+      error: null,
+    });
+    const selectEqMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectEqMock });
+    const updateEqMock = jest.fn().mockResolvedValue({ error: null });
+    const updateMock = jest.fn().mockReturnValue({ eq: updateEqMock });
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ update: updateMock });
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
 
     await touchEventLastAccessedIfStale('tok');
 
-    expect(rpcMock).toHaveBeenCalledWith(
-      'touch_event_last_accessed_if_stale',
-      expect.objectContaining({
-        p_public_token: 'tok',
-        p_min_interval_minutes: 15,
-      }),
-    );
+    expect(updateEqMock).toHaveBeenCalledWith('id', 'event-1');
+  });
+
+  it('更新間隔内なら最終アクセス更新をスキップする', async () => {
+    const nowIso = new Date().toISOString();
+    const maybeSingleMock = jest.fn().mockResolvedValue({
+      data: { id: 'event-1', last_accessed_at: nowIso },
+      error: null,
+    });
+    const selectEqMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectEqMock });
+    const updateMock = jest.fn();
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ update: updateMock });
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
+
+    await touchEventLastAccessedIfStale('tok');
+
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });
