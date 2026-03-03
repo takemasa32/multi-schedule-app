@@ -4,7 +4,8 @@
 body {
   @apply bg-base-100 text-base-content;
   font-family:
-    'Inter',
+    var(--font-noto-sans-jp),
+    var(--font-inter),
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;

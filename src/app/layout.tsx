@@ -1,5 +1,6 @@
 import { Toaster } from 'react-hot-toast';
 import type { Metadata } from 'next';
+import { Inter, Noto_Sans_JP } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -8,7 +9,18 @@ import { ThemeProvider } from '@/components/theme-provider';
 import ExternalBrowserBanner from '@/components/browser-banner';
 import GoogleAnalytics from '@/components/analytics/google-analytics';
 import AuthSessionProvider from '@/components/auth/session-provider';
-// import AddToHomeScreenBanner from "@/components/add-to-home-screen";
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-sans-jp',
+});
 
 export const viewport = {
   width: 'device-width',
@@ -39,7 +51,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" suppressHydrationWarning>
-      <body className="bg-base-100 flex min-h-screen flex-col">
+      <body className={`${inter.variable} ${notoSansJP.variable} bg-base-100 flex min-h-screen flex-col`}>
         <AuthSessionProvider>
           <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem={true}>
             <Header />

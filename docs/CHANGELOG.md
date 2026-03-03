@@ -2,6 +2,11 @@
 
 ## 2026-03-03
 
+- LPを根本再構築し、ヒーロー・課題訴求・機能訴求・3ステップ導線・履歴・最終CTAで構成した新しいランディング体験へ刷新。
+- Motion（motion.dev）の`whileInView`/`variants`/`useReducedMotion`を活用し、視認性とアクセシビリティを両立したスクロール連動アニメーションへ改善。
+- ヒーローにSVGヒートマップアニメーションを追加し、回答集計から最適日決定までの体験価値を視覚的に訴求。
+- `next/font/google` で `Noto Sans JP` と `Inter` を導入し、全体の可読性を改善。
+- LP再設計の背景・目的・影響範囲を `docs/architecture/landing-page-rebuild-2026-03.md` に追加し、READMEのドキュメントリンクを更新。
 - CI の `npm ci` で `Missing: preact@10.11.3 from lock file` が再発しないよう、`package-lock.json` を `npm@10.8.2` で再生成し、`@auth/core` 配下の `preact@10.11.3` エントリを復元。
 - `npm audit fix` を適用し、`axios` / `ajv` / `minimatch` 由来の既知脆弱性を解消。
 - `package.json` の `overrides.tar` を `7.5.9` へ更新し、`tar` の高優先度脆弱性（`<=7.5.7`）を解消。

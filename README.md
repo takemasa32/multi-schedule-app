@@ -13,6 +13,7 @@
 - [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
 - [体感最適化と整合性担保](docs/architecture/performance-latency-improvements.md)
 - [Motion導入方針（低影響・段階移行）](docs/architecture/motion-adoption-plan.md)
+- [LP再構築メモ（2026-03）](docs/architecture/landing-page-rebuild-2026-03.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
