@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { easeOut } from 'motion';
+import { motion } from 'motion/react';
 import {
   CalendarRange,
   Users,
@@ -22,7 +23,7 @@ import EventHistory from '@/components/event-history';
 /**
  * Responsive Landing Page
  * - Hero / Features / UseCases / HowTo / Stats / FAQ / CTA / Footer
- * - Tailwind + DaisyUI + Framer Motion
+ * - Tailwind + DaisyUI + Motion
  */
 export default function LandingPageClient() {
   const fadeUp = {
@@ -30,7 +31,7 @@ export default function LandingPageClient() {
     show: (i: number) => ({
       opacity: 1,
       y: 0,
-      transition: { delay: i * 0.12, duration: 0.6, ease: 'easeOut' },
+      transition: { delay: i * 0.12, duration: 0.6, ease: easeOut },
     }),
   } as const;
 
