@@ -2,6 +2,7 @@
 
 ## 2026-03-03
 
+- CI の `npm ci` で `Missing: preact@10.11.3 from lock file` が再発しないよう、`package-lock.json` を `npm@10.8.2` で再生成し、`@auth/core` 配下の `preact@10.11.3` エントリを復元。
 - `npm audit fix` を適用し、`axios` / `ajv` / `minimatch` 由来の既知脆弱性を解消。
 - `package.json` の `overrides.tar` を `7.5.9` へ更新し、`tar` の高優先度脆弱性（`<=7.5.7`）を解消。
 - `package.json` の `engines.npm` を `>=10 <12` に調整し、npm 11 系利用時の `EBADENGINE` 警告を解消。
