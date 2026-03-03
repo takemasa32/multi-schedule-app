@@ -12,6 +12,7 @@
 - [アカウント予定連携の設計](docs/architecture/account-schedule.md)
 - [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
 - [体感最適化と整合性担保](docs/architecture/performance-latency-improvements.md)
+- [Motion導入方針（低影響・段階移行）](docs/architecture/motion-adoption-plan.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
