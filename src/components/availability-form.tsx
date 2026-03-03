@@ -9,6 +9,7 @@ import { submitAvailability, checkParticipantExists } from '@/lib/actions';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
+import useHapticsFeedback from '@/hooks/useHapticsFeedback';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from './week-navigation-bar';
 import { useRouter } from 'next/navigation';
@@ -139,6 +140,7 @@ export default function AvailabilityForm({
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
   const isWeekdayModeActive = weeklyStep !== null && currentStep === weeklyStep;
+  const { notifyDragStart, notifyDragEnd, notifySelectionChange } = useHapticsFeedback();
   // 曜日ごとの選択状態と時間帯設定
   const [weekdaySelections, setWeekdaySelections] = useState<Record<WeekDay, WeekDaySchedule>>({
     月: { selected: false, timeSlots: {} },
@@ -209,6 +211,7 @@ export default function AvailabilityForm({
       return changed ? next : prev;
     });
     if (changedKeys.length > 0) {
+      notifySelectionChange();
       setManuallyEditedDateIds((prev) => {
         const next = { ...prev };
         changedKeys.forEach((key) => {
@@ -217,7 +220,7 @@ export default function AvailabilityForm({
         return next;
       });
     }
-  }, []);
+  }, [notifySelectionChange]);
 
   const dateSelectionController = useSelectionDragController({
     isSelected: (key) => Boolean(selectedDates[key]),
@@ -226,6 +229,8 @@ export default function AvailabilityForm({
     shouldIgnorePointerDown: (_event, _key) => isWeekdayModeActive,
     shouldIgnorePointerEnter: (_event, _key) => isWeekdayModeActive,
     disableBodyScroll: true,
+    onDragStart: notifyDragStart,
+    onDragEnd: notifyDragEnd,
   });
 
   const getMatrixKey = useCallback((weekday: WeekDay, slot: string) => `${weekday}__${slot}`, []);
@@ -237,6 +242,7 @@ export default function AvailabilityForm({
 
   const applyMatrixSelection = useCallback(
     (keys: string[], value: boolean) => {
+      const changedKeys: string[] = [];
       setHasWeekdayEdits(true);
       setWeekdaySelections((prev) => {
         let changed = false;
@@ -250,6 +256,7 @@ export default function AvailabilityForm({
             return;
           }
           changed = true;
+          changedKeys.push(rawKey);
           const nextTimeSlots = {
             ...schedule.timeSlots,
             [slot]: value,
@@ -262,8 +269,13 @@ export default function AvailabilityForm({
         });
         return changed ? next : prev;
       });
+      // 単発タップでもドラッグ連続入力でも、実際に状態が変わったときだけ触覚を返す。
+      // クールダウンは useHapticsFeedback 側で吸収するため、ここでは変化有無のみ判定する。
+      if (changedKeys.length > 0) {
+        notifySelectionChange();
+      }
     },
-    [parseMatrixKey],
+    [notifySelectionChange, parseMatrixKey],
   );
 
   const weekdaySelectionController = useSelectionDragController({
@@ -277,6 +289,8 @@ export default function AvailabilityForm({
     shouldIgnorePointerEnter: (_event, _key) => !isWeekdayModeActive,
     disableBodyScroll: true,
     enableKeyboard: false,
+    onDragStart: notifyDragStart,
+    onDragEnd: notifyDragEnd,
   });
 
   const handleMouseLeave = useCallback(() => {
@@ -552,7 +566,15 @@ export default function AvailabilityForm({
       }
       setCurrentStep(confirmStep);
     }
-  }, [confirmStep, currentStep, heatmapStep, isNewMode, name, selectedDates, weeklyStep]);
+  }, [
+    confirmStep,
+    currentStep,
+    heatmapStep,
+    isNewMode,
+    name,
+    selectedDates,
+    weeklyStep,
+  ]);
 
   const handleOpenGuestConfirm = useCallback(() => {
     setShowGuestConfirm(true);
