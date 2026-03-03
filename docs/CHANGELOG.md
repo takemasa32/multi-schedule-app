@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2026-03-03
+
+- CI の `npm ci` で `Missing: preact@10.11.3 from lock file` が再発しないよう、`package-lock.json` を `npm@10.8.2` で再生成し、`@auth/core` 配下の `preact@10.11.3` エントリを復元。
+- `npm audit fix` を適用し、`axios` / `ajv` / `minimatch` 由来の既知脆弱性を解消。
+- `package.json` の `overrides.tar` を `7.5.9` へ更新し、`tar` の高優先度脆弱性（`<=7.5.7`）を解消。
+- `package.json` の `engines.npm` を `>=10 <12` に調整し、npm 11 系利用時の `EBADENGINE` 警告を解消。
+- Motion（motion.dev）導入の初期段階として、依存ライブラリを `framer-motion` から `motion` へ置換。
+- ランディング画面での `motion` import を `framer-motion` から `motion/react` へ差し替え、既存アニメーション挙動を維持したまま移行。
+- 導入背景・低影響移行方針・段階的ロールアウト案を `docs/architecture/motion-adoption-plan.md` として新規追加。
+- README のドキュメントリンクに Motion 導入方針を追加。
+
 ## 2026-02-27
 
 - イベント取得（`getEvent`）を request-scope キャッシュ化し、`/event/[public_id]` 系ページでの重複DB参照を削減。表示時の `last_accessed_at` 更新も廃止し、読み取り時の不要writeを解消。

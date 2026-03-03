@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { easeOut } from 'motion';
+import { motion } from 'motion/react';
 import siteConfig from '@/lib/site-config';
 
 export default function HeroSection() {
@@ -46,7 +47,7 @@ export default function HeroSection() {
             show: {
               opacity: 1,
               y: 0,
-              transition: { duration: 0.6, ease: 'easeOut' },
+              transition: { duration: 0.6, ease: easeOut },
             },
           }}
         >
