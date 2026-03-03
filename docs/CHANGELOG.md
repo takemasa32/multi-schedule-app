@@ -2,6 +2,9 @@
 
 ## 2026-03-03
 
+- `npm audit fix` を適用し、`axios` / `ajv` / `minimatch` 由来の既知脆弱性を解消。
+- `package.json` の `overrides.tar` を `7.5.9` へ更新し、`tar` の高優先度脆弱性（`<=7.5.7`）を解消。
+- `package.json` の `engines.npm` を `>=10 <12` に調整し、npm 11 系利用時の `EBADENGINE` 警告を解消。
 - Motion（motion.dev）導入の初期段階として、依存ライブラリを `framer-motion` から `motion` へ置換。
 - ランディング画面での `motion` import を `framer-motion` から `motion/react` へ差し替え、既存アニメーション挙動を維持したまま移行。
 - 導入背景・低影響移行方針・段階的ロールアウト案を `docs/architecture/motion-adoption-plan.md` として新規追加。
