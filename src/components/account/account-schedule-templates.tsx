@@ -911,6 +911,7 @@ export default function AccountScheduleTemplates({
     const result = await upsertWeeklyTemplatesFromWeekdaySelections({
       templates: Array.from(nextManualMap.values()),
       allowClear: nextManualMap.size === 0,
+      replaceExisting: true,
     });
     if (!result.success) {
       setWeeklyMessage(result.message ?? '週ごとの用事の更新に失敗しました');

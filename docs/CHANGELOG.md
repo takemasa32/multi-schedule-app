@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2026-03-07
+
+- `/account` の週ごとの用事保存で、一部セルを削除した際に削除情報が反映されず再表示で復活する不具合を修正。`upsertWeeklyTemplatesFromWeekdaySelections` に `replaceExisting` オプションを追加し、予定一括管理からは手動テンプレ全体を正として保存するよう変更。
+
 ## 2026-03-03
 
 - CI の `npm ci` で `Missing: preact@10.11.3 from lock file` が再発しないよう、`package-lock.json` を `npm@10.8.2` で再生成し、`@auth/core` 配下の `preact@10.11.3` エントリを復元。
@@ -29,7 +33,7 @@
 - `upsert_event_access_histories_bulk` は部分失敗耐性を追加し、`processed_count / skipped_count` を返すよう改善。スキップ発生時は警告ログを出力。
 - 閲覧時の `last_accessed_at` 更新を `touch_event_last_accessed_if_stale` RPC で復元し、実ページ描画時のみ間引き更新する方式に変更。
 - 非破壊DB最適化として、`participants(event_id, created_at)` と `event_dates(event_id, start_time)` の追加インデックスを導入。
-- `test:e2e:chrome:public` はサーバー自動起動付きへ変更し、認証付きE2Eは前提テーブル不足時に理由付きskipできるよう改善。
+- E2E 実行フローを見直し、認証付きE2Eは前提テーブル不足時に理由付きskipできるよう改善。
 - `package.json` のテスト系スクリプトを整理し、重複していた `e2e:*` 系とブラウザ別補助スクリプトを削減。日常運用向けに `test:e2e:chrome` / `test:e2e:chrome:public` / `test:e2e:auth` / `test:e2e` / `test:e2e:debug` へ集約。
 - 体感最適化方針と公開API変更を `docs/architecture/performance-latency-improvements.md` に追加。
 - 回答状況ヒートマップのセル上辺罫線を調整し、上辺に角丸が存在するセルでは水平線を描画しないよう修正。

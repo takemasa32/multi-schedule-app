@@ -21,7 +21,6 @@ export async function generateMetadata({
   let event;
   try {
     event = await getEvent(public_id);
-    await touchEventLastAccessedIfStale(public_id);
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       return {
@@ -61,6 +60,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   let event;
   try {
     event = await getEvent(public_id);
+    await touchEventLastAccessedIfStale(public_id);
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();

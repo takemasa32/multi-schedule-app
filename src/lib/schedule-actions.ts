@@ -1648,6 +1648,7 @@ export async function removeUserScheduleBlock(blockId: string): Promise<{ succes
 export async function upsertWeeklyTemplatesFromWeekdaySelections({
   templates,
   allowClear = false,
+  replaceExisting = false,
 }: {
   templates: Array<{
     weekday: number;
@@ -1656,6 +1657,7 @@ export async function upsertWeeklyTemplatesFromWeekdaySelections({
     availability: boolean;
   }>;
   allowClear?: boolean;
+  replaceExisting?: boolean;
 }): Promise<{ success: boolean; message?: string; updatedCount: number }> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
@@ -1718,15 +1720,17 @@ export async function upsertWeeklyTemplatesFromWeekdaySelections({
   }
 
   const compacted = compactWeeklyTemplateRows({
-    existingRows: (existingRows ?? []).flatMap((row) => {
-      const normalizedExisting = normalizeWeeklyTemplateRow({
-        weekday: row.weekday,
-        startTime: row.start_time,
-        endTime: row.end_time,
-        availability: row.availability,
-      });
-      return normalizedExisting ? [normalizedExisting] : [];
-    }),
+    existingRows: replaceExisting
+      ? []
+      : (existingRows ?? []).flatMap((row) => {
+          const normalizedExisting = normalizeWeeklyTemplateRow({
+            weekday: row.weekday,
+            startTime: row.start_time,
+            endTime: row.end_time,
+            availability: row.availability,
+          });
+          return normalizedExisting ? [normalizedExisting] : [];
+        }),
     incomingRows: normalized,
   });
 

@@ -288,6 +288,135 @@ describe('upsertWeeklyTemplatesFromWeekdaySelections', () => {
     expect(selectSecondEqMock).toHaveBeenCalledWith('source', 'manual');
   });
 
+  it('replaceExisting 未指定では入力外の既存行を維持する', async () => {
+    const existingRows = [
+      {
+        id: 'old-1',
+        weekday: 1,
+        start_time: '08:00:00',
+        end_time: '09:00:00',
+        availability: false,
+      },
+      {
+        id: 'old-2',
+        weekday: 1,
+        start_time: '10:00:00',
+        end_time: '11:00:00',
+        availability: true,
+      },
+    ];
+    const selectSecondEqMock = jest.fn().mockResolvedValue({ data: existingRows, error: null });
+    const selectFirstEqMock = jest.fn().mockReturnValue({ eq: selectSecondEqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectFirstEqMock });
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ upsert: upsertMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: [
+        {
+          weekday: 1,
+          startTime: '08:00',
+          endTime: '09:00',
+          availability: false,
+        },
+      ],
+    });
+
+    expect(result).toEqual({ success: true, updatedCount: 2 });
+    expect(fromMock).toHaveBeenCalledTimes(2);
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          user_id: 'user-1',
+          weekday: 1,
+          start_time: '08:00',
+          end_time: '09:00',
+          availability: false,
+          source: 'manual',
+        }),
+        expect.objectContaining({
+          user_id: 'user-1',
+          weekday: 1,
+          start_time: '10:00',
+          end_time: '11:00',
+          availability: true,
+          source: 'manual',
+        }),
+      ]),
+      { onConflict: 'user_id,weekday,start_time,end_time,source' },
+    );
+  });
+
+  it('replaceExisting=true なら入力外の既存行を削除する', async () => {
+    const existingRows = [
+      {
+        id: 'old-1',
+        weekday: 1,
+        start_time: '08:00:00',
+        end_time: '09:00:00',
+        availability: false,
+      },
+      {
+        id: 'old-2',
+        weekday: 1,
+        start_time: '10:00:00',
+        end_time: '11:00:00',
+        availability: true,
+      },
+    ];
+    const selectSecondEqMock = jest.fn().mockResolvedValue({ data: existingRows, error: null });
+    const selectFirstEqMock = jest.fn().mockReturnValue({ eq: selectSecondEqMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectFirstEqMock });
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const deleteInMock = jest.fn().mockResolvedValue({ error: null });
+    const deleteSecondEqMock = jest.fn().mockReturnValue({ in: deleteInMock });
+    const deleteFirstEqMock = jest.fn().mockReturnValue({ eq: deleteSecondEqMock });
+    const deleteMock = jest.fn().mockReturnValue({ eq: deleteFirstEqMock });
+
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ upsert: upsertMock })
+      .mockReturnValueOnce({ delete: deleteMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
+      templates: [
+        {
+          weekday: 1,
+          startTime: '08:00',
+          endTime: '09:00',
+          availability: false,
+        },
+      ],
+      replaceExisting: true,
+    });
+
+    expect(result).toEqual({ success: true, updatedCount: 1 });
+    expect(upsertMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          user_id: 'user-1',
+          weekday: 1,
+          start_time: '08:00',
+          end_time: '09:00',
+          availability: false,
+          source: 'manual',
+        }),
+      ],
+      { onConflict: 'user_id,weekday,start_time,end_time,source' },
+    );
+    expect(deleteFirstEqMock).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(deleteSecondEqMock).toHaveBeenCalledWith('source', 'manual');
+    expect(deleteInMock).toHaveBeenCalledWith('id', ['old-2']);
+  });
+
   it('重複・重なりを圧縮し、不要な既存テンプレ行を削除する', async () => {
     const existingRows = [
       {

@@ -234,6 +234,59 @@ describe('AccountScheduleTemplates', () => {
           },
         ],
         allowClear: false,
+        replaceExisting: true,
+      });
+    });
+  });
+
+  it('週テンプレを一部削除しても残存テンプレのみで保存できる', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [
+        {
+          id: 'tpl-1',
+          weekday: 1,
+          start_time: '09:00:00',
+          end_time: '10:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+        {
+          id: 'tpl-2',
+          weekday: 1,
+          start_time: '10:00:00',
+          end_time: '11:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('account-tab-weekly'));
+    await screen.findByRole('heading', { name: '週ごとの用事' });
+    fireEvent.click(screen.getByRole('button', { name: '編集する' }));
+    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
+    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
+    fireEvent.click(screen.getByTestId('weekly-save-bottom'));
+
+    await waitFor(() => {
+      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledTimes(1);
+      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledWith({
+        templates: [
+          {
+            weekday: 1,
+            startTime: '10:00',
+            endTime: '11:00',
+            availability: true,
+          },
+        ],
+        allowClear: false,
+        replaceExisting: true,
       });
     });
   });
