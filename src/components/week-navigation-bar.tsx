@@ -28,6 +28,17 @@ export default function WeekNavigationBar({
   const canGoPrev = currentPage > 0;
   const canGoNext = currentPage < safeTotalPages - 1;
 
+  const handlePrev = () => {
+    if (!canGoPrev) return;
+    onPageChange(Math.max(0, currentPage - 1));
+  };
+
+  const handleNext = () => {
+    if (!canGoNext) return;
+    onPageChange(Math.min(safeTotalPages - 1, currentPage + 1));
+  };
+
+
   return (
     <div className="bg-base-200 rounded-lg p-3">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -41,7 +52,7 @@ export default function WeekNavigationBar({
           <button
             type="button"
             className="btn btn-sm btn-outline"
-            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+            onClick={handlePrev}
             disabled={!canGoPrev}
             aria-label="前の週へ移動"
           >
@@ -56,7 +67,7 @@ export default function WeekNavigationBar({
           <button
             type="button"
             className="btn btn-sm btn-outline"
-            onClick={() => onPageChange(Math.min(safeTotalPages - 1, currentPage + 1))}
+            onClick={handleNext}
             disabled={!canGoNext}
             aria-label="次の週へ移動"
           >

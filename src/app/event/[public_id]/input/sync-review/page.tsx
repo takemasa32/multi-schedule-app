@@ -1,14 +1,16 @@
 import { redirect } from 'next/navigation';
-import { getEvent } from '@/lib/actions';
+import { getEvent, touchEventLastAccessedIfStale } from '@/lib/actions';
 import { getAuthSession } from '@/lib/auth';
 import SyncReviewPage from '@/components/sync/sync-review-page';
 
 type SyncReviewRouteProps = {
   params: Promise<{ public_id: string }>;
+  searchParams: Promise<{ sync_warning?: string }>;
 };
 
-export default async function SyncReviewRoutePage({ params }: SyncReviewRouteProps) {
+export default async function SyncReviewRoutePage({ params, searchParams }: SyncReviewRouteProps) {
   const { public_id: publicId } = await params;
+  const { sync_warning: syncWarning } = await searchParams;
   const session = await getAuthSession();
 
   if (!session?.user?.id) {
@@ -17,7 +19,14 @@ export default async function SyncReviewRoutePage({ params }: SyncReviewRoutePro
 
   try {
     const event = await getEvent(publicId);
-    return <SyncReviewPage publicToken={publicId} currentEventId={event.id} />;
+    await touchEventLastAccessedIfStale(publicId);
+    return (
+      <SyncReviewPage
+        publicToken={publicId}
+        currentEventId={event.id}
+        syncWarning={syncWarning === 'partial' ? 'partial' : null}
+      />
+    );
   } catch (error) {
     console.error('同期確認ページの初期化エラー:', error);
     redirect(`/event/${publicId}`);
