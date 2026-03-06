@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## 2026-03-07
+
+- `/account` の週ごとの用事保存で、一部セルを削除した際に削除情報が反映されず再表示で復活する不具合を修正。`upsertWeeklyTemplatesFromWeekdaySelections` に `replaceExisting` オプションを追加し、予定一括管理からは手動テンプレ全体を正として保存するよう変更。
+
+## 2026-03-03
+
+- CI の `npm ci` で `Missing: preact@10.11.3 from lock file` が再発しないよう、`package-lock.json` を `npm@10.8.2` で再生成し、`@auth/core` 配下の `preact@10.11.3` エントリを復元。
+- `npm audit fix` を適用し、`axios` / `ajv` / `minimatch` 由来の既知脆弱性を解消。
+- `package.json` の `overrides.tar` を `7.5.9` へ更新し、`tar` の高優先度脆弱性（`<=7.5.7`）を解消。
+- `package.json` の `engines.npm` を `>=10 <12` に調整し、npm 11 系利用時の `EBADENGINE` 警告を解消。
+- Motion（motion.dev）導入の初期段階として、依存ライブラリを `framer-motion` から `motion` へ置換。
+- ランディング画面での `motion` import を `framer-motion` から `motion/react` へ差し替え、既存アニメーション挙動を維持したまま移行。
+- 導入背景・低影響移行方針・段階的ロールアウト案を `docs/architecture/motion-adoption-plan.md` として新規追加。
+- README のドキュメントリンクに Motion 導入方針を追加。
+- `web-haptics` を導入し、回答入力（ドラッグ／セル切り替え）にモバイル向け触覚フィードバックを追加。
+- 触覚制御を `useHapticsFeedback` に集約し、クールダウンと `prefers-reduced-motion` 対応を実装。
+- 入力系UI（回答ヒートマップ、手動候補ピッカー）で、ドラッグ開始/終了に加えてセル状態変更時にも触覚連携を追加。ドラッグ連続入力時はクールダウンで間引く仕様に調整。
+
+## 2026-02-27
+
+- イベント取得（`getEvent`）を request-scope キャッシュ化し、`/event/[public_id]` 系ページでの重複DB参照を削減。表示時の `last_accessed_at` 更新も廃止し、読み取り時の不要writeを解消。
+- 回答送信処理を新RPC `submit_availability_bundle` ベースへ変更し、参加者更新・回答保存・紐づけ更新・予定反映・override更新・最終アクセス更新を1回で整合的に実行するよう改善。
+- `submitAvailability` は既存シグネチャ互換を維持しつつ内部実装を刷新。`sync_scope=all` + defer挙動は維持し、回答完了体感を優先。
+- `submitAvailability` の成功レスポンスに任意 `warningCodes` を追加し、非必須後処理（履歴同期/紐づけ更新）の失敗を警告としてUIへ伝播できるよう改善。
+- 同期プレビュー取得（`fetchUserAvailabilitySyncPreview`）をイベント単位逐次取得から一括取得へ変更し、N+1クエリを解消。`excludeEventId` / `targetEventIds` の任意オプションを追加。
+- `/event/[public_id]/input/sync-review` は `excludeEventId` を使ったサーバー側除外へ変更し、不要データ取得を削減。
+- `/account` の保存処理をバッチ化。週次は単発 `upsertWeeklyTemplatesFromWeekdaySelections`、日付ブロックは新規 `saveUserScheduleBlockChanges` で1回保存へ統一。
+- `upsertWeeklyTemplatesFromWeekdaySelections` に `allowClear?: boolean` を追加。既定では `templates=[]` をエラー扱いへ戻し、全削除は明示指定時のみ可能にして互換性を維持。
+- 回答画面の送信後遷移とログイン遷移を `window.location.href` から `router.replace/push` へ変更し、フルリロード依存を削減。
+- 履歴同期を `upsert_event_access_histories_bulk` で一括化し、`syncEventHistory` の逐次RPCループを廃止。
+- `upsert_event_access_histories_bulk` は部分失敗耐性を追加し、`processed_count / skipped_count` を返すよう改善。スキップ発生時は警告ログを出力。
+- 閲覧時の `last_accessed_at` 更新を `touch_event_last_accessed_if_stale` RPC で復元し、実ページ描画時のみ間引き更新する方式に変更。
+- 非破壊DB最適化として、`participants(event_id, created_at)` と `event_dates(event_id, start_time)` の追加インデックスを導入。
+- E2E 実行フローを見直し、認証付きE2Eは前提テーブル不足時に理由付きskipできるよう改善。
+- `package.json` のテスト系スクリプトを整理し、重複していた `e2e:*` 系とブラウザ別補助スクリプトを削減。日常運用向けに `test:e2e:chrome` / `test:e2e:chrome:public` / `test:e2e:auth` / `test:e2e` / `test:e2e:debug` へ集約。
+- 体感最適化方針と公開API変更を `docs/architecture/performance-latency-improvements.md` に追加。
+- 回答状況ヒートマップのセル上辺罫線を調整し、上辺に角丸が存在するセルでは水平線を描画しないよう修正。
+- `test:e2e:chrome:public` から build/start/wait-on と `fuser -k 3000/tcp` を削除し、既存 `http://localhost:3000` 前提で Playwright のみ実行する構成へ簡略化。
+- 回答状況ヒートマップの日付列幅を `colgroup` で明示し、日付列数が多い場合でもヘッダー文字が潰れて見える表示崩れを修正。
+- イベント閲覧時の `last_accessed_at` 更新を RPC 呼び出しからサーバー側の通常クエリへ切り替え、`PGRST202` に依存しない更新経路へ修正。
+- `src/lib/supabase.ts` に `server-only` を追加し、クライアントバンドルから Supabase クライアント生成モジュールを取り込めないよう制約を強化。
+- `use client` ファイルが `@/lib/supabase` / `@supabase/supabase-js` を直接 import していないことを検証する非同期テストを追加し、DB直アクセスの再発を防止。
+
 ## 2026-02-26
 
 - 回答状況ヒートマップのテーブルに `colgroup` と固定レイアウトを導入し、日付列が少ないケースでも時間列だけが過度に広がらないよう修正。
@@ -88,6 +131,7 @@
 - 週予定保存時のエラーメッセージを具体化し、取得失敗・更新失敗・整理失敗で再試行行動が分かる文言へ改善。
 - 回答送信時に `アカウント予定に保存して反映` を選択した場合は、`sync_defer=true` で保存し、直後に `/event/{public_id}/input/sync-review` でイベント別差分確認を行うフローへ変更。
 - `sync-review` では現在イベントを除外した差分イベントのみを表示し、イベント単位で `この変更を適用` できるよう追加。
+- `sync-review` と `/account` の回答イベント反映プレビューで、イベント単位の `この変更をキャンセル` を追加。適用せずに対象イベントを除外できるよう改善。
 - `sync-review` の対象が0件の場合（初回表示時 / 最後の適用後）はページ表示をスキップし、`/event/{public_id}` へ自動遷移する仕様を追加。
 - 回答画面の `回答後の保存方法` モーダル文言は変更せず、送信後の遷移制御のみ更新。
 

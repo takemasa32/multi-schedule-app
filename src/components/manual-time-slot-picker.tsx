@@ -7,6 +7,7 @@ import DateRangePicker, { DateRangeSettings } from './date-range-picker';
 import { TimeSlot } from '@/lib/utils';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
+import useHapticsFeedback from '@/hooks/useHapticsFeedback';
 import WeekNavigationBar from './week-navigation-bar';
 
 /**
@@ -59,6 +60,7 @@ export default function ManualTimeSlotPicker({
     () => new Set(initialSlots.map(slotKey)),
   );
   const { isMobile } = useDeviceDetect();
+  const { notifyDragStart, notifyDragEnd, notifySelectionChange } = useHapticsFeedback();
 
   /**
    * TimeSlot から一意なキー文字列を生成する
@@ -115,6 +117,7 @@ export default function ManualTimeSlotPicker({
 
   const applySelection = useCallback(
     (keys: string[], value: boolean) => {
+      const changedKeys: string[] = [];
       setSelectedKeys((prev) => {
         let changed = false;
         const next = new Set(prev);
@@ -126,16 +129,21 @@ export default function ManualTimeSlotPicker({
             if (!next.has(key)) {
               next.add(key);
               changed = true;
+              changedKeys.push(key);
             }
           } else if (next.has(key)) {
             next.delete(key);
             changed = true;
+            changedKeys.push(key);
           }
         }
         return changed ? next : prev;
       });
+      if (changedKeys.length > 0) {
+        notifySelectionChange();
+      }
     },
-    [disabledKeySet],
+    [disabledKeySet, notifySelectionChange],
   );
 
   /**
@@ -279,6 +287,8 @@ export default function ManualTimeSlotPicker({
     enableKeyboard: false,
     shouldIgnorePointerDown: (_, key) => disabledKeySet.has(key),
     shouldIgnorePointerEnter: (_, key) => disabledKeySet.has(key),
+    onDragStart: notifyDragStart,
+    onDragEnd: notifyDragEnd,
   });
 
   // カレンダーヘッダーで月・年の表示を抑制しつつ境界では明示する

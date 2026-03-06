@@ -3,13 +3,11 @@ import { useSession } from 'next-auth/react';
 import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
 import {
   applyUserAvailabilitySyncForEvent,
-  createManualScheduleTemplate,
   fetchUserAvailabilitySyncPreview,
   fetchUserScheduleBlocks,
   fetchUserScheduleTemplates,
-  removeScheduleTemplate,
-  removeUserScheduleBlock,
-  upsertUserScheduleBlock,
+  saveUserScheduleBlockChanges,
+  upsertWeeklyTemplatesFromWeekdaySelections,
 } from '@/lib/schedule-actions';
 
 jest.mock('next-auth/react', () => ({
@@ -18,13 +16,11 @@ jest.mock('next-auth/react', () => ({
 
 jest.mock('@/lib/schedule-actions', () => ({
   applyUserAvailabilitySyncForEvent: jest.fn(),
-  createManualScheduleTemplate: jest.fn(),
   fetchUserAvailabilitySyncPreview: jest.fn(),
   fetchUserScheduleBlocks: jest.fn(),
   fetchUserScheduleTemplates: jest.fn(),
-  removeScheduleTemplate: jest.fn(),
-  upsertUserScheduleBlock: jest.fn(),
-  removeUserScheduleBlock: jest.fn(),
+  saveUserScheduleBlockChanges: jest.fn(),
+  upsertWeeklyTemplatesFromWeekdaySelections: jest.fn(),
 }));
 
 const mockUseSession = useSession as jest.Mock;
@@ -32,10 +28,9 @@ const mockApplyUserAvailabilitySyncForEvent = applyUserAvailabilitySyncForEvent 
 const mockFetchUserScheduleTemplates = fetchUserScheduleTemplates as jest.Mock;
 const mockFetchUserAvailabilitySyncPreview = fetchUserAvailabilitySyncPreview as jest.Mock;
 const mockFetchUserScheduleBlocks = fetchUserScheduleBlocks as jest.Mock;
-const mockCreateManualScheduleTemplate = createManualScheduleTemplate as jest.Mock;
-const mockRemoveScheduleTemplate = removeScheduleTemplate as jest.Mock;
-const mockUpsertUserScheduleBlock = upsertUserScheduleBlock as jest.Mock;
-const mockRemoveUserScheduleBlock = removeUserScheduleBlock as jest.Mock;
+const mockSaveUserScheduleBlockChanges = saveUserScheduleBlockChanges as jest.Mock;
+const mockUpsertWeeklyTemplatesFromWeekdaySelections =
+  upsertWeeklyTemplatesFromWeekdaySelections as jest.Mock;
 
 const createLocalTimeRange = (startHour: number, endHour: number) => {
   const now = new Date();
@@ -126,7 +121,6 @@ const createSyncPreviewEvent = (eventId: string, title: string) => {
 describe('AccountScheduleTemplates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRemoveScheduleTemplate.mockResolvedValue({ success: true });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([]);
     mockApplyUserAvailabilitySyncForEvent.mockResolvedValue({
@@ -134,8 +128,11 @@ describe('AccountScheduleTemplates', () => {
       message: 'イベントを更新しました',
       updatedCount: 1,
     });
-    mockUpsertUserScheduleBlock.mockResolvedValue({ success: true });
-    mockRemoveUserScheduleBlock.mockResolvedValue({ success: true });
+    mockSaveUserScheduleBlockChanges.mockResolvedValue({ success: true, updatedCount: 1 });
+    mockUpsertWeeklyTemplatesFromWeekdaySelections.mockResolvedValue({
+      success: true,
+      updatedCount: 1,
+    });
   });
 
   it('未ログイン時は案内文を表示する', () => {
@@ -215,8 +212,6 @@ describe('AccountScheduleTemplates', () => {
         },
       ],
     });
-    mockCreateManualScheduleTemplate.mockResolvedValue({ success: true });
-
     render(<AccountScheduleTemplates />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
@@ -228,12 +223,70 @@ describe('AccountScheduleTemplates', () => {
     fireEvent.click(screen.getByTestId('weekly-save-bottom'));
 
     await waitFor(() => {
-      expect(mockCreateManualScheduleTemplate).toHaveBeenCalledTimes(1);
-      expect(mockCreateManualScheduleTemplate).toHaveBeenCalledWith({
-        weekday: 1,
-        startTime: '09:00',
-        endTime: '10:00',
-        availability: false,
+      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledTimes(1);
+      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledWith({
+        templates: [
+          {
+            weekday: 1,
+            startTime: '09:00',
+            endTime: '10:00',
+            availability: false,
+          },
+        ],
+        allowClear: false,
+        replaceExisting: true,
+      });
+    });
+  });
+
+  it('週テンプレを一部削除しても残存テンプレのみで保存できる', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [
+        {
+          id: 'tpl-1',
+          weekday: 1,
+          start_time: '09:00:00',
+          end_time: '10:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+        {
+          id: 'tpl-2',
+          weekday: 1,
+          start_time: '10:00:00',
+          end_time: '11:00:00',
+          availability: true,
+          source: 'manual',
+          sample_count: 1,
+        },
+      ],
+      learned: [],
+    });
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('account-tab-weekly'));
+    await screen.findByRole('heading', { name: '週ごとの用事' });
+    fireEvent.click(screen.getByRole('button', { name: '編集する' }));
+    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
+    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
+    fireEvent.click(screen.getByTestId('weekly-save-bottom'));
+
+    await waitFor(() => {
+      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledTimes(1);
+      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledWith({
+        templates: [
+          {
+            weekday: 1,
+            startTime: '10:00',
+            endTime: '11:00',
+            availability: true,
+          },
+        ],
+        allowClear: false,
+        replaceExisting: true,
       });
     });
   });
@@ -424,11 +477,16 @@ describe('AccountScheduleTemplates', () => {
     fireEvent.click(screen.getByTestId('dated-save-bottom'));
 
     await waitFor(() => {
-      expect(mockUpsertUserScheduleBlock).toHaveBeenCalledWith({
-        startTime: `${range.dateKey}T${startClock}:00`,
-        endTime: `${range.dateKey}T${endClock}:00`,
-        availability: false,
-        replaceBlockId: 'block-1',
+      expect(mockSaveUserScheduleBlockChanges).toHaveBeenCalledWith({
+        upserts: [
+          {
+            startTime: `${range.dateKey}T${startClock}:00`,
+            endTime: `${range.dateKey}T${endClock}:00`,
+            availability: false,
+            replaceBlockId: 'block-1',
+          },
+        ],
+        deleteIds: [],
       });
     });
   });
@@ -468,11 +526,16 @@ describe('AccountScheduleTemplates', () => {
     fireEvent.click(screen.getByTestId('dated-save-bottom'));
 
     await waitFor(() => {
-      expect(mockUpsertUserScheduleBlock).toHaveBeenCalledWith({
-        startTime: `${dateKey}T23:00:00`,
-        endTime: `${nextDateKey}T00:00:00`,
-        availability: false,
-        replaceBlockId: 'block-midnight',
+      expect(mockSaveUserScheduleBlockChanges).toHaveBeenCalledWith({
+        upserts: [
+          {
+            startTime: `${dateKey}T23:00:00`,
+            endTime: `${nextDateKey}T00:00:00`,
+            availability: false,
+            replaceBlockId: 'block-midnight',
+          },
+        ],
+        deleteIds: [],
       });
     });
   });
@@ -726,5 +789,35 @@ describe('AccountScheduleTemplates', () => {
     });
     expect(mockApplyUserAvailabilitySyncForEvent).toHaveBeenCalledTimes(2);
     expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
+  });
+
+  it('回答イベントへの反映でキャンセルしたイベントは一覧から除外される', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleTemplates.mockResolvedValue({
+      manual: [],
+      learned: [],
+    });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      createSyncPreviewEvent('event-1', 'イベントA'),
+    ]);
+
+    render(<AccountScheduleTemplates />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+    await screen.findByText('イベントA');
+
+    fireEvent.click(screen.getByTestId('sync-cancel-event-1'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('イベントA')).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(
+        '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+      ),
+    ).toBeInTheDocument();
+    expect(mockApplyUserAvailabilitySyncForEvent).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { getEvent } from '../actions';
+import { getEvent, touchEventLastAccessedIfStale } from '../actions';
 import { createSupabaseAdmin } from '../supabase';
 import { EventNotFoundError, EventFetchError } from '../errors';
 
@@ -51,13 +51,12 @@ describe('getEvent', () => {
       data: { id: 'e1', public_token: 'tok' },
       error: null,
     });
-    const updateChain = createSupabaseChainMock({ data: null, error: null });
-    const fromMock = jest.fn().mockReturnValueOnce(selectChain).mockReturnValueOnce(updateChain);
+    const fromMock = jest.fn().mockReturnValueOnce(selectChain);
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
 
     const event = await getEvent('tok');
     expect(event.id).toBe('e1');
-    expect(fromMock).toHaveBeenCalledTimes(2);
+    expect(fromMock).toHaveBeenCalledTimes(1);
   });
 
   it('行が存在しない場合は EventNotFoundError', async () => {
@@ -75,12 +74,58 @@ describe('getEvent', () => {
       error: { code: '500', message: 'server error' },
     });
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
-    await expect(getEvent('tok')).rejects.toBeInstanceOf(EventFetchError);
+    await expect(getEvent('tok-error')).rejects.toBeInstanceOf(EventFetchError);
   });
 
   it('データが null の場合も EventNotFoundError', async () => {
     const chain = createSupabaseChainMock({ data: null, error: null });
     mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: () => chain }));
-    await expect(getEvent('tok')).rejects.toBeInstanceOf(EventNotFoundError);
+    await expect(getEvent('tok-null')).rejects.toBeInstanceOf(EventNotFoundError);
+  });
+});
+
+describe('touchEventLastAccessedIfStale', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('更新間隔を超えていれば最終アクセス時刻を更新する', async () => {
+    const maybeSingleMock = jest.fn().mockResolvedValue({
+      data: { id: 'event-1', last_accessed_at: '2000-01-01T00:00:00.000Z' },
+      error: null,
+    });
+    const selectEqMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectEqMock });
+    const updateEqMock = jest.fn().mockResolvedValue({ error: null });
+    const updateMock = jest.fn().mockReturnValue({ eq: updateEqMock });
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ update: updateMock });
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
+
+    await touchEventLastAccessedIfStale('tok');
+
+    expect(updateEqMock).toHaveBeenCalledWith('id', 'event-1');
+  });
+
+  it('更新間隔内なら最終アクセス更新をスキップする', async () => {
+    const nowIso = new Date().toISOString();
+    const maybeSingleMock = jest.fn().mockResolvedValue({
+      data: { id: 'event-1', last_accessed_at: nowIso },
+      error: null,
+    });
+    const selectEqMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: selectEqMock });
+    const updateMock = jest.fn();
+    const fromMock = jest
+      .fn()
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ update: updateMock });
+    mockedCreateSupabaseAdmin.mockImplementation(() => ({ from: fromMock }));
+
+    await touchEventLastAccessedIfStale('tok');
+
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });

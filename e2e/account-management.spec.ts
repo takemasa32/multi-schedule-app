@@ -113,7 +113,8 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
   test.skip(!isDevLoginEnabled, '開発用ログインが無効のためスキップします');
 
   let db: Client;
-  let userId: string;
+  let userId = '';
+  let schemaSkipReason: string | null = null;
   const createdEventIds: string[] = [];
   const createdTokens: string[] = [];
 
@@ -154,6 +155,16 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
   test.beforeAll(async () => {
     db = new Client({ connectionString: runtime.dbUrl });
     await db.connect();
+    const schemaCheck = await db.query<{ users_table: string | null; blocks_table: string | null }>(
+      "select to_regclass('authjs.users') as users_table, to_regclass('public.user_schedule_blocks') as blocks_table",
+    );
+    const schemaRow = schemaCheck.rows[0];
+    if (!schemaRow?.users_table || !schemaRow?.blocks_table) {
+      schemaSkipReason =
+        'E2E前提テーブルが不足しています（authjs.users / public.user_schedule_blocks）。マイグレーション適用後に再実行してください。';
+      return;
+    }
+
     const email = `${runtime.devLoginId}@local.dev`;
     const existing = await db.query<{ id: string }>('select id from authjs.users where email=$1', [
       email,
@@ -171,8 +182,16 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     userId = inserted.rows[0].id;
   });
 
+  test.beforeEach(async () => {
+    test.skip(Boolean(schemaSkipReason), schemaSkipReason ?? '');
+  });
+
   test.afterAll(async () => {
     if (!db) return;
+    if (schemaSkipReason) {
+      await db.end();
+      return;
+    }
     if (createdEventIds.length > 0) {
       await db.query(
         'delete from public.user_event_links where user_id=$1 and event_id = any($2::uuid[])',

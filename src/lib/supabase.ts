@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
@@ -17,7 +18,7 @@ export const createSupabaseAdmin = (): SupabaseClient<Database> => {
   });
 };
 
-// Create the Supabase client with anon key (for client operations)
+// Create the Supabase client with anon key (for server-side public operations)
 export const createSupabaseClient = (): SupabaseClient<Database> => {
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 

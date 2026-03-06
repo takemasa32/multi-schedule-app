@@ -474,6 +474,32 @@ export type Database = {
           id: string;
         }[];
       };
+      submit_availability_bundle: {
+        Args: {
+          p_event_id: string;
+          p_public_token: string;
+          p_participant_id: string | null;
+          p_participant_name: string;
+          p_comment: string | null;
+          p_availabilities: Json;
+          p_user_id: string | null;
+          p_override_date_ids?: Json;
+        };
+        Returns: {
+          success: boolean;
+          message: string;
+          participant_id: string | null;
+          event_title: string | null;
+        }[];
+      };
+      touch_event_last_accessed_if_stale: {
+        Args: {
+          p_public_token: string;
+          p_accessed_at?: string;
+          p_min_interval_minutes?: number;
+        };
+        Returns: boolean;
+      };
       update_participant_availability: {
         Args: {
           p_participant_id: string;
@@ -500,6 +526,16 @@ export type Database = {
           last_accessed_at: string;
           user_id: string;
         };
+      };
+      upsert_event_access_histories_bulk: {
+        Args: {
+          p_user_id: string;
+          p_items: Json;
+        };
+        Returns: {
+          processed_count: number;
+          skipped_count: number;
+        }[];
       };
     };
     Enums: {

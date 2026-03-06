@@ -6,7 +6,7 @@ import {
   getFinalizedDateIds,
 } from '@/lib/actions';
 import { getAuthSession } from '@/lib/auth';
-import { syncUserAvailabilities } from '@/lib/schedule-actions';
+import { syncUserAvailabilities, upsertUserEventLink } from '@/lib/schedule-actions';
 import { createSupabaseAdmin, createSupabaseClient } from '../supabase';
 
 jest.mock('../supabase');
@@ -24,6 +24,7 @@ const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
 const mockedCreateSupabaseClient = createSupabaseClient as jest.Mock;
 const mockedGetAuthSession = getAuthSession as jest.Mock;
 const mockedSyncUserAvailabilities = syncUserAvailabilities as jest.Mock;
+const mockedUpsertUserEventLink = upsertUserEventLink as jest.Mock;
 
 jest.mock('@/lib/supabase', () => ({
   createSupabaseClient: jest.fn(() => ({ from: jest.fn() })),
@@ -238,33 +239,27 @@ describe('createEvent', () => {
 });
 
 describe('submitAvailability', () => {
+  let rpcMock: jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockedGetAuthSession.mockResolvedValue(null);
+    rpcMock = jest.fn(() =>
+      Promise.resolve({
+        data: [
+          {
+            success: true,
+            message: '回答を送信しました。ありがとうございます！',
+            participant_id: 'partid',
+            event_title: 'テストイベント',
+          },
+        ],
+        error: null,
+      }),
+    );
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) => {
-        if (table === 'events') {
-          return createSupabaseChainMock({
-            data: [
-              {
-                id: 'eventid',
-                public_token: 'AbCdEf123456',
-                admin_token: 'mock-admin-token',
-                is_finalized: false,
-              },
-            ],
-            error: null,
-          });
-        }
-        if (table === 'participants') {
-          return createSupabaseChainMock({ data: [], error: null });
-        }
-        if (table === 'availabilities') {
-          return createSupabaseChainMock({ data: [], error: null });
-        }
-        return createSupabaseChainMock();
-      },
-      rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
+      from: (_table: string) => createSupabaseChainMock({ data: [], error: null }),
+      rpc: rpcMock,
     }));
     mockedCreateSupabaseClient.mockImplementation(() => ({
       from: (_table: string) => createSupabaseChainMock(),
@@ -273,28 +268,6 @@ describe('submitAvailability', () => {
   });
 
   it('正常な入力で回答が保存される', async () => {
-    mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) => {
-        if (table === 'events') {
-          return createSupabaseChainMock({
-            data: [
-              {
-                id: 'eventid',
-                public_token: 'AbCdEf123456',
-                admin_token: 'mock-admin-token',
-                is_finalized: false,
-              },
-            ],
-            error: null,
-          });
-        }
-        if (table === 'participants') {
-          return createSupabaseChainMock({ data: [], error: null });
-        }
-        return createSupabaseChainMock({ data: [], error: null });
-      },
-      rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
-    }));
     const formData = new FormData();
     formData.set('eventId', 'eventid');
     formData.set('publicToken', 'pubtok');
@@ -304,6 +277,14 @@ describe('submitAvailability', () => {
     const result = await submitAvailability(formData);
     expect(result.success).toBe(true);
     expect(result.message).toMatch(/回答/);
+    expect(rpcMock).toHaveBeenCalledWith(
+      'submit_availability_bundle',
+      expect.objectContaining({
+        p_event_id: 'eventid',
+        p_public_token: 'pubtok',
+        p_participant_name: 'テスト太郎',
+      }),
+    );
   });
 
   it('必須項目未入力時はエラー', async () => {
@@ -314,15 +295,10 @@ describe('submitAvailability', () => {
   });
 
   it('イベントが存在しない場合はエラー', async () => {
-    mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) => {
-        if (table === 'events') {
-          return createSupabaseChainMock({ data: null, error: null });
-        }
-        return createSupabaseChainMock();
-      },
-      rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
-    }));
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: 'イベントが見つかりません' },
+    });
     const formData = new FormData();
     formData.set('eventId', 'eventid');
     formData.set('publicToken', 'pubtok');
@@ -344,39 +320,12 @@ describe('submitAvailability', () => {
     expect(result.message).toMatch(/少なくとも/);
   });
 
-  it('既存参加者の上書き保存ができる', async () => {
-    mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) => {
-        if (table === 'events') {
-          return createSupabaseChainMock({
-            data: [
-              {
-                id: 'eventid',
-                public_token: 'AbCdEf123456',
-                admin_token: 'mock-admin-token',
-                is_finalized: false,
-              },
-            ],
-            error: null,
-          });
-        }
-        if (table === 'participants') {
-          return createSupabaseChainMock({
-            data: [{ id: 'partid', name: 'テスト太郎' }],
-            error: null,
-          });
-        }
-        if (table === 'availabilities') {
-          return createSupabaseChainMock({ data: [], error: null });
-        }
-        return createSupabaseChainMock();
-      },
-      rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
-    }));
+  it('既存参加者ID付きでも回答が保存される', async () => {
     const formData = new FormData();
     formData.set('eventId', 'eventid');
     formData.set('publicToken', 'pubtok');
     formData.set('participant_name', 'テスト太郎');
+    formData.set('participantId', 'partid');
     formData.append('availability_date1', 'on');
     const result = await submitAvailability(formData);
     expect(result.success).toBe(true);
@@ -384,48 +333,20 @@ describe('submitAvailability', () => {
   });
 
   it('コメント付きで新規参加者が保存される', async () => {
-    const selectChain = createSupabaseChainMock({ data: null, error: null });
-    const insertChain = createSupabaseChainMock({
-      data: { id: 'partid' },
-      error: null,
-    });
-    const participantsFrom = jest
-      .fn()
-      .mockReturnValueOnce(selectChain)
-      .mockReturnValueOnce(insertChain);
-    mockedCreateSupabaseAdmin.mockImplementation(() => ({
-      from: (table: string) => {
-        if (table === 'events') {
-          return createSupabaseChainMock({
-            data: [
-              {
-                id: 'eventid',
-                public_token: 'AbCdEf123456',
-                admin_token: 'mock-admin-token',
-                is_finalized: false,
-              },
-            ],
-            error: null,
-          });
-        }
-        if (table === 'participants') {
-          return participantsFrom();
-        }
-        if (table === 'availabilities') {
-          return createSupabaseChainMock({ data: [], error: null });
-        }
-        return createSupabaseChainMock();
-      },
-    }));
     const formData = new FormData();
     formData.set('eventId', 'eventid');
     formData.set('publicToken', 'pubtok');
     formData.set('participant_name', 'テスト太郎');
     formData.set('comment', 'コメントテスト');
     formData.append('availability_date1', 'on');
-    await submitAvailability(formData);
-    expect(insertChain.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ comment: 'コメントテスト' }),
+    await expect(submitAvailability(formData)).resolves.toEqual(
+      expect.objectContaining({ success: true }),
+    );
+    expect(rpcMock).toHaveBeenCalledWith(
+      'submit_availability_bundle',
+      expect.objectContaining({
+        p_comment: 'コメントテスト',
+      }),
     );
   });
 
@@ -462,6 +383,44 @@ describe('submitAvailability', () => {
       scope: 'all',
       currentEventId: 'eventid',
     });
+  });
+
+  it('非必須後処理で失敗があっても成功を維持し warningCodes を返す', async () => {
+    mockedGetAuthSession.mockResolvedValue({ user: { id: 'user-1' } });
+    rpcMock
+      .mockResolvedValueOnce({
+        data: [
+          {
+            success: true,
+            message: '回答を送信しました。ありがとうございます！',
+            participant_id: 'partid',
+            event_title: 'テストイベント',
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'history failed' },
+      });
+    mockedUpsertUserEventLink.mockResolvedValueOnce({
+      success: false,
+      message: 'link failed',
+    });
+
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('publicToken', 'pubtok');
+    formData.set('participant_name', 'テスト太郎');
+    formData.append('availability_date1', 'on');
+
+    const result = await submitAvailability(formData);
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+        warningCodes: ['POST_SYNC_PARTIAL_FAILURE'],
+      }),
+    );
   });
 });
 

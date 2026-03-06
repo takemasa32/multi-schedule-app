@@ -14,6 +14,7 @@ import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 type SyncReviewPageProps = {
   publicToken: string;
   currentEventId: string;
+  syncWarning?: 'partial' | null;
 };
 
 const toLocalDateKey = (date: Date): string =>
@@ -158,7 +159,11 @@ const reconcileEventAfterApply = ({
   };
 };
 
-export default function SyncReviewPage({ publicToken, currentEventId }: SyncReviewPageProps) {
+export default function SyncReviewPage({
+  publicToken,
+  currentEventId,
+  syncWarning = null,
+}: SyncReviewPageProps) {
   const router = useRouter();
   const [syncPreviewEvents, setSyncPreviewEvents] = useState<UserAvailabilitySyncPreviewEvent[]>([]);
   const [syncCellSelectionMap, setSyncCellSelectionMap] = useState<
@@ -173,14 +178,18 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
   const [syncApplyingEventIds, setSyncApplyingEventIds] = useState<Set<string>>(new Set());
   const syncApplyingEventIdsRef = useRef<Set<string>>(new Set());
 
-  const backToEventPath = useMemo(() => `/event/${publicToken}`, [publicToken]);
+  const backToEventPath = useMemo(
+    () => `/event/${publicToken}${syncWarning === 'partial' ? '?sync_warning=partial' : ''}`,
+    [publicToken, syncWarning],
+  );
 
   const loadSyncPreview = useCallback(async () => {
     setIsSyncPreviewLoading(true);
     setSyncPreviewError(null);
     try {
-      const preview = await fetchUserAvailabilitySyncPreview();
-      const filteredPreview = preview.filter((event) => event.eventId !== currentEventId);
+      const filteredPreview = await fetchUserAvailabilitySyncPreview({
+        excludeEventId: currentEventId,
+      });
 
       if (filteredPreview.length === 0) {
         router.replace(backToEventPath);
@@ -310,6 +319,35 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
     ],
   );
 
+  const handleCancelForEvent = useCallback((eventId: string) => {
+    setSyncPreviewEvents((prev) => prev.filter((event) => event.eventId !== eventId));
+    setSyncCellSelectionMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncPreviewWeekPageMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncOverwriteMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncAllowFinalizedMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+    setSyncMessageMap((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+  }, []);
+
   if (isSyncPreviewLoading) {
     return (
       <div className="py-8" data-testid="sync-review-page">
@@ -328,7 +366,7 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
       </div>
 
       <p className="mb-4 text-sm text-base-content/60">
-        反映対象イベントごとに変更内容を確認し、「この変更を適用」で更新できます。
+        反映対象イベントごとに変更内容を確認し、「この変更を適用」または「この変更をキャンセル」を選べます。
       </p>
       {syncPreviewError && (
         <div className="alert alert-warning mb-4">
@@ -541,6 +579,15 @@ export default function SyncReviewPage({ publicToken, currentEventId }: SyncRevi
                   </label>
                 )}
 
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  disabled={isUpdating}
+                  data-testid={`sync-review-cancel-${event.eventId}`}
+                  onClick={() => handleCancelForEvent(event.eventId)}
+                >
+                  この変更をキャンセル
+                </button>
                 <button
                   type="button"
                   className="btn btn-sm btn-primary ml-auto"
