@@ -84,11 +84,6 @@ describe('EventHistory', () => {
       success: true,
       message: '回答の紐づけを解除しました',
     });
-    jest.spyOn(window, 'confirm').mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    (window.confirm as jest.Mock).mockRestore();
   });
 
   it('編集モードで回答紐づき解除ボタンを表示できる', async () => {
@@ -108,6 +103,7 @@ describe('EventHistory', () => {
 
     fireEvent.click(await screen.findByTestId('event-history-answer-edit-toggle'));
     fireEvent.click(screen.getByTestId('event-history-unlink-event-1'));
+    fireEvent.click(screen.getByRole('button', { name: '解除する' }));
 
     await waitFor(() => {
       expect(mockUnlinkMyParticipantAnswerByEventPublicToken).toHaveBeenCalledWith('event-1');
@@ -117,11 +113,10 @@ describe('EventHistory', () => {
   });
 
   it('履歴クリアを実行できる', async () => {
-    (window.confirm as jest.Mock).mockReturnValueOnce(true);
-
     render(<EventHistory title="回答履歴" showClearButton={true} enableAnswerLinkEdit={true} />);
 
     fireEvent.click(await screen.findByText('履歴をクリア'));
+    fireEvent.click(screen.getByRole('button', { name: '削除する' }));
 
     await waitFor(() => {
       expect(clearEventHistory).toHaveBeenCalledTimes(1);

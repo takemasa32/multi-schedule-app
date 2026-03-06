@@ -2,6 +2,14 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EventOpenForm from '@/components/event-open-form';
 
+const mockPush = jest.fn();
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 // jsdomのrequestSubmit未実装対策
 if (!HTMLFormElement.prototype.requestSubmit) {
   HTMLFormElement.prototype.requestSubmit = function () {
@@ -41,6 +49,7 @@ describe('EventOpenForm', () => {
     fireEvent.change(input, { target: { value: 'abcdefgh' } });
     fireEvent.click(button);
     expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalledWith('/event/abcdefgh');
 
     // 正しいURL
     fireEvent.change(input, {
@@ -48,5 +57,6 @@ describe('EventOpenForm', () => {
     });
     fireEvent.click(button);
     expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalledWith('/event/ijklmnop');
   });
 });

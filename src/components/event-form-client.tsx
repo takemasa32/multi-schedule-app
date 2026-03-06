@@ -9,6 +9,7 @@ import ManualTimeSlotPicker from './manual-time-slot-picker';
 import { TimeSlot, addEventToHistory, EVENT_HISTORY_SYNC_MAX_ITEMS } from '@/lib/utils';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
+import WizardProgress from './common/wizard-progress';
 
 type CreateEventSuccess = Extract<CreateEventActionResult, { success: true }>;
 
@@ -353,23 +354,68 @@ export default function EventFormClient() {
     return 'ステップ3: 確認・作成';
   }, [currentStep, step2SubStep]);
 
+  const mainSteps = useMemo(
+    () => [
+      {
+        label: '基本情報',
+        shortLabel: '基本',
+        description: 'イベント名と説明を入力します。',
+      },
+      {
+        label: '候補日程',
+        shortLabel: '候補',
+        description: '入力方式を選び、候補枠を組み立てます。',
+      },
+      {
+        label: '確認・作成',
+        shortLabel: '確認',
+        description: '内容を確認してイベントを作成します。',
+      },
+    ],
+    [],
+  );
+
+  const step2SubSteps = useMemo(() => {
+    const steps = [
+      {
+        label: '入力方式の選択',
+        shortLabel: '方式',
+      },
+      {
+        label: '候補条件の設定',
+        shortLabel: '設定',
+      },
+    ];
+
+    if (inputMode === 'manual') {
+      steps.push({
+        label: 'カレンダーで候補を選択',
+        shortLabel: '選択',
+      });
+    }
+
+    return steps;
+  }, [inputMode]);
+
+  const currentSubStep = useMemo(() => {
+    if (currentStep !== 2) return null;
+    if (step2SubStep === 'mode') return 1;
+    if (step2SubStep === 'settings') return 2;
+    return 3;
+  }, [currentStep, step2SubStep]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div ref={stepIndicatorRef} className="mb-2 overflow-x-auto">
-        <ul className="steps w-full whitespace-nowrap text-xs sm:text-sm">
-          <li className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}>
-            <span className="sm:hidden">基本</span>
-            <span className="hidden sm:inline">基本情報</span>
-          </li>
-          <li className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}>
-            <span className="sm:hidden">候補</span>
-            <span className="hidden sm:inline">候補日程</span>
-          </li>
-          <li className={`step ${currentStep >= 3 ? 'step-primary' : ''}`}>確認</li>
-        </ul>
+      <div ref={stepIndicatorRef}>
+        <WizardProgress
+          currentStep={currentStep}
+          steps={mainSteps}
+          currentLabel={stepLabel}
+          subSteps={currentStep === 2 ? step2SubSteps : undefined}
+          currentSubStep={currentSubStep}
+          subStepLabel="候補日程ステップの進行"
+        />
       </div>
-
-      <div className="scroll-mt-24 text-base font-semibold">{stepLabel}</div>
 
       {error && (
         <div className="alert alert-error" role="alert" ref={errorRef}>

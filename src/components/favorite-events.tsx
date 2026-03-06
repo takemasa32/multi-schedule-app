@@ -16,11 +16,22 @@ export default function FavoriteEvents() {
   const { favorites, isHydrated, removeFavorite } = useFavoriteEvents();
 
   if (!isHydrated) {
-    return <p className="mt-2 text-sm text-base-content/60">お気に入りイベントを読み込んでいます...</p>;
+    return (
+      <div className="rounded-xl border border-base-300 bg-base-100 p-4 text-sm text-base-content/60">
+        お気に入りイベントを読み込んでいます...
+      </div>
+    );
   }
 
   if (!favorites.length) {
-    return <p className="mt-2 text-sm text-base-content/60">お気に入りイベントはありません。</p>;
+    return (
+      <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-4">
+        <p className="font-semibold">お気に入りはまだありません</p>
+        <p className="mt-1 text-sm leading-relaxed text-base-content/70">
+          よく開くイベントを登録しておくと、ここからすぐにアクセスできます。
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -7,6 +7,7 @@ import {
   unlinkMyParticipantAnswerByEventPublicToken,
 } from '@/lib/actions';
 import { getEventHistory, setEventHistory } from '@/lib/utils';
+import ConfirmationModal from '@/components/common/confirmation-modal';
 
 type EventAnswerLinkEditorProps = {
   eventId: string;
@@ -15,6 +16,16 @@ type EventAnswerLinkEditorProps = {
   linkedParticipantId: string | null;
   onLinkedParticipantIdChange: (participantId: string | null) => void;
 };
+
+type ConfirmState =
+  | {
+      type: 'unlink';
+    }
+  | {
+      type: 'link-name-mismatch';
+      message: string;
+      participantId: string;
+    };
 
 export default function EventAnswerLinkEditor({
   eventId,
@@ -28,6 +39,7 @@ export default function EventAnswerLinkEditor({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [selectedParticipantId, setSelectedParticipantId] = useState('');
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
 
   useEffect(() => {
     setSelectedParticipantId(linkedParticipantId ?? participants[0]?.id ?? '');
@@ -59,6 +71,41 @@ export default function EventAnswerLinkEditor({
         : item,
     );
     setEventHistory(nextHistory);
+  };
+
+  const handleUnlink = async () => {
+    setIsSubmitting(true);
+    const result = await unlinkMyParticipantAnswerByEventPublicToken(eventPublicToken);
+    setIsSubmitting(false);
+    setConfirmState(null);
+    setMessage(result.message);
+    if (!result.success) return;
+    onLinkedParticipantIdChange(null);
+    updateHistoryAnsweredState(false);
+  };
+
+  const handleLink = async (confirmNameMismatch = false, participantId = selectedParticipantId) => {
+    setIsSubmitting(true);
+    const result = await linkMyParticipantAnswerById({
+      eventId,
+      participantId,
+      confirmNameMismatch,
+    });
+    setIsSubmitting(false);
+    if (result.requiresConfirmation) {
+      setConfirmState({
+        type: 'link-name-mismatch',
+        message: result.message,
+        participantId,
+      });
+      return;
+    }
+
+    setConfirmState(null);
+    setMessage(result.message);
+    if (!result.success) return;
+    onLinkedParticipantIdChange(participantId);
+    updateHistoryAnsweredState(true);
   };
 
   return (
@@ -93,17 +140,7 @@ export default function EventAnswerLinkEditor({
                     className="btn btn-sm btn-warning"
                     data-testid="event-answer-link-unlink"
                     disabled={isSubmitting}
-                    onClick={async () => {
-                      if (!window.confirm('このイベントの回答紐づきを解除しますか？')) return;
-                      setIsSubmitting(true);
-                      const result =
-                        await unlinkMyParticipantAnswerByEventPublicToken(eventPublicToken);
-                      setIsSubmitting(false);
-                      setMessage(result.message);
-                      if (!result.success) return;
-                      onLinkedParticipantIdChange(null);
-                      updateHistoryAnsweredState(false);
-                    }}
+                    onClick={() => setConfirmState({ type: 'unlink' })}
                   >
                     {isSubmitting ? '解除中...' : '紐づきを解除'}
                   </button>
@@ -128,32 +165,7 @@ export default function EventAnswerLinkEditor({
                     className="btn btn-sm btn-primary"
                     data-testid="event-answer-link-link"
                     disabled={!selectedParticipantId || isSubmitting}
-                    onClick={async () => {
-                      setIsSubmitting(true);
-                      let result = await linkMyParticipantAnswerById({
-                        eventId,
-                        participantId: selectedParticipantId,
-                      });
-                      if (result.requiresConfirmation) {
-                        const confirmed = window.confirm(
-                          `${result.message}\n\n紐づけを続ける場合は「OK」を押してください。`,
-                        );
-                        if (confirmed) {
-                          result = await linkMyParticipantAnswerById({
-                            eventId,
-                            participantId: selectedParticipantId,
-                            confirmNameMismatch: true,
-                          });
-                        } else {
-                          result = { success: false, message: '紐づけをキャンセルしました' };
-                        }
-                      }
-                      setIsSubmitting(false);
-                      setMessage(result.message);
-                      if (!result.success) return;
-                      onLinkedParticipantIdChange(selectedParticipantId);
-                      updateHistoryAnsweredState(true);
-                    }}
+                    onClick={() => void handleLink()}
                   >
                     {isSubmitting ? '紐づけ中...' : 'この回答を紐づける'}
                   </button>
@@ -182,6 +194,44 @@ export default function EventAnswerLinkEditor({
           />
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={confirmState?.type === 'unlink'}
+        title="回答紐づきを解除"
+        description="このイベントの回答紐づきを解除します。回答データそのものは削除されません。"
+        confirmLabel="解除する"
+        confirmButtonClassName="btn-warning"
+        isConfirming={isSubmitting && confirmState?.type === 'unlink'}
+        confirmingLabel="解除中..."
+        onConfirm={() => void handleUnlink()}
+        onCancel={() => {
+          if (isSubmitting) return;
+          setConfirmState(null);
+        }}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmState?.type === 'link-name-mismatch'}
+        title="別名の回答を紐づけますか？"
+        description={
+          confirmState?.type === 'link-name-mismatch'
+            ? `${confirmState.message} 問題なければこのまま紐づけを続けてください。`
+            : undefined
+        }
+        confirmLabel="紐づけを続ける"
+        confirmButtonClassName="btn-primary"
+        isConfirming={isSubmitting && confirmState?.type === 'link-name-mismatch'}
+        confirmingLabel="紐づけ中..."
+        onConfirm={() => {
+          if (confirmState?.type !== 'link-name-mismatch') return;
+          void handleLink(true, confirmState.participantId);
+        }}
+        onCancel={() => {
+          if (isSubmitting) return;
+          setConfirmState(null);
+          setMessage('紐づけをキャンセルしました');
+        }}
+      />
     </>
   );
 }

@@ -21,10 +21,12 @@ import {
   syncEventHistory,
 } from '@/lib/event-history-actions';
 import EventOpenForm from '@/components/event-open-form';
+import ConfirmationModal from '@/components/common/confirmation-modal';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const { status } = useSession();
 
   useEffect(() => {
@@ -67,13 +69,12 @@ export default function HistoryPage() {
   }, [status]);
 
   const handleClearHistory = () => {
-    if (confirm('すべての履歴を削除してもよろしいですか？')) {
-      clearEventHistory();
-      if (status === 'authenticated') {
-        void clearServerEventHistory();
-      }
-      setHistory([]);
+    clearEventHistory();
+    if (status === 'authenticated') {
+      void clearServerEventHistory();
     }
+    setHistory([]);
+    setIsClearConfirmOpen(false);
   };
 
   const handleRemoveItem = (eventId: string) => {
@@ -120,17 +121,29 @@ export default function HistoryPage() {
         </section>
 
         {!isHistoryLoaded ? null : history.length === 0 ? (
-          <div className="bg-base-200 rounded-lg py-10 text-center">
-            <p>閲覧履歴はありません</p>
-            <Link href="/" className="btn btn-primary mt-4">
-              ホームに戻る
-            </Link>
+          <div className="rounded-xl border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center">
+            <p className="text-lg font-semibold">まだ閲覧履歴はありません</p>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-base-content/70">
+              イベントを開いたり作成したりすると、このページからまとめて再訪できます。共有されたURLやイベントIDがあれば、上のフォームから直接開けます。
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Link href="/create" className="btn btn-primary">
+                イベントを作成する
+              </Link>
+              <Link href="/" className="btn btn-outline">
+                ホームに戻る
+              </Link>
+            </div>
           </div>
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-base-content/60">{history.length}件のイベント履歴があります</p>
-              <button onClick={handleClearHistory} className="btn btn-outline btn-sm">
+              <button
+                type="button"
+                onClick={() => setIsClearConfirmOpen(true)}
+                className="btn btn-outline btn-sm"
+              >
                 すべての履歴を削除
               </button>
             </div>
@@ -173,6 +186,16 @@ export default function HistoryPage() {
             </div>
           </>
         )}
+
+        <ConfirmationModal
+          isOpen={isClearConfirmOpen}
+          title="履歴をすべて削除"
+          description="閲覧履歴と作成履歴をこの端末から削除します。ログイン中は同期済み履歴も削除されます。"
+          confirmLabel="削除する"
+          confirmButtonClassName="btn-error"
+          onConfirm={handleClearHistory}
+          onCancel={() => setIsClearConfirmOpen(false)}
+        />
       </div>
     </FavoriteEventsProvider>
   );

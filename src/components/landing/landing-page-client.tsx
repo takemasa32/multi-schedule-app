@@ -14,11 +14,14 @@ import {
   CalendarPlus,
   Share2,
   CheckCircle2,
+  Star,
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
 import Card from '@/components/layout/Card';
 import EventHistory from '@/components/event-history';
+import FavoriteEvents from '@/components/favorite-events';
+import { FavoriteEventsProvider } from '@/components/favorite-events-context';
 
 /**
  * Responsive Landing Page
@@ -547,25 +550,44 @@ export default function LandingPageClient() {
             <History className="text-primary h-6 w-6" />
             <h2 className="text-center text-3xl font-bold">履歴・お気に入り</h2>
           </motion.div>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeUp}
-            custom={1}
-          >
-            <EventHistory
-              maxDisplay={5}
-              title="過去に閲覧・作成したイベント"
-              showClearButton={true}
-            />
+          <FavoriteEventsProvider>
+            <motion.div
+              className="grid gap-6 lg:grid-cols-2"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.4 }}
+              variants={fadeUp}
+              custom={1}
+            >
+              <Card className="h-full">
+                <div className="mb-4 flex items-center gap-2">
+                  <Star className="text-warning h-5 w-5" />
+                  <h3 className="text-lg font-semibold">お気に入りイベント</h3>
+                </div>
+                <FavoriteEvents />
+              </Card>
 
-            <div className="mt-4 text-center">
-              <Link href="/history" className="btn btn-outline btn-sm">
-                すべての履歴を見る
-              </Link>
-            </div>
-          </motion.div>
+              <div>
+                <EventHistory
+                  maxDisplay={5}
+                  title="最近開いたイベント"
+                  showClearButton={true}
+                  withProvider={false}
+                  emptyStateTitle="まだ履歴はありません"
+                  emptyStateDescription="イベントを開いたり作成したりすると、ここに最近使ったイベントが表示されます。"
+                  emptyStateActionHref="/create"
+                  emptyStateActionLabel="イベントを作成する"
+                  containerClassName="m-0"
+                />
+
+                <div className="mt-4 text-center lg:text-left">
+                  <Link href="/history" className="btn btn-outline btn-sm">
+                    すべての履歴を見る
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </FavoriteEventsProvider>
         </div>
       </section>
 
