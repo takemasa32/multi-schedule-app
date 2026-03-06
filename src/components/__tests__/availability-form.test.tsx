@@ -49,7 +49,6 @@ describe('AvailabilityForm', () => {
     eventDates,
   };
 
-
   beforeEach(() => {
     jest.clearAllMocks();
     Object.defineProperty(window, 'scrollTo', {
@@ -69,7 +68,6 @@ describe('AvailabilityForm', () => {
       updatedCount: 1,
     });
   });
-
 
   const goToWeeklyStepAsGuest = () => {
     fireEvent.change(screen.getByLabelText(/お名前/), {
@@ -116,6 +114,45 @@ describe('AvailabilityForm', () => {
 
     expect(await screen.findByTestId('availability-step-confirm')).toBeInTheDocument();
     expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+
+  it('ドラッグ中に再描画されても最初のセルの選択意図を維持する', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated={false}
+        initialAvailabilities={{ date1: false, date2: true }}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+    await applyWeeklyAndGoHeatmap();
+
+    const cell1 = document.querySelector<HTMLElement>('[data-selection-key="date1"]');
+    const cell2 = document.querySelector<HTMLElement>('[data-selection-key="date2"]');
+    if (!cell1 || !cell2) {
+      throw new Error('ヒートマップセルが見つかりません');
+    }
+
+    expect(cell1).toHaveTextContent('×');
+    expect(cell2).toHaveTextContent('○');
+
+    fireEvent.pointerDown(cell1, { buttons: 1, pointerId: 11, pointerType: 'mouse' });
+    await waitFor(() => {
+      expect(cell1).toHaveTextContent('○');
+    });
+
+    fireEvent.pointerEnter(cell2, { buttons: 1, pointerId: 11, pointerType: 'mouse' });
+    fireEvent.pointerUp(cell2, { pointerId: 11, pointerType: 'mouse' });
+
+    await waitFor(() => {
+      expect(cell1).toHaveTextContent('○');
+      expect(cell2).toHaveTextContent('○');
+    });
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="availability_date2"]'),
+    ).toBeInTheDocument();
   });
 
   it('未ログイン導線の文言を表示する', () => {
@@ -203,9 +240,7 @@ describe('AvailabilityForm', () => {
   });
 
   it('ログイン時の週予定取得中は空状態文言を出さず、完了まで次へを無効化する', async () => {
-    let resolveTemplates:
-      | ((value: { manual: []; learned: [] }) => void)
-      | null = null;
+    let resolveTemplates: ((value: { manual: []; learned: [] }) => void) | null = null;
     (fetchUserScheduleTemplates as jest.Mock).mockImplementation(
       () =>
         new Promise<{ manual: []; learned: [] }>((resolve) => {
