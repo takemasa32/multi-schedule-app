@@ -500,7 +500,6 @@ describe('AvailabilityForm', () => {
   });
 
   it('競合枠セルの上書き確認が動作する', async () => {
-    const confirmMock = jest.spyOn(window, 'confirm').mockReturnValue(true);
     render(
       <AvailabilityForm
         {...defaultProps}
@@ -516,14 +515,14 @@ describe('AvailabilityForm', () => {
     const lockedCell = document.querySelector<HTMLElement>('[data-selection-key="date1"]');
     if (!lockedCell) throw new Error('競合セルが見つかりません');
     fireEvent.click(lockedCell);
-    expect(confirmMock).toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: '重複する予定枠を選択' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'この枠を選択する' }));
 
     await waitFor(() => {
       expect(
         document.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
       ).toBeInTheDocument();
     });
-    confirmMock.mockRestore();
   });
 
   it('最終送信時に同期範囲モーダルを表示し sync_scope=current で送信できる', async () => {

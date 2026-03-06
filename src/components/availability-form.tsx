@@ -13,6 +13,7 @@ import useHapticsFeedback from '@/hooks/useHapticsFeedback';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from './week-navigation-bar';
 import { useRouter } from 'next/navigation';
+import ConfirmationModal from './common/confirmation-modal';
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -122,6 +123,7 @@ export default function AvailabilityForm({
   const [showGuestConfirm, setShowGuestConfirm] = useState(false);
   const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
   const [showWeeklySaveConfirm, setShowWeeklySaveConfirm] = useState(false);
+  const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
   const [pendingWeeklyTemplates, setPendingWeeklyTemplates] = useState<WeeklyTemplatePayloadRow[]>(
     [],
   );
@@ -301,22 +303,31 @@ export default function AvailabilityForm({
     (dateId: string) => {
       if (!lockedDateIdSet.has(dateId)) return;
       if (overrideDateIdSet.has(dateId)) return;
-      const confirmed = window.confirm(
-        'この枠は別の確定イベントと重複しています。上書きしますか？',
-      );
-      if (!confirmed) return;
-      setOverrideDateIds((prev) => (prev.includes(dateId) ? prev : [...prev, dateId]));
-      setSelectedDates((prev) => ({
-        ...prev,
-        [dateId]: !prev[dateId],
-      }));
-      setManuallyEditedDateIds((prev) => ({
-        ...prev,
-        [dateId]: true,
-      }));
+      setOverrideConfirmDateId(dateId);
     },
     [lockedDateIdSet, overrideDateIdSet],
   );
+
+  const handleConfirmLockedOverride = useCallback(() => {
+    if (!overrideConfirmDateId) return;
+    const dateId = overrideConfirmDateId;
+    setOverrideConfirmDateId(null);
+    // 重複枠を明示的に選ぶ操作なので、この時点では必ず可として扱う。
+    // 解除したい場合は override 状態になった後に通常操作で切り替える。
+    setOverrideDateIds((prev) => (prev.includes(dateId) ? prev : [...prev, dateId]));
+    setSelectedDates((prev) => ({
+      ...prev,
+      [dateId]: true,
+    }));
+    setManuallyEditedDateIds((prev) => ({
+      ...prev,
+      [dateId]: true,
+    }));
+  }, [overrideConfirmDateId]);
+
+  const handleCloseLockedOverrideConfirm = useCallback(() => {
+    setOverrideConfirmDateId(null);
+  }, []);
 
   // LocalStorageから以前の名前を復元、または既存の回答データの名前を使用
   useEffect(() => {
@@ -1711,6 +1722,16 @@ export default function AvailabilityForm({
             />
           </div>
         )}
+
+        <ConfirmationModal
+          isOpen={overrideConfirmDateId !== null}
+          title="重複する予定枠を選択"
+          description="この枠は別の確定イベントと重複しています。回答に含めると予定が重なったまま送信されます。問題ない場合のみ選択してください。"
+          confirmLabel="この枠を選択する"
+          confirmButtonClassName="btn-warning"
+          onConfirm={handleConfirmLockedOverride}
+          onCancel={handleCloseLockedOverrideConfirm}
+        />
       </form>
     </div>
   );

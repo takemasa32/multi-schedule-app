@@ -41,11 +41,6 @@ describe('EventAnswerLinkEditor', () => {
         answeredByMe: false,
       },
     ]);
-    jest.spyOn(window, 'confirm').mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    (window.confirm as jest.Mock).mockRestore();
   });
 
   it('未紐づけ時に編集モードから紐づけ実行できる', async () => {
@@ -70,6 +65,7 @@ describe('EventAnswerLinkEditor', () => {
 
     await waitFor(() => {
       expect(mockLinkMyParticipantAnswerById).toHaveBeenCalledWith({
+        confirmNameMismatch: false,
         eventId: 'event-id',
         participantId: 'p1',
       });
@@ -97,6 +93,7 @@ describe('EventAnswerLinkEditor', () => {
 
     fireEvent.click(screen.getByTestId('event-answer-link-open'));
     fireEvent.click(screen.getByTestId('event-answer-link-unlink'));
+    fireEvent.click(screen.getByRole('button', { name: '解除する' }));
 
     await waitFor(() => {
       expect(mockUnlinkMyParticipantAnswerByEventPublicToken).toHaveBeenCalledWith(

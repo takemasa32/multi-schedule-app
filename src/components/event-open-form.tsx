@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface EventOpenFormProps {
   title?: string;
@@ -16,6 +17,7 @@ export default function EventOpenForm({
   title = 'イベントURL/IDから開く',
   description = 'イベントのURLまたはIDを入力すると、該当イベントページをすぐに開けます。',
 }: EventOpenFormProps) {
+  const router = useRouter();
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
 
@@ -39,7 +41,7 @@ export default function EventOpenForm({
       setError('有効なイベントIDまたはURLを入力してください');
       return;
     }
-    window.location.assign(`/event/${id}`);
+    router.push(`/event/${id}`);
   };
 
   return (

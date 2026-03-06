@@ -28,12 +28,12 @@ describe('お気に入りイベント機能', () => {
       </FavoriteEventsProvider>,
     );
     // 初期同期後: お気に入りなし
-    expect(await screen.findByText('お気に入りイベントはありません。')).toBeInTheDocument();
+    expect(await screen.findByText('お気に入りはまだありません')).toBeInTheDocument();
     // 追加
     fireEvent.click(screen.getByRole('button', { name: 'お気に入り登録' }));
     expect(screen.getByText(TEST_EVENT.title)).toBeInTheDocument();
     // 解除（「お気に入り解除」ボタンをクリック）
     fireEvent.click(screen.getByRole('button', { name: 'お気に入り解除' }));
-    expect(await screen.findByText('お気に入りイベントはありません。')).toBeInTheDocument();
+    expect(await screen.findByText('お気に入りはまだありません')).toBeInTheDocument();
   });
 });
