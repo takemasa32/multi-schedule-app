@@ -112,20 +112,14 @@ export default function EventDetailsSection({
       {/* --- イベント管理・修正セクション --- */}
       <div className="card bg-base-100 border-base-200 my-8 border shadow-md">
         <div className="card-body">
-          <h2 className="mb-2 text-xl font-bold">イベント管理・修正</h2>
-          <p className="mb-4 text-sm text-base-content/60">
-            主催者向け：
-            <br />
-            日程の確定や候補日程の追加・修正を行えます。
-          </p>
+          <h2 className="mb-4 text-xl font-bold">イベント管理・修正</h2>
           <div className="flex flex-col gap-8 md:flex-row">
             {/* 日程確定セクション */}
             <div className="min-w-0 flex-1">
               <FinalizeEventSection
-                eventId={event.id}
+                publicToken={event.public_token}
                 eventDates={eventDates}
                 availabilities={availabilities}
-                participants={participants}
                 finalizedDateIds={finalizedDateIds}
               />
             </div>
