@@ -9,10 +9,12 @@
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)
 - [イベント作成ウィザード設計メモ](docs/architecture/create-wizard.md)
 - [回答ウィザード設計メモ](docs/architecture/answer-wizard.md)
+- [イベント日程確定フロー設計メモ](docs/architecture/event-finalize-flow.md)
 - [アカウント予定連携の設計](docs/architecture/account-schedule.md)
 - [アカウントページ新規ユーザーツアー設計](docs/architecture/account-onboarding-tour.md)
 - [体感最適化と整合性担保](docs/architecture/performance-latency-improvements.md)
 - [Motion導入方針（低影響・段階移行）](docs/architecture/motion-adoption-plan.md)
+- [AI駆動開発におけるデザイン品質ガイド](docs/architecture/ai-driven-design-guidelines.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能
@@ -69,11 +71,11 @@ npx supabase status
 Supabase を起動すると、以下のような情報が表示されます：
 
 ```text
-API URL: http://localhost:54321
-GraphQL URL: http://localhost:54321/graphql/v1
-DB URL: postgresql://postgres:postgres@localhost:54322/postgres
-Studio URL: http://localhost:54323
-Inbucket URL: http://localhost:54324
+API URL: http://localhost:14321
+GraphQL URL: http://localhost:14321/graphql/v1
+DB URL: postgresql://postgres:postgres@localhost:14322/postgres
+Studio URL: http://localhost:14323
+Inbucket URL: http://localhost:14324
 JWT secret: super-secret-jwt-token-with-at-least-32-characters-long
 anon key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -131,6 +133,7 @@ npx supabase [コマンド] -h
 
 - **環境起動エラー**: Docker が起動していることを確認し、必要に応じて Docker のリソース設定を見直してください
 - **接続エラー**: ポート競合がないか確認し、必要に応じて実行中のプロセスを停止してください
+- **Docker Desktop on WSL で 5432x 帯のポート公開に失敗する場合**: このリポジトリでは元の `5432x` 系の最上位だけを `1` に置き換えた `1432x` 帯を使います。既存の `.env.local` がある場合は `SUPABASE_URL` と `SUPABASE_DB_URL` を README の値に合わせて更新してください
 - **DB マイグレーションエラー**: エラーメッセージを確認し、SQL の構文や参照整合性を修正してください
 
 ## 環境変数の設定
@@ -138,10 +141,10 @@ npx supabase [コマンド] -h
 `.env.local.example` ファイルを `.env.local` としてコピーし、Supabase 起動時に表示される値で更新してください：
 
 ```bash
-SUPABASE_URL=http://localhost:54321
+SUPABASE_URL=http://localhost:14321
 SUPABASE_ANON_KEY=[表示されたanonキー]
 SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
-SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:54322/postgres
+SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:14322/postgres
 NEXTAUTH_SECRET=[ランダムなシークレット]
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=[Google OAuth クライアントID]
