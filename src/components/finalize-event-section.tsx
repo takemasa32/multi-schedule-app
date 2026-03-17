@@ -52,6 +52,16 @@ export default function FinalizeEventSection({
     }).length,
   );
 
+  const candidateAvailabilityCounts = eventDates.map((date) =>
+    availabilities.filter((availability) => {
+      return availability.event_date_id === date.id && availability.availability;
+    }).length,
+  );
+  const maxAvailableCount = candidateAvailabilityCounts.reduce((max, count) => Math.max(max, count), 0);
+  const peakCandidateCount = candidateAvailabilityCounts.filter(
+    (count) => count === maxAvailableCount,
+  ).length;
+
   const totalAvailable = availableCounts.reduce((sum, count) => sum + count, 0);
   const averageAvailable =
     availableCounts.length > 0 ? Math.round(totalAvailable / availableCounts.length) : 0;
@@ -73,7 +83,7 @@ export default function FinalizeEventSection({
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-base-300 bg-base-200/60 px-4 py-3">
           <p className="text-xs text-base-content/60">候補</p>
-          <p className="mt-1 text-lg font-bold">{eventDates.length}件</p>
+          <p className="mt-1 text-lg font-bold">{peakCandidateCount}件</p>
         </div>
         <div className="rounded-2xl border border-base-300 bg-base-200/60 px-4 py-3">
           <p className="text-xs text-base-content/60">平均参加可能</p>
