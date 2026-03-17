@@ -68,7 +68,7 @@
     "supabase": "^2.72.9",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "undici": "^7.8.0",
+    "undici": "^7.24.0",
     "wait-on": "^8.0.3",
     "web-streams-polyfill": "^4.1.0"
   },
@@ -76,7 +76,7 @@
     "tar": "7.5.9"
   },
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=20.18.1",
     "npm": ">=10 <12"
   }
 }

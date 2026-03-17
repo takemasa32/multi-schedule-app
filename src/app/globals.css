@@ -150,8 +150,8 @@ body {
 
   /* スマホ表示時のセル幅調整 */
   .heatmap-cell-mobile {
-    min-width: 34px;
-    min-height: 34px;
+    min-width: 46px;
+    min-height: 46px;
     padding: 0;
   }
 }

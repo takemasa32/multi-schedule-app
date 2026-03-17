@@ -20,6 +20,7 @@ import type {
 } from '@/components/event-client/event-details-section';
 import EventDetailsSectionSkeleton from '@/components/event-client/event-details-section-skeleton';
 import SyncWarningBanner from '@/components/sync/sync-warning-banner';
+import FinalizeStatusBanner from '@/components/event-client/finalize-status-banner';
 
 interface EventPageProps {
   params: Promise<{
@@ -27,6 +28,7 @@ interface EventPageProps {
   }>;
   searchParams: Promise<{
     sync_warning?: string;
+    finalize_status?: string;
   }>;
 }
 
@@ -93,7 +95,7 @@ export async function generateMetadata({
 
 export default async function EventPage({ params, searchParams }: EventPageProps) {
   const { public_id } = await params;
-  const { sync_warning: syncWarning } = await searchParams;
+  const { sync_warning: syncWarning, finalize_status: finalizeStatus } = await searchParams;
 
   let event;
   try {
@@ -132,6 +134,9 @@ export default async function EventPage({ params, searchParams }: EventPageProps
       </div>
       <div className="fade-in pb-12">
         {syncWarning === 'partial' && <SyncWarningBanner />}
+        {(finalizeStatus === 'saved' || finalizeStatus === 'cleared') && (
+          <FinalizeStatusBanner status={finalizeStatus} />
+        )}
         <SectionDivider title="イベント情報" />
         {/* 確実に揃っている情報は即時表示し、不要なスケルトンを避ける */}
         <div className="my-8">
