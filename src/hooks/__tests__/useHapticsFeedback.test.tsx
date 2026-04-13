@@ -19,6 +19,25 @@ function TriggerTestComponent() {
   );
 }
 
+function ConfigurableTriggerTestComponent({
+  mobileOnly = true,
+  disableInTest = false,
+}: {
+  mobileOnly?: boolean;
+  disableInTest?: boolean;
+}) {
+  const { notifyDragStart } = useHapticsFeedback({
+    mobileOnly,
+    disableInTest,
+  });
+
+  return (
+    <button type="button" onClick={notifyDragStart}>
+      drag-start-only
+    </button>
+  );
+}
+
 function IdentityProbe({
   onSnapshot,
 }: {
@@ -42,8 +61,11 @@ function IdentityProbe({
 describe('useHapticsFeedback', () => {
   const originalInnerWidth = window.innerWidth;
   const originalMatchMedia = window.matchMedia;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalDateNow = Date.now;
 
   beforeEach(() => {
+    process.env.NODE_ENV = 'test';
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       value: 390,
@@ -65,6 +87,8 @@ describe('useHapticsFeedback', () => {
   });
 
   afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    Date.now = originalDateNow;
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       value: originalInnerWidth,
@@ -110,5 +134,78 @@ describe('useHapticsFeedback', () => {
     expect(beforeRerender.notifyDragStart).toBe(afterRerender.notifyDragStart);
     expect(beforeRerender.notifyDragEnd).toBe(afterRerender.notifyDragEnd);
     expect(beforeRerender.notifySelectionChange).toBe(afterRerender.notifySelectionChange);
+  });
+
+  it('disableInTest が有効なときは通知しない', () => {
+    const vibrate = jest.fn().mockReturnValue(true);
+    Object.defineProperty(window.navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    });
+
+    render(<ConfigurableTriggerTestComponent mobileOnly={false} disableInTest />);
+    fireEvent.click(screen.getByRole('button', { name: 'drag-start-only' }));
+
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it('mobileOnly が有効でデスクトップ幅の場合は通知しない', () => {
+    const vibrate = jest.fn().mockReturnValue(true);
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1280,
+    });
+    Object.defineProperty(window.navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    });
+
+    render(<ConfigurableTriggerTestComponent mobileOnly disableInTest={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'drag-start-only' }));
+
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it('reduced motion 設定時は通知しない', () => {
+    const vibrate = jest.fn().mockReturnValue(true);
+    Object.defineProperty(window.navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: jest.fn().mockImplementation((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        onchange: null,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
+
+    render(<ConfigurableTriggerTestComponent mobileOnly={false} disableInTest={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'drag-start-only' }));
+
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it('同一イベントはクールダウン中に連続実行されない', () => {
+    const vibrate = jest.fn().mockReturnValue(true);
+    Object.defineProperty(window.navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    });
+    Date.now = jest.fn().mockReturnValue(1000);
+
+    render(<ConfigurableTriggerTestComponent mobileOnly={false} disableInTest={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'drag-start-only' }));
+    fireEvent.click(screen.getByRole('button', { name: 'drag-start-only' }));
+
+    expect(vibrate).toHaveBeenCalledTimes(1);
+    expect(vibrate).toHaveBeenCalledWith([20]);
   });
 });
