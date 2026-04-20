@@ -19,6 +19,15 @@ if (typeof global.TransformStream === 'undefined') {
   global.TransformStream = TransformStream;
 }
 
+// JSDOM の未実装APIをモックしてテストログのノイズを抑制
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'scrollTo', {
+    value: () => {},
+    writable: true,
+    configurable: true,
+  });
+}
+
 // テスト環境向けの必須環境変数（未設定時のみ）
 if (!process.env.SUPABASE_DB_URL) {
   process.env.SUPABASE_DB_URL = 'postgresql://postgres:postgres@localhost:5432/postgres';
