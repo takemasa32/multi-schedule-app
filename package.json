@@ -31,7 +31,7 @@
   "dependencies": {
     "@auth/pg-adapter": "1.4.2",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.105.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/uuid": "^10.0.0",
     "@vercel/og": "^0.6.8",
@@ -55,7 +55,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
-    "uuid": "^11.1.0",
+    "uuid": "^14.0.0",
     "web-haptics": "^0.0.6"
   },
   "devDependencies": {
