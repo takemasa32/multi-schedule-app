@@ -29,7 +29,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@auth/pg-adapter": "^1.11.1",
+    "@auth/pg-adapter": "1.4.2",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
     "@types/bcryptjs": "^2.4.6",
@@ -88,7 +88,7 @@
     "web-streams-polyfill": "^4.1.0"
   },
   "overrides": {
-    "@auth/core": "0.41.1",
+    "@auth/core": "0.34.3",
     "tar": "7.5.13"
   },
   "engines": {
