@@ -88,3 +88,10 @@ if (typeof window !== 'undefined' && !window.HTMLFormElement.prototype.requestSu
     this.submit();
   };
 }
+
+// jsdom の `window.scrollTo` は実装が未完成で呼び出すと例外になることがあるため、
+// テスト実行時は安全なスタブ実装で上書きする
+if (typeof window !== 'undefined') {
+  // 常に上書きして Not implemented エラーを防止
+  window.scrollTo = function () {};
+}

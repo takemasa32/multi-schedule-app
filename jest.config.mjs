@@ -7,8 +7,10 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js', '@testing-library/jest-dom'],
   testEnvironment: 'jsdom',
+  transformIgnorePatterns: ['node_modules/(?!(uuid)/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^uuid$': '<rootDir>/src/lib/__mocks__/uuid.ts',
     '^@/lib/supabase$': '<rootDir>/src/lib/__mocks__/supabase.ts',
     '^next-auth$': '<rootDir>/src/lib/__mocks__/next-auth.ts',
     '^next-auth/react$': '<rootDir>/src/lib/__mocks__/next-auth-react.ts',
