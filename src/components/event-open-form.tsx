@@ -37,7 +37,7 @@ export default function EventOpenForm({
     } catch {
       // 入力がURLでなければそのままIDとして扱う
     }
-    if (!id.match(/^[\w-]{8,}$/)) {
+    if (!id.match(/^[0-9A-Za-z]{10,64}$/)) {
       setError('有効なイベントIDまたはURLを入力してください');
       return;
     }

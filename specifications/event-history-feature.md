@@ -19,8 +19,8 @@
 
 ## 4. データ構造
 
-- ローカルストレージキー: `eventHistory`
-- データ型: `[{ id: string, title: string, lastAccessed: string }]`
+- ローカルストレージキー: `multi_schedule_event_history`
+- データ型: `[{ id: string, title: string, createdAt: string, isCreatedByMe: boolean, answeredByMe?: boolean, myParticipantName?: string | null }]`
 - イベント詳細ページアクセス時に履歴を自動追加・更新
 - 表示は新しい順
 
@@ -28,7 +28,8 @@
 
 - イベント詳細ページアクセス時に、イベント ID・タイトル・アクセス日時を履歴リストに追加/更新
 - 履歴一覧はローカルストレージから取得し、履歴ページで表示
-- 履歴の最大件数を制限（例: 20 件）し、古いものから削除
+- 履歴の最大件数を制限（既定: 10 件）し、古いものから削除
+- 同期時は上限を 30 件として扱う
 
 ## 6. 今後の拡張方針
 

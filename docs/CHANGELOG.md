@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-04-01
+
+- `npm audit` で検出された既知脆弱性への対処として、`package.json` の `overrides` を見直し、`@auth/core` を `next-auth` v4 の peer 要件である `0.34.3`、`tar` を `7.5.13` へ固定。
+- `next-auth` 5 系への移行は認証API互換影響が大きいため見送り、v4 構成を維持したまま `@auth/pg-adapter` も互換範囲の `1.4.2` に揃える方針に変更。
+- `package-lock.json` を再生成し、`tar` 由来の脆弱性が解消される状態へ更新。`cookie` 由来の指摘は `next-auth` v4 / `@auth/core` の互換範囲では残るため、Auth.js v5 移行時の対応対象として扱う。
+
 ## 2026-03-12
 
 - AI 駆動開発時に「AI 感」の強い UI 実装へ寄りすぎないための設計・調査・レビュー手順を `docs/architecture/ai-driven-design-guidelines.md` として追加。

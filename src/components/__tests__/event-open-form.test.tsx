@@ -46,17 +46,17 @@ describe('EventOpenForm', () => {
     expect(screen.getByText(/有効なイベントIDまたはURLを入力してください/)).toBeInTheDocument();
 
     // 正しいID
-    fireEvent.change(input, { target: { value: 'abcdefgh' } });
+    fireEvent.change(input, { target: { value: 'abcdefghij' } });
     fireEvent.click(button);
     expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
-    expect(mockPush).toHaveBeenCalledWith('/event/abcdefgh');
+    expect(mockPush).toHaveBeenCalledWith('/event/abcdefghij');
 
     // 正しいURL
     fireEvent.change(input, {
-      target: { value: 'https://example.com/event/ijklmnop' },
+      target: { value: 'https://example.com/event/klmnopqrst' },
     });
     fireEvent.click(button);
     expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
-    expect(mockPush).toHaveBeenCalledWith('/event/ijklmnop');
+    expect(mockPush).toHaveBeenCalledWith('/event/klmnopqrst');
   });
 });

@@ -1,5 +1,90 @@
-import { buildParticipantsByDateIndex, fetchParticipantsByDate } from '../tooltip-utils';
+import {
+  buildDateTimeLabel,
+  buildParticipantsByDateIndex,
+  calcTooltipPosition,
+  fetchParticipantsByDate,
+} from '../tooltip-utils';
 import type { Participant } from '@/types/participant';
+
+describe('calcTooltipPosition', () => {
+  const originalInnerWidthDesc = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+  const originalInnerHeightDesc = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+
+  afterEach(() => {
+    // innerWidth の復元
+    if (originalInnerWidthDesc) {
+      Object.defineProperty(window, 'innerWidth', originalInnerWidthDesc);
+    } else {
+      delete (window as Window & { innerWidth?: unknown }).innerWidth;
+    }
+
+    // innerHeight の復元
+    if (originalInnerHeightDesc) {
+      Object.defineProperty(window, 'innerHeight', originalInnerHeightDesc);
+    } else {
+      delete (window as Window & { innerHeight?: unknown }).innerHeight;
+    }
+  });
+
+  it('右端に近い場合は左寄せで表示する', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 700 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
+
+    const result = calcTooltipPosition(690, 300, 120, 200);
+    expect(result).toEqual({ x: 570, y: 300 });
+  });
+
+  it('左寄せ時のX座標は10未満にならない', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 80 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
+
+    const result = calcTooltipPosition(20, 240, 120, 100);
+    expect(result.x).toBe(10);
+  });
+
+  it('モバイル幅ではY座標を80px上にずらす', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 375 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
+
+    const result = calcTooltipPosition(100, 300, 120, 200);
+    expect(result).toEqual({ x: 100, y: 220 });
+  });
+
+  it('デスクトップでは下端を超えないように調整する', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 });
+
+    const result = calcTooltipPosition(100, 580, 120, 200);
+    expect(result).toEqual({ x: 100, y: 400 });
+  });
+});
+
+describe('buildDateTimeLabel', () => {
+  const eventDates = [
+    {
+      id: 'd1',
+      start_time: '2026-01-01T09:00:00',
+      end_time: '2026-01-01T10:00:00',
+    },
+    {
+      id: 'd2',
+      start_time: '2026-01-02T00:00:00',
+      end_time: '2026-01-02T01:00:00',
+    },
+  ];
+
+  it('対象日付が存在する場合は日付ラベルと時間ラベルを返す', () => {
+    const result = buildDateTimeLabel(eventDates, 'd1');
+
+    expect(result.dateLabel).toContain('1/1');
+    expect(result.timeLabel).toBe('09:00〜10:00');
+  });
+
+  it('対象日付が存在しない場合は空文字を返す', () => {
+    const result = buildDateTimeLabel(eventDates, 'missing');
+    expect(result).toEqual({ dateLabel: '', timeLabel: '' });
+  });
+});
 
 describe('fetchParticipantsByDate', () => {
   it('コメント付きで参加者を分類できる', () => {

@@ -19,6 +19,15 @@ if (typeof global.TransformStream === 'undefined') {
   global.TransformStream = TransformStream;
 }
 
+// JSDOM の未実装APIをモックしてテストログのノイズを抑制
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'scrollTo', {
+    value: () => {},
+    writable: true,
+    configurable: true,
+  });
+}
+
 // テスト環境向けの必須環境変数（未設定時のみ）
 if (!process.env.SUPABASE_DB_URL) {
   process.env.SUPABASE_DB_URL = 'postgresql://postgres:postgres@localhost:5432/postgres';
@@ -78,4 +87,11 @@ if (typeof window !== 'undefined' && !window.HTMLFormElement.prototype.requestSu
   window.HTMLFormElement.prototype.requestSubmit = function () {
     this.submit();
   };
+}
+
+// jsdom の `window.scrollTo` は実装が未完成で呼び出すと例外になることがあるため、
+// テスト実行時は安全なスタブ実装で上書きする
+if (typeof window !== 'undefined') {
+  // 常に上書きして Not implemented エラーを防止
+  window.scrollTo = function () {};
 }

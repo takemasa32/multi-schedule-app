@@ -248,34 +248,39 @@ test.describe.serial('イベントE2Eフロー', () => {
       timeout: 10000,
     });
 
-    // 日程の確定セクションを展開
-    const openFinalizeBtn = adminPage.getByRole('button', {
-      name: /日程の確定を開く/,
+    const openFinalizeLink = adminPage.getByRole('link', {
+      name: /日程を確定する|確定内容を変更する/,
     });
-    await expect(openFinalizeBtn).toBeVisible();
-    await openFinalizeBtn.click();
+    await expect(openFinalizeLink).toBeVisible();
+    await openFinalizeLink.click();
+    await adminPage.waitForURL(/\/finalize$/);
 
-    const selectableCell = adminPage.getByRole('button', { name: '人 50%' }).first();
+    const selectableCell = adminPage.locator('button[data-selection-key][aria-pressed="false"]').first();
     await expect(selectableCell).toBeVisible();
     await selectableCell.click();
 
-    await expect(adminPage.getByText(/選択中: *1件/)).toBeVisible({
+    await expect(adminPage.getByText(/選択中\s*1件/).first()).toBeVisible({
       timeout: 3000,
     });
 
-    const finalizeBtn = adminPage.getByRole('button', {
-      name: /選択した日程で確定する|確定する/,
+    const confirmSelectionButton = adminPage.getByRole('button', {
+      name: /内容を確認する/,
     });
-    await expect(finalizeBtn).toBeVisible();
-    await finalizeBtn.click();
+    await expect(confirmSelectionButton).toBeVisible();
+    await confirmSelectionButton.click();
 
-    const confirmBtn = adminPage.getByRole('button', {
-      name: /確定する|現在の確定内容を維持する/,
+    await expect(adminPage.getByText(/今回確定する日程/)).toBeVisible();
+    const saveDraftButton = adminPage.getByRole('button', {
+      name: /この内容で保存する/,
     });
-    await expect(confirmBtn).toBeVisible();
-    await confirmBtn.click();
+    await expect(saveDraftButton).toBeVisible();
+    await saveDraftButton.click();
 
-    await adminPage.waitForLoadState('networkidle');
+    const saveConfirmButton = adminPage.getByRole('button', { name: /^保存する$/ });
+    await expect(saveConfirmButton).toBeVisible();
+    await saveConfirmButton.click();
+
+    await adminPage.waitForURL(/\/event\/[^/]+\?finalize_status=saved$/);
 
     const icsLink = adminPage.getByRole('link', { name: /カレンダーに追加/ });
 
@@ -305,31 +310,40 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(adminPage.getByRole('heading', { name: 'みんなの回答状況' })).toBeVisible({
       timeout: 10000,
     });
-    // 日程の確定セクションを展開
-    const openFinalizeBtn = adminPage.getByRole('button', {
-      name: /日程の確定を開く/,
+    const openFinalizeLink = adminPage.getByRole('link', {
+      name: /確定内容を変更する|日程を確定する/,
     });
-    await expect(openFinalizeBtn).toBeVisible();
-    await openFinalizeBtn.click();
-    // 既に確定済みのセルをすべてクリックして選択解除
-    const selectedCells = await adminPage.locator('td.border-accent').all();
-    for (const cell of selectedCells) {
-      await cell.click();
-    }
-    // 「選択中: 0件の日程」表示を確認
-    await expect(adminPage.getByText(/選択中: *0件/)).toBeVisible({
+    await expect(openFinalizeLink).toBeVisible();
+    await openFinalizeLink.click();
+    await adminPage.waitForURL(/\/finalize$/);
+
+    // 直前のテストで1件確定しているため、その候補をクリックして選択解除
+    const selectedCell = adminPage.getByRole('switch', { name: '選択済み' }).first();
+    await expect(selectedCell).toBeVisible();
+    await selectedCell.click({ force: true });
+    // 「選択中 0件」表示を確認
+    await expect(adminPage.getByText(/選択中\s*0件/).first()).toBeVisible({
       timeout: 3000,
     });
-    // 確定ボタンを押す
-    const finalizeBtn = adminPage.getByRole('button', {
-      name: /確定を解除する|解除する/,
-    });
-    await expect(finalizeBtn).toBeVisible();
-    await finalizeBtn.click();
 
-    await adminPage.waitForLoadState('networkidle');
-    // 解除後、確定済み日程のアラートが消えていること（または確定済み日程が0件であること）
-    await expect(adminPage.getByText('確定済みの日程があります')).not.toBeVisible({
+    const confirmSelectionButton = adminPage.getByRole('button', {
+      name: /内容を確認する/,
+    });
+    await expect(confirmSelectionButton).toBeVisible();
+    await confirmSelectionButton.click();
+
+    const clearDraftButton = adminPage.getByRole('button', {
+      name: /この内容で解除する/,
+    });
+    await expect(clearDraftButton).toBeVisible();
+    await clearDraftButton.click();
+
+    const clearConfirmButton = adminPage.getByRole('button', { name: /^解除する$/ });
+    await expect(clearConfirmButton).toBeVisible();
+    await clearConfirmButton.click();
+
+    await adminPage.waitForURL(/\/event\/[^/]+\?finalize_status=cleared$/);
+    await expect(adminPage.getByText('確定済みの日程')).not.toBeVisible({
       timeout: 10000,
     });
     await adminPage.close();
