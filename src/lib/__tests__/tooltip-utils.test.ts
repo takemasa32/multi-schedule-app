@@ -14,11 +14,15 @@ describe('calcTooltipPosition', () => {
     // innerWidth の復元
     if (originalInnerWidthDesc) {
       Object.defineProperty(window, 'innerWidth', originalInnerWidthDesc);
+    } else {
+      delete (window as Window & { innerWidth?: unknown }).innerWidth;
     }
 
     // innerHeight の復元
     if (originalInnerHeightDesc) {
       Object.defineProperty(window, 'innerHeight', originalInnerHeightDesc);
+    } else {
+      delete (window as Window & { innerHeight?: unknown }).innerHeight;
     }
   });
 

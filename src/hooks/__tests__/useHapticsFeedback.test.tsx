@@ -59,8 +59,8 @@ function IdentityProbe({
 }
 
 describe('useHapticsFeedback', () => {
-  const originalInnerWidth = window.innerWidth;
-  const originalMatchMedia = window.matchMedia;
+  const originalInnerWidthDesc = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+  const originalMatchMediaDesc = Object.getOwnPropertyDescriptor(window, 'matchMedia');
   const originalNodeEnv = process.env.NODE_ENV;
   const originalDateNow = Date.now;
 
@@ -89,15 +89,18 @@ describe('useHapticsFeedback', () => {
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;
     Date.now = originalDateNow;
-    Object.defineProperty(window, 'innerWidth', {
-      configurable: true,
-      value: originalInnerWidth,
-    });
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      writable: true,
-      value: originalMatchMedia,
-    });
+
+    if (originalInnerWidthDesc) {
+      Object.defineProperty(window, 'innerWidth', originalInnerWidthDesc);
+    } else {
+      delete (window as Window & { innerWidth?: unknown }).innerWidth;
+    }
+
+    if (originalMatchMediaDesc) {
+      Object.defineProperty(window, 'matchMedia', originalMatchMediaDesc);
+    } else {
+      delete (window as Window & { matchMedia?: unknown }).matchMedia;
+    }
   });
 
   it('モバイル幅では navigator.vibrate を優先して呼び出す', async () => {
