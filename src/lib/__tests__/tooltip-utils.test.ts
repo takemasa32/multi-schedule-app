@@ -7,12 +7,19 @@ import {
 import type { Participant } from '@/types/participant';
 
 describe('calcTooltipPosition', () => {
-  const originalWidth = window.innerWidth;
-  const originalHeight = window.innerHeight;
+  const originalInnerWidthDesc = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+  const originalInnerHeightDesc = Object.getOwnPropertyDescriptor(window, 'innerHeight');
 
   afterEach(() => {
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
-    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight });
+    // innerWidth の復元
+    if (originalInnerWidthDesc) {
+      Object.defineProperty(window, 'innerWidth', originalInnerWidthDesc);
+    }
+
+    // innerHeight の復元
+    if (originalInnerHeightDesc) {
+      Object.defineProperty(window, 'innerHeight', originalInnerHeightDesc);
+    }
   });
 
   it('右端に近い場合は左寄せで表示する', () => {

@@ -84,20 +84,34 @@ describe('date-utils', () => {
   });
 
   describe('isTouchDevice', () => {
-    const originalMaxTouchPoints = navigator.maxTouchPoints;
-    const originalMsMaxTouchPoints = (navigator as Navigator & { msMaxTouchPoints?: number })
-      .msMaxTouchPoints;
+    const originalMaxTouchPointsDesc = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');
+    const originalMsMaxTouchPointsDesc = Object.getOwnPropertyDescriptor(
+      navigator,
+      'msMaxTouchPoints'
+    );
+    const originalOntouchstart = Object.getOwnPropertyDescriptor(window, 'ontouchstart');
 
     afterEach(() => {
-      delete (window as Window & { ontouchstart?: unknown }).ontouchstart;
-      Object.defineProperty(navigator, 'maxTouchPoints', {
-        configurable: true,
-        value: originalMaxTouchPoints,
-      });
-      Object.defineProperty(navigator, 'msMaxTouchPoints', {
-        configurable: true,
-        value: originalMsMaxTouchPoints,
-      });
+      // ontouchstart の復元
+      if (originalOntouchstart) {
+        Object.defineProperty(window, 'ontouchstart', originalOntouchstart);
+      } else {
+        delete (window as Window & { ontouchstart?: unknown }).ontouchstart;
+      }
+
+      // maxTouchPoints の復元
+      if (originalMaxTouchPointsDesc) {
+        Object.defineProperty(navigator, 'maxTouchPoints', originalMaxTouchPointsDesc);
+      } else {
+        delete (navigator as Navigator & { maxTouchPoints?: unknown }).maxTouchPoints;
+      }
+
+      // msMaxTouchPoints の復元
+      if (originalMsMaxTouchPointsDesc) {
+        Object.defineProperty(navigator, 'msMaxTouchPoints', originalMsMaxTouchPointsDesc);
+      } else {
+        delete (navigator as Navigator & { msMaxTouchPoints?: unknown }).msMaxTouchPoints;
+      }
     });
 
     it('ontouchstartがあればtrueを返す', () => {
