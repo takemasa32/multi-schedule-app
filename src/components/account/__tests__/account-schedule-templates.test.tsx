@@ -159,8 +159,8 @@ describe('AccountScheduleTemplates', () => {
 
   it('予定一括管理の読み込み中は空データ文言を表示しない', async () => {
     mockUseSession.mockReturnValue({ status: 'loading' });
-    let resolveTemplates: ((value: { manual: never[]; learned: never[] }) => void) | null = null;
-    let resolveBlocks: ((value: never[]) => void) | null = null;
+    let resolveTemplates: (value: { manual: never[]; learned: never[] }) => void = () => {};
+    let resolveBlocks: (value: never[]) => void = () => {};
 
     mockFetchUserScheduleTemplates.mockReturnValue(
       new Promise((resolve) => {

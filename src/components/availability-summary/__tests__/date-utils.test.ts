@@ -103,7 +103,8 @@ describe('date-utils', () => {
       if (originalMaxTouchPointsDesc) {
         Object.defineProperty(navigator, 'maxTouchPoints', originalMaxTouchPointsDesc);
       } else {
-        delete (navigator as Navigator & { maxTouchPoints?: unknown }).maxTouchPoints;
+        delete (navigator as Omit<Navigator, 'maxTouchPoints'> & { maxTouchPoints?: unknown })
+          .maxTouchPoints;
       }
 
       // msMaxTouchPoints の復元

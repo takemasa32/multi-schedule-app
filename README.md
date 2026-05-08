@@ -167,6 +167,10 @@ GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
 - **開発中のテスト実行**: `npm run test` - ファイル変更を監視し、変更があった場合に自動的に再実行します。
 - **CI 環境用テスト実行**: `npm run test:ci` - テストがない場合でもエラーにならず、CI 環境に適しています。
 
+### 型確認
+
+- **TypeScript 型確認**: `npm run typecheck` - Next.js のルート型を生成したうえで `tsc --noEmit` を実行し、ビルド前に型エラーを確認します。
+
 ### E2E テスト (Playwright)
 
 - 推奨（公開フロー + 認証フロー）: `npm run test:e2e:chrome`（事前に `http://localhost:3000` の起動が必要）

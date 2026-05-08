@@ -65,7 +65,10 @@ describe('useHapticsFeedback', () => {
   const originalDateNow = Date.now;
 
   beforeEach(() => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      configurable: true,
+      value: 'test',
+    });
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       value: 390,
@@ -87,19 +90,22 @@ describe('useHapticsFeedback', () => {
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      configurable: true,
+      value: originalNodeEnv,
+    });
     Date.now = originalDateNow;
 
     if (originalInnerWidthDesc) {
       Object.defineProperty(window, 'innerWidth', originalInnerWidthDesc);
     } else {
-      delete (window as Window & { innerWidth?: unknown }).innerWidth;
+      delete (window as Omit<Window, 'innerWidth'> & { innerWidth?: unknown }).innerWidth;
     }
 
     if (originalMatchMediaDesc) {
       Object.defineProperty(window, 'matchMedia', originalMatchMediaDesc);
     } else {
-      delete (window as Window & { matchMedia?: unknown }).matchMedia;
+      delete (window as Omit<Window, 'matchMedia'> & { matchMedia?: unknown }).matchMedia;
     }
   });
 
