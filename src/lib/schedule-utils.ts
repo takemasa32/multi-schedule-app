@@ -59,6 +59,37 @@ export const toWallClockUtcIso = (value: string): string => {
   ).toISOString();
 };
 
+export const isFutureScheduleDate = (date: { end_time: string }, now = new Date()): boolean => {
+  const endAt = toComparableDate(date.end_time);
+  if (Number.isNaN(endAt.getTime())) return false;
+  return endAt > now;
+};
+
+export const toTokyoWallClockDate = (date = new Date()): Date => {
+  const parts = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const valueMap = Object.fromEntries(
+    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]),
+  );
+
+  return new Date(
+    valueMap.year,
+    valueMap.month - 1,
+    valueMap.day,
+    valueMap.hour,
+    valueMap.minute,
+    valueMap.second,
+  );
+};
+
 const toTimeRange = (start: string, end: string): TimeRange => ({
   start: toComparableDate(start),
   end: toComparableDate(end),

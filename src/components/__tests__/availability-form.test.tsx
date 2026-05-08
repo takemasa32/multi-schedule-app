@@ -240,7 +240,7 @@ describe('AvailabilityForm', () => {
   });
 
   it('ログイン時の週予定取得中は空状態文言を出さず、完了まで次へを無効化する', async () => {
-    let resolveTemplates: ((value: { manual: []; learned: [] }) => void) | null = null;
+    let resolveTemplates: (value: { manual: []; learned: [] }) => void = () => {};
     (fetchUserScheduleTemplates as jest.Mock).mockImplementation(
       () =>
         new Promise<{ manual: []; learned: [] }>((resolve) => {

@@ -4,8 +4,10 @@ import { getAuthSession } from '@/lib/auth';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import {
   computeAutoFillAvailability,
+  isFutureScheduleDate,
   isRangeOverlapping,
   toComparableDate,
+  toTokyoWallClockDate,
   toWallClockUtcIso,
   type ScheduleBlock,
   type ScheduleTemplate,
@@ -558,15 +560,19 @@ const buildUserAvailabilitySyncPreview = async (
   if (context.links.length === 0) return [];
 
   const previewEvents: UserAvailabilitySyncPreviewEvent[] = [];
+  const now = toTokyoWallClockDate();
 
   for (const link of context.links) {
     const eventInfo = context.eventsMap.get(link.event_id);
     if (!eventInfo) continue;
-    const eventDates = context.eventDatesByEventId.get(link.event_id) ?? [];
+    const eventDates = (context.eventDatesByEventId.get(link.event_id) ?? []).filter((date) =>
+      isFutureScheduleDate(date, now),
+    );
     if (eventDates.length === 0) continue;
     const protectedSet = context.protectedDateIdsByEventId.get(link.event_id) ?? new Set<string>();
     const currentMap =
-      context.currentAvailabilitiesByParticipantId.get(link.participant_id) ?? new Map<string, boolean>();
+      context.currentAvailabilitiesByParticipantId.get(link.participant_id) ??
+      new Map<string, boolean>();
 
     const dates: SyncPreviewDateRow[] = eventDates.map((date) => {
       const currentAvailability = currentMap.get(date.id) ?? false;
@@ -1168,7 +1174,9 @@ export async function syncUserAvailabilities({
     if (eventDates.length === 0) continue;
 
     const overrideMap = overrideMapByEventId.get(link.event_id) ?? new Map<string, boolean>();
-    const selectedSet = new Set(currentAvailabilitiesByParticipantId.get(link.participant_id) ?? []);
+    const selectedSet = new Set(
+      currentAvailabilitiesByParticipantId.get(link.participant_id) ?? [],
+    );
 
     eventDates.forEach((date) => {
       const override = overrideMap.get(date.id);
@@ -1224,9 +1232,9 @@ export async function syncUserAvailabilities({
   }
 }
 
-export async function fetchUserAvailabilitySyncPreview(options?: SyncPreviewBuildOptions): Promise<
-  UserAvailabilitySyncPreviewEvent[]
-> {
+export async function fetchUserAvailabilitySyncPreview(
+  options?: SyncPreviewBuildOptions,
+): Promise<UserAvailabilitySyncPreviewEvent[]> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
   if (!userId) return [];
@@ -1291,7 +1299,24 @@ export async function applyUserAvailabilitySyncForEvent({
     return { success: false, message: '参加者情報の取得に失敗しました', updatedCount: 0 };
   }
 
-  const payload = selectedDates.map((eventDateId) => ({
+  const previewDateIds = new Set(target.dates.map((row) => row.eventDateId));
+  const { data: existingAvailabilities, error: existingAvailabilitiesError } = await supabase
+    .from('availabilities')
+    .select('event_date_id,availability')
+    .eq('event_id', eventId)
+    .eq('participant_id', link.participant_id);
+
+  if (existingAvailabilitiesError) {
+    console.error('既存回答取得エラー:', existingAvailabilitiesError);
+    return { success: false, message: '既存回答の取得に失敗しました', updatedCount: 0 };
+  }
+
+  const preservedSelectedDates = (existingAvailabilities ?? [])
+    .filter((row) => row.availability && !previewDateIds.has(row.event_date_id))
+    .map((row) => row.event_date_id);
+
+  const payloadDateIds = Array.from(new Set([...preservedSelectedDates, ...selectedDates]));
+  const payload = payloadDateIds.map((eventDateId) => ({
     event_date_id: eventDateId,
     availability: true,
   }));

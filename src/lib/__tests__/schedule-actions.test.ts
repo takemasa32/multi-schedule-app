@@ -1,4 +1,5 @@
 import {
+  applyUserAvailabilitySyncForEvent,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
   upsertUserScheduleBlock,
@@ -176,7 +177,10 @@ describe('saveUserScheduleBlockChanges', () => {
 
     expect(result).toEqual({ success: true, updatedCount: 1 });
     expect(deleteEqMock).toHaveBeenCalledWith('user_id', 'user-1');
-    expect(deleteInMock).toHaveBeenCalledWith('id', expect.arrayContaining(['remove-1', 'replace-1']));
+    expect(deleteInMock).toHaveBeenCalledWith(
+      'id',
+      expect.arrayContaining(['remove-1', 'replace-1']),
+    );
     expect(upsertMock).toHaveBeenCalledWith(
       [
         expect.objectContaining({
@@ -190,6 +194,148 @@ describe('saveUserScheduleBlockChanges', () => {
       ],
       { onConflict: 'user_id,start_time,end_time' },
     );
+  });
+});
+
+describe('applyUserAvailabilitySyncForEvent', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({
+      user: { id: 'user-1' },
+    });
+  });
+
+  it('過去候補を表示対象から除外しても既存の選択済み回答は保持してRPCへ渡す', async () => {
+    const rpcMock = jest.fn().mockResolvedValue({ error: null });
+    const participantId = 'participant-1';
+    const eventId = 'event-1';
+    const pastDateId = '00000000-0000-0000-0000-000000000001';
+    const futureDateId = '00000000-0000-0000-0000-000000000002';
+    const allLinks = [{ event_id: eventId, participant_id: participantId }];
+    const currentAvailabilities = [
+      { participant_id: participantId, event_date_id: pastDateId, availability: true },
+      { participant_id: participantId, event_date_id: futureDateId, availability: false },
+    ];
+
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'user_event_links' && fromMock.mock.calls.length === 1) {
+        const eqMock = jest.fn().mockResolvedValue({ data: allLinks, error: null });
+        return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
+      }
+      if (table === 'user_schedule_blocks') {
+        const eqMock = jest.fn().mockResolvedValue({
+          data: [
+            {
+              start_time: '2099-05-09T13:00:00',
+              end_time: '2099-05-09T14:00:00',
+              availability: true,
+            },
+          ],
+          error: null,
+        });
+        return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
+      }
+      if (table === 'user_schedule_templates') {
+        const sourceEqMock = jest.fn().mockResolvedValue({ data: [], error: null });
+        const userEqMock = jest.fn().mockReturnValue({ eq: sourceEqMock });
+        return { select: jest.fn().mockReturnValue({ eq: userEqMock }) };
+      }
+      if (table === 'finalized_dates') {
+        return {
+          select: jest.fn().mockReturnValue({ in: jest.fn().mockResolvedValue({ data: [] }) }),
+        };
+      }
+      if (table === 'events') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: eventId,
+                  title: '対象イベント',
+                  public_token: 'event-token',
+                  is_finalized: false,
+                },
+              ],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === 'event_dates') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: pastDateId,
+                    event_id: eventId,
+                    start_time: '2000-05-09T13:00:00',
+                    end_time: '2000-05-09T14:00:00',
+                  },
+                  {
+                    id: futureDateId,
+                    event_id: eventId,
+                    start_time: '2099-05-09T13:00:00',
+                    end_time: '2099-05-09T14:00:00',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'user_event_availability_overrides') {
+        const inMock = jest.fn().mockResolvedValue({ data: [], error: null });
+        const eqMock = jest.fn().mockReturnValue({ in: inMock });
+        return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
+      }
+      if (table === 'availabilities' && fromMock.mock.calls.length === 8) {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockResolvedValue({ data: currentAvailabilities, error: null }),
+          }),
+        };
+      }
+      if (table === 'user_event_links') {
+        const eventEqMock = jest.fn().mockReturnValue({
+          maybeSingle: jest.fn().mockResolvedValue({
+            data: { participant_id: participantId },
+            error: null,
+          }),
+        });
+        const userEqMock = jest.fn().mockReturnValue({ eq: eventEqMock });
+        return { select: jest.fn().mockReturnValue({ eq: userEqMock }) };
+      }
+      if (table === 'availabilities') {
+        const participantEqMock = jest
+          .fn()
+          .mockResolvedValue({ data: currentAvailabilities, error: null });
+        const eventEqMock = jest.fn().mockReturnValue({ eq: participantEqMock });
+        return { select: jest.fn().mockReturnValue({ eq: eventEqMock }) };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock, rpc: rpcMock });
+
+    const result = await applyUserAvailabilitySyncForEvent({
+      eventId,
+      selectedAvailabilities: { [futureDateId]: true },
+      overwriteProtected: false,
+      allowFinalized: false,
+    });
+
+    expect(result).toEqual({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
+    expect(rpcMock).toHaveBeenCalledWith('update_participant_availability', {
+      p_participant_id: participantId,
+      p_event_id: eventId,
+      p_availabilities: expect.arrayContaining([
+        { event_date_id: pastDateId, availability: true },
+        { event_date_id: futureDateId, availability: true },
+      ]),
+    });
   });
 });
 
