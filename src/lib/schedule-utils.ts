@@ -59,6 +59,12 @@ export const toWallClockUtcIso = (value: string): string => {
   ).toISOString();
 };
 
+export const isFutureScheduleDate = (date: { end_time: string }, now = new Date()): boolean => {
+  const endAt = toComparableDate(date.end_time);
+  if (Number.isNaN(endAt.getTime())) return false;
+  return endAt > now;
+};
+
 const toTimeRange = (start: string, end: string): TimeRange => ({
   start: toComparableDate(start),
   end: toComparableDate(end),

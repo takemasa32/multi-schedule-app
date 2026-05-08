@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2026-05-09
+
+- 回答後の反映確認で、終了時刻が現在時刻以前の候補日時を対象外にし、過去イベントや過去候補のみの差分が表示されないよう修正。
+- `sync-review` の対象条件を `docs/architecture/account-schedule.md` に反映。
+
 ## 2026-04-01
 
 - `npm audit` で検出された既知脆弱性への対処として、`package.json` の `overrides` を見直し、`@auth/core` を `next-auth` v4 の peer 要件である `0.34.3`、`tar` を `7.5.13` へ固定。
