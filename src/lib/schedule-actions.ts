@@ -7,6 +7,7 @@ import {
   isFutureScheduleDate,
   isRangeOverlapping,
   toComparableDate,
+  toTokyoWallClockDate,
   toWallClockUtcIso,
   type ScheduleBlock,
   type ScheduleTemplate,
@@ -559,7 +560,7 @@ const buildUserAvailabilitySyncPreview = async (
   if (context.links.length === 0) return [];
 
   const previewEvents: UserAvailabilitySyncPreviewEvent[] = [];
-  const now = new Date();
+  const now = toTokyoWallClockDate();
 
   for (const link of context.links) {
     const eventInfo = context.eventsMap.get(link.event_id);
@@ -1298,7 +1299,24 @@ export async function applyUserAvailabilitySyncForEvent({
     return { success: false, message: '参加者情報の取得に失敗しました', updatedCount: 0 };
   }
 
-  const payload = selectedDates.map((eventDateId) => ({
+  const previewDateIds = new Set(target.dates.map((row) => row.eventDateId));
+  const { data: existingAvailabilities, error: existingAvailabilitiesError } = await supabase
+    .from('availabilities')
+    .select('event_date_id,availability')
+    .eq('event_id', eventId)
+    .eq('participant_id', link.participant_id);
+
+  if (existingAvailabilitiesError) {
+    console.error('既存回答取得エラー:', existingAvailabilitiesError);
+    return { success: false, message: '既存回答の取得に失敗しました', updatedCount: 0 };
+  }
+
+  const preservedSelectedDates = (existingAvailabilities ?? [])
+    .filter((row) => row.availability && !previewDateIds.has(row.event_date_id))
+    .map((row) => row.event_date_id);
+
+  const payloadDateIds = Array.from(new Set([...preservedSelectedDates, ...selectedDates]));
+  const payload = payloadDateIds.map((eventDateId) => ({
     event_date_id: eventDateId,
     availability: true,
   }));

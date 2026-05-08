@@ -1,6 +1,7 @@
 import {
   computeAutoFillAvailability,
   isFutureScheduleDate,
+  toTokyoWallClockDate,
   toWallClockUtcIso,
 } from '@/lib/schedule-utils';
 
@@ -204,5 +205,18 @@ describe('isFutureScheduleDate', () => {
 
   it('終了時刻が不正な候補は対象にしない', () => {
     expect(isFutureScheduleDate({ end_time: 'invalid' })).toBe(false);
+  });
+});
+
+describe('toTokyoWallClockDate', () => {
+  it('UTC時刻を東京の壁時計時刻へ変換する', () => {
+    const result = toTokyoWallClockDate(new Date('2026-05-09T03:04:05.000Z'));
+
+    expect(result.getFullYear()).toBe(2026);
+    expect(result.getMonth()).toBe(4);
+    expect(result.getDate()).toBe(9);
+    expect(result.getHours()).toBe(12);
+    expect(result.getMinutes()).toBe(4);
+    expect(result.getSeconds()).toBe(5);
   });
 });
