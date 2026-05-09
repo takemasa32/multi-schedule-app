@@ -12,10 +12,6 @@ jest.mock('@/lib/actions', () => ({
   submitAvailability: jest.fn(),
   checkParticipantExists: jest.fn(),
 }));
-jest.mock('@/lib/schedule-actions', () => ({
-  upsertWeeklyTemplatesFromWeekdaySelections: jest.fn(),
-  fetchUserScheduleTemplates: jest.fn(),
-}));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -24,8 +20,6 @@ jest.mock('next/navigation', () => ({
 }));
 
 import { submitAvailability, checkParticipantExists } from '@/lib/actions';
-import { upsertWeeklyTemplatesFromWeekdaySelections } from '@/lib/schedule-actions';
-import { fetchUserScheduleTemplates } from '@/lib/schedule-actions';
 
 describe('AvailabilityForm', () => {
   const eventDates = [
@@ -59,14 +53,6 @@ describe('AvailabilityForm', () => {
     localStorage.clear();
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
     (submitAvailability as jest.Mock).mockResolvedValue({ success: true });
-    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
-    (upsertWeeklyTemplatesFromWeekdaySelections as jest.Mock).mockResolvedValue({
-      success: true,
-      updatedCount: 1,
-    });
   });
 
   const goToWeeklyStepAsGuest = () => {
@@ -214,54 +200,17 @@ describe('AvailabilityForm', () => {
     expect(screen.getByText('各曜日の予定を入力してください。')).toBeInTheDocument();
   });
 
-  it('ログイン済みかつ週テンプレありの曜日一括入力では確認案内文言を表示する', async () => {
-    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
-      manual: [
-        {
-          weekday: 1,
-          start_time: '09:00:00',
-          end_time: '10:00:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-      learned: [],
-    });
-
-    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+  it('ログイン済みかつ長い未入力期間がある場合は一時的な曜日入力案内を表示する', async () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated requireWeeklyStep />);
 
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
     expect(
-      await screen.findByText('各曜日の予定を反映しました。変更がないか確認してください。'),
+      await screen.findByText(
+        '日付ごとのアカウント予定で補えない期間が長いため、曜日ごとにまとめて入力してください。ここでの入力はこの回答だけに反映されます。',
+      ),
     ).toBeInTheDocument();
-  });
-
-  it('ログイン時の週予定取得中は空状態文言を出さず、完了まで次へを無効化する', async () => {
-    let resolveTemplates: (value: { manual: []; learned: [] }) => void = () => {};
-    (fetchUserScheduleTemplates as jest.Mock).mockImplementation(
-      () =>
-        new Promise<{ manual: []; learned: [] }>((resolve) => {
-          resolveTemplates = resolve;
-        }),
-    );
-
-    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
-
-    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
-    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
-
-    expect(await screen.findByText('アカウント予定を読み込んでいます。')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '予定を読み込み中...' })).toBeDisabled();
-    expect(screen.queryByText('利用可能な時間帯がありません')).not.toBeInTheDocument();
-
-    resolveTemplates?.({ manual: [], learned: [] });
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: '予定を読み込み中...' })).not.toBeInTheDocument();
-    });
-    expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled();
   });
 
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
@@ -348,7 +297,7 @@ describe('AvailabilityForm', () => {
     expect(within(heatmapSection).getByText(expectedLastEnd)).toBeInTheDocument();
   });
 
-  it('24:00終端の週テンプレは曜日一括入力の00:00終端枠へ反映される', async () => {
+  it('24:00終端の候補は曜日一括入力で00:00終端枠として表示される', async () => {
     const midnightEventDates = [
       {
         id: 'midnight-date',
@@ -359,26 +308,12 @@ describe('AvailabilityForm', () => {
     const weekdayNumber = new Date(midnightEventDates[0].start_time).getDay();
     const weekdayLabel = ['日', '月', '火', '水', '木', '金', '土'][weekdayNumber];
 
-    (fetchUserScheduleTemplates as jest.Mock).mockResolvedValue({
-      manual: [
-        {
-          weekday: weekdayNumber,
-          start_time: '23:00:00',
-          end_time: '24:00:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-      learned: [],
-    });
-
     render(
       <AvailabilityForm
         {...defaultProps}
         mode="new"
         isAuthenticated
-        uncoveredDayCount={1}
+        requireWeeklyStep
         eventDates={midnightEventDates}
       />,
     );
@@ -392,7 +327,7 @@ describe('AvailabilityForm', () => {
     );
 
     expect(selectedCell).not.toBeNull();
-    expect(selectedCell).toHaveTextContent('○');
+    expect(selectedCell).toHaveTextContent('×');
   });
 
   it('ヒートマップで○が0件のままは確認へ進めない', async () => {
@@ -424,8 +359,8 @@ describe('AvailabilityForm', () => {
     expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
   });
 
-  it('ログイン時の曜日一括入力で差分がある場合は週予定更新確認を表示できる', async () => {
-    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+  it('ログイン時の曜日一括入力はアカウント週予定に保存せず次へ進む', async () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated requireWeeklyStep />);
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
     await waitFor(() => {
@@ -438,11 +373,7 @@ describe('AvailabilityForm', () => {
     fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
-    expect(await screen.findByText('週予定の更新')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '更新して次へ' }));
-    await waitFor(() => {
-      expect(upsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalled();
-    });
+    expect(screen.queryByText('週予定の更新')).not.toBeInTheDocument();
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
   });
 
@@ -452,7 +383,7 @@ describe('AvailabilityForm', () => {
         {...defaultProps}
         mode="new"
         isAuthenticated
-        uncoveredDayCount={1}
+        requireWeeklyStep
         initialAvailabilities={{ date1: true }}
         dailyAutoFillDateIds={['date1']}
       />,
@@ -470,13 +401,6 @@ describe('AvailabilityForm', () => {
     fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
-    const skipWeeklySave = await screen
-      .findByRole('button', { name: '更新せず次へ' })
-      .catch(() => null);
-    if (skipWeeklySave) {
-      fireEvent.click(skipWeeklySave);
-    }
-
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
     expect(
       document.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
@@ -484,7 +408,7 @@ describe('AvailabilityForm', () => {
   });
 
   it('曜日セルを○→×に戻した曜日は未選択扱いになり、週予定更新モーダルを出さずに進める', async () => {
-    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated uncoveredDayCount={1} />);
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated requireWeeklyStep />);
 
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));

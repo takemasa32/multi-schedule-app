@@ -27,7 +27,7 @@
 
 ### 4. アカウント画面の保存バッチ化
 
-- 週次保存は `upsertWeeklyTemplatesFromWeekdaySelections` の単発呼び出しへ統一。
+- 2026-05-09 時点で週予定のアカウント保存は廃止し、保存対象は日付ブロックのみとする。
 - 日付ブロック保存は `saveUserScheduleBlockChanges` を追加し、1回の Server Action で upsert/delete を実行。
 
 ### 5. 履歴同期の一括化
@@ -47,11 +47,10 @@
 - `generateMetadata` では呼ばず、実ページ描画時のみ呼び出す。
 - 一定間隔以内の再アクセスでは更新を抑止し、不要writeを削減する。
 
-### 8. 週テンプレ保存APIの互換維持
+### 8. 週テンプレ保存APIの廃止
 
-- `upsertWeeklyTemplatesFromWeekdaySelections` へ `allowClear?: boolean` を追加。
-- デフォルトは `allowClear=false` とし、`templates=[]` は従来どおりエラー。
-- 明示的な全削除が必要な場合のみ `allowClear=true` を指定する。
+- 週予定は回答時の一時入力に限定し、アカウント単位の保存APIは削除する。
+- 未入力期間の長いイベントでのみ、曜日ごとの入力を現在回答へ反映する。
 
 ### 9. E2E実行基盤の安定化
 
@@ -63,7 +62,6 @@
 - 追加: `fetchUserAvailabilitySyncPreview(options?)`
 - 追加: `saveUserScheduleBlockChanges(input)`
 - 追加: `submitAvailability(...): { warningCodes?: string[] }`（成功レスポンス拡張）
-- 追加: `upsertWeeklyTemplatesFromWeekdaySelections({ ..., allowClear?: boolean })`
 - 追加: `submit_availability_bundle(...)`（DB RPC）
 - 追加: `touch_event_last_accessed_if_stale(...)`（DB RPC）
 - 追加: `upsert_event_access_histories_bulk(...)`（DB RPC）

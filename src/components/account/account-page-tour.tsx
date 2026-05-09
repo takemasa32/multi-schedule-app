@@ -69,7 +69,7 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
     target: '[data-tour-id="account-schedule-templates"]',
     title: '予定の設定',
     description:
-      'このエリアで予定をまとめて管理します。タブで「日付ごとの予定」と「曜日ごとの予定」を切り替えます。',
+      'このエリアで日付ごとの予定をまとめて管理し、回答済みイベントへの反映内容を確認できます。',
     placement: 'bottom',
   },
   {
@@ -78,13 +78,6 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
     title: '日付ごとの予定を編集',
     description:
       '「編集する」から日付ごとの予定を変更できます。変更内容は下の「回答イベントへの反映」で確認できます。',
-    placement: 'bottom',
-  },
-  {
-    id: 'weekly-tab',
-    target: '[data-tour-id="account-tab-weekly"]',
-    title: '曜日ごとの予定',
-    description: '毎週くり返す予定は、このタブで設定します。',
     placement: 'bottom',
   },
   {

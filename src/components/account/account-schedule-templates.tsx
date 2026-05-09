@@ -7,24 +7,12 @@ import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreview,
   fetchUserScheduleBlocks,
-  fetchUserScheduleTemplates,
   saveUserScheduleBlockChanges,
   type UserAvailabilitySyncPreviewEvent,
-  upsertWeeklyTemplatesFromWeekdaySelections,
 } from '@/lib/schedule-actions';
 import { toComparableDate } from '@/lib/schedule-utils';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from '@/components/week-navigation-bar';
-
-type ScheduleTemplate = {
-  id: string;
-  weekday: number;
-  start_time: string;
-  end_time: string;
-  availability: boolean;
-  source: string;
-  sample_count: number;
-};
 
 type ScheduleBlock = {
   id: string;
@@ -37,28 +25,12 @@ type ScheduleBlock = {
 };
 
 type CellState = 'available' | 'unavailable' | 'empty';
-type ActiveTab = 'weekly' | 'dated';
-
-type TemplateCell = {
-  id?: string;
-  availability: boolean;
-};
-
-type TemplateRange = {
-  weekday: number;
-  startMinutes: number;
-  endMinutes: number;
-  availability: boolean;
-};
 
 type BlockCell = {
   id?: string;
   availability: boolean;
   source: string;
 };
-
-const weekdayLabels = ['日', '月', '火', '水', '木', '金', '土'];
-const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
 
 const normalizeTime = (value: string): string => {
   const matched = value.match(/^(\d{2}:\d{2})/);
@@ -86,19 +58,6 @@ const toDisplayTimeRangeKey = (start: Date, end: Date): string => {
   return `${startTime}-${endTime}`;
 };
 
-const toTemplateCellKey = (weekday: number, startTime: string, endTime: string) =>
-  `${weekday}_${normalizeTime(startTime)}-${normalizeTime(endTime)}`;
-
-const parseTemplateCellKey = (
-  key: string,
-): { weekday: number; startTime: string; endTime: string } | null => {
-  const [weekdayValue, range] = key.split('_');
-  const [startTime, endTime] = (range ?? '').split('-');
-  const weekday = Number(weekdayValue);
-  if (Number.isNaN(weekday) || !startTime || !endTime) return null;
-  return { weekday, startTime: normalizeTime(startTime), endTime: normalizeTime(endTime) };
-};
-
 const toBlockCellKey = (dateKey: string, timeKey: string) => `${dateKey}_${timeKey}`;
 
 const parseBlockCellKey = (
@@ -113,20 +72,6 @@ const parseBlockCellKey = (
 const toMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
-};
-
-const parseTemplateRangeMinutes = (
-  startTime: string,
-  endTime: string,
-): { startMinutes: number; endMinutes: number } | null => {
-  const normalizedStart = normalizeTime(startTime);
-  const normalizedEnd = normalizeTime(endTime);
-  const startMinutes = toMinutes(normalizedStart);
-  const endMinutes = toMinutes(normalizedEnd);
-  if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes)) return null;
-  const normalizedEndMinutes = endMinutes === 0 && startMinutes > 0 ? 24 * 60 : endMinutes;
-  if (startMinutes >= normalizedEndMinutes) return null;
-  return { startMinutes, endMinutes: normalizedEndMinutes };
 };
 
 const resolveDatedBlockDateTimeRange = ({
@@ -157,20 +102,6 @@ const resolveDatedBlockDateTimeRange = ({
 
 const toTimeString = (minutes: number): string =>
   `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-
-const compareTimeSlotRange = (a: string, b: string): number => {
-  const [aStart = '00:00', aEnd = '00:00'] = a.split('-');
-  const [bStart = '00:00', bEnd = '00:00'] = b.split('-');
-  const startDiff = toMinutes(aStart) - toMinutes(bStart);
-  if (startDiff !== 0) return startDiff;
-  return toMinutes(aEnd) - toMinutes(bEnd);
-};
-
-const DEFAULT_WEEKLY_TIME_SLOTS = Array.from({ length: 12 }, (_, index) => {
-  const start = 8 + index;
-  const end = start + 1;
-  return `${String(start).padStart(2, '0')}:00-${String(end).padStart(2, '0')}:00`;
-});
 
 const DATED_UPDATE_SUCCESS_MESSAGE = '予定一括管理を更新しました';
 
@@ -301,16 +232,8 @@ export default function AccountScheduleTemplates({
   initialIsAuthenticated = false,
 }: AccountScheduleTemplatesProps) {
   const { status } = useSession();
-  const [manualTemplates, setManualTemplates] = useState<ScheduleTemplate[]>([]);
-  const [learnedTemplates, setLearnedTemplates] = useState<ScheduleTemplate[]>([]);
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [isLoading, setIsLoading] = useState(initialIsAuthenticated || status === 'authenticated');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dated');
-
-  const [weeklyEditing, setWeeklyEditing] = useState(false);
-  const [weeklySaving, setWeeklySaving] = useState(false);
-  const [weeklyDraftMap, setWeeklyDraftMap] = useState<Record<string, CellState>>({});
-  const [weeklyMessage, setWeeklyMessage] = useState<string | null>(null);
 
   const [datedEditing, setDatedEditing] = useState(false);
   const [datedSaving, setDatedSaving] = useState(false);
@@ -341,12 +264,7 @@ export default function AccountScheduleTemplates({
     if (!isAuthenticated) return;
     setIsLoading(true);
     try {
-      const [templateData, blocksData] = await Promise.all([
-        fetchUserScheduleTemplates(),
-        fetchUserScheduleBlocks(),
-      ]);
-      setManualTemplates(templateData.manual);
-      setLearnedTemplates(templateData.learned);
+      const blocksData = await fetchUserScheduleBlocks();
       setScheduleBlocks(blocksData);
     } finally {
       setIsLoading(false);
@@ -519,82 +437,6 @@ export default function AccountScheduleTemplates({
     });
   }, []);
 
-  const manualMap = useMemo(() => {
-    const map: Record<string, TemplateCell> = {};
-    manualTemplates.forEach((template) => {
-      map[toTemplateCellKey(template.weekday, template.start_time, template.end_time)] = {
-        id: template.id,
-        availability: template.availability,
-      };
-    });
-    return map;
-  }, [manualTemplates]);
-
-  const learnedMap = useMemo(() => {
-    const map: Record<string, TemplateCell> = {};
-    learnedTemplates.forEach((template) => {
-      map[toTemplateCellKey(template.weekday, template.start_time, template.end_time)] = {
-        id: template.id,
-        availability: template.availability,
-      };
-    });
-    return map;
-  }, [learnedTemplates]);
-
-  const mergedTemplateMap = useMemo(() => {
-    const map: Record<string, TemplateCell> = { ...learnedMap };
-    Object.entries(manualMap).forEach(([key, value]) => {
-      map[key] = value;
-    });
-    return map;
-  }, [learnedMap, manualMap]);
-
-  const weeklyTimeSlots = useMemo(() => {
-    const slotSet = new Set<string>();
-    [...manualTemplates, ...learnedTemplates].forEach((template) => {
-      slotSet.add(`${normalizeTime(template.start_time)}-${normalizeTime(template.end_time)}`);
-    });
-    return Array.from(slotSet).sort(compareTimeSlotRange);
-  }, [manualTemplates, learnedTemplates]);
-
-  const weeklyTemplateRanges = useMemo(() => {
-    const manualRanges: TemplateRange[] = [];
-    const learnedRanges: TemplateRange[] = [];
-    const parseAndPush = (template: ScheduleTemplate, target: TemplateRange[]) => {
-      const parsed = parseTemplateRangeMinutes(template.start_time, template.end_time);
-      if (!parsed) return;
-      target.push({
-        weekday: template.weekday,
-        startMinutes: parsed.startMinutes,
-        endMinutes: parsed.endMinutes,
-        availability: template.availability,
-      });
-    };
-    manualTemplates.forEach((template) => parseAndPush(template, manualRanges));
-    learnedTemplates.forEach((template) => parseAndPush(template, learnedRanges));
-    return { manualRanges, learnedRanges };
-  }, [learnedTemplates, manualTemplates]);
-
-  const weeklyDisplayTimeSlots = useMemo(() => {
-    if (weeklyTimeSlots.length === 0) return DEFAULT_WEEKLY_TIME_SLOTS;
-    const boundaries = new Set<number>();
-    [...manualTemplates, ...learnedTemplates].forEach((template) => {
-      const parsed = parseTemplateRangeMinutes(template.start_time, template.end_time);
-      if (!parsed) return;
-      boundaries.add(parsed.startMinutes);
-      boundaries.add(parsed.endMinutes);
-    });
-    const sorted = Array.from(boundaries).sort((a, b) => a - b);
-    const slots: string[] = [];
-    for (let i = 0; i < sorted.length - 1; i += 1) {
-      const start = sorted[i];
-      const end = sorted[i + 1];
-      if (end <= start) continue;
-      slots.push(`${toTimeString(start)}-${toTimeString(end)}`);
-    }
-    return slots.length > 0 ? slots : weeklyTimeSlots;
-  }, [learnedTemplates, manualTemplates, weeklyTimeSlots]);
-
   const blockCalendarData = useMemo(() => {
     const dateKeys = new Set<string>();
     const timeKeys = new Set<string>();
@@ -684,16 +526,6 @@ export default function AccountScheduleTemplates({
     () => weeklyDateBuckets[Math.max(0, resolvedBlockPage)] ?? [],
     [resolvedBlockPage, weeklyDateBuckets],
   );
-  const weeklyHeaderDates = useMemo(() => {
-    const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
-    return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
-  }, []);
-
-  const weeklyLastEndLabel = useMemo(() => {
-    if (weeklyDisplayTimeSlots.length === 0) return null;
-    const [, end] = weeklyDisplayTimeSlots[weeklyDisplayTimeSlots.length - 1].split('-');
-    return end;
-  }, [weeklyDisplayTimeSlots]);
 
   const datedPeriodLabel = useMemo(() => {
     if (visibleBlockDates.length === 0) return null;
@@ -783,43 +615,6 @@ export default function AccountScheduleTemplates({
     return end;
   }, [datedDisplayRows]);
 
-  const getWeeklyCellState = useCallback(
-    (key: string): CellState => {
-      if (weeklyEditing && key in weeklyDraftMap) return weeklyDraftMap[key];
-      const value = mergedTemplateMap[key];
-      if (value) return value.availability ? 'available' : 'unavailable';
-
-      const parsed = parseTemplateCellKey(key);
-      if (!parsed) return 'empty';
-
-      const startMinutes = toMinutes(parsed.startTime);
-      const endMinutes = parsed.endTime === '24:00' ? 24 * 60 : toMinutes(parsed.endTime);
-      if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes) || startMinutes >= endMinutes) {
-        return 'empty';
-      }
-
-      const resolveFromRanges = (ranges: TemplateRange[]): CellState | null => {
-        const covered = ranges.filter(
-          (range) =>
-            range.weekday === parsed.weekday &&
-            range.startMinutes <= startMinutes &&
-            endMinutes <= range.endMinutes,
-        );
-        if (covered.length === 0) return null;
-        const hasAvailable = covered.some((range) => range.availability);
-        const hasUnavailable = covered.some((range) => !range.availability);
-        if (hasAvailable && hasUnavailable) return 'empty';
-        return hasAvailable ? 'available' : 'unavailable';
-      };
-
-      const manualResolved = resolveFromRanges(weeklyTemplateRanges.manualRanges);
-      if (manualResolved) return manualResolved;
-      const learnedResolved = resolveFromRanges(weeklyTemplateRanges.learnedRanges);
-      return learnedResolved ?? 'empty';
-    },
-    [mergedTemplateMap, weeklyDraftMap, weeklyEditing, weeklyTemplateRanges],
-  );
-
   const getBlockCellState = useCallback(
     (key: string): CellState => {
       if (datedEditing && key in datedDraftMap) return datedDraftMap[key];
@@ -837,92 +632,6 @@ export default function AccountScheduleTemplates({
     if (state === 'available') return 'unavailable';
     if (state === 'unavailable') return 'empty';
     return 'available';
-  };
-
-  const saveWeekly = async () => {
-    setWeeklyMessage(null);
-    setWeeklySaving(true);
-    const nextManualMap = new Map<
-      string,
-      { weekday: number; startTime: string; endTime: string; availability: boolean }
-    >(
-      Object.entries(manualMap).flatMap(([key, cell]) => {
-        if (!cell) return [];
-        const parsed = parseTemplateCellKey(key);
-        if (!parsed) return [];
-        return [
-          [
-            key,
-            {
-              weekday: parsed.weekday,
-              startTime: parsed.startTime,
-              endTime: parsed.endTime,
-              availability: cell.availability,
-            },
-          ] as const,
-        ];
-      }),
-    );
-
-    Object.entries(weeklyDraftMap).forEach(([key, draft]) => {
-      const parsed = parseTemplateCellKey(key);
-      if (!parsed) return;
-      const manualCell = manualMap[key];
-      const learnedCell = learnedMap[key];
-
-      if (draft === 'empty') {
-        nextManualMap.delete(key);
-        return;
-      }
-
-      const nextAvailability = draft === 'available';
-      if (!manualCell && learnedCell && learnedCell.availability === nextAvailability) {
-        nextManualMap.delete(key);
-        return;
-      }
-
-      nextManualMap.set(key, {
-        weekday: parsed.weekday,
-        startTime: parsed.startTime,
-        endTime: parsed.endTime,
-        availability: nextAvailability,
-      });
-    });
-
-    const currentManualMap = new Map(
-      Object.entries(manualMap).flatMap(([key, cell]) => {
-        if (!cell) return [];
-        return [[key, cell.availability] as const];
-      }),
-    );
-    const isUnchanged =
-      currentManualMap.size === nextManualMap.size &&
-      Array.from(nextManualMap.entries()).every(
-        ([key, value]) => currentManualMap.get(key) === value.availability,
-      );
-
-    if (isUnchanged) {
-      setWeeklyMessage('変更はありません');
-      setWeeklySaving(false);
-      setWeeklyEditing(false);
-      return;
-    }
-
-    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
-      templates: Array.from(nextManualMap.values()),
-      allowClear: nextManualMap.size === 0,
-      replaceExisting: true,
-    });
-    if (!result.success) {
-      setWeeklyMessage(result.message ?? '週ごとの用事の更新に失敗しました');
-      setWeeklySaving(false);
-      return;
-    }
-
-    setWeeklySaving(false);
-    setWeeklyEditing(false);
-    setWeeklyMessage('週ごとの用事を更新しました');
-    await loadAll();
   };
 
   const saveDated = async () => {
@@ -1003,8 +712,6 @@ export default function AccountScheduleTemplates({
     );
   }
 
-  const isWeeklyTab = activeTab === 'weekly';
-
   return (
     <div
       className="bg-base-100 rounded-lg border p-4 shadow-sm"
@@ -1012,201 +719,10 @@ export default function AccountScheduleTemplates({
       data-tour-id="account-schedule-templates"
     >
       <h3 className="mb-2 text-lg font-semibold">マイ予定設定</h3>
-      <p className="mb-4 text-sm text-base-content/60">タブで表示対象を切り替えて編集できます。</p>
+      <p className="mb-4 text-sm text-base-content/60">
+        日付ごとの予定を管理し、回答済みイベントへの反映内容を確認できます。
+      </p>
 
-      <div className="join mb-4">
-        <button
-          type="button"
-          className={`join-item btn btn-sm ${!isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setActiveTab('dated')}
-          data-testid="account-tab-dated"
-          data-tour-id="account-tab-dated"
-        >
-          予定一括管理
-        </button>
-        <button
-          type="button"
-          className={`join-item btn btn-sm ${isWeeklyTab ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setActiveTab('weekly')}
-          data-testid="account-tab-weekly"
-          data-tour-id="account-tab-weekly"
-        >
-          週ごとの用事
-        </button>
-      </div>
-
-      {isWeeklyTab ? (
-        <div>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h4 className="text-sm font-semibold">週ごとの用事</h4>
-            {weeklyEditing ? (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  onClick={() => {
-                    setWeeklyDraftMap({});
-                    setWeeklyEditing(false);
-                    setWeeklyMessage(null);
-                  }}
-                  disabled={weeklySaving}
-                  data-testid="weekly-cancel"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => void saveWeekly()}
-                  disabled={weeklySaving}
-                  data-testid="weekly-save"
-                >
-                  {weeklySaving ? '更新中...' : '更新する'}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-sm btn-outline"
-                onClick={() => {
-                  setWeeklyDraftMap({});
-                  setWeeklyEditing(true);
-                  setWeeklyMessage(null);
-                }}
-                data-testid="weekly-edit"
-              >
-                編集する
-              </button>
-            )}
-          </div>
-
-          {isLoading ? (
-            <p className="text-sm text-base-content/60">読み込み中...</p>
-          ) : (
-            <>
-              {weeklyTimeSlots.length === 0 && (
-                <p className="mb-2 text-xs text-base-content/60">
-                  テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。
-                </p>
-              )}
-              <div className="overflow-x-auto">
-                <table className="table-xs table w-full table-fixed border-collapse">
-                  <thead>
-                    <tr className="bg-base-200">
-                      <th className="border-base-300 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
-                        時間
-                      </th>
-                      {weekdayOrder.map((weekday, index) => {
-                        const date = weeklyHeaderDates[index];
-                        return (
-                          <th
-                            key={weekday}
-                            className="border-base-300 border px-0.5 py-1 text-center md:px-1 md:py-2"
-                          >
-                            <div className="text-xs font-semibold md:text-sm">
-                              {date.toLocaleDateString('ja-JP', { weekday: 'short' })}
-                            </div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
-                      {weekdayOrder.map((weekday) => (
-                        <td key={`${weekday}-spacer`} className="h-1 md:h-3" />
-                      ))}
-                    </tr>
-                    {weeklyDisplayTimeSlots.map((timeSlot, rowIndex) => {
-                      const [startTime, endTime] = timeSlot.split('-');
-                      return (
-                        <tr key={timeSlot}>
-                          <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
-                            <span
-                              className={`absolute left-2 text-xs font-medium ${
-                                rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
-                              }`}
-                            >
-                              {startTime.replace(/^0/, '')}
-                            </span>
-                          </th>
-                          {weekdayOrder.map((weekday) => {
-                            const key = toTemplateCellKey(weekday, startTime, endTime);
-                            const state = getWeeklyCellState(key);
-                            const className =
-                              state === 'available'
-                                ? 'bg-success text-success-content'
-                                : state === 'unavailable'
-                                  ? 'bg-warning/70 text-warning-content'
-                                  : 'bg-base-200/40 text-base-content/50';
-
-                            return (
-                              <td
-                                key={`${weekday}-${timeSlot}`}
-                                className="border-base-300 border p-0.5 md:p-1"
-                              >
-                                <button
-                                  type="button"
-                                  className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${className}`}
-                                  onClick={() =>
-                                    weeklyEditing &&
-                                    setWeeklyDraftMap((prev) => ({
-                                      ...prev,
-                                      [key]: cycleState(prev[key] ?? getWeeklyCellState(key)),
-                                    }))
-                                  }
-                                  disabled={!weeklyEditing}
-                                  aria-label={`${weekdayLabels[weekday]} ${timeSlot}`}
-                                >
-                                  {state === 'available'
-                                    ? '○'
-                                    : state === 'unavailable'
-                                      ? '×'
-                                      : '-'}
-                                </button>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                    {weeklyLastEndLabel && (
-                      <tr className="h-0">
-                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
-                          <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
-                            {weeklyLastEndLabel === '00:00'
-                              ? '24:00'
-                              : weeklyLastEndLabel.replace(/^0/, '')}
-                          </span>
-                        </th>
-                        {weekdayOrder.map((weekday) => (
-                          <td key={`${weekday}-end`} className="border-base-300 border p-0" />
-                        ))}
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {weeklyEditing && (
-                <div className="mt-3 flex justify-end">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={() => void saveWeekly()}
-                    disabled={weeklySaving}
-                    data-testid="weekly-save-bottom"
-                  >
-                    {weeklySaving ? '更新中...' : '更新する'}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-          <div className="mt-2 text-xs text-base-content/60">凡例: ○=可 / ×=不可 / -=未設定</div>
-          {weeklyMessage && <p className="text-info mt-2 text-sm">{weeklyMessage}</p>}
-        </div>
-      ) : (
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
             <h4 className="text-sm font-semibold">予定一括管理</h4>
@@ -1656,7 +1172,6 @@ export default function AccountScheduleTemplates({
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 }
