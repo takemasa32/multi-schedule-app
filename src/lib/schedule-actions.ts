@@ -134,7 +134,6 @@ const computeAccountBlockAutoFill = ({
       start,
       end,
       blocks: overlappingBlocks,
-      templates: [],
     });
   }
 
@@ -586,7 +585,6 @@ export async function getUserScheduleContext(
       start: date.start_time,
       end: date.end_time,
       blocks: (blocks ?? []) as ScheduleBlock[],
-      templates: [],
     });
     if (blockOnlyResult !== null) {
       dailyCoveredSet.add(date.id);
@@ -627,9 +625,7 @@ export async function getUserScheduleContext(
   ).size;
   const weeklyCellCount = 7 * uniqueTimeSlotCount;
   const requireWeeklyStep = uncoveredCellCount > weeklyCellCount;
-  const hasAccountSeedData =
-    Boolean(blocks && blocks.length > 0) ||
-    lockedDateIds.length > 0;
+  const hasAccountSeedData = Boolean(blocks && blocks.length > 0) || lockedDateIds.length > 0;
 
   return {
     isAuthenticated: true,

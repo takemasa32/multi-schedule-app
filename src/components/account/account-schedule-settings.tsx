@@ -224,13 +224,13 @@ const reconcileEventAfterApply = ({
   };
 };
 
-type AccountScheduleTemplatesProps = {
+type AccountScheduleSettingsProps = {
   initialIsAuthenticated?: boolean;
 };
 
-export default function AccountScheduleTemplates({
+export default function AccountScheduleSettings({
   initialIsAuthenticated = false,
-}: AccountScheduleTemplatesProps) {
+}: AccountScheduleSettingsProps) {
   const { status } = useSession();
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [isLoading, setIsLoading] = useState(initialIsAuthenticated || status === 'authenticated');
@@ -296,7 +296,9 @@ export default function AccountScheduleTemplates({
         Object.fromEntries(
           preview.map((row) => [
             row.eventId,
-            Object.fromEntries(row.dates.map((date) => [date.eventDateId, date.desiredAvailability])),
+            Object.fromEntries(
+              row.dates.map((date) => [date.eventDateId, date.desiredAvailability]),
+            ),
           ]),
         ),
       );
@@ -312,9 +314,7 @@ export default function AccountScheduleTemplates({
       return preview;
     } catch (error) {
       console.error('反映対象取得エラー:', error);
-      setSyncPreviewMessage(
-        '反映対象の取得に失敗しました。時間をおいて再度お試しください。',
-      );
+      setSyncPreviewMessage('反映対象の取得に失敗しました。時間をおいて再度お試しください。');
       return [];
     } finally {
       setIsSyncPreviewLoading(false);
@@ -333,7 +333,12 @@ export default function AccountScheduleTemplates({
     setSyncPreviewMessage(
       '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
     );
-  }, [hasLoadedSyncPreview, isSyncPreviewLoading, syncApplyingEventIds.size, syncPreviewEvents.length]);
+  }, [
+    hasLoadedSyncPreview,
+    isSyncPreviewLoading,
+    syncApplyingEventIds.size,
+    syncPreviewEvents.length,
+  ]);
 
   const handleApplySyncEvent = useCallback(
     async (eventId: string) => {
@@ -706,7 +711,7 @@ export default function AccountScheduleTemplates({
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-base-200 rounded-lg p-4 text-sm text-base-content/60">
+      <div className="bg-base-200 text-base-content/60 rounded-lg p-4 text-sm">
         ログインすると予定設定を管理できます。
       </div>
     );
@@ -715,463 +720,462 @@ export default function AccountScheduleTemplates({
   return (
     <div
       className="bg-base-100 rounded-lg border p-4 shadow-sm"
-      data-testid="account-schedule-templates"
-      data-tour-id="account-schedule-templates"
+      data-testid="account-schedule-settings"
+      data-tour-id="account-schedule-settings"
     >
       <h3 className="mb-2 text-lg font-semibold">マイ予定設定</h3>
-      <p className="mb-4 text-sm text-base-content/60">
+      <p className="text-base-content/60 mb-4 text-sm">
         日付ごとの予定を管理し、回答済みイベントへの反映内容を確認できます。
       </p>
 
-        <div>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h4 className="text-sm font-semibold">予定一括管理</h4>
-            {datedEditing ? (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  onClick={() => {
-                    setDatedDraftMap({});
-                    setDatedEditing(false);
-                    setDatedMessage(null);
-                  }}
-                  disabled={datedSaving}
-                  data-testid="dated-cancel"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => void saveDated()}
-                  disabled={datedSaving}
-                  data-testid="dated-save"
-                >
-                  {datedSaving ? '更新中...' : '更新する'}
-                </button>
-              </div>
-            ) : (
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h4 className="text-sm font-semibold">予定一括管理</h4>
+          {datedEditing ? (
+            <div className="flex gap-2">
               <button
                 type="button"
                 className="btn btn-sm btn-outline"
                 onClick={() => {
                   setDatedDraftMap({});
-                  setDatedEditing(true);
+                  setDatedEditing(false);
                   setDatedMessage(null);
                 }}
-                disabled={isLoading}
-                data-testid="dated-edit"
-                data-tour-id="account-dated-edit"
+                disabled={datedSaving}
+                data-testid="dated-cancel"
               >
-                編集する
+                キャンセル
               </button>
-            )}
-          </div>
-
-          {isLoading ? (
-            <p className="text-sm text-base-content/60">予定データを読み込んでいます...</p>
-          ) : blockCalendarData.dateKeys.length === 0 ? (
-            <p className="text-sm text-base-content/60">予定データはまだありません。</p>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => void saveDated()}
+                disabled={datedSaving}
+                data-testid="dated-save"
+              >
+                {datedSaving ? '更新中...' : '更新する'}
+              </button>
+            </div>
           ) : (
-            <>
-              <div className="mb-2">
-                <WeekNavigationBar
-                  periodLabel={datedPeriodLabel ?? '-'}
-                  currentPage={resolvedBlockPage}
-                  totalPages={weeklyDateBuckets.length}
-                  onPageChange={setBlockPage}
-                  hidePageIndicator={true}
-                />
-              </div>
-              <div className="overflow-x-auto">
-                <table className="table-xs table w-full table-fixed border-collapse">
-                  <thead>
-                    <tr className="bg-base-200">
-                      <th className="border-base-300 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
-                        時間
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setDatedDraftMap({});
+                setDatedEditing(true);
+                setDatedMessage(null);
+              }}
+              disabled={isLoading}
+              data-testid="dated-edit"
+              data-tour-id="account-dated-edit"
+            >
+              編集する
+            </button>
+          )}
+        </div>
+
+        {isLoading ? (
+          <p className="text-base-content/60 text-sm">予定データを読み込んでいます...</p>
+        ) : blockCalendarData.dateKeys.length === 0 ? (
+          <p className="text-base-content/60 text-sm">予定データはまだありません。</p>
+        ) : (
+          <>
+            <div className="mb-2">
+              <WeekNavigationBar
+                periodLabel={datedPeriodLabel ?? '-'}
+                currentPage={resolvedBlockPage}
+                totalPages={weeklyDateBuckets.length}
+                onPageChange={setBlockPage}
+                hidePageIndicator={true}
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="table-xs table w-full table-fixed border-collapse">
+                <thead>
+                  <tr className="bg-base-200">
+                    <th className="border-base-300 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
+                      時間
+                    </th>
+                    {visibleBlockDates.map((dateKey) => {
+                      const date = new Date(`${dateKey}T00:00:00`);
+                      return (
+                        <th
+                          key={dateKey}
+                          className="border-base-300 border px-0.5 py-1 text-center md:px-1 md:py-2"
+                        >
+                          <div className="flex flex-col items-center leading-tight">
+                            <span className="text-xs font-semibold md:text-sm">
+                              {date.toLocaleDateString('ja-JP', {
+                                month: 'numeric',
+                                day: 'numeric',
+                              })}
+                            </span>
+                            <span className="text-base-content/60 text-xs">
+                              ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
+                            </span>
+                          </div>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
+                    {visibleBlockDates.map((dateKey) => (
+                      <td key={`${dateKey}-spacer`} className="h-1 md:h-3" />
+                    ))}
+                  </tr>
+                  {datedDisplayRows.map((row, rowIndex) => (
+                    <tr key={row.label}>
+                      <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                        <span
+                          className={`absolute left-2 text-xs font-medium ${
+                            rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
+                          }`}
+                        >
+                          {row.label.split('-')[0].replace(/^0/, '')}
+                        </span>
                       </th>
                       {visibleBlockDates.map((dateKey) => {
-                        const date = new Date(`${dateKey}T00:00:00`);
+                        const keys = row.timeKeys.map((timeKey) =>
+                          toBlockCellKey(dateKey, timeKey),
+                        );
+                        const rowCellKey = `${dateKey}_${row.label}`;
+                        const state = getBlockCellState(keys[0]);
+                        const className =
+                          state === 'available'
+                            ? 'bg-success text-success-content'
+                            : state === 'unavailable'
+                              ? 'bg-warning/70 text-warning-content'
+                              : 'bg-base-200/40 text-base-content/40';
                         return (
-                          <th
-                            key={dateKey}
-                            className="border-base-300 border px-0.5 py-1 text-center md:px-1 md:py-2"
-                          >
-                            <div className="flex flex-col items-center leading-tight">
-                              <span className="text-xs font-semibold md:text-sm">
-                                {date.toLocaleDateString('ja-JP', {
-                                  month: 'numeric',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                              <span className="text-xs text-base-content/60">
-                                ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
-                              </span>
-                            </div>
-                          </th>
+                          <td key={rowCellKey} className="border-base-300 border p-0.5 md:p-1">
+                            <button
+                              type="button"
+                              className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${className}`}
+                              onClick={() =>
+                                datedEditing &&
+                                setDatedDraftMap((prev) => ({
+                                  ...prev,
+                                  ...Object.fromEntries(
+                                    keys.map((key) => [
+                                      key,
+                                      cycleState(prev[key] ?? getBlockCellState(key)),
+                                    ]),
+                                  ),
+                                }))
+                              }
+                              disabled={!datedEditing}
+                              aria-label={`${dateKey} ${row.label}`}
+                            >
+                              {state === 'available' ? '○' : state === 'unavailable' ? '×' : '-'}
+                            </button>
+                          </td>
                         );
                       })}
                     </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
+                  ))}
+                  {datedLastEndLabel && (
+                    <tr className="h-0">
+                      <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                        <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
+                          {datedLastEndLabel === '00:00'
+                            ? '24:00'
+                            : datedLastEndLabel.replace(/^0/, '')}
+                        </span>
+                      </th>
                       {visibleBlockDates.map((dateKey) => (
-                        <td key={`${dateKey}-spacer`} className="h-1 md:h-3" />
+                        <td key={`${dateKey}-end`} className="border-base-300 border p-0" />
                       ))}
                     </tr>
-                    {datedDisplayRows.map((row, rowIndex) => (
-                      <tr key={row.label}>
-                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
-                          <span
-                            className={`absolute left-2 text-xs font-medium ${
-                              rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
-                            }`}
-                          >
-                            {row.label.split('-')[0].replace(/^0/, '')}
-                          </span>
-                        </th>
-                        {visibleBlockDates.map((dateKey) => {
-                          const keys = row.timeKeys.map((timeKey) =>
-                            toBlockCellKey(dateKey, timeKey),
-                          );
-                          const rowCellKey = `${dateKey}_${row.label}`;
-                          const state = getBlockCellState(keys[0]);
-                          const className =
-                            state === 'available'
-                              ? 'bg-success text-success-content'
-                              : state === 'unavailable'
-                                ? 'bg-warning/70 text-warning-content'
-                                : 'bg-base-200/40 text-base-content/40';
-                          return (
-                            <td key={rowCellKey} className="border-base-300 border p-0.5 md:p-1">
-                              <button
-                                type="button"
-                                className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${className}`}
-                                onClick={() =>
-                                  datedEditing &&
-                                  setDatedDraftMap((prev) => ({
-                                    ...prev,
-                                    ...Object.fromEntries(
-                                      keys.map((key) => [
-                                        key,
-                                        cycleState(prev[key] ?? getBlockCellState(key)),
-                                      ]),
-                                    ),
-                                  }))
-                                }
-                                disabled={!datedEditing}
-                                aria-label={`${dateKey} ${row.label}`}
-                              >
-                                {state === 'available' ? '○' : state === 'unavailable' ? '×' : '-'}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                    {datedLastEndLabel && (
-                      <tr className="h-0">
-                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
-                          <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
-                            {datedLastEndLabel === '00:00'
-                              ? '24:00'
-                              : datedLastEndLabel.replace(/^0/, '')}
-                          </span>
-                        </th>
-                        {visibleBlockDates.map((dateKey) => (
-                          <td key={`${dateKey}-end`} className="border-base-300 border p-0" />
-                        ))}
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {datedEditing && (
-                <div className="mt-3 flex justify-end">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={() => void saveDated()}
-                    disabled={datedSaving}
-                    data-testid="dated-save-bottom"
-                  >
-                    {datedSaving ? '更新中...' : '更新する'}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-          <div className="mt-2 text-xs text-base-content/60">凡例: ○=可 / ×=不可 / -=未設定</div>
-          {datedMessage && <p className="text-info mt-2 text-sm">{datedMessage}</p>}
-
-          <div
-            ref={syncSectionRef}
-            className="mt-6 space-y-3"
-            data-testid="schedule-sync-section"
-            data-tour-id="account-sync-section"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h5 className="text-sm font-semibold">回答イベントへの反映</h5>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline"
-                onClick={() => void loadSyncPreview()}
-                disabled={isSyncPreviewLoading || datedEditing}
-                data-testid="sync-check-button"
-              >
-                {isSyncPreviewLoading ? '確認中...' : '変更内容を確認'}
-              </button>
+                  )}
+                </tbody>
+              </table>
             </div>
-            <p className="text-xs text-base-content/60">
-              予定一括管理の変更が、過去・未来を含む回答済みイベントへどう反映されるかを確認できます。
-            </p>
-            {syncPreviewMessage && <p className="text-sm text-base-content/60">{syncPreviewMessage}</p>}
+            {datedEditing && (
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={() => void saveDated()}
+                  disabled={datedSaving}
+                  data-testid="dated-save-bottom"
+                >
+                  {datedSaving ? '更新中...' : '更新する'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        <div className="text-base-content/60 mt-2 text-xs">凡例: ○=可 / ×=不可 / -=未設定</div>
+        {datedMessage && <p className="text-info mt-2 text-sm">{datedMessage}</p>}
 
-            <div className="space-y-3">
-              {syncPreviewEvents.map((event) => {
-                const matrix = buildSyncPreviewMatrix(event);
-                const dateBuckets = toWeeklyDateBuckets(matrix.sortedDates);
-                const currentWeekPage = Math.min(
-                  syncPreviewWeekPageMap[event.eventId] ?? 0,
-                  Math.max(dateBuckets.length - 1, 0),
-                );
-                const visibleDates = dateBuckets[currentWeekPage] ?? [];
-                const isUpdating = syncApplyingEventIds.has(event.eventId);
-                const selection = syncCellSelectionMap[event.eventId] ?? {};
-                const weekPeriodLabel =
-                  visibleDates.length > 0
-                    ? `${new Date(`${visibleDates[0]}T00:00:00`).toLocaleDateString('ja-JP', {
-                        month: 'numeric',
-                        day: 'numeric',
-                      })} 〜 ${new Date(
-                        `${visibleDates[visibleDates.length - 1]}T00:00:00`,
-                      ).toLocaleDateString('ja-JP', {
-                        month: 'numeric',
-                        day: 'numeric',
-                      })}`
-                    : '-';
-                return (
-                  <div key={event.eventId} className="bg-base-100 rounded-lg border p-3">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">
-                          <Link href={`/event/${event.publicToken}`} className="link link-hover">
-                            {event.title}
-                          </Link>
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                          <span className="badge badge-info badge-outline">
-                            変更 {event.changes.total}件
+        <div
+          ref={syncSectionRef}
+          className="mt-6 space-y-3"
+          data-testid="schedule-sync-section"
+          data-tour-id="account-sync-section"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h5 className="text-sm font-semibold">回答イベントへの反映</h5>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => void loadSyncPreview()}
+              disabled={isSyncPreviewLoading || datedEditing}
+              data-testid="sync-check-button"
+            >
+              {isSyncPreviewLoading ? '確認中...' : '変更内容を確認'}
+            </button>
+          </div>
+          <p className="text-base-content/60 text-xs">
+            予定一括管理の変更が、過去・未来を含む回答済みイベントへどう反映されるかを確認できます。
+          </p>
+          {syncPreviewMessage && (
+            <p className="text-base-content/60 text-sm">{syncPreviewMessage}</p>
+          )}
+
+          <div className="space-y-3">
+            {syncPreviewEvents.map((event) => {
+              const matrix = buildSyncPreviewMatrix(event);
+              const dateBuckets = toWeeklyDateBuckets(matrix.sortedDates);
+              const currentWeekPage = Math.min(
+                syncPreviewWeekPageMap[event.eventId] ?? 0,
+                Math.max(dateBuckets.length - 1, 0),
+              );
+              const visibleDates = dateBuckets[currentWeekPage] ?? [];
+              const isUpdating = syncApplyingEventIds.has(event.eventId);
+              const selection = syncCellSelectionMap[event.eventId] ?? {};
+              const weekPeriodLabel =
+                visibleDates.length > 0
+                  ? `${new Date(`${visibleDates[0]}T00:00:00`).toLocaleDateString('ja-JP', {
+                      month: 'numeric',
+                      day: 'numeric',
+                    })} 〜 ${new Date(
+                      `${visibleDates[visibleDates.length - 1]}T00:00:00`,
+                    ).toLocaleDateString('ja-JP', {
+                      month: 'numeric',
+                      day: 'numeric',
+                    })}`
+                  : '-';
+              return (
+                <div key={event.eventId} className="bg-base-100 rounded-lg border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">
+                        <Link href={`/event/${event.publicToken}`} className="link link-hover">
+                          {event.title}
+                        </Link>
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                        <span className="badge badge-info badge-outline">
+                          変更 {event.changes.total}件
+                        </span>
+                        {event.changes.availableToUnavailable > 0 && (
+                          <span className="badge badge-error badge-outline">
+                            可→不可 {event.changes.availableToUnavailable}
                           </span>
-                          {event.changes.availableToUnavailable > 0 && (
-                            <span className="badge badge-error badge-outline">
-                              可→不可 {event.changes.availableToUnavailable}
-                            </span>
-                          )}
-                          {event.changes.unavailableToAvailable > 0 && (
-                            <span className="badge badge-success badge-outline">
-                              不可→可 {event.changes.unavailableToAvailable}
-                            </span>
-                          )}
-                          {event.changes.protected > 0 && (
-                            <span className="badge badge-warning badge-outline">
-                              保護 {event.changes.protected}件
-                            </span>
-                          )}
-                          {event.isFinalized && (
-                            <span className="badge badge-warning">確定済み</span>
-                          )}
-                        </div>
+                        )}
+                        {event.changes.unavailableToAvailable > 0 && (
+                          <span className="badge badge-success badge-outline">
+                            不可→可 {event.changes.unavailableToAvailable}
+                          </span>
+                        )}
+                        {event.changes.protected > 0 && (
+                          <span className="badge badge-warning badge-outline">
+                            保護 {event.changes.protected}件
+                          </span>
+                        )}
+                        {event.isFinalized && <span className="badge badge-warning">確定済み</span>}
                       </div>
-                      <Link
-                        href={`/event/${event.publicToken}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-sm btn-outline"
-                      >
-                        このイベントに移動
-                      </Link>
                     </div>
+                    <Link
+                      href={`/event/${event.publicToken}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-outline"
+                    >
+                      このイベントに移動
+                    </Link>
+                  </div>
 
-                    {dateBuckets.length > 1 && (
-                      <div className="mb-2">
-                        <WeekNavigationBar
-                          periodLabel={weekPeriodLabel}
-                          currentPage={currentWeekPage}
-                          totalPages={dateBuckets.length}
-                          onPageChange={(page) =>
-                            setSyncPreviewWeekPageMap((prev) => ({
-                              ...prev,
-                              [event.eventId]: page,
-                            }))
-                          }
-                          hidePageIndicator={true}
-                        />
-                      </div>
-                    )}
+                  {dateBuckets.length > 1 && (
+                    <div className="mb-2">
+                      <WeekNavigationBar
+                        periodLabel={weekPeriodLabel}
+                        currentPage={currentWeekPage}
+                        totalPages={dateBuckets.length}
+                        onPageChange={(page) =>
+                          setSyncPreviewWeekPageMap((prev) => ({
+                            ...prev,
+                            [event.eventId]: page,
+                          }))
+                        }
+                        hidePageIndicator={true}
+                      />
+                    </div>
+                  )}
 
-                    <div className="overflow-x-auto">
-                      <table className="table-xs table w-full table-fixed border-collapse">
-                        <thead>
-                          <tr className="bg-base-200">
-                            <th className="border-base-300 w-20 border px-1 py-1 text-center">
-                              時間
-                            </th>
-                            {visibleDates.map((dateKey) => {
-                              const date = new Date(`${dateKey}T00:00:00`);
-                              return (
-                                <th
-                                  key={dateKey}
-                                  className="border-base-300 border px-0.5 py-1 text-center"
-                                >
-                                  <div className="flex flex-col items-center leading-tight">
-                                    <span className="text-xs font-semibold">
-                                      {date.toLocaleDateString('ja-JP', {
-                                        month: 'numeric',
-                                        day: 'numeric',
-                                      })}
-                                    </span>
-                                    <span className="text-xs text-base-content/60">
-                                      ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
-                                    </span>
-                                  </div>
-                                </th>
-                              );
-                            })}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matrix.sortedTimes.map((timeKey) => (
-                            <tr key={`${event.eventId}_${timeKey}`}>
-                              <th className="border-base-300 border px-1 py-1 text-xs">
-                                {timeKey}
+                  <div className="overflow-x-auto">
+                    <table className="table-xs table w-full table-fixed border-collapse">
+                      <thead>
+                        <tr className="bg-base-200">
+                          <th className="border-base-300 w-20 border px-1 py-1 text-center">
+                            時間
+                          </th>
+                          {visibleDates.map((dateKey) => {
+                            const date = new Date(`${dateKey}T00:00:00`);
+                            return (
+                              <th
+                                key={dateKey}
+                                className="border-base-300 border px-0.5 py-1 text-center"
+                              >
+                                <div className="flex flex-col items-center leading-tight">
+                                  <span className="text-xs font-semibold">
+                                    {date.toLocaleDateString('ja-JP', {
+                                      month: 'numeric',
+                                      day: 'numeric',
+                                    })}
+                                  </span>
+                                  <span className="text-base-content/60 text-xs">
+                                    ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
+                                  </span>
+                                </div>
                               </th>
-                              {visibleDates.map((dateKey) => {
-                                const slot = matrix.map[`${dateKey}_${timeKey}`];
-                                if (!slot) {
-                                  return (
-                                    <td
-                                      key={`${dateKey}_${timeKey}`}
-                                      className="border-base-300 text-base-content/30 border text-center text-xs"
-                                    >
-                                      -
-                                    </td>
-                                  );
-                                }
-                                const selected =
-                                  slot.eventDateId in selection
-                                    ? selection[slot.eventDateId]
-                                    : slot.desiredAvailability;
-                                const willApplyChange = selected !== slot.currentAvailability;
-                                const cellClass = willApplyChange
-                                  ? selected
-                                    ? 'bg-success text-success-content ring-success ring-2'
-                                    : 'bg-warning/80 text-warning-content ring-warning ring-2'
-                                  : 'bg-base-200/50 text-base-content/40';
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matrix.sortedTimes.map((timeKey) => (
+                          <tr key={`${event.eventId}_${timeKey}`}>
+                            <th className="border-base-300 border px-1 py-1 text-xs">{timeKey}</th>
+                            {visibleDates.map((dateKey) => {
+                              const slot = matrix.map[`${dateKey}_${timeKey}`];
+                              if (!slot) {
                                 return (
                                   <td
                                     key={`${dateKey}_${timeKey}`}
-                                    className="border-base-300 border p-0.5 md:p-1"
+                                    className="border-base-300 text-base-content/30 border text-center text-xs"
                                   >
-                                    <button
-                                      type="button"
-                                      className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
-                                      onClick={() =>
-                                        slot.willChange &&
-                                        setSyncCellSelectionMap((prev) => ({
-                                          ...prev,
-                                          [event.eventId]: {
-                                            ...(prev[event.eventId] ?? {}),
-                                            [slot.eventDateId]:
-                                              (prev[event.eventId]?.[slot.eventDateId] ??
-                                                slot.desiredAvailability) ===
-                                              slot.desiredAvailability
-                                                ? slot.currentAvailability
-                                                : slot.desiredAvailability,
-                                          },
-                                        }))
-                                      }
-                                      disabled={!slot.willChange}
-                                      aria-label={`${event.title} ${dateKey} ${timeKey}`}
-                                    >
-                                      {selected ? '○' : '×'}
-                                      {slot.isProtected && (
-                                        <span className="ml-1 text-[10px]">保</span>
-                                      )}
-                                    </button>
+                                    -
                                   </td>
                                 );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-3">
-                      {event.changes.protected > 0 && (
-                        <label className="label cursor-pointer gap-2 py-0">
-                          <input
-                            type="checkbox"
-                            className="checkbox checkbox-sm"
-                            checked={syncOverwriteMap[event.eventId] ?? false}
-                            onChange={(e) =>
-                              setSyncOverwriteMap((prev) => ({
-                                ...prev,
-                                [event.eventId]: e.target.checked,
-                              }))
-                            }
-                          />
-                          <span className="label-text text-xs">保護された枠も上書きする</span>
-                        </label>
-                      )}
-                      {event.isFinalized && (
-                        <label className="label cursor-pointer gap-2 py-0">
-                          <input
-                            type="checkbox"
-                            className="checkbox checkbox-sm"
-                            checked={syncAllowFinalizedMap[event.eventId] ?? false}
-                            onChange={(e) =>
-                              setSyncAllowFinalizedMap((prev) => ({
-                                ...prev,
-                                [event.eventId]: e.target.checked,
-                              }))
-                            }
-                          />
-                          <span className="label-text text-xs">確定済みイベントにも反映する</span>
-                        </label>
-                      )}
-
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline"
-                        disabled={isUpdating}
-                        data-testid={`sync-cancel-${event.eventId}`}
-                        onClick={() => handleCancelSyncEvent(event.eventId)}
-                      >
-                        この変更をキャンセル
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-primary ml-auto"
-                        disabled={isUpdating}
-                        data-testid={`sync-apply-${event.eventId}`}
-                        onClick={() => void handleApplySyncEvent(event.eventId)}
-                      >
-                        {isUpdating ? '適用中...' : 'この変更を適用'}
-                      </button>
-                    </div>
-                    {syncMessageMap[event.eventId] && (
-                      <p className="mt-2 text-xs text-base-content/70">{syncMessageMap[event.eventId]}</p>
-                    )}
+                              }
+                              const selected =
+                                slot.eventDateId in selection
+                                  ? selection[slot.eventDateId]
+                                  : slot.desiredAvailability;
+                              const willApplyChange = selected !== slot.currentAvailability;
+                              const cellClass = willApplyChange
+                                ? selected
+                                  ? 'bg-success text-success-content ring-success ring-2'
+                                  : 'bg-warning/80 text-warning-content ring-warning ring-2'
+                                : 'bg-base-200/50 text-base-content/40';
+                              return (
+                                <td
+                                  key={`${dateKey}_${timeKey}`}
+                                  className="border-base-300 border p-0.5 md:p-1"
+                                >
+                                  <button
+                                    type="button"
+                                    className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
+                                    onClick={() =>
+                                      slot.willChange &&
+                                      setSyncCellSelectionMap((prev) => ({
+                                        ...prev,
+                                        [event.eventId]: {
+                                          ...(prev[event.eventId] ?? {}),
+                                          [slot.eventDateId]:
+                                            (prev[event.eventId]?.[slot.eventDateId] ??
+                                              slot.desiredAvailability) === slot.desiredAvailability
+                                              ? slot.currentAvailability
+                                              : slot.desiredAvailability,
+                                        },
+                                      }))
+                                    }
+                                    disabled={!slot.willChange}
+                                    aria-label={`${event.title} ${dateKey} ${timeKey}`}
+                                  >
+                                    {selected ? '○' : '×'}
+                                    {slot.isProtected && (
+                                      <span className="ml-1 text-[10px]">保</span>
+                                    )}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    {event.changes.protected > 0 && (
+                      <label className="label cursor-pointer gap-2 py-0">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={syncOverwriteMap[event.eventId] ?? false}
+                          onChange={(e) =>
+                            setSyncOverwriteMap((prev) => ({
+                              ...prev,
+                              [event.eventId]: e.target.checked,
+                            }))
+                          }
+                        />
+                        <span className="label-text text-xs">保護された枠も上書きする</span>
+                      </label>
+                    )}
+                    {event.isFinalized && (
+                      <label className="label cursor-pointer gap-2 py-0">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={syncAllowFinalizedMap[event.eventId] ?? false}
+                          onChange={(e) =>
+                            setSyncAllowFinalizedMap((prev) => ({
+                              ...prev,
+                              [event.eventId]: e.target.checked,
+                            }))
+                          }
+                        />
+                        <span className="label-text text-xs">確定済みイベントにも反映する</span>
+                      </label>
+                    )}
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      disabled={isUpdating}
+                      data-testid={`sync-cancel-${event.eventId}`}
+                      onClick={() => handleCancelSyncEvent(event.eventId)}
+                    >
+                      この変更をキャンセル
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary ml-auto"
+                      disabled={isUpdating}
+                      data-testid={`sync-apply-${event.eventId}`}
+                      onClick={() => void handleApplySyncEvent(event.eventId)}
+                    >
+                      {isUpdating ? '適用中...' : 'この変更を適用'}
+                    </button>
+                  </div>
+                  {syncMessageMap[event.eventId] && (
+                    <p className="text-base-content/70 mt-2 text-xs">
+                      {syncMessageMap[event.eventId]}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
+      </div>
     </div>
   );
 }

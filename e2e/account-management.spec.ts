@@ -296,10 +296,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(page.getByTestId('availability-link-existing-answer')).toHaveCount(0);
   });
 
-  test('予定一括管理の更新と反映プレビュー導線を確認できる', async ({
-    page,
-    browserName,
-  }) => {
+  test('予定一括管理の更新と反映プレビュー導線を確認できる', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
 
     const syncEvent = await createSeedEvent('E2E_反映対象', [
@@ -332,15 +329,15 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await loginAsDevUser(page);
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await dismissAccountTourIfVisible(page);
-    const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
+    const scheduleSettings = page.getByTestId('account-schedule-settings').first();
 
-    await scheduleTemplates.getByTestId('dated-edit').click();
-    await scheduleTemplates.locator('button[aria-label^="20"]').first().click();
-    await scheduleTemplates.getByTestId('dated-save').click();
-    await expect(scheduleTemplates).toContainText(/予定一括管理を更新しました|変更はありません/);
+    await scheduleSettings.getByTestId('dated-edit').click();
+    await scheduleSettings.locator('button[aria-label^="20"]').first().click();
+    await scheduleSettings.getByTestId('dated-save').click();
+    await expect(scheduleSettings).toContainText(/予定一括管理を更新しました|変更はありません/);
 
-    await scheduleTemplates.getByTestId('sync-check-button').click();
-    const syncSection = scheduleTemplates.getByTestId('schedule-sync-section');
+    await scheduleSettings.getByTestId('sync-check-button').click();
+    const syncSection = scheduleSettings.getByTestId('schedule-sync-section');
     await expect(syncSection).toContainText(
       /変更対象のイベントはありません|変更のあるイベントを下で確認できます|この変更を適用/,
     );
@@ -436,10 +433,10 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
 
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await dismissAccountTourIfVisible(page);
-    const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
-    await scheduleTemplates.getByTestId('sync-check-button').click();
+    const scheduleSettings = page.getByTestId('account-schedule-settings').first();
+    await scheduleSettings.getByTestId('sync-check-button').click();
 
-    const syncCard = scheduleTemplates
+    const syncCard = scheduleSettings
       .getByTestId('schedule-sync-section')
       .locator('div')
       .filter({ hasText: syncEvent.title })
@@ -447,7 +444,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(syncCard).toBeVisible();
     await expect(syncCard).toContainText('変更 1件');
 
-    await scheduleTemplates.getByTestId(`sync-apply-${syncEvent.id}`).click();
+    await scheduleSettings.getByTestId(`sync-apply-${syncEvent.id}`).click();
     await expect
       .poll(
         async () => {

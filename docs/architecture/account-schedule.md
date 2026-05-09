@@ -21,8 +21,14 @@
 
 - `user_event_links`: ユーザーとイベントの紐付け
 - `user_schedule_blocks`: 実日時の予定ブロック（可/不可）
-- `user_schedule_templates`: 旧週次テンプレ（段階的廃止対象。現行UI/同期/自動反映では参照しない）
 - `user_event_availability_overrides`: 重複枠の手動上書き
+
+### 廃止したデータ
+
+- `user_schedule_templates`: 週予定のアカウント保存廃止に伴い、`20260509000000_drop_user_schedule_templates.sql` で削除する。
+- 既存データを残したい環境では、マイグレーション適用前に `public.user_schedule_templates` をバックアップする。
+  - 例: `create table public.user_schedule_templates_backup_20260509 as table public.user_schedule_templates;`
+- 2026-05-09 時点の `supabase migration list` では `20260420000000` も remote 未適用のため、実DBへ push する際は適用順序と既存 pending migration の内容を先に確認する。
 
 ## 自動反映ルール
 
@@ -73,3 +79,12 @@
 
 - 紐づけ導線はイベントページ内の「回答紐づきを編集」に統一し、`/account` には表示しない。
 - `linkMyParticipantAnswerById` は、対象回答が他ユーザーに紐づいている場合は拒否する。
+
+## 復帰時の参照差分
+
+- 本変更を戻す場合は、週予定保存廃止の差分として次を参照する。
+  - 作業中: `git diff -- src/components/availability-form.tsx src/components/account/account-schedule-settings.tsx src/lib/schedule-actions.ts src/lib/schedule-utils.ts supabase/migrations/20260509000000_drop_user_schedule_templates.sql`
+  - コミット後: 上記ファイルと `docs/architecture/account-schedule.md` を変更したコミットの diff。
+- DBデータ復帰が必要な場合は、`20260509000000_drop_user_schedule_templates.sql` 適用前のバックアップから `public.user_schedule_templates` を復元する。
+  - 例: `create table public.user_schedule_templates as table public.user_schedule_templates_backup_20260509;` の後、必要な制約・インデックスは `20260205000000_add_user_schedule_features.sql` の定義を参照して再作成する。
+- Git差分の確認には `git diff --name-status HEAD` と `git diff HEAD -- <対象ファイル>` を使う。

@@ -13,7 +13,7 @@ const renderWithTargets = () =>
   render(
     <>
       <div data-tour-id="account-profile-card">profile</div>
-      <div data-tour-id="account-schedule-templates">schedule</div>
+      <div data-tour-id="account-schedule-settings">schedule</div>
       <button data-tour-id="account-dated-edit" type="button">
         edit
       </button>

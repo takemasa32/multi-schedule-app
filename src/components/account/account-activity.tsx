@@ -3,7 +3,7 @@
 import EventHistory from '@/components/event-history';
 import FavoriteEvents from '@/components/favorite-events';
 import { FavoriteEventsProvider } from '@/components/favorite-events-context';
-import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
+import AccountScheduleSettings from '@/components/account/account-schedule-settings';
 
 type AccountActivityProps = {
   isAuthenticated: boolean;
@@ -13,7 +13,7 @@ export default function AccountActivity({ isAuthenticated }: AccountActivityProp
   return (
     <FavoriteEventsProvider>
       <section className="mb-8">
-        <AccountScheduleTemplates initialIsAuthenticated={isAuthenticated} />
+        <AccountScheduleSettings initialIsAuthenticated={isAuthenticated} />
       </section>
       <section className="mb-8" data-tour-id="account-favorite-history">
         <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>

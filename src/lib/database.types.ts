@@ -370,42 +370,6 @@ export type Database = {
           },
         ];
       };
-      user_schedule_templates: {
-        Row: {
-          availability: boolean;
-          end_time: string;
-          id: string;
-          sample_count: number;
-          source: string;
-          start_time: string;
-          updated_at: string;
-          user_id: string;
-          weekday: number;
-        };
-        Insert: {
-          availability: boolean;
-          end_time: string;
-          id?: string;
-          sample_count?: number;
-          source: string;
-          start_time: string;
-          updated_at?: string;
-          user_id: string;
-          weekday: number;
-        };
-        Update: {
-          availability?: boolean;
-          end_time?: string;
-          id?: string;
-          sample_count?: number;
-          source?: string;
-          start_time?: string;
-          updated_at?: string;
-          user_id?: string;
-          weekday?: number;
-        };
-        Relationships: [];
-      };
       participants: {
         Row: {
           comment: string | null;

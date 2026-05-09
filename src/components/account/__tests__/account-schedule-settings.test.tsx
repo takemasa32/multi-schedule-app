@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useSession } from 'next-auth/react';
-import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
+import AccountScheduleSettings from '@/components/account/account-schedule-settings';
 import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreview,
@@ -27,15 +27,7 @@ const mockSaveUserScheduleBlockChanges = saveUserScheduleBlockChanges as jest.Mo
 
 const createLocalTimeRange = (startHour: number, endHour: number) => {
   const now = new Date();
-  const start = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    startHour,
-    0,
-    0,
-    0,
-  );
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0);
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, 0, 0, 0);
   return {
     startIso: start.toISOString(),
@@ -111,7 +103,7 @@ const createSyncPreviewEvent = (eventId: string, title: string) => {
   };
 };
 
-describe('AccountScheduleTemplates', () => {
+describe('AccountScheduleSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
@@ -127,7 +119,7 @@ describe('AccountScheduleTemplates', () => {
   it('未ログイン時は案内文を表示する', () => {
     mockUseSession.mockReturnValue({ status: 'unauthenticated' });
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     expect(screen.getByText('ログインすると予定設定を管理できます。')).toBeInTheDocument();
   });
@@ -136,7 +128,7 @@ describe('AccountScheduleTemplates', () => {
     mockUseSession.mockReturnValue({ status: 'loading' });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
 
-    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+    render(<AccountScheduleSettings initialIsAuthenticated={true} />);
 
     expect(screen.queryByText('ログインすると予定設定を管理できます。')).not.toBeInTheDocument();
     await screen.findByRole('heading', { name: '予定一括管理' });
@@ -152,7 +144,7 @@ describe('AccountScheduleTemplates', () => {
       }),
     );
 
-    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+    render(<AccountScheduleSettings initialIsAuthenticated={true} />);
 
     expect(screen.getByText('予定データを読み込んでいます...')).toBeInTheDocument();
     expect(screen.queryByText('予定データはまだありません。')).not.toBeInTheDocument();
@@ -178,7 +170,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     expect(await screen.findByText(range.dateLabel)).toBeInTheDocument();
@@ -209,7 +201,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     await waitFor(() => {
@@ -249,7 +241,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     await waitFor(() => {
@@ -281,7 +273,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     await waitFor(() => {
@@ -329,7 +321,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('dated-edit'));
@@ -373,7 +365,7 @@ describe('AccountScheduleTemplates', () => {
         },
       ]);
 
-      render(<AccountScheduleTemplates />);
+      render(<AccountScheduleSettings />);
 
       await screen.findByRole('heading', { name: '予定一括管理' });
       await waitFor(() => {
@@ -444,7 +436,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
@@ -486,7 +478,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
@@ -511,7 +503,8 @@ describe('AccountScheduleTemplates', () => {
     ]);
     mockApplyUserAvailabilitySyncForEvent.mockImplementation(({ eventId }: { eventId: string }) => {
       return new Promise((resolve) => {
-        const responder = () => resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
+        const responder = () =>
+          resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
         if (eventId === 'event-1') {
           resolveFirst = responder;
           return;
@@ -520,7 +513,7 @@ describe('AccountScheduleTemplates', () => {
       });
     });
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
@@ -561,7 +554,7 @@ describe('AccountScheduleTemplates', () => {
       createSyncPreviewEvent('event-1', 'イベントA'),
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
