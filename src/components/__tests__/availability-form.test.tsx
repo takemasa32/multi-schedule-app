@@ -208,7 +208,7 @@ describe('AvailabilityForm', () => {
 
     expect(
       await screen.findByText(
-        '日付ごとのアカウント予定で補えない期間が長いため、曜日ごとにまとめて入力してください。ここでの入力はこの回答だけに反映されます。',
+        '日程が多いため、曜日ごとにまとめて入力してください。',
       ),
     ).toBeInTheDocument();
   });
