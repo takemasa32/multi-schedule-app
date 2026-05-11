@@ -1,10 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import {
-  fetchUserScheduleTemplates,
-  upsertWeeklyTemplatesFromWeekdaySelections,
-} from '@/lib/schedule-actions';
 import { submitAvailability, checkParticipantExists } from '@/lib/actions';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
@@ -52,19 +48,6 @@ type WeekDaySchedule = {
 };
 type CellStatus = 'available' | 'unavailable' | 'empty';
 type WizardStep = 1 | 2 | 3 | 4;
-type WeeklyTemplatePayloadRow = {
-  weekday: number;
-  startTime: string;
-  endTime: string;
-  availability: boolean;
-};
-
-const toWeeklyTemplateSlotKey = (startTime: string, endTime: string): string => {
-  const normalizedStartTime = startTime.slice(0, 5);
-  const normalizedEndSource = endTime.slice(0, 5);
-  const normalizedEndTime = normalizedEndSource === '24:00' ? '00:00' : normalizedEndSource;
-  return `${normalizedStartTime}-${normalizedEndTime}`;
-};
 
 export default function AvailabilityForm({
   eventId,
@@ -81,13 +64,13 @@ export default function AvailabilityForm({
   overrideDateIds: initialOverrideDateIds = [],
   coveredDateIds: _coveredDateIds = [],
   uncoveredDateKeys: _uncoveredDateKeys = [],
-  uncoveredDayCount = 0,
-  requireWeeklyStep: _requireWeeklyStep = false,
+  uncoveredDayCount: _uncoveredDayCount = 0,
+  requireWeeklyStep = false,
   hasAccountSeedData: _hasAccountSeedData = false,
 }: AvailabilityFormProps) {
   const router = useRouter();
   const isNewMode = mode === 'new';
-  const showWeeklyStep = !isAuthenticated || uncoveredDayCount > 0;
+  const showWeeklyStep = !isAuthenticated || requireWeeklyStep;
   const weeklyStep = showWeeklyStep ? ((isNewMode ? 2 : 1) as WizardStep) : null;
   const heatmapStep: WizardStep = isNewMode
     ? ((showWeeklyStep ? 3 : 2) as WizardStep)
@@ -122,17 +105,7 @@ export default function AvailabilityForm({
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [showGuestConfirm, setShowGuestConfirm] = useState(false);
   const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
-  const [showWeeklySaveConfirm, setShowWeeklySaveConfirm] = useState(false);
   const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
-  const [pendingWeeklyTemplates, setPendingWeeklyTemplates] = useState<WeeklyTemplatePayloadRow[]>(
-    [],
-  );
-  const [isSavingWeeklyTemplates, setIsSavingWeeklyTemplates] = useState(false);
-  const [isLoadingWeeklyTemplates, setIsLoadingWeeklyTemplates] = useState(false);
-  const [isCheckingWeeklyTemplateChanges, setIsCheckingWeeklyTemplateChanges] = useState(false);
-  const [weeklyTemplateLoadError, setWeeklyTemplateLoadError] = useState<string | null>(null);
-  const [hasWeekdayEdits, setHasWeekdayEdits] = useState(false);
-  const [hasManualWeeklyTemplates, setHasManualWeeklyTemplates] = useState(false);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
@@ -245,7 +218,6 @@ export default function AvailabilityForm({
   const applyMatrixSelection = useCallback(
     (keys: string[], value: boolean) => {
       const changedKeys: string[] = [];
-      setHasWeekdayEdits(true);
       setWeekdaySelections((prev) => {
         let changed = false;
         const next: Record<WeekDay, WeekDaySchedule> = { ...prev };
@@ -348,11 +320,6 @@ export default function AvailabilityForm({
   useEffect(() => {
     setCurrentStep(1);
     setWeekdayInitialized(false);
-    setHasWeekdayEdits(false);
-    setHasManualWeeklyTemplates(false);
-    setIsLoadingWeeklyTemplates(false);
-    setIsCheckingWeeklyTemplateChanges(false);
-    setWeeklyTemplateLoadError(null);
     hasAutoFillAppliedRef.current = false;
   }, [mode, eventId]);
 
@@ -776,10 +743,7 @@ export default function AvailabilityForm({
   }, []);
 
   // 週入力モード用の時間帯スロットを初期化する関数
-  const initializeWeekdayTimeSlots = useCallback(async () => {
-    setIsLoadingWeeklyTemplates(isAuthenticated);
-    setWeeklyTemplateLoadError(null);
-
+  const initializeWeekdayTimeSlots = useCallback(() => {
     // 全ての時間帯を収集
     const timeSlots: Record<string, boolean> = {};
 
@@ -804,7 +768,7 @@ export default function AvailabilityForm({
       const updatedSelections = {} as Record<WeekDay, WeekDaySchedule>;
       (Object.keys(weekdayData) as WeekDay[]).forEach((day) => {
         const weekday = day as WeekDay;
-        // テンプレの該当行がある曜日、または少なくとも1つ選択されている曜日を選択済みにする。
+        // 既に選択済みの枠がある曜日を初期選択する。
         const hasSelection =
           selectedWeekdaysByTemplate.has(weekday) ||
           Object.values(weekdayData[weekday]).some((val) => val);
@@ -830,53 +794,13 @@ export default function AvailabilityForm({
 
     // 取得中でも空状態を見せないよう、まずはイベント枠ベースで表示する。
     setWeekdaySelections(buildSelections(baseSelectedWeekdays));
-
-    if (!isAuthenticated) {
-      setHasManualWeeklyTemplates(false);
-      setIsLoadingWeeklyTemplates(false);
-      return;
-    }
-
-    const templateWeekdayMap = new Map<string, boolean>();
-    const selectedWeekdaysByTemplate = new Set<WeekDay>(baseSelectedWeekdays);
-    try {
-      const templateData = await fetchUserScheduleTemplates();
-      setHasManualWeeklyTemplates(templateData.manual.length > 0);
-      templateData.manual.forEach((template) => {
-        const weekday = ['日', '月', '火', '水', '木', '金', '土'][template.weekday] as
-          | WeekDay
-          | undefined;
-        if (!weekday) return;
-        const key = `${weekday}_${toWeeklyTemplateSlotKey(template.start_time, template.end_time)}`;
-        templateWeekdayMap.set(key, template.availability);
-      });
-      eventDates.forEach((date) => {
-        const dateObj = new Date(date.start_time);
-        const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
-        const timeKey = getTimeKey(date.start_time, date.end_time);
-        const templateKey = `${weekday}_${timeKey}`;
-        if (templateWeekdayMap.has(templateKey)) {
-          weekdayData[weekday][timeKey] = templateWeekdayMap.get(templateKey) ?? false;
-          selectedWeekdaysByTemplate.add(weekday);
-        }
-      });
-      setWeekdaySelections(buildSelections(selectedWeekdaysByTemplate));
-    } catch (err) {
-      console.error('週予定テンプレ取得エラー:', err);
-      setHasManualWeeklyTemplates(false);
-      setWeeklyTemplateLoadError(
-        'アカウントの週予定を取得できませんでした。手入力で続行できます。',
-      );
-    } finally {
-      setIsLoadingWeeklyTemplates(false);
-    }
-  }, [eventDates, getTimeKey, isAuthenticated, selectedDates]);
+  }, [eventDates, getTimeKey, selectedDates]);
 
   useEffect(() => {
     if (weeklyStep === null) return;
     if (currentStep !== weeklyStep) return;
     if (weekdayInitialized) return;
-    void initializeWeekdayTimeSlots();
+    initializeWeekdayTimeSlots();
     setWeekdayInitialized(true);
   }, [currentStep, initializeWeekdayTimeSlots, weekdayInitialized, weeklyStep]);
 
@@ -938,139 +862,15 @@ export default function AvailabilityForm({
     dailyAutoFillDateIdSet,
   ]);
 
-  const weekdayToNumber = useCallback((weekday: WeekDay): number => {
-    const mapping: Record<WeekDay, number> = {
-      日: 0,
-      月: 1,
-      火: 2,
-      水: 3,
-      木: 4,
-      金: 5,
-      土: 6,
-    };
-    return mapping[weekday];
-  }, []);
-
-  const buildWeeklyTemplatePayload = useCallback((): WeeklyTemplatePayloadRow[] => {
-    const rows: WeeklyTemplatePayloadRow[] = [];
-    Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
-      if (!daySchedule.selected) return;
-      const weekday = weekdayToNumber(day as WeekDay);
-      Object.entries(daySchedule.timeSlots).forEach(([timeKey, availability]) => {
-        const [startTime, endTime] = timeKey.split('-');
-        if (!startTime || !endTime) return;
-        rows.push({
-          weekday,
-          startTime,
-          endTime,
-          availability,
-        });
-      });
-    });
-    return rows;
-  }, [weekdaySelections, weekdayToNumber]);
-
-  const hasWeeklyTemplateChanges = useCallback(
-    (
-      payload: WeeklyTemplatePayloadRow[],
-      manualRows: Array<{
-        weekday: number;
-        start_time: string;
-        end_time: string;
-        availability: boolean;
-      }>,
-    ): boolean => {
-      if (payload.length === 0) return false;
-      const manualMap = new Map<string, boolean>();
-      manualRows.forEach((row) => {
-        manualMap.set(
-          `${row.weekday}_${toWeeklyTemplateSlotKey(row.start_time, row.end_time)}`,
-          row.availability,
-        );
-      });
-      return payload.some((row) => {
-        const key = `${row.weekday}_${toWeeklyTemplateSlotKey(row.startTime, row.endTime)}`;
-        const current = manualMap.get(key);
-        return current === undefined || current !== row.availability;
-      });
-    },
-    [],
-  );
-
   const proceedToHeatmap = useCallback(() => {
-    setShowWeeklySaveConfirm(false);
-    setPendingWeeklyTemplates([]);
-    setHasWeekdayEdits(false);
     setCurrentStep(heatmapStep);
   }, [heatmapStep]);
 
-  const handleProceedFromWeeklyStep = useCallback(async () => {
-    if (isLoadingWeeklyTemplates || isCheckingWeeklyTemplateChanges) {
-      return;
-    }
+  const handleProceedFromWeeklyStep = useCallback(() => {
     setError(null);
     applyWeekdaySelections();
-
-    if (!isAuthenticated) {
-      setCurrentStep(heatmapStep);
-      return;
-    }
-
-    if (!hasWeekdayEdits) {
-      setCurrentStep(heatmapStep);
-      return;
-    }
-
-    const payload = buildWeeklyTemplatePayload();
-    if (payload.length === 0) {
-      setCurrentStep(heatmapStep);
-      return;
-    }
-
-    setIsCheckingWeeklyTemplateChanges(true);
-    try {
-      const templates = await fetchUserScheduleTemplates();
-      const changed = hasWeeklyTemplateChanges(payload, templates.manual);
-      if (!changed) {
-        setCurrentStep(heatmapStep);
-        return;
-      }
-
-      setPendingWeeklyTemplates(payload);
-      setShowWeeklySaveConfirm(true);
-    } catch (err) {
-      console.error('週予定差分確認エラー:', err);
-      setError('週予定の確認に失敗しました。時間をおいて再度お試しください。');
-    } finally {
-      setIsCheckingWeeklyTemplateChanges(false);
-    }
-  }, [
-    applyWeekdaySelections,
-    buildWeeklyTemplatePayload,
-    hasWeekdayEdits,
-    hasWeeklyTemplateChanges,
-    heatmapStep,
-    isCheckingWeeklyTemplateChanges,
-    isAuthenticated,
-    isLoadingWeeklyTemplates,
-  ]);
-
-  const handleSaveWeeklyAndProceed = useCallback(async () => {
-    if (!pendingWeeklyTemplates.length) {
-      proceedToHeatmap();
-      return;
-    }
-    setIsSavingWeeklyTemplates(true);
-    const result = await upsertWeeklyTemplatesFromWeekdaySelections({
-      templates: pendingWeeklyTemplates,
-    });
-    setIsSavingWeeklyTemplates(false);
-    if (!result.success) {
-      setError(result.message ?? '週予定の更新に失敗しました');
-      return;
-    }
     proceedToHeatmap();
-  }, [pendingWeeklyTemplates, proceedToHeatmap]);
+  }, [applyWeekdaySelections, proceedToHeatmap]);
 
   const selectedAvailableCount = useMemo(
     () => Object.values(selectedDates).filter(Boolean).length,
@@ -1121,14 +921,11 @@ export default function AvailabilityForm({
     return `ステップ${currentStep}: ${label}`;
   }, [currentStep, stepLabels]);
   const weeklyStepLeadMessage = useMemo(() => {
-    if (isAuthenticated && isLoadingWeeklyTemplates) {
-      return 'アカウント予定を読み込んでいます。';
-    }
-    if (isAuthenticated && hasManualWeeklyTemplates) {
-      return '各曜日の予定を反映しました。変更がないか確認してください。';
+    if (isAuthenticated) {
+      return '日程が多いため、曜日ごとにまとめて入力してください。';
     }
     return '各曜日の予定を入力してください。';
-  }, [hasManualWeeklyTemplates, isAuthenticated, isLoadingWeeklyTemplates]);
+  }, [isAuthenticated]);
   const weekdayTimeSlots = useMemo(() => {
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
@@ -1243,15 +1040,6 @@ export default function AvailabilityForm({
           <section className="space-y-4" data-testid="availability-step-weekly">
             <div className="bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
               <p>{weeklyStepLeadMessage}</p>
-              {isAuthenticated && isLoadingWeeklyTemplates && (
-                <p className="text-base-content/70 mt-2 flex items-center gap-2 text-xs">
-                  <span className="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                  週予定を取得中です。読み込み完了までお待ちください。
-                </p>
-              )}
-              {weeklyTemplateLoadError && (
-                <p className="text-warning mt-2 text-xs">{weeklyTemplateLoadError}</p>
-              )}
             </div>
 
             <div className="bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
@@ -1319,10 +1107,7 @@ export default function AvailabilityForm({
                                     data-time-slot={timeSlot}
                                     data-selection-key={matrixKey}
                                     {...weekdaySelectionController.getCellProps(matrixKey, {
-                                      disabled:
-                                        !isWeekdayModeActive ||
-                                        isLoadingWeeklyTemplates ||
-                                        isCheckingWeeklyTemplateChanges,
+                                      disabled: !isWeekdayModeActive,
                                     })}
                                   >
                                     <div
@@ -1373,14 +1158,9 @@ export default function AvailabilityForm({
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => void handleProceedFromWeeklyStep()}
-                disabled={isLoadingWeeklyTemplates || isCheckingWeeklyTemplateChanges}
+                onClick={handleProceedFromWeeklyStep}
               >
-                {isLoadingWeeklyTemplates
-                  ? '予定を読み込み中...'
-                  : isCheckingWeeklyTemplateChanges
-                    ? '差分を確認中...'
-                    : '次へ'}
+                次へ
               </button>
             </div>
           </section>
@@ -1646,35 +1426,6 @@ export default function AvailabilityForm({
                   className="btn btn-primary"
                 >
                   アカウント予定に保存して反映
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showWeeklySaveConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold">週予定の更新</h3>
-              <p className="mb-6 text-sm text-base-content/70">
-                曜日一括入力の変更をアカウントの週予定にも反映しますか？
-              </p>
-              <div className="flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={proceedToHeatmap}
-                  disabled={isSavingWeeklyTemplates}
-                >
-                  更新せず次へ
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => void handleSaveWeeklyAndProceed()}
-                  disabled={isSavingWeeklyTemplates}
-                >
-                  {isSavingWeeklyTemplates ? '更新中...' : '更新して次へ'}
                 </button>
               </div>
             </div>

@@ -225,26 +225,8 @@ try {
   );
   add('/account で回答紐づけボタンを表示しない', !hasLinkerButtonAfter);
 
-  // 9) 週ごとの用事 更新
+  // 9) 予定一括管理 更新
   await guestPage.waitForTimeout(1800);
-  await guestPage.getByRole('button', { name: '編集する' }).first().click();
-  const weeklyCells = guestPage.locator('button[aria-label*=":"]');
-  const weeklyCellCount = await weeklyCells.count();
-  if (weeklyCellCount > 0) {
-    await weeklyCells.first().click();
-  }
-  await guestPage.getByRole('button', { name: '更新する' }).first().click();
-  await guestPage.waitForTimeout(1200);
-  const weeklyText = (await guestPage.textContent('body')) ?? '';
-  add(
-    '週ごとの用事の更新',
-    weeklyText.includes('週ごとの用事を更新しました') || weeklyText.includes('変更はありません'),
-    `cells=${weeklyCellCount}`,
-  );
-
-  // 10) 予定一括管理 更新
-  await guestPage.getByRole('button', { name: '予定一括管理' }).click();
-  await guestPage.waitForTimeout(400);
   await guestPage.getByRole('button', { name: '編集する' }).first().click();
   const datedCells = guestPage.locator('button[aria-label^="20"]');
   const datedCellCount = await datedCells.count();

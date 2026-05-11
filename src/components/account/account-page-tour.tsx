@@ -60,16 +60,15 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
     id: 'profile',
     target: '[data-tour-id="account-profile-card"]',
     title: 'アカウント情報',
-    description:
-      'ここで表示名とメールアドレスを確認できます。ログアウトや連携解除も行えます。',
+    description: 'ここで表示名とメールアドレスを確認できます。ログアウトや連携解除も行えます。',
     placement: 'bottom',
   },
   {
     id: 'schedule-overview',
-    target: '[data-tour-id="account-schedule-templates"]',
+    target: '[data-tour-id="account-schedule-settings"]',
     title: '予定の設定',
     description:
-      'このエリアで予定をまとめて管理します。タブで「日付ごとの予定」と「曜日ごとの予定」を切り替えます。',
+      'このエリアで日付ごとの予定をまとめて管理し、回答済みイベントへの反映内容を確認できます。',
     placement: 'bottom',
   },
   {
@@ -81,18 +80,10 @@ const ACCOUNT_TOUR_STEPS: AccountTourStep[] = [
     placement: 'bottom',
   },
   {
-    id: 'weekly-tab',
-    target: '[data-tour-id="account-tab-weekly"]',
-    title: '曜日ごとの予定',
-    description: '毎週くり返す予定は、このタブで設定します。',
-    placement: 'bottom',
-  },
-  {
     id: 'sync-section',
     target: '[data-tour-id="account-sync-section"]',
     title: '回答イベントへの反映',
-    description:
-      '予定を変えたあと、どのイベントに反映されるか確認してから適用できます。',
+    description: '予定を変えたあと、どのイベントに反映されるか確認してから適用できます。',
     placement: 'top',
   },
   {
@@ -308,7 +299,10 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
     const useTop = currentStep.placement === 'top' || topCandidate > 240;
     const top = useTop ? topCandidate - measuredTooltipHeight : bottomCandidate;
     const minTop = safeViewportPadding;
-    const maxTop = Math.max(minTop, window.innerHeight - measuredTooltipHeight - safeViewportPadding);
+    const maxTop = Math.max(
+      minTop,
+      window.innerHeight - measuredTooltipHeight - safeViewportPadding,
+    );
     return {
       position: 'fixed' as const,
       width,
@@ -391,7 +385,7 @@ export default function AccountPageTour({ initialIsAuthenticated }: AccountPageT
 
           <div
             ref={tooltipRef}
-            className="bg-base-100 fixed z-50 overflow-y-auto rounded-2xl border border-base-300 shadow-xl"
+            className="bg-base-100 border-base-300 fixed z-50 overflow-y-auto rounded-2xl border shadow-xl"
             style={tooltipStyle}
             role="dialog"
             aria-modal="true"

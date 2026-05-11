@@ -16,7 +16,6 @@ jest.mock('@/lib/auth', () => ({
 jest.mock('@/lib/schedule-actions', () => ({
   saveAvailabilityOverrides: jest.fn(() => Promise.resolve()),
   syncUserAvailabilities: jest.fn(() => Promise.resolve()),
-  updateUserScheduleTemplatesFromBlocks: jest.fn(() => Promise.resolve()),
   upsertUserEventLink: jest.fn(() => Promise.resolve({ success: true })),
   upsertUserScheduleBlocks: jest.fn(() => Promise.resolve()),
 }));

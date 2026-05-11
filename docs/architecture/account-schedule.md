@@ -1,55 +1,58 @@
 # アカウント予定連携の設計（現行実装）
 
 作成日: 2026-02-05  
-最終更新日: 2026-02-26
+最終更新日: 2026-05-09
 
 ## 背景
 
 - ログインユーザーの予定情報を活用し、回答入力の負担を減らす。
 - 確定イベントと重複する枠を安全に扱う。
 - 手動上書きはイベント単位で保持し、他イベントへ波及させない。
+- 週ごとの入力は便利だが、アカウント保存すると日付ごとの予定との優先関係が見えづらくなるため、回答中の一時入力補助に限定する。
 
 ## 方針
 
 - 新規回答時はアカウント予定を初期値へ自動反映する。
-- 予定の優先順位は「各日予定（blocks）優先、週予定（templates）は不足分補完」。
+- アカウント予定の自動反映は `user_schedule_blocks`（日付ごとの予定）と確定イベント重複のみを対象にする。
+- 週予定はアカウントへ保存せず、長い未入力期間がある回答時だけ一時的な曜日一括入力として表示する。
 - 同期範囲の選択は、同期対象がある場合のみ表示する。
 
 ## データモデル
 
 - `user_event_links`: ユーザーとイベントの紐付け
 - `user_schedule_blocks`: 実日時の予定ブロック（可/不可）
-- `user_schedule_templates`: 週次テンプレ（手動登録）
 - `user_event_availability_overrides`: 重複枠の手動上書き
 
+### 廃止したデータ
+
+- `user_schedule_templates`: 週予定のアカウント保存廃止に伴い、`20260509000000_drop_user_schedule_templates.sql` で削除する。
+- 既存データを残したい環境では、マイグレーション適用前に `public.user_schedule_templates` をバックアップする。
+  - 例: `create table public.user_schedule_templates_backup_20260509 as table public.user_schedule_templates;`
+- 実DBへ push する前に `supabase migration list` で pending migration と適用順序を確認する。
+
 ## 自動反映ルール
-
-### 優先順位
-
-1. `blocks`（日付ごとの予定）
-2. `templates`（週予定）
 
 ### 判定
 
 - **可（○）**: 候補枠を可ブロックが完全内包する場合
-- **不可（×）**: 不可ブロックまたは不可テンプレが重なる場合
+- **不可（×）**: 不可ブロックまたは確定イベントとの重複がある場合
 - 判定不能は自動反映しない（`null`）
 
 ### 補足
 
 - 各日予定由来で反映された枠は `dailyAutoFillDateIds` で保持する。
-- Step3 の反映期間表示は `dailyAutoFillDateIds` のみを対象とする（週予定由来は含めない）。
+- 週入力由来の値はアカウント予定として扱わない。
 
 ## 回答画面仕様（現行）
 
 - 新規回答は基本 `Step1 -> Step2 -> Step3 -> Step4`。
-- ただし `isAuthenticated && uncoveredDayCount === 0` の場合は Step2 をスキップ。
+- ログイン済みの場合は、日付ごとの予定で補えない候補枠数が `7 * ユニーク時間帯数` を超える場合のみ Step2（曜日一括入力）を表示する。
+- 未ログインの場合は従来どおり Step2 を表示し、回答入力の補助として使う。
 - Step2 の `次へ` で曜日一括入力をイベント枠へ反映する。
   - `dailyAutoFillDateIds` の枠は上書きしない。
   - 手動編集済み枠（ヒートマップ編集）も上書きしない。
-- ログイン時に曜日表を編集し、週予定差分がある場合のみ、Step2で次の確認を表示:
-  - `更新して次へ`（`user_schedule_templates` を更新）
-  - `更新せず次へ`
+- Step2 の入力内容は現在の回答だけに反映し、アカウントには保存しない。
+- `/account` には週予定管理タブを表示しない。
 
 ## 同期（送信時）
 
@@ -76,3 +79,12 @@
 
 - 紐づけ導線はイベントページ内の「回答紐づきを編集」に統一し、`/account` には表示しない。
 - `linkMyParticipantAnswerById` は、対象回答が他ユーザーに紐づいている場合は拒否する。
+
+## 復帰時の参照差分
+
+- 本変更を戻す場合は、週予定保存廃止の差分として次を参照する。
+  - 作業中: `git diff -- src/components/availability-form.tsx src/components/account/account-schedule-settings.tsx src/lib/schedule-actions.ts src/lib/schedule-utils.ts supabase/migrations/20260509000000_drop_user_schedule_templates.sql`
+  - コミット後: 上記ファイルと `docs/architecture/account-schedule.md` を変更したコミットの diff。
+- DBデータ復帰が必要な場合は、`20260509000000_drop_user_schedule_templates.sql` 適用前のバックアップから `public.user_schedule_templates` を復元する。
+  - 例: `create table public.user_schedule_templates as table public.user_schedule_templates_backup_20260509;` の後、必要な制約・インデックスは `20260205000000_add_user_schedule_features.sql` の定義を参照して再作成する。
+- Git差分の確認には `git diff --name-status HEAD` と `git diff HEAD -- <対象ファイル>` を使う。

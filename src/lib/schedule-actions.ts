@@ -10,7 +10,6 @@ import {
   toTokyoWallClockDate,
   toWallClockUtcIso,
   type ScheduleBlock,
-  type ScheduleTemplate,
 } from '@/lib/schedule-utils';
 
 type EventDateRange = {
@@ -31,17 +30,6 @@ type ScheduleContext = {
   uncoveredDayCount: number;
   requireWeeklyStep: boolean;
   hasAccountSeedData: boolean;
-};
-
-type UserScheduleTemplateRow = {
-  id: string;
-  weekday: number;
-  start_time: string;
-  end_time: string;
-  availability: boolean;
-  source: string;
-  sample_count: number;
-  updated_at?: string;
 };
 
 type UserScheduleBlockRow = {
@@ -121,217 +109,14 @@ const normalizeManualBlockRange = ({
   return { startTime, endTime };
 };
 
-const toTemplateTimeMinutes = (value: string): number | null => {
-  const matched = value.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
-  if (!matched) return null;
-
-  const hours = Number(matched[1]);
-  const minutes = Number(matched[2]);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-  if (hours === 24 && minutes === 0) return 24 * 60;
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  return hours * 60 + minutes;
-};
-
-const normalizeWeeklyTemplateRange = ({
-  startTime,
-  endTime,
-}: {
-  startTime: string;
-  endTime: string;
-}): { startTime: string; endTime: string } | null => {
-  const startMinutes = toTemplateTimeMinutes(startTime);
-  const endMinutes = toTemplateTimeMinutes(endTime);
-  if (startMinutes === null || endMinutes === null) return null;
-
-  const isMidnightEnd = endMinutes === 0 && startMinutes > 0;
-  const normalizedEndMinutes = isMidnightEnd ? 24 * 60 : endMinutes;
-  const normalizedEndTime = isMidnightEnd ? '24:00' : endTime;
-
-  if (startMinutes >= normalizedEndMinutes) return null;
-
-  return { startTime, endTime: normalizedEndTime };
-};
-
-type WeeklyTemplateNormalizedRow = {
-  weekday: number;
-  startTime: string;
-  endTime: string;
-  availability: boolean;
-};
-
-type WeeklyTemplateCandidateRow = {
-  weekday: number;
-  startMinutes: number;
-  endMinutes: number;
-  availability: boolean;
-  priority: number;
-};
-
-const toWeeklyTemplateTimeString = (minutes: number): string => {
-  if (minutes === 24 * 60) return '24:00';
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-};
-
-const normalizeWeeklyTemplateRow = ({
-  weekday,
-  startTime,
-  endTime,
-  availability,
-}: {
-  weekday: number;
-  startTime: string;
-  endTime: string;
-  availability: boolean;
-}): WeeklyTemplateNormalizedRow | null => {
-  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return null;
-  const normalizedRange = normalizeWeeklyTemplateRange({ startTime, endTime });
-  if (!normalizedRange) return null;
-  const startMinutes = toTemplateTimeMinutes(normalizedRange.startTime);
-  const endMinutes = toTemplateTimeMinutes(normalizedRange.endTime);
-  if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) return null;
-  return {
-    weekday,
-    startTime: toWeeklyTemplateTimeString(startMinutes),
-    endTime: toWeeklyTemplateTimeString(endMinutes),
-    availability,
-  };
-};
-
-const toWeeklyTemplateKey = ({
-  weekday,
-  startTime,
-  endTime,
-}: {
-  weekday: number;
-  startTime: string;
-  endTime: string;
-}): string => `${weekday}_${startTime}-${endTime}`;
-
-const compactWeeklyTemplateRows = ({
-  existingRows,
-  incomingRows,
-}: {
-  existingRows: Array<{
-    weekday: number;
-    startTime: string;
-    endTime: string;
-    availability: boolean;
-  }>;
-  incomingRows: WeeklyTemplateNormalizedRow[];
-}): WeeklyTemplateNormalizedRow[] => {
-  const existingCandidates: WeeklyTemplateCandidateRow[] = existingRows.flatMap((row) => {
-    const startMinutes = toTemplateTimeMinutes(row.startTime);
-    const endMinutes = toTemplateTimeMinutes(row.endTime);
-    if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) return [];
-    return [
-      {
-        weekday: row.weekday,
-        startMinutes,
-        endMinutes,
-        availability: row.availability,
-        priority: 0,
-      },
-    ];
-  });
-
-  const incomingCandidates: WeeklyTemplateCandidateRow[] = incomingRows.flatMap((row, index) => {
-    const startMinutes = toTemplateTimeMinutes(row.startTime);
-    const endMinutes = toTemplateTimeMinutes(row.endTime);
-    if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) return [];
-    return [
-      {
-        weekday: row.weekday,
-        startMinutes,
-        endMinutes,
-        availability: row.availability,
-        priority: index + 1,
-      },
-    ];
-  });
-
-  const result: WeeklyTemplateNormalizedRow[] = [];
-  for (let weekday = 0; weekday <= 6; weekday += 1) {
-    const dayExisting = existingCandidates.filter((row) => row.weekday === weekday);
-    const dayIncoming = incomingCandidates.filter((row) => row.weekday === weekday);
-    if (dayExisting.length === 0 && dayIncoming.length === 0) continue;
-
-    const boundaries = Array.from(
-      new Set(
-        [...dayExisting, ...dayIncoming].flatMap((row) => [row.startMinutes, row.endMinutes]),
-      ),
-    ).sort((a, b) => a - b);
-    if (boundaries.length < 2) continue;
-
-    const daySegments: Array<{ startMinutes: number; endMinutes: number; availability: boolean }> =
-      [];
-    for (let i = 0; i < boundaries.length - 1; i += 1) {
-      const startMinutes = boundaries[i];
-      const endMinutes = boundaries[i + 1];
-      if (startMinutes >= endMinutes) continue;
-
-      const incomingCover = dayIncoming
-        .filter((row) => row.startMinutes <= startMinutes && endMinutes <= row.endMinutes)
-        .sort((a, b) => a.priority - b.priority);
-      if (incomingCover.length > 0) {
-        daySegments.push({
-          startMinutes,
-          endMinutes,
-          availability: incomingCover[incomingCover.length - 1].availability,
-        });
-        continue;
-      }
-
-      const existingCover = dayExisting.filter(
-        (row) => row.startMinutes <= startMinutes && endMinutes <= row.endMinutes,
-      );
-      if (existingCover.length === 0) continue;
-      daySegments.push({
-        startMinutes,
-        endMinutes,
-        availability: existingCover.some((row) => !row.availability) ? false : true,
-      });
-    }
-
-    const merged: Array<{ startMinutes: number; endMinutes: number; availability: boolean }> = [];
-    daySegments.forEach((segment) => {
-      const last = merged[merged.length - 1];
-      if (
-        last &&
-        last.endMinutes === segment.startMinutes &&
-        last.availability === segment.availability
-      ) {
-        last.endMinutes = segment.endMinutes;
-        return;
-      }
-      merged.push({ ...segment });
-    });
-
-    merged.forEach((segment) => {
-      result.push({
-        weekday,
-        startTime: toWeeklyTemplateTimeString(segment.startMinutes),
-        endTime: toWeeklyTemplateTimeString(segment.endMinutes),
-        availability: segment.availability,
-      });
-    });
-  }
-
-  return result;
-};
-
-const computeAutoFillWithPriority = ({
+const computeAccountBlockAutoFill = ({
   start,
   end,
   blocks,
-  templates,
 }: {
   start: string;
   end: string;
   blocks: ScheduleBlock[];
-  templates: ScheduleTemplate[];
 }): boolean | null => {
   const targetRange = {
     start: toComparableDate(start),
@@ -345,22 +130,14 @@ const computeAutoFillWithPriority = ({
   );
 
   if (overlappingBlocks.length > 0) {
-    // 日付ごとの予定がある枠は、予定一括管理を優先する。
     return computeAutoFillAvailability({
       start,
       end,
       blocks: overlappingBlocks,
-      templates: [],
     });
   }
 
-  // 日付ごとの予定がない枠のみ、週ごとの用事を使う。
-  return computeAutoFillAvailability({
-    start,
-    end,
-    blocks: [],
-    templates,
-  });
+  return null;
 };
 
 type SyncPreviewBuildOptions = {
@@ -385,7 +162,6 @@ type SyncPreviewContext = {
     }
   >;
   blocks: ScheduleBlock[];
-  templates: ScheduleTemplate[];
   busyIntervals: Array<{ event_id: string; start_time: string; end_time: string }>;
   eventDatesByEventId: Map<string, EventDateRange[]>;
   protectedDateIdsByEventId: Map<string, Set<string>>;
@@ -409,7 +185,6 @@ const buildSyncPreviewContext = async (
       links: [],
       eventsMap: new Map(),
       blocks: [],
-      templates: [],
       busyIntervals: [],
       eventDatesByEventId: new Map(),
       protectedDateIdsByEventId: new Map(),
@@ -438,7 +213,6 @@ const buildSyncPreviewContext = async (
       links: [],
       eventsMap: new Map(),
       blocks: [],
-      templates: [],
       busyIntervals: [],
       eventDatesByEventId: new Map(),
       protectedDateIdsByEventId: new Map(),
@@ -454,12 +228,6 @@ const buildSyncPreviewContext = async (
     .from('user_schedule_blocks')
     .select('start_time,end_time,availability')
     .eq('user_id', userId);
-
-  const { data: templates } = await supabase
-    .from('user_schedule_templates')
-    .select('weekday,start_time,end_time,availability,source,sample_count')
-    .eq('user_id', userId)
-    .eq('source', 'manual');
 
   const { data: finalizedDates } =
     allEventIds.length > 0
@@ -544,7 +312,6 @@ const buildSyncPreviewContext = async (
     links,
     eventsMap,
     blocks: (blocks ?? []) as ScheduleBlock[],
-    templates: (templates ?? []) as ScheduleTemplate[],
     busyIntervals,
     eventDatesByEventId,
     protectedDateIdsByEventId,
@@ -589,11 +356,10 @@ const buildUserAvailabilitySyncPreview = async (
       if (hasBusyOverlap) {
         desiredAvailability = false;
       } else {
-        const auto = computeAutoFillWithPriority({
+        const auto = computeAccountBlockAutoFill({
           start: date.start_time,
           end: date.end_time,
           blocks: context.blocks,
-          templates: context.templates,
         });
         if (auto !== null) {
           desiredAvailability = auto;
@@ -757,16 +523,6 @@ export async function getUserScheduleContext(
     console.error('予定ブロック取得エラー:', blocksError);
   }
 
-  const { data: templates, error: templatesError } = await supabase
-    .from('user_schedule_templates')
-    .select('weekday,start_time,end_time,availability,source,sample_count')
-    .eq('user_id', userId)
-    .eq('source', 'manual');
-
-  if (templatesError) {
-    console.error('予定テンプレ取得エラー:', templatesError);
-  }
-
   const { data: linkEvents } = await supabase
     .from('user_event_links')
     .select('event_id,participant_id')
@@ -829,18 +585,16 @@ export async function getUserScheduleContext(
       start: date.start_time,
       end: date.end_time,
       blocks: (blocks ?? []) as ScheduleBlock[],
-      templates: [],
     });
     if (blockOnlyResult !== null) {
       dailyCoveredSet.add(date.id);
     }
 
     if (lockedSet.has(date.id)) return;
-    const result = computeAutoFillWithPriority({
+    const result = computeAccountBlockAutoFill({
       start: date.start_time,
       end: date.end_time,
       blocks: (blocks ?? []) as ScheduleBlock[],
-      templates: (templates ?? []) as ScheduleTemplate[],
     });
     if (result !== null) {
       autoFillAvailabilities[date.id] = result;
@@ -871,10 +625,7 @@ export async function getUserScheduleContext(
   ).size;
   const weeklyCellCount = 7 * uniqueTimeSlotCount;
   const requireWeeklyStep = uncoveredCellCount > weeklyCellCount;
-  const hasAccountSeedData =
-    Boolean(blocks && blocks.length > 0) ||
-    Boolean(templates && templates.length > 0) ||
-    lockedDateIds.length > 0;
+  const hasAccountSeedData = Boolean(blocks && blocks.length > 0) || lockedDateIds.length > 0;
 
   return {
     isAuthenticated: true,
@@ -951,21 +702,6 @@ export async function upsertUserScheduleBlocks({
   if (error) {
     console.error('予定ブロックの更新に失敗しました:', error);
   }
-}
-
-export async function updateUserScheduleTemplatesFromBlocks({
-  userId,
-  eventDates,
-  selectedDateIds,
-}: {
-  userId: string;
-  eventDates: EventDateRange[];
-  selectedDateIds: string[];
-}): Promise<void> {
-  // 週次テンプレは手動登録のみを採用するため、自動学習更新は行わない。
-  void userId;
-  void eventDates;
-  void selectedDateIds;
 }
 
 export async function saveAvailabilityOverrides({
@@ -1092,12 +828,6 @@ export async function syncUserAvailabilities({
     .select('start_time,end_time,availability')
     .eq('user_id', userId);
 
-  const { data: templates } = await supabase
-    .from('user_schedule_templates')
-    .select('weekday,start_time,end_time,availability,source,sample_count')
-    .eq('user_id', userId)
-    .eq('source', 'manual');
-
   const { data: finalizedDates } =
     allEventIds.length > 0
       ? await supabase
@@ -1201,11 +931,10 @@ export async function syncUserAvailabilities({
         return;
       }
 
-      const auto = computeAutoFillWithPriority({
+      const auto = computeAccountBlockAutoFill({
         start: date.start_time,
         end: date.end_time,
         blocks: (blocks ?? []) as ScheduleBlock[],
-        templates: (templates ?? []) as ScheduleTemplate[],
       });
 
       if (auto === true) {
@@ -1344,34 +1073,6 @@ export async function applyUserAvailabilitySyncForEvent({
   return { success: true, message: 'イベントを更新しました', updatedCount };
 }
 
-export async function fetchUserScheduleTemplates(): Promise<{
-  manual: UserScheduleTemplateRow[];
-  learned: UserScheduleTemplateRow[];
-}> {
-  const session = await getAuthSession();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { manual: [], learned: [] };
-  }
-
-  const supabase = createSupabaseAdmin();
-  const { data, error } = await supabase
-    .from('user_schedule_templates')
-    .select('id,weekday,start_time,end_time,availability,source,sample_count')
-    .eq('user_id', userId)
-    .order('weekday', { ascending: true });
-
-  if (error || !data) {
-    console.error('テンプレ取得エラー:', error);
-    return { manual: [], learned: [] };
-  }
-
-  return {
-    manual: data.filter((row) => row.source === 'manual'),
-    learned: [],
-  };
-}
-
 export async function fetchUserScheduleBlocks(): Promise<UserScheduleBlockRow[]> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
@@ -1392,75 +1093,6 @@ export async function fetchUserScheduleBlocks(): Promise<UserScheduleBlockRow[]>
   }
 
   return data as UserScheduleBlockRow[];
-}
-
-export async function createManualScheduleTemplate({
-  weekday,
-  startTime,
-  endTime,
-  availability,
-}: {
-  weekday: number;
-  startTime: string;
-  endTime: string;
-  availability: boolean;
-}): Promise<{ success: boolean; message?: string }> {
-  const session = await getAuthSession();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { success: false, message: 'ログインが必要です' };
-  }
-
-  if (weekday < 0 || weekday > 6) {
-    return { success: false, message: '曜日の指定が正しくありません' };
-  }
-  if (!startTime || !endTime || startTime >= endTime) {
-    return { success: false, message: '時間帯の指定が正しくありません' };
-  }
-
-  const supabase = createSupabaseAdmin();
-  const { error } = await supabase.from('user_schedule_templates').upsert(
-    {
-      user_id: userId,
-      weekday,
-      start_time: startTime,
-      end_time: endTime,
-      availability,
-      source: 'manual',
-      sample_count: 1,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id,weekday,start_time,end_time,source' },
-  );
-
-  if (error) {
-    console.error('テンプレ追加エラー:', error);
-    return { success: false, message: 'テンプレの追加に失敗しました' };
-  }
-
-  return { success: true };
-}
-
-export async function removeScheduleTemplate(templateId: string): Promise<{ success: boolean }> {
-  const session = await getAuthSession();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { success: false };
-  }
-
-  const supabase = createSupabaseAdmin();
-  const { error } = await supabase
-    .from('user_schedule_templates')
-    .delete()
-    .eq('id', templateId)
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('テンプレ削除エラー:', error);
-    return { success: false };
-  }
-
-  return { success: true };
 }
 
 export async function upsertUserScheduleBlock({
@@ -1668,159 +1300,4 @@ export async function removeUserScheduleBlock(blockId: string): Promise<{ succes
   }
 
   return { success: true };
-}
-
-export async function upsertWeeklyTemplatesFromWeekdaySelections({
-  templates,
-  allowClear = false,
-  replaceExisting = false,
-}: {
-  templates: Array<{
-    weekday: number;
-    startTime: string;
-    endTime: string;
-    availability: boolean;
-  }>;
-  allowClear?: boolean;
-  replaceExisting?: boolean;
-}): Promise<{ success: boolean; message?: string; updatedCount: number }> {
-  const session = await getAuthSession();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { success: false, message: 'ログインが必要です', updatedCount: 0 };
-  }
-  if (!templates.length && !allowClear) {
-    return { success: false, message: '保存対象の設定がありません', updatedCount: 0 };
-  }
-
-  const supabase = createSupabaseAdmin();
-  const { data: existingRows, error: existingError } = await supabase
-    .from('user_schedule_templates')
-    .select('id,weekday,start_time,end_time,availability')
-    .eq('user_id', userId)
-    .eq('source', 'manual');
-
-  if (existingError) {
-    console.error('週次テンプレ既存データ取得エラー:', existingError);
-    return {
-      success: false,
-      message: '週ごとの用事の取得に失敗しました。時間をおいて再試行してください。',
-      updatedCount: 0,
-    };
-  }
-
-  if (!templates.length) {
-    if (!existingRows || existingRows.length === 0) {
-      return { success: true, updatedCount: 0 };
-    }
-    const staleIds = existingRows.map((row) => row.id);
-    const { error: clearError } = await supabase
-      .from('user_schedule_templates')
-      .delete()
-      .eq('user_id', userId)
-      .eq('source', 'manual')
-      .in('id', staleIds);
-    if (clearError) {
-      console.error('週次テンプレ全削除エラー:', clearError);
-      return {
-        success: false,
-        message: '週ごとの用事の更新に失敗しました。再読み込み後にもう一度お試しください。',
-        updatedCount: 0,
-      };
-    }
-    return { success: true, updatedCount: 0 };
-  }
-
-  const normalized = templates.flatMap((row) => {
-    const normalizedRow = normalizeWeeklyTemplateRow({
-      weekday: row.weekday,
-      startTime: row.startTime,
-      endTime: row.endTime,
-      availability: row.availability,
-    });
-    return normalizedRow ? [normalizedRow] : [];
-  });
-  if (!normalized.length) {
-    return { success: false, message: '曜日ごとの設定が不正です', updatedCount: 0 };
-  }
-
-  const compacted = compactWeeklyTemplateRows({
-    existingRows: replaceExisting
-      ? []
-      : (existingRows ?? []).flatMap((row) => {
-          const normalizedExisting = normalizeWeeklyTemplateRow({
-            weekday: row.weekday,
-            startTime: row.start_time,
-            endTime: row.end_time,
-            availability: row.availability,
-          });
-          return normalizedExisting ? [normalizedExisting] : [];
-        }),
-    incomingRows: normalized,
-  });
-
-  if (compacted.length === 0) {
-    return { success: false, message: '曜日ごとの設定が不正です', updatedCount: 0 };
-  }
-
-  const payload = compacted.map((row) => ({
-    user_id: userId,
-    weekday: row.weekday,
-    start_time: row.startTime,
-    end_time: row.endTime,
-    availability: row.availability,
-    source: 'manual',
-    sample_count: 1,
-    updated_at: new Date().toISOString(),
-  }));
-
-  const { error } = await supabase
-    .from('user_schedule_templates')
-    .upsert(payload, { onConflict: 'user_id,weekday,start_time,end_time,source' });
-
-  if (error) {
-    console.error('週次テンプレ更新エラー:', error);
-    return {
-      success: false,
-      message: '週ごとの用事の更新に失敗しました。再読み込み後にもう一度お試しください。',
-      updatedCount: 0,
-    };
-  }
-
-  const keepKeys = new Set(compacted.map((row) => toWeeklyTemplateKey(row)));
-  const staleIds = (existingRows ?? [])
-    .flatMap((row) => {
-      const normalizedExisting = normalizeWeeklyTemplateRow({
-        weekday: row.weekday,
-        startTime: row.start_time,
-        endTime: row.end_time,
-        availability: row.availability,
-      });
-      if (!normalizedExisting) return [row.id];
-      const key = toWeeklyTemplateKey(normalizedExisting);
-      return keepKeys.has(key) ? [] : [row.id];
-    })
-    .filter((id): id is string => Boolean(id));
-
-  if (staleIds.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('user_schedule_templates')
-      .delete()
-      .eq('user_id', userId)
-      .eq('source', 'manual')
-      .in('id', staleIds);
-
-    if (deleteError) {
-      console.error('週次テンプレ整理エラー:', deleteError);
-      return {
-        // upsert 自体は成功しているため、整理失敗は警告として扱う。
-        success: true,
-        message:
-          '週ごとの用事は保存されましたが、一部の古いデータの整理に失敗しました。時間をおいてページを再読み込みしてください。',
-        updatedCount: payload.length,
-      };
-    }
-  }
-
-  return { success: true, updatedCount: payload.length };
 }

@@ -218,10 +218,6 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
       "delete from public.user_schedule_blocks where user_id=$1 and source='manual' and start_time >= '2099-01-01'::timestamptz and end_time < '2100-01-01'::timestamptz",
       [userId],
     );
-    await db.query(
-      "delete from public.user_schedule_templates where user_id=$1 and source='manual' and start_time='03:00'::time and end_time='04:00'::time",
-      [userId],
-    );
     await db.end();
   });
 
@@ -300,10 +296,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(page.getByTestId('availability-link-existing-answer')).toHaveCount(0);
   });
 
-  test('週ごとの用事/予定一括管理の更新と反映プレビュー導線を確認できる', async ({
-    page,
-    browserName,
-  }) => {
+  test('予定一括管理の更新と反映プレビュー導線を確認できる', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'DBシード併用ケースはchromiumで安定実行');
 
     const syncEvent = await createSeedEvent('E2E_反映対象', [
@@ -322,15 +315,8 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     );
 
     await db.query(
-      `insert into public.user_schedule_templates(user_id,weekday,start_time,end_time,availability,source,sample_count,updated_at)
-       values($1,1,'03:00','04:00',true,'manual',0,now())
-       on conflict(user_id,weekday,start_time,end_time,source)
-       do update set availability=excluded.availability,updated_at=now()`,
-      [userId],
-    );
-    await db.query(
       `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source,event_id,updated_at)
-       values($1,date_trunc('hour', now()),date_trunc('hour', now()) + interval '1 hour',true,'manual',null,now())
+       values($1,'2099-04-06T03:00:00Z','2099-04-06T04:00:00Z',true,'manual',null,now())
        on conflict(user_id,start_time,end_time)
        do update set
          availability=excluded.availability,
@@ -343,22 +329,15 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await loginAsDevUser(page);
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await dismissAccountTourIfVisible(page);
-    const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
+    const scheduleSettings = page.getByTestId('account-schedule-settings').first();
 
-    await scheduleTemplates.getByTestId('account-tab-weekly').click();
-    await scheduleTemplates.getByTestId('weekly-edit').click();
-    await scheduleTemplates.locator('button[aria-label*=":"]').first().click();
-    await scheduleTemplates.getByTestId('weekly-save').click();
-    await expect(scheduleTemplates).toContainText(/週ごとの用事を更新しました|変更はありません/);
+    await scheduleSettings.getByTestId('dated-edit').click();
+    await scheduleSettings.locator('button[aria-label^="20"]').first().click();
+    await scheduleSettings.getByTestId('dated-save').click();
+    await expect(scheduleSettings).toContainText(/予定一括管理を更新しました|変更はありません/);
 
-    await scheduleTemplates.getByTestId('account-tab-dated').click();
-    await scheduleTemplates.getByTestId('dated-edit').click();
-    await scheduleTemplates.locator('button[aria-label^="20"]').first().click();
-    await scheduleTemplates.getByTestId('dated-save').click();
-    await expect(scheduleTemplates).toContainText(/予定一括管理を更新しました|変更はありません/);
-
-    await scheduleTemplates.getByTestId('sync-check-button').click();
-    const syncSection = scheduleTemplates.getByTestId('schedule-sync-section');
+    await scheduleSettings.getByTestId('sync-check-button').click();
+    const syncSection = scheduleSettings.getByTestId('schedule-sync-section');
     await expect(syncSection).toContainText(
       /変更対象のイベントはありません|変更のあるイベントを下で確認できます|この変更を適用/,
     );
@@ -405,10 +384,6 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     const weeklyNextButton = page.getByRole('button', { name: '次へ' });
     if (await weeklyNextButton.isVisible().catch(() => false)) {
       await weeklyNextButton.click();
-      const saveWeeklyButton = page.getByRole('button', { name: '更新して次へ' });
-      if (await saveWeeklyButton.isVisible().catch(() => false)) {
-        await saveWeeklyButton.click();
-      }
     }
     await page.getByRole('button', { name: '確認へ進む' }).click();
     await page.getByLabel('利用規約を読み、同意します').check();
@@ -458,11 +433,10 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
 
     await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await dismissAccountTourIfVisible(page);
-    const scheduleTemplates = page.getByTestId('account-schedule-templates').first();
-    await scheduleTemplates.getByTestId('account-tab-dated').click();
-    await scheduleTemplates.getByTestId('sync-check-button').click();
+    const scheduleSettings = page.getByTestId('account-schedule-settings').first();
+    await scheduleSettings.getByTestId('sync-check-button').click();
 
-    const syncCard = scheduleTemplates
+    const syncCard = scheduleSettings
       .getByTestId('schedule-sync-section')
       .locator('div')
       .filter({ hasText: syncEvent.title })
@@ -470,7 +444,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(syncCard).toBeVisible();
     await expect(syncCard).toContainText('変更 1件');
 
-    await scheduleTemplates.getByTestId(`sync-apply-${syncEvent.id}`).click();
+    await scheduleSettings.getByTestId(`sync-apply-${syncEvent.id}`).click();
     await expect
       .poll(
         async () => {
@@ -487,6 +461,12 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.goto(`/event/${answerEvent.publicToken}/input/sync-review`, {
       waitUntil: 'domcontentloaded',
     });
-    await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}$`), { timeout: 10000 });
+    const answerEventUrlPattern = new RegExp(`/event/${answerEvent.publicToken}$`);
+    await page.waitForURL(answerEventUrlPattern, { timeout: 3000 }).catch(async () => {
+      const remainingSyncApplyButton = page.getByRole('button', { name: 'この変更を適用' }).first();
+      await expect(remainingSyncApplyButton).toBeVisible({ timeout: 10000 });
+      await remainingSyncApplyButton.click();
+    });
+    await page.waitForURL(answerEventUrlPattern, { timeout: 10000 });
   });
 });

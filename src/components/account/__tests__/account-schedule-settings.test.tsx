@@ -1,13 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useSession } from 'next-auth/react';
-import AccountScheduleTemplates from '@/components/account/account-schedule-templates';
+import AccountScheduleSettings from '@/components/account/account-schedule-settings';
 import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreview,
   fetchUserScheduleBlocks,
-  fetchUserScheduleTemplates,
   saveUserScheduleBlockChanges,
-  upsertWeeklyTemplatesFromWeekdaySelections,
 } from '@/lib/schedule-actions';
 
 jest.mock('next-auth/react', () => ({
@@ -18,31 +16,18 @@ jest.mock('@/lib/schedule-actions', () => ({
   applyUserAvailabilitySyncForEvent: jest.fn(),
   fetchUserAvailabilitySyncPreview: jest.fn(),
   fetchUserScheduleBlocks: jest.fn(),
-  fetchUserScheduleTemplates: jest.fn(),
   saveUserScheduleBlockChanges: jest.fn(),
-  upsertWeeklyTemplatesFromWeekdaySelections: jest.fn(),
 }));
 
 const mockUseSession = useSession as jest.Mock;
 const mockApplyUserAvailabilitySyncForEvent = applyUserAvailabilitySyncForEvent as jest.Mock;
-const mockFetchUserScheduleTemplates = fetchUserScheduleTemplates as jest.Mock;
 const mockFetchUserAvailabilitySyncPreview = fetchUserAvailabilitySyncPreview as jest.Mock;
 const mockFetchUserScheduleBlocks = fetchUserScheduleBlocks as jest.Mock;
 const mockSaveUserScheduleBlockChanges = saveUserScheduleBlockChanges as jest.Mock;
-const mockUpsertWeeklyTemplatesFromWeekdaySelections =
-  upsertWeeklyTemplatesFromWeekdaySelections as jest.Mock;
 
 const createLocalTimeRange = (startHour: number, endHour: number) => {
   const now = new Date();
-  const start = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    startHour,
-    0,
-    0,
-    0,
-  );
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, 0, 0, 0);
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, 0, 0, 0);
   return {
     startIso: start.toISOString(),
@@ -118,7 +103,7 @@ const createSyncPreviewEvent = (eventId: string, title: string) => {
   };
 };
 
-describe('AccountScheduleTemplates', () => {
+describe('AccountScheduleSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
@@ -129,29 +114,21 @@ describe('AccountScheduleTemplates', () => {
       updatedCount: 1,
     });
     mockSaveUserScheduleBlockChanges.mockResolvedValue({ success: true, updatedCount: 1 });
-    mockUpsertWeeklyTemplatesFromWeekdaySelections.mockResolvedValue({
-      success: true,
-      updatedCount: 1,
-    });
   });
 
   it('未ログイン時は案内文を表示する', () => {
     mockUseSession.mockReturnValue({ status: 'unauthenticated' });
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     expect(screen.getByText('ログインすると予定設定を管理できます。')).toBeInTheDocument();
   });
 
   it('初期認証済みの場合はセッション読込中でも未ログイン文言を表示しない', async () => {
     mockUseSession.mockReturnValue({ status: 'loading' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
 
-    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+    render(<AccountScheduleSettings initialIsAuthenticated={true} />);
 
     expect(screen.queryByText('ログインすると予定設定を管理できます。')).not.toBeInTheDocument();
     await screen.findByRole('heading', { name: '予定一括管理' });
@@ -159,26 +136,19 @@ describe('AccountScheduleTemplates', () => {
 
   it('予定一括管理の読み込み中は空データ文言を表示しない', async () => {
     mockUseSession.mockReturnValue({ status: 'loading' });
-    let resolveTemplates: (value: { manual: never[]; learned: never[] }) => void = () => {};
     let resolveBlocks: (value: never[]) => void = () => {};
 
-    mockFetchUserScheduleTemplates.mockReturnValue(
-      new Promise((resolve) => {
-        resolveTemplates = resolve;
-      }),
-    );
     mockFetchUserScheduleBlocks.mockReturnValue(
       new Promise((resolve) => {
         resolveBlocks = resolve;
       }),
     );
 
-    render(<AccountScheduleTemplates initialIsAuthenticated={true} />);
+    render(<AccountScheduleSettings initialIsAuthenticated={true} />);
 
     expect(screen.getByText('予定データを読み込んでいます...')).toBeInTheDocument();
     expect(screen.queryByText('予定データはまだありません。')).not.toBeInTheDocument();
 
-    resolveTemplates?.({ manual: [], learned: [] });
     resolveBlocks?.([]);
 
     await waitFor(() => {
@@ -186,156 +156,9 @@ describe('AccountScheduleTemplates', () => {
     });
   });
 
-  it('編集して更新するとテンプレを保存できる', async () => {
-    mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [
-        {
-          id: 'tpl-1',
-          weekday: 1,
-          start_time: '09:00:00',
-          end_time: '10:00:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-      learned: [
-        {
-          id: 'learn-1',
-          weekday: 2,
-          start_time: '09:00:00',
-          end_time: '10:00:00',
-          availability: false,
-          source: 'learned',
-          sample_count: 3,
-        },
-      ],
-    });
-    render(<AccountScheduleTemplates />);
-
-    await screen.findByRole('heading', { name: '予定一括管理' });
-    fireEvent.click(screen.getByTestId('account-tab-weekly'));
-    await screen.findByRole('heading', { name: '週ごとの用事' });
-    expect(screen.queryByText('学')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '編集する' }));
-    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
-    fireEvent.click(screen.getByTestId('weekly-save-bottom'));
-
-    await waitFor(() => {
-      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledTimes(1);
-      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledWith({
-        templates: [
-          {
-            weekday: 1,
-            startTime: '09:00',
-            endTime: '10:00',
-            availability: false,
-          },
-        ],
-        allowClear: false,
-        replaceExisting: true,
-      });
-    });
-  });
-
-  it('週テンプレを一部削除しても残存テンプレのみで保存できる', async () => {
-    mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [
-        {
-          id: 'tpl-1',
-          weekday: 1,
-          start_time: '09:00:00',
-          end_time: '10:00:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-        {
-          id: 'tpl-2',
-          weekday: 1,
-          start_time: '10:00:00',
-          end_time: '11:00:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-      learned: [],
-    });
-    render(<AccountScheduleTemplates />);
-
-    await screen.findByRole('heading', { name: '予定一括管理' });
-    fireEvent.click(screen.getByTestId('account-tab-weekly'));
-    await screen.findByRole('heading', { name: '週ごとの用事' });
-    fireEvent.click(screen.getByRole('button', { name: '編集する' }));
-    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
-    fireEvent.click(screen.getByRole('button', { name: '月 09:00-10:00' }));
-    fireEvent.click(screen.getByTestId('weekly-save-bottom'));
-
-    await waitFor(() => {
-      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledTimes(1);
-      expect(mockUpsertWeeklyTemplatesFromWeekdaySelections).toHaveBeenCalledWith({
-        templates: [
-          {
-            weekday: 1,
-            startTime: '10:00',
-            endTime: '11:00',
-            availability: true,
-          },
-        ],
-        allowClear: false,
-        replaceExisting: true,
-      });
-    });
-  });
-
-  it('週テンプレに重複開始時刻の混在があっても時間行を分割して表示できる', async () => {
-    mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [
-        {
-          id: 'tpl-1',
-          weekday: 1,
-          start_time: '08:00:00',
-          end_time: '09:00:00',
-          availability: false,
-          source: 'manual',
-          sample_count: 1,
-        },
-        {
-          id: 'tpl-2',
-          weekday: 1,
-          start_time: '08:00:00',
-          end_time: '10:00:00',
-          availability: false,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-      learned: [],
-    });
-    mockFetchUserScheduleBlocks.mockResolvedValue([]);
-
-    render(<AccountScheduleTemplates />);
-
-    await screen.findByRole('heading', { name: '予定一括管理' });
-    fireEvent.click(screen.getByTestId('account-tab-weekly'));
-    await screen.findByRole('heading', { name: '週ごとの用事' });
-
-    expect(screen.getAllByText('8:00')).toHaveLength(1);
-    expect(screen.getByText('9:00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '月 09:00-10:00' })).toHaveTextContent('×');
-  });
-
   it('予定一括管理をカレンダー表示できる', async () => {
     const range = createLocalTimeRange(9, 10);
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-1',
@@ -347,7 +170,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     expect(await screen.findByText(range.dateLabel)).toBeInTheDocument();
@@ -359,10 +182,6 @@ describe('AccountScheduleTemplates', () => {
     const secondRange = createLocalTimeRange(10, 11);
     const mergedLabel = `${firstRange.startIso.slice(11, 16)}-${secondRange.endIso.slice(11, 16)}`;
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-1',
@@ -382,7 +201,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     await waitFor(() => {
@@ -403,10 +222,6 @@ describe('AccountScheduleTemplates', () => {
     const firstRange = createLocalTimeRange(9, 10);
     const secondRange = createLocalTimeRange(10, 11);
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-1',
@@ -426,7 +241,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     await waitFor(() => {
@@ -447,10 +262,6 @@ describe('AccountScheduleTemplates', () => {
     const startClock = range.startIso.slice(11, 16);
     const endClock = range.endIso.slice(11, 16);
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-1',
@@ -462,7 +273,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     await waitFor(() => {
@@ -499,10 +310,6 @@ describe('AccountScheduleTemplates', () => {
     const nextDateKey = toDateKey(tomorrow);
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([
       {
         id: 'block-midnight',
@@ -514,7 +321,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('dated-edit'));
@@ -547,10 +354,6 @@ describe('AccountScheduleTemplates', () => {
       const startClock = range.startIso.slice(11, 16);
       const endClock = range.endIso.slice(11, 16);
       mockUseSession.mockReturnValue({ status: 'authenticated' });
-      mockFetchUserScheduleTemplates.mockResolvedValue({
-        manual: [],
-        learned: [],
-      });
       mockFetchUserScheduleBlocks.mockResolvedValue([
         {
           id: 'block-1',
@@ -562,7 +365,7 @@ describe('AccountScheduleTemplates', () => {
         },
       ]);
 
-      render(<AccountScheduleTemplates />);
+      render(<AccountScheduleSettings />);
 
       await screen.findByRole('heading', { name: '予定一括管理' });
       await waitFor(() => {
@@ -590,42 +393,6 @@ describe('AccountScheduleTemplates', () => {
     }
   });
 
-  it('週の設定が空でもデフォルト時間行で週ごとの用事を編集できる', async () => {
-    mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
-    mockFetchUserScheduleBlocks.mockResolvedValue([
-      {
-        id: 'block-1',
-        start_time: '2026-02-06T09:00:00Z',
-        end_time: '2026-02-06T10:00:00Z',
-        availability: false,
-        source: 'event',
-        event_id: 'event-1',
-      },
-    ]);
-
-    render(<AccountScheduleTemplates />);
-
-    fireEvent.click(screen.getByTestId('account-tab-weekly'));
-    await screen.findByRole('heading', { name: '週ごとの用事' });
-    await waitFor(() => {
-      expect(
-        screen.getByText(
-          'テンプレデータはまだありません。まずはセルを編集して週ごとの用事を保存してください。',
-        ),
-      ).toBeInTheDocument();
-    });
-    const mondayCells = screen.getAllByRole('button').filter((button) => {
-      const label = button.getAttribute('aria-label') ?? '';
-      return /^月 \d{2}:\d{2}-\d{2}:\d{2}$/.test(label);
-    });
-    expect(mondayCells.length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: '月 21:00-22:00' })).not.toBeInTheDocument();
-  });
-
   it('回答イベントへの反映は変更がある最初の週を初期表示する', async () => {
     const firstWeek = createFixedLocalTimeRange(2026, 1, 9, 9, 10);
     const changedWeek = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
@@ -633,10 +400,6 @@ describe('AccountScheduleTemplates', () => {
     const changedWeekLabel = toWeekPeriodLabelFromIso(changedWeek.startIso);
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
       {
@@ -673,7 +436,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
@@ -688,10 +451,6 @@ describe('AccountScheduleTemplates', () => {
     const changed = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
       {
@@ -719,7 +478,7 @@ describe('AccountScheduleTemplates', () => {
       },
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
@@ -737,10 +496,6 @@ describe('AccountScheduleTemplates', () => {
     let resolveSecond: (() => void) | null = null;
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
       createSyncPreviewEvent('event-1', 'イベントA'),
@@ -748,7 +503,8 @@ describe('AccountScheduleTemplates', () => {
     ]);
     mockApplyUserAvailabilitySyncForEvent.mockImplementation(({ eventId }: { eventId: string }) => {
       return new Promise((resolve) => {
-        const responder = () => resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
+        const responder = () =>
+          resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
         if (eventId === 'event-1') {
           resolveFirst = responder;
           return;
@@ -757,7 +513,7 @@ describe('AccountScheduleTemplates', () => {
       });
     });
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));
@@ -793,16 +549,12 @@ describe('AccountScheduleTemplates', () => {
 
   it('回答イベントへの反映でキャンセルしたイベントは一覧から除外される', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
-    mockFetchUserScheduleTemplates.mockResolvedValue({
-      manual: [],
-      learned: [],
-    });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
     mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
       createSyncPreviewEvent('event-1', 'イベントA'),
     ]);
 
-    render(<AccountScheduleTemplates />);
+    render(<AccountScheduleSettings />);
 
     await screen.findByRole('heading', { name: '予定一括管理' });
     fireEvent.click(screen.getByTestId('sync-check-button'));

@@ -1,12 +1,12 @@
 # 回答ウィザード設計メモ（現行実装）
 
 作成日: 2026-02-19  
-最終更新日: 2026-02-26
+最終更新日: 2026-05-09
 
 ## 背景
 
 - 回答入力を段階化し、入力ミスと離脱を減らす。
-- アカウント予定（各日予定 / 週予定）を使って初期入力負荷を下げる。
+- アカウントの日付ごとの予定を使って初期入力負荷を下げる。
 - 未ログイン回答を維持しつつ、ログインユーザーの同期導線も維持する。
 
 ## 新規回答フロー
@@ -21,15 +21,13 @@
 
 ### Step2: 曜日一括入力（条件付き）
 
-- 表示条件: `!isAuthenticated || uncoveredDayCount > 0`
-- 非表示条件: `isAuthenticated && uncoveredDayCount === 0`
+- 表示条件: `!isAuthenticated || requireWeeklyStep`
+- 非表示条件: `isAuthenticated && !requireWeeklyStep`
 - 役割: 曜日×時間帯で入力し、イベント候補枠へ一括反映する。
 - 反映時の保護:
   - 各日予定由来で自動反映済みの枠（`dailyAutoFillDateIds`）は上書きしない。
   - ヒートマップで手動編集済みの枠は上書きしない。
-- ログイン時に曜日表を編集し、かつ週予定差分ありの場合:
-  - `週予定の更新` モーダルを表示
-  - `更新して次へ` / `更新せず次へ`
+- ログイン時の曜日一括入力は現在の回答だけに反映し、アカウントには保存しない。
 
 ### Step3: 予定確認・修正
 
@@ -88,12 +86,11 @@
 
 ### 算出上の重要点
 
-- `autoFillAvailabilities` は `blocks` 優先、未該当時のみ `templates` を参照する。
-- `uncoveredDayCount` は「週予定ではなく各日予定（blocks）+ locked」ベースで算出する。
-  - `computeAutoFillAvailability(... templates: []) !== null` の枠を各日カバー扱い。
+- `autoFillAvailabilities` は各日予定（`user_schedule_blocks`）と確定イベント重複のみを参照する。
+- `uncoveredDayCount` は各日予定（blocks）+ locked ベースで算出する。
+  - `computeAutoFillAvailability(...) !== null` の枠を各日カバー扱い。
 - `dailyAutoFillDateIds` は、各日予定由来で実際に自動反映された枠のみを保持する。
 
 ## 非目標
 
-- DB スキーマ変更
 - 未ログイン回答の廃止

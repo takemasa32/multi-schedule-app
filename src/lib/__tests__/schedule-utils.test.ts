@@ -17,7 +17,6 @@ describe('computeAutoFillAvailability', () => {
           availability: true,
         },
       ],
-      templates: [],
     });
 
     expect(result).toBe(true);
@@ -39,7 +38,6 @@ describe('computeAutoFillAvailability', () => {
           availability: true,
         },
       ],
-      templates: [],
     });
 
     expect(result).toBe(true);
@@ -56,7 +54,6 @@ describe('computeAutoFillAvailability', () => {
           availability: true,
         },
       ],
-      templates: [],
     });
 
     expect(result).toBeNull();
@@ -73,7 +70,6 @@ describe('computeAutoFillAvailability', () => {
           availability: false,
         },
       ],
-      templates: [],
     });
 
     expect(result).toBe(false);
@@ -95,70 +91,16 @@ describe('computeAutoFillAvailability', () => {
           availability: false,
         },
       ],
-      templates: [],
     });
 
     expect(result).toBe(false);
   });
 
-  it('テンプレの不可は重なりで反映する', () => {
-    const weekday = new Date('2026-02-02T10:30:00.000Z').getDay();
-    const result = computeAutoFillAvailability({
-      start: '2026-02-02T10:30:00.000Z',
-      end: '2026-02-02T11:30:00.000Z',
-      blocks: [],
-      templates: [
-        {
-          weekday,
-          start_time: '10:00',
-          end_time: '11:00',
-          availability: false,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it('テンプレの可は内包のみ反映する', () => {
-    const weekday = new Date('2026-02-02T10:15:00.000Z').getDay();
-    const result = computeAutoFillAvailability({
-      start: '2026-02-02T10:15:00.000Z',
-      end: '2026-02-02T10:45:00.000Z',
-      blocks: [],
-      templates: [
-        {
-          weekday,
-          start_time: '10:00',
-          end_time: '11:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
-    });
-
-    expect(result).toBe(true);
-  });
-
-  it('判定できない場合はnullを返す', () => {
-    const weekday = new Date('2026-02-02T10:00:00.000Z').getDay();
+  it('日付ブロックで判定できない場合はnullを返す', () => {
     const result = computeAutoFillAvailability({
       start: '2026-02-02T10:00:00.000Z',
       end: '2026-02-02T12:00:00.000Z',
       blocks: [],
-      templates: [
-        {
-          weekday,
-          start_time: '10:00',
-          end_time: '11:00',
-          availability: true,
-          source: 'manual',
-          sample_count: 1,
-        },
-      ],
     });
 
     expect(result).toBeNull();
@@ -175,7 +117,6 @@ describe('computeAutoFillAvailability', () => {
           availability: false,
         },
       ],
-      templates: [],
     });
 
     expect(result).toBe(false);

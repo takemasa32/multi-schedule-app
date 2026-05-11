@@ -13,12 +13,9 @@ const renderWithTargets = () =>
   render(
     <>
       <div data-tour-id="account-profile-card">profile</div>
-      <div data-tour-id="account-schedule-templates">schedule</div>
+      <div data-tour-id="account-schedule-settings">schedule</div>
       <button data-tour-id="account-dated-edit" type="button">
         edit
-      </button>
-      <button data-tour-id="account-tab-weekly" type="button">
-        weekly
       </button>
       <div data-tour-id="account-sync-section">sync</div>
       <div data-tour-id="account-favorite-history">favorites</div>
@@ -70,10 +67,10 @@ describe('AccountPageTour', () => {
   it('次のステップへ進むと予定の設定の説明を表示する', async () => {
     renderWithTargets();
     expect(await screen.findByText('アカウント情報')).toBeInTheDocument();
-    expect(screen.getByText('1 / 7')).toBeInTheDocument();
+    expect(screen.getByText('1 / 6')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('account-tour-next'));
     expect(await screen.findByText('予定の設定')).toBeInTheDocument();
-    expect(screen.getByText('2 / 7')).toBeInTheDocument();
+    expect(screen.getByText('2 / 6')).toBeInTheDocument();
   });
 
   it('最後まで進めると完了状態を保存して閉じる', async () => {
