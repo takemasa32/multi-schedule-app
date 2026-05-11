@@ -28,7 +28,7 @@
 - `user_schedule_templates`: 週予定のアカウント保存廃止に伴い、`20260509000000_drop_user_schedule_templates.sql` で削除する。
 - 既存データを残したい環境では、マイグレーション適用前に `public.user_schedule_templates` をバックアップする。
   - 例: `create table public.user_schedule_templates_backup_20260509 as table public.user_schedule_templates;`
-- 2026-05-09 時点の `supabase migration list` では `20260420000000` も remote 未適用のため、実DBへ push する際は適用順序と既存 pending migration の内容を先に確認する。
+- 実DBへ push する前に `supabase migration list` で pending migration と適用順序を確認する。
 
 ## 自動反映ルール
 
