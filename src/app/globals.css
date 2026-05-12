@@ -25,7 +25,12 @@ body {
     @apply font-medium transition-all duration-200;
   }
 
+  .hero-illustration-light {
+    display: block;
+  }
+
   .hero-illustration-dark {
+    display: none;
     -webkit-mask-image: radial-gradient(
       ellipse 62% 50% at 70% 48%,
       #000 0%,
@@ -40,6 +45,24 @@ body {
       rgb(0 0 0 / 72%) 70%,
       transparent 88%
     );
+  }
+
+  :root[data-theme='dark'] .hero-illustration-light {
+    display: none;
+  }
+
+  :root[data-theme='dark'] .hero-illustration-dark {
+    display: block;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .hero-illustration-light {
+      display: none;
+    }
+
+    :root:not([data-theme]) .hero-illustration-dark {
+      display: block;
+    }
   }
 
   @media (min-width: 1024px) {
