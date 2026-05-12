@@ -12,9 +12,7 @@ export default function HeroIllustration() {
           alt=""
           aria-hidden="true"
           fill
-          loading="eager"
           sizes="(max-width: 1024px) 70vw, 50vw"
-          priority
           className="object-contain object-right"
         />
       </div>
@@ -24,9 +22,7 @@ export default function HeroIllustration() {
           alt=""
           aria-hidden="true"
           fill
-          loading="eager"
           sizes="(max-width: 1024px) 70vw, 50vw"
-          priority
           className="object-contain object-right"
         />
       </div>

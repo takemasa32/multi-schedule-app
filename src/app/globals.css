@@ -55,6 +55,16 @@ body {
     display: block;
   }
 
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .hero-illustration-light {
+      display: none;
+    }
+
+    :root:not([data-theme]) .hero-illustration-dark {
+      display: block;
+    }
+  }
+
   @media (min-width: 1024px) {
     .hero-illustration-dark {
       -webkit-mask-image: radial-gradient(
