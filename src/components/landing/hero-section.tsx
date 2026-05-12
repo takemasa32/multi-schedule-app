@@ -1,120 +1,50 @@
-'use client';
-
 import Link from 'next/link';
-import Image from 'next/image';
-import { easeOut } from 'motion';
-import { motion } from 'motion/react';
-import siteConfig from '@/lib/site-config';
+import HeroIllustration from '@/components/landing/hero-illustration';
 
 export default function HeroSection() {
   return (
-    <section className="from-primary/20 to-base-100 relative flex min-h-[60vh] items-center overflow-hidden bg-gradient-to-b px-2 pb-16 pt-24 sm:px-4 sm:pb-24 sm:pt-32">
-      {/* Hero背景装飾SVG */}
-      <svg
-        className="pointer-events-none absolute left-[-40px] top-[-40px] z-0 block h-[180px] w-[180px] select-none opacity-10 sm:h-[320px] sm:w-[320px] sm:opacity-20"
-        viewBox="0 0 320 320"
-        fill="none"
-      >
-        <defs>
-          <linearGradient id="hero-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#6366F1" />
-            <stop offset="100%" stopColor="#818CF8" />
-          </linearGradient>
-        </defs>
-        <circle cx="160" cy="160" r="160" fill="url(#hero-grad)" />
-      </svg>
-      <svg
-        className="pointer-events-none absolute bottom-[-60px] right-[-30px] z-0 block h-[120px] w-[120px] select-none opacity-5 sm:h-[220px] sm:w-[220px] sm:opacity-10"
-        viewBox="0 0 220 220"
-        fill="none"
-      >
-        <defs>
-          <linearGradient id="hero-grad2" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#A78BFA" />
-            <stop offset="100%" stopColor="#6366F1" />
-          </linearGradient>
-        </defs>
-        <circle cx="110" cy="110" r="110" fill="url(#hero-grad2)" />
-      </svg>
-      <div className="container relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-12 sm:flex-row sm:gap-20">
-        <motion.div
-          className="w-full sm:w-1/2"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.4 }}
-          variants={{
-            hidden: { opacity: 0, y: 40 },
-            show: {
-              opacity: 1,
-              y: 0,
-              transition: { duration: 0.6, ease: easeOut },
-            },
-          }}
+    <section className="relative flex min-h-[60vh] items-center overflow-hidden bg-base-100 px-2 pb-10 pt-12 sm:min-h-[70vh] sm:px-4 sm:pb-16 sm:pt-24">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-base-300" />
+      <div className="container relative z-10 mx-auto grid max-w-6xl lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:gap-10">
+        <div
+          className="pointer-events-none absolute -right-28 -top-14 z-0 h-[28rem] w-[40rem] sm:-right-24 sm:-top-20 sm:h-[36rem] sm:w-[54rem] md:-right-16 md:-top-20 md:h-[38rem] md:w-[58rem] lg:relative lg:right-auto lg:top-auto lg:col-start-2 lg:row-start-1 lg:h-[32rem] lg:w-full"
         >
-          <h1 className="text-primary mb-2 text-4xl font-extrabold leading-tight tracking-tight drop-shadow-sm sm:mb-4 sm:text-5xl lg:text-6xl">
+          <HeroIllustration />
+        </div>
+        <div className="relative z-10 w-full py-7 sm:py-10 lg:col-start-1 lg:row-start-1 lg:py-0">
+          <div className="pointer-events-none absolute -inset-x-4 -inset-y-5 -z-10 bg-gradient-to-r from-base-100 via-base-100/88 to-base-100/16 lg:hidden" />
+          <h1 className="mb-4 text-4xl font-semibold leading-[1.05] tracking-normal text-base-content sm:text-5xl lg:text-6xl">
             DaySynth
           </h1>
-          <h2 className="text-base-content/90 mb-3 text-lg font-bold tracking-wide sm:text-2xl">
-            <span className="text-primary mr-2 inline-block align-middle">
-              最適日がすぐに見つかる
+          <h2 className="mb-5 max-w-xl text-2xl font-semibold leading-relaxed text-base-content sm:text-3xl">
+            <span className="block">みんなの予定を重ねて、</span>
+            <span className="block">
+              <span className="text-primary">集まれる日だけ</span>を見つける。
             </span>
-            <span className="text-base-content/70 inline-block align-middle">日程調整アプリ</span>
           </h2>
-          <div className="mb-4 flex flex-wrap gap-2">
-            <span className="badge badge-primary badge-lg">ログイン不要</span>
-            <span className="badge badge-secondary badge-lg">無料</span>
-            <span className="badge badge-accent badge-lg">広告なし</span>
-          </div>
-          <p className="text-base-content/80 mb-4 max-w-xl text-base sm:text-lg">
-            バンド練習・会議・ゲームイベントなど、複数候補から最適な日程を
-            <mark className="bg-primary/10 text-primary rounded px-1 font-bold">簡単</mark>
-            に決定。
-            <br className="hidden sm:inline" />
-            スマホ・PCどちらでも、誰でも簡単に使えます。
-            <br className="hidden sm:inline" />
-            ログインは任意。必要に応じて履歴を同期できます。
+          <p className="mb-7 max-w-xl text-base leading-8 text-base-content/70 sm:text-lg">
+            候補を作ってリンクを送るだけ。参加者はログインなしで回答し、ヒートマップから最適な時間をそのまま確定できます。
           </p>
-          <div className="mb-4 flex min-h-[56px] flex-wrap gap-3 sm:gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div>
               <Link
                 href="/create"
-                className="btn btn-primary btn-lg focus-visible:ring-primary/40 w-full px-6 py-3 text-base shadow-lg focus-visible:ring-4 sm:w-auto"
+                className="btn btn-primary btn-lg focus-visible:ring-primary/40 w-full px-6 text-base shadow-sm focus-visible:ring-4 sm:w-auto"
               >
-                今すぐ無料で日程調整を始める
+                日程調整を作成
               </Link>
-            </motion.div>
+            </div>
             <Link
               href="#concept"
-              className="btn btn-outline btn-lg focus-visible:ring-primary/40 w-full px-6 py-3 text-base focus-visible:ring-4 sm:w-auto"
+              className="btn btn-ghost btn-lg focus-visible:ring-primary/30 w-full px-6 text-base focus-visible:ring-4 sm:w-auto"
             >
-              サービスの特徴を見る
+              使い方を見る
             </Link>
           </div>
-        </motion.div>
-        <motion.div
-          className="relative hidden h-48 w-full overflow-hidden sm:block sm:h-64 sm:w-1/2 md:h-[28rem]"
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1, transition: { duration: 0.8 } }}
-          viewport={{ once: true, amount: 0.5 }}
-        >
-          <Image
-            src={siteConfig.illustrations.hero}
-            alt="DaySynth ロゴとレイヤードイメージ"
-            fill
-            loading="eager"
-            sizes="(max-width: 768px) 100vw, 50vw"
-            priority={false}
-            className="max-h-full max-w-full object-contain drop-shadow-xl"
-          />
-          {/* レイヤー重ね合わせのイメージを追加 */}
-          <div className="bg-primary/20 absolute left-4 top-4 z-10 h-6 w-28 rotate-6 rounded-lg blur-sm" />
-          <div className="bg-secondary/20 absolute left-8 top-10 z-20 h-6 w-28 -rotate-3 rounded-lg blur-sm" />
-          <div className="bg-accent/20 absolute left-12 top-16 z-30 h-6 w-28 rotate-2 rounded-lg blur-sm" />
-        </motion.div>
+          <p className="mt-5 text-sm text-base-content/60">
+            無料・広告なし。ログインなしでも回答できます。
+          </p>
+        </div>
       </div>
     </section>
   );

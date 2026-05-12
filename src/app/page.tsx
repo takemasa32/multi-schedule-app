@@ -1,15 +1,13 @@
 import HeroSection from '@/components/landing/hero-section';
-import LandingPageClient from '@/components/landing/landing-page-client';
+import LandingPage from '@/components/landing/landing-page';
 import siteConfig from '@/lib/site-config';
 
 export const metadata = {
-  title: '日程調整 DaySynth｜最適日がすぐに見つかる・ログイン不要・無料',
-  description:
-    'バンド練習や会議、ゲームイベントなど複数候補から最適な日程をすぐに決定。ログイン不要・無料・広告なしのシンプルな日程調整アプリ。スマホ・PC両対応。',
+  title: siteConfig.share.homeTitle,
+  description: siteConfig.share.homeDescription,
   openGraph: {
-    title: '日程調整アプリ DaySynth｜最適日がすぐに見つかる・ログイン不要・無料',
-    description:
-      'バンド練習や会議、ゲームイベントなど複数候補から最適な日程をすぐに決定。ログイン不要・無料・広告なしのシンプルな日程調整アプリ。スマホ・PC両対応。',
+    title: siteConfig.share.homeTitle,
+    description: siteConfig.share.homeDescription,
     url: siteConfig.url,
     images: [
       {
@@ -24,13 +22,13 @@ export const metadata = {
 /**
  * ランディングページ
  * - サーバーコンポーネントとして実装
- * - metadataを設定し、クライアントコンポーネントのLandingPageClientを呼び出す
+ * - metadataを設定し、静的なLP本文はサーバーコンポーネントで描画する
  */
-export default function LandingPage() {
+export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <LandingPageClient />
+      <LandingPage />
     </>
   );
 }

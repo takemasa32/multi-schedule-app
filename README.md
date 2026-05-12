@@ -15,6 +15,7 @@
 - [体感最適化と整合性担保](docs/architecture/performance-latency-improvements.md)
 - [Motion導入方針（低影響・段階移行）](docs/architecture/motion-adoption-plan.md)
 - [AI駆動開発におけるデザイン品質ガイド](docs/architecture/ai-driven-design-guidelines.md)
+- [デザイン改善メモ（2026-05-11）](docs/architecture/design-refresh-2026-05-11.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ### イベント作成機能

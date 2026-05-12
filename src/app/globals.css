@@ -16,17 +16,49 @@ body {
 /* Card Component Styles */
 @layer components {
   .card {
-    @apply bg-base-100 border-base-300 overflow-hidden rounded-xl border transition-all;
-  }
-
-  .card:hover {
-    @apply shadow-md;
+    @apply bg-base-100 border-base-300 overflow-hidden rounded-lg border shadow-sm transition-all;
   }
 
   /* Button Styles */
   /* DaisyUIのボタンクラス(btn, btn-primary, btn-secondary)を活用する */
   .btn-custom {
     @apply font-medium transition-all duration-200;
+  }
+
+  .hero-illustration-dark {
+    -webkit-mask-image: radial-gradient(
+      ellipse 62% 50% at 70% 48%,
+      #000 0%,
+      #000 58%,
+      rgb(0 0 0 / 72%) 70%,
+      transparent 88%
+    );
+    mask-image: radial-gradient(
+      ellipse 62% 50% at 70% 48%,
+      #000 0%,
+      #000 58%,
+      rgb(0 0 0 / 72%) 70%,
+      transparent 88%
+    );
+  }
+
+  @media (min-width: 1024px) {
+    .hero-illustration-dark {
+      -webkit-mask-image: radial-gradient(
+        ellipse 70% 58% at 62% 48%,
+        #000 0%,
+        #000 54%,
+        rgb(0 0 0 / 68%) 68%,
+        transparent 86%
+      );
+      mask-image: radial-gradient(
+        ellipse 70% 58% at 62% 48%,
+        #000 0%,
+        #000 54%,
+        rgb(0 0 0 / 68%) 68%,
+        transparent 86%
+      );
+    }
   }
 }
 
