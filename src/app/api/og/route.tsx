@@ -1,334 +1,782 @@
 /* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import type { ReactNode } from 'react';
 import siteConfig from '../../../lib/site-config';
 
 export const runtime = 'edge';
 // タイトル等が変更できないため長期間キャッシュ
 export const revalidate = 2592000; // 30日
 
+const IMAGE_SIZE = {
+  width: 1200,
+  height: 630,
+} as const;
+
+const palette = {
+  ink: '#14213d',
+  muted: '#4f6078',
+  surface: '#f8fafc',
+  panel: '#ffffff',
+  border: 'rgba(79, 96, 120, 0.14)',
+  primary: '#4f46e5',
+  primarySoft: '#e0e7ff',
+  mint: '#14b8a6',
+  mintSoft: '#ccfbf1',
+  amber: '#f59e0b',
+} as const;
+
 /**
- * OG画像生成API（モダン・ブランド一貫デザイン）
- * type=home: トップページ用
- * type=event&title=...: イベント用
- * 日付は一切画像に含めない
+ * OG画像の共通レスポンスオプションを返す
+ *
+ * @returns {ConstructorParameters<typeof ImageResponse>[1]} 画像サイズとキャッシュヘッダー
  */
-export async function GET(req: NextRequest) {
-  const searchParams = (() => {
-    const url = new URL(req.url);
-    return url.searchParams;
-  })();
-  const type = searchParams.get('type');
-  // 本番はsiteConfig.url、ローカル開発時のみreqからhostを取得
-  let baseUrl = siteConfig.url.replace(/\/$/, '');
-  let logoUrl = siteConfig.ogImage;
-  if (process.env.NODE_ENV !== 'production' && req.headers.get('host')) {
-    const host = req.headers.get('host')!;
-    const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
-    baseUrl = `${isLocal ? 'http' : 'https'}://${host}`;
-  }
-  if (!/^https?:\/\//.test(logoUrl)) {
-    logoUrl = `${baseUrl}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
+function imageOptions(): ConstructorParameters<typeof ImageResponse>[1] {
+  return {
+    ...IMAGE_SIZE,
+    emoji: 'twemoji',
+    headers: {
+      'Cache-Control': 'public, immutable, max-age=31536000',
+    },
+  };
+}
+
+/**
+ * サービスURLから表示用ドメインを取得する
+ *
+ * @returns {string} プロトコルと末尾スラッシュを除いたドメイン
+ */
+function getServiceDomain() {
+  return siteConfig.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
+/**
+ * 環境に応じてOG画像内で参照する絶対URLの基点を返す
+ *
+ * @param {NextRequest} req リクエスト
+ * @returns {string} アセット参照用のベースURL
+ */
+function getBaseUrl(req: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return siteConfig.url.replace(/\/$/, '');
   }
 
-  // サービスドメイン（末尾スラッシュ除去、https://は除去）
-  const serviceDomain = siteConfig.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const host = req.headers.get('host');
+  if (!host) return siteConfig.url.replace(/\/$/, '');
 
-  // 共通スタイル
-  const baseStyle = {
-    width: '1200px',
-    height: '630px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative' as const,
-    overflow: 'hidden',
-    fontFamily: '"Noto Sans JP", "Inter", "Segoe UI", Arial, sans-serif',
+  const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+  return `${isLocal ? 'http' : 'https'}://${host}`;
+}
+
+/**
+ * public 配下のアセットパスをOG画像から読める絶対URLへ変換する
+ *
+ * @param {string} baseUrl ベースURL
+ * @param {string} path アセットパス
+ * @returns {string} 絶対URL
+ */
+function getAssetUrl(baseUrl: string, path: string) {
+  if (/^https?:\/\//.test(path)) return path;
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+/**
+ * 文字列を指定位置で分割する
+ *
+ * @param {string} text イベント名
+ * @param {number[]} breakpoints 分割位置
+ * @returns {string[]} 分割済みの行
+ */
+function splitAtBreakpoints(text: string, breakpoints: number[]) {
+  let start = 0;
+  const lines = breakpoints.map((point) => {
+    const line = text.slice(start, point).trim();
+    start = point;
+    return line;
+  });
+  lines.push(text.slice(start).trim());
+  return lines.filter(Boolean);
+}
+
+const preferredBreakWords = [
+  '飲み会',
+  'バンド練習',
+  '年度',
+  'プロジェクト',
+  'キックオフ',
+  '懇親会',
+  'ミーティング',
+  '打ち合わせ',
+  '候補日程調整',
+  '候補日調整',
+  '候補日',
+  '日程調整',
+  '日程',
+  '調整',
+];
+
+const compoundWords = [
+  '候補日程調整',
+  '候補日調整',
+  'バンド練習',
+  'プロジェクト',
+  'キックオフ',
+  '新作確認',
+  '確認イベント',
+  'ミーティング',
+  '打ち合わせ',
+  '懇親会',
+  '飲み会',
+  '日程調整',
+  '候補日',
+];
+
+const particles = ['の', 'と', 'で', 'へ', 'に', 'を', 'が'];
+
+/**
+ * カタカナかどうかを判定する
+ *
+ * @param {string} char 1文字
+ * @returns {boolean} カタカナの場合 true
+ */
+function isKatakana(char: string) {
+  return /^[\u30A0-\u30FFー]$/.test(char);
+}
+
+/**
+ * 英数字かどうかを判定する
+ *
+ * @param {string} char 1文字
+ * @returns {boolean} 英数字の場合 true
+ */
+function isAlphaNumeric(char: string) {
+  return /^[A-Za-z0-9]$/.test(char);
+}
+
+/**
+ * OG画像上の見た目幅に近い概算長を返す
+ *
+ * @param {string} text イベント名
+ * @returns {number} 日本語1文字を1とした概算幅
+ */
+function getVisualLength(text: string) {
+  return Array.from(text).reduce((sum, char) => {
+    if (isAlphaNumeric(char)) return sum + 0.58;
+    if (/^[\u{1F300}-\u{1FAFF}]$/u.test(char)) return sum + 1.15;
+    if (/^[\s・×!！?？.,、。:：|｜/／_-]$/.test(char)) return sum + 0.45;
+    return sum + 1;
+  }, 0);
+}
+
+/**
+ * OG画像で扱いやすいように空白と制御文字を整える
+ *
+ * @param {string} text イベント名
+ * @returns {string} OG画像に描画するタイトル
+ */
+function sanitizeTitleForOg(text: string) {
+  return text
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * 単語途中での不自然な改行かどうかを判定する
+ *
+ * @param {string} text イベント名
+ * @param {number} index 分割位置
+ * @returns {boolean} 避けるべき分割の場合 true
+ */
+function isAwkwardBreak(text: string, index: number) {
+  const before = text[index - 1] ?? '';
+  const after = text[index] ?? '';
+  const kinsokuAfter = ['ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ゃ', 'ゅ', 'ょ', 'っ', 'ー'];
+
+  if (kinsokuAfter.includes(after)) return true;
+  if (isKatakana(before) && isKatakana(after)) return true;
+  if (isAlphaNumeric(before) && isAlphaNumeric(after)) return true;
+
+  return false;
+}
+
+/**
+ * 日本語タイトルを語単位に分割する
+ *
+ * @param {string} text イベント名
+ * @returns {string[]} 語単位の配列
+ */
+function segmentJapaneseTitle(text: string) {
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    const segmenter = new Intl.Segmenter('ja', { granularity: 'word' });
+    return [...segmenter.segment(text)].map((segment) => segment.segment.trim()).filter(Boolean);
+  }
+
+  return Array.from(text);
+}
+
+/**
+ * Intl.Segmenter が細かく分けすぎる語をOG向けに結合する
+ *
+ * @param {string[]} tokens 語単位の配列
+ * @returns {string[]} 結合後の語単位配列
+ */
+function mergeCompoundTokens(tokens: string[]) {
+  const merged: string[] = [];
+  let index = 0;
+
+  while (index < tokens.length) {
+    let matchedWord = '';
+    let matchedEnd = index;
+
+    for (let end = Math.min(tokens.length, index + 5); end > index; end -= 1) {
+      const candidate = tokens.slice(index, end).join('');
+      if (compoundWords.includes(candidate)) {
+        matchedWord = candidate;
+        matchedEnd = end;
+        break;
+      }
+    }
+
+    if (matchedWord) {
+      merged.push(matchedWord);
+      index = matchedEnd;
+      continue;
+    }
+
+    merged.push(tokens[index]);
+    index += 1;
+  }
+
+  return merged;
+}
+
+/**
+ * 語境界として自然な位置にスコアを付ける
+ *
+ * @param {string[]} tokens 語単位の配列
+ * @param {number} tokenIndex 分割位置
+ * @returns {number} 分割位置の自然さ
+ */
+function scoreTokenBreak(tokens: string[], tokenIndex: number) {
+  const before = tokens[tokenIndex - 1] ?? '';
+  const after = tokens[tokenIndex] ?? '';
+  const beforeText = tokens.slice(0, tokenIndex).join('');
+  const afterText = tokens.slice(tokenIndex).join('');
+  const highPriorityBefore = ['、', '・', '/', '／', '|', '｜', ':', '：', '-'];
+
+  if (afterText === '日程調整' || afterText === '候補日調整') return 44;
+  if (particles.includes(before) && (after === '日程調整' || after === '候補日調整')) return 40;
+  if (particles.includes(before)) return 24;
+  if (preferredBreakWords.some((word) => beforeText.endsWith(word))) return 22;
+  if (highPriorityBefore.some((mark) => before.endsWith(mark))) return 18;
+  if (after === '日程調整' || after === '候補日調整') return 16;
+  return 0;
+}
+
+/**
+ * よくあるイベント名サフィックスを意味のまとまりで分割する
+ *
+ * @param {string} text イベント名
+ * @param {number} lineCount 目標行数
+ * @returns {string[] | null} 定型分割できる場合の行
+ */
+function splitCommonEventSuffix(text: string, lineCount: number) {
+  const suffixes = ['の日程調整', '候補日程調整', '候補日調整', '日程調整'];
+
+  for (const suffix of suffixes) {
+    if (!text.endsWith(suffix)) continue;
+
+    const prefix = text.slice(0, -suffix.length);
+    if (prefix.length < 2) continue;
+
+    if (suffix === 'の日程調整') {
+      const prefixLines =
+        lineCount <= 2 || prefix.length <= 16
+          ? [`${prefix}の`]
+          : splitTitleIntoLineCount(`${prefix}の`, lineCount - 1);
+      return [...prefixLines, '日程調整'];
+    }
+
+    const prefixLines =
+      lineCount <= 2 || prefix.length <= 16
+        ? [prefix]
+        : splitTitleIntoLineCount(prefix, lineCount - 1);
+    return [...prefixLines, suffix];
+  }
+
+  return null;
+}
+
+/**
+ * 指定行数で最も読みやすい改行位置を探索する
+ *
+ * @param {string} text イベント名
+ * @param {number} lineCount 行数
+ * @returns {string[]} 分割済みの行
+ */
+function splitTitleIntoLineCount(text: string, lineCount: number) {
+  if (lineCount <= 1) return [text];
+
+  const tokens = mergeCompoundTokens(segmentJapaneseTitle(text));
+  if (tokens.length <= lineCount) return tokens;
+
+  const length = text.length;
+  const idealLineLength = length / lineCount;
+  const maxComfortableLength =
+    lineCount >= 4 ? 12 : lineCount === 3 ? 14 : Math.ceil(idealLineLength) + 5;
+  let bestLines: string[] = [];
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  const search = (startToken: number, lines: string[], breakScore: number) => {
+    const remainingLines = lineCount - lines.length;
+
+    if (remainingLines === 1) {
+      const lastLine = tokens.slice(startToken).join('');
+      const candidate = [...lines, lastLine].filter(Boolean);
+      const lineLengths = candidate.map((line) => line.length);
+      const longest = Math.max(...lineLengths);
+      const shortest = Math.min(...lineLengths);
+      const balancePenalty = (longest - shortest) * 5;
+      const overflowPenalty = Math.max(0, longest - maxComfortableLength) * 16;
+      const orphanPenalty = lineLengths.some((length) => length <= 2) ? 120 : 0;
+      const score = breakScore - balancePenalty - overflowPenalty - orphanPenalty - longest;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestLines = candidate;
+      }
+      return;
+    }
+
+    const remainingTokenCount = tokens.length - startToken;
+    const maxEndToken = tokens.length - remainingLines + 1;
+    const minEndToken = startToken + 1;
+    const remainingTextLength = tokens.slice(startToken).join('').length;
+    const ideal = remainingTextLength / remainingLines;
+
+    if (remainingTokenCount < remainingLines) return;
+
+    for (let endToken = minEndToken; endToken <= maxEndToken; endToken += 1) {
+      const line = tokens.slice(startToken, endToken).join('');
+      if (!line) continue;
+
+      const nextLineMinLength = tokens[endToken]?.length ?? 0;
+      const lineLength = line.length;
+      const distancePenalty = Math.abs(lineLength - ideal) * 2.8;
+      const localBreakScore = scoreTokenBreak(tokens, endToken);
+      const overflowPenalty = Math.max(0, lineLength - maxComfortableLength) * 10;
+      const shortPenalty = lineLength <= 2 || nextLineMinLength <= 1 ? 80 : 0;
+      search(
+        endToken,
+        [...lines, line],
+        breakScore + localBreakScore - distancePenalty - overflowPenalty - shortPenalty,
+      );
+    }
   };
 
-  // グラデーション背景
-  const gradientBg = {
-    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #818cf8 100%)',
+  search(0, [], 0);
+
+  if (bestLines.length === lineCount) return bestLines;
+
+  const minLineLength = Math.max(3, Math.floor(length / lineCount) - 3);
+  let bestBreakpoints: number[] = [];
+  const maxLineLength = Math.ceil(length / lineCount) + 5;
+  let fallbackBestScore = Number.NEGATIVE_INFINITY;
+
+  const fallbackSearch = (start: number, breakpoints: number[]) => {
+    const remainingLines = lineCount - breakpoints.length;
+
+    if (remainingLines === 1) {
+      const candidate = splitAtBreakpoints(text, breakpoints);
+      const lineLengths = candidate.map((line) => line.length);
+      const longest = Math.max(...lineLengths);
+      const shortest = Math.min(...lineLengths);
+      const balancePenalty = (longest - shortest) * 5;
+      const awkwardPenalty = breakpoints.some((point) => isAwkwardBreak(text, point)) ? 120 : 0;
+      const score = -balancePenalty - awkwardPenalty - longest;
+
+      if (score > fallbackBestScore) {
+        fallbackBestScore = score;
+        bestBreakpoints = breakpoints;
+      }
+      return;
+    }
+
+    const remainingLength = length - start;
+    const ideal = Math.round(remainingLength / remainingLines);
+    const from = Math.max(start + minLineLength, start + ideal - 6);
+    const to = Math.min(length - minLineLength * (remainingLines - 1), start + ideal + 6);
+
+    for (let point = from; point <= to; point += 1) {
+      const lineLength = point - start;
+      if (lineLength < minLineLength || lineLength > maxLineLength) continue;
+      fallbackSearch(point, [...breakpoints, point]);
+    }
   };
 
-  // 半透明の円形アクセント
-  const circleAccent = (
+  fallbackSearch(0, []);
+  return splitAtBreakpoints(text, bestBreakpoints);
+}
+
+/**
+ * 長すぎるイベント名をOG画像内で読める長さに丸める
+ *
+ * @param {string} text イベント名
+ * @param {number} maxLength 最大文字数
+ * @returns {{ text: string; truncated: boolean }} 丸めた文字列と省略有無
+ */
+function truncateTitleForOg(text: string, maxLength: number) {
+  if (text.length <= maxLength) return { text, truncated: false };
+  return { text: `${text.slice(0, maxLength - 1)}…`, truncated: true };
+}
+
+/**
+ * イベント名をOG画像用に改行し、文字サイズを決める
+ *
+ * @param {string} rawTitle イベント名
+ * @returns {{ lines: string[]; fontSize: number; lineHeight: number }} 描画用の行と組版値
+ */
+function formatEventTitle(rawTitle: string) {
+  const sanitizedTitle = sanitizeTitleForOg(rawTitle) || 'イベント';
+  const { text, truncated } = truncateTitleForOg(sanitizedTitle, 50);
+  const visualLength = getVisualLength(text);
+  let lineCount = visualLength <= 8.5 ? 1 : visualLength <= 22 ? 2 : visualLength <= 36 ? 3 : 4;
+
+  if (!truncated && text.endsWith('の日程調整')) {
+    const prefixLength = text.slice(0, -'の日程調整'.length).length;
+    if (prefixLength > 16) lineCount = Math.max(lineCount, 3);
+    if (prefixLength > 28) lineCount = Math.max(lineCount, 4);
+  }
+
+  if (
+    !truncated &&
+    (text.endsWith('日程調整') || text.endsWith('候補日調整') || text.endsWith('候補日程調整'))
+  ) {
+    const suffixLength = text.endsWith('候補日程調整')
+      ? '候補日程調整'.length
+      : text.endsWith('候補日調整')
+        ? '候補日調整'.length
+        : '日程調整'.length;
+    const prefixLength = text.slice(0, -suffixLength).length;
+    if (prefixLength > 18) lineCount = Math.max(lineCount, 3);
+    if (prefixLength > 30) lineCount = Math.max(lineCount, 4);
+  }
+
+  const fixedSuffixLines = !truncated ? splitCommonEventSuffix(text, lineCount) : null;
+  const lines = fixedSuffixLines ?? splitTitleIntoLineCount(text, lineCount);
+  const longestLineLength = Math.max(...lines.map((line) => line.length));
+
+  if (lines.length === 1) {
+    const visualLineLength = getVisualLength(lines[0] ?? '');
+    const fontSize = visualLineLength <= 6 ? 98 : 88;
+    return { lines, fontSize, lineHeight: 1.04 };
+  }
+  if (lines.length === 2) {
+    return { lines, fontSize: longestLineLength <= 13 ? 78 : 74, lineHeight: 1.08 };
+  }
+  if (lines.length === 3) {
+    return { lines, fontSize: truncated ? 56 : 58, lineHeight: 1.1 };
+  }
+  return { lines, fontSize: 44, lineHeight: 1.08 };
+}
+
+function LogoBadge({ logoUrl, size = 108 }: { logoUrl: string; size?: number }) {
+  return (
     <div
       style={{
-        position: 'absolute',
-        top: '-120px',
-        right: '-120px',
-        width: '340px',
-        height: '340px',
-        borderRadius: '50%',
-        background: 'rgba(255,255,255,0.10)',
-        filter: 'blur(2px)',
+        display: 'flex',
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 28,
+        background: palette.panel,
+        border: `1px solid ${palette.border}`,
+        boxShadow: '0 24px 60px rgba(20, 33, 61, 0.14)',
       }}
-    />
+    >
+      <img
+        src={logoUrl}
+        alt="DaySynthロゴ"
+        width={Math.round(size * 0.72)}
+        height={Math.round(size * 0.72)}
+        style={{ borderRadius: 20 }}
+      />
+    </div>
   );
-  if (type === 'home') {
-    return new ImageResponse(
-      (
-        <div style={{ ...baseStyle, ...gradientBg }}>
-          {circleAccent}
-          <img
-            src={logoUrl}
-            width={128}
-            height={128}
-            alt="DaySynthロゴ"
-            style={{
-              boxShadow: '0 8px 32px 0 rgba(0,0,0,0.18)',
-              borderRadius: 32,
-              marginBottom: 40,
-              background: '#fff',
-              padding: 2,
-            }}
-          />
-          <h1
-            style={{
-              fontSize: 72,
-              fontWeight: 800,
-              color: '#fff',
-              letterSpacing: '-2px',
-              margin: 0,
-              textShadow: '0 4px 24px rgba(0,0,0,0.18)',
-            }}
-          >
-            {siteConfig.name.full}
-          </h1>
-          <p
-            style={{
-              fontSize: 36,
-              color: 'rgba(255,255,255,0.92)',
-              marginTop: 28,
-              fontWeight: 500,
-              textShadow: '0 2px 8px rgba(0,0,0,0.10)',
-            }}
-          >
-            {siteConfig.name.tagline}
-          </p>
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 36,
-              right: 48,
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: 24,
-              fontWeight: 400,
-              letterSpacing: '0.05em',
-            }}
-          >
-            {serviceDomain}
-          </div>
-        </div>
-      ),
-      {
-        width: 1200,
-        height: 630,
-        headers: {
-          'Cache-Control': 'public, immutable, max-age=31536000',
+}
+
+function LayerMark({
+  logoUrl,
+  scale = 1,
+  offsetX = 0,
+  offsetY = 0,
+}: {
+  logoUrl: string;
+  scale?: number;
+  offsetX?: number;
+  offsetY?: number;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'relative',
+        width: 340 * scale,
+        height: 300 * scale,
+        transform: `translate(${offsetX}px, ${offsetY}px)`,
+      }}
+    >
+      {[
+        {
+          top: 28 * scale,
+          left: 52 * scale,
+          width: 210 * scale,
+          height: 210 * scale,
+          background: palette.primarySoft,
+          opacity: 0.95,
         },
-      },
-    );
-  }
+        {
+          top: 76 * scale,
+          left: 112 * scale,
+          width: 210 * scale,
+          height: 210 * scale,
+          background: palette.mintSoft,
+          opacity: 0.86,
+        },
+        {
+          top: 132 * scale,
+          left: 18 * scale,
+          width: 210 * scale,
+          height: 140 * scale,
+          background: 'rgba(245, 158, 11, 0.22)',
+          opacity: 0.9,
+        },
+      ].map((shape, index) => (
+        <div
+          key={index}
+          style={{
+            position: 'absolute',
+            borderRadius: 34 * scale,
+            boxShadow: '0 26px 70px rgba(20, 33, 61, 0.12)',
+            ...shape,
+          }}
+        />
+      ))}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: 112 * scale,
+          left: 116 * scale,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <LogoBadge logoUrl={logoUrl} size={118 * scale} />
+      </div>
+    </div>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        width: `${IMAGE_SIZE.width}px`,
+        height: `${IMAGE_SIZE.height}px`,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '70px 84px 54px 92px',
+        fontFamily: '"Noto Sans JP", "Inter", "Segoe UI", Arial, sans-serif',
+        background: palette.surface,
+        color: palette.ink,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          background:
+            'linear-gradient(120deg, rgba(248,250,252,1) 0%, rgba(248,250,252,0.96) 58%, rgba(224,231,255,0.76) 100%)',
+        }}
+      />
+      {children}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          color: palette.muted,
+          fontSize: 22,
+          fontWeight: 800,
+        }}
+      >
+        {getServiceDomain()}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * OG画像生成API
+ *
+ * @param {NextRequest} req リクエスト
+ * @returns {Promise<ImageResponse> | ImageResponse} 生成したOG画像レスポンス
+ */
+export function GET(req: NextRequest) {
+  const searchParams = new URL(req.url).searchParams;
+  const type = searchParams.get('type');
+  const logoUrl = getAssetUrl(getBaseUrl(req), siteConfig.ogImage);
 
   if (type === 'event') {
     const title = searchParams.get('title') || 'イベント';
-    /**
-     * タイトルの長さに応じてフォントサイズと行数を制御し、
-     * スマホでの縮小表示でも視認性が担保されるようにする。
-     */
-    const calcTitleTypography = (text: string) => {
-      const length = text.length;
-      if (length <= 12) {
-        return { fontSize: 88, lineClamp: 2, lineHeight: 1.05 } as const;
-      }
-      if (length <= 24) {
-        return { fontSize: 76, lineClamp: 2, lineHeight: 1.1 } as const;
-      }
-      if (length <= 36) {
-        return { fontSize: 64, lineClamp: 3, lineHeight: 1.15 } as const;
-      }
-      if (length <= 60) {
-        return { fontSize: 52, lineClamp: 3, lineHeight: 1.2 } as const;
-      }
-      return { fontSize: 44, lineClamp: 4, lineHeight: 1.25 } as const;
-    };
-    const { fontSize, lineClamp, lineHeight } = calcTitleTypography(title);
-    // サブテキスト（キャッチコピーや説明）
-    const subText = siteConfig.name.tagline || 'みんなの予定を簡単調整';
-    // サービス特徴（短縮表現にして画面密度を下げる）
-    const features = ['ログイン不要', '無料', 'スマホ対応', 'カレンダー連携', 'シンプルUI'];
+    const { lines, fontSize, lineHeight } = formatEventTitle(title);
+
     return new ImageResponse(
       (
-        <div style={{ ...baseStyle, ...gradientBg }}>
-          {/* 上部アクセントバー */}
+        <Shell>
           <div
             style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: 12,
-              background: '#6366f1',
-            }}
-          />
-          {circleAccent}
-          <img
-            src={logoUrl}
-            width={96}
-            height={96}
-            alt="DaySynthロゴ"
-            style={{
-              boxShadow: '0 4px 16px 0 rgba(0,0,0,0.12)',
-              borderRadius: 24,
-              marginBottom: 18,
-              background: '#fff',
-              padding: 2,
-            }}
-          />
-          {/* サブタイトル */}
-          <div
-            style={{
-              fontSize: 32,
-              color: '#e0f2ff',
-              fontWeight: 600,
-              marginBottom: 16,
-              letterSpacing: '0.05em',
-              textShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            }}
-          >
-            {subText}
-          </div>
-          <h2
-            style={{
-              fontSize,
-              color: '#fff',
-              fontWeight: 800,
-              margin: 0,
-              textAlign: 'center',
-              lineHeight,
-              textShadow: '0 2px 12px rgba(0,0,0,0.16)',
-              maxWidth: 900,
-              marginLeft: 'auto',
-              marginRight: 'auto',
-              padding: '0 32px',
-              wordBreak: 'break-word',
-              overflowWrap: 'break-word',
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: lineClamp,
-              WebkitBoxOrient: 'vertical',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {title}
-          </h2>
-          {/* サービス特徴リスト */}
-          <div
-            style={{
-              marginTop: 32,
               display: 'flex',
-              gap: 16,
-              flexWrap: 'wrap',
+              position: 'relative',
+              flexDirection: 'column',
               justifyContent: 'center',
+              zIndex: 2,
+              width: 840,
+              height: 500,
             }}
           >
-            {features.map((f, i) => (
-              <span
-                key={i}
-                style={{
-                  background: 'rgba(255,255,255,0.18)',
-                  color: '#fff',
-                  fontSize: 24,
-                  fontWeight: 700,
-                  borderRadius: 18,
-                  padding: '10px 26px',
-                  letterSpacing: '0.04em',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
-                  border: '1.5px solid rgba(255,255,255,0.22)',
-                }}
-              >
-                {f}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                color: palette.ink,
+              }}
+            >
+              <span style={{ color: palette.primary, fontSize: 34, fontWeight: 900 }}>
+                {siteConfig.name.full}
               </span>
-            ))}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: lines.length === 1 ? 0 : 6,
+                color: palette.ink,
+                fontSize,
+                fontWeight: 900,
+                lineHeight,
+                margin: '30px 0 24px',
+                wordBreak: 'break-word',
+              }}
+            >
+              {lines.map((line, index) => (
+                <span key={`${line}-${index}`} style={{ display: 'block', whiteSpace: 'nowrap' }}>
+                  {line}
+                </span>
+              ))}
+            </div>
+            <p
+              style={{
+                color: palette.muted,
+                fontSize: 30,
+                fontWeight: 700,
+                lineHeight: 1.36,
+                margin: 0,
+              }}
+            >
+              すぐに回答。すぐに調整。
+            </p>
           </div>
-          {/* サービス名 */}
           <div
             style={{
-              marginTop: 40,
-              fontSize: 36,
-              color: 'rgba(255,255,255,0.95)',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-              textShadow: '0 3px 12px rgba(0,0,0,0.14)',
-            }}
-          >
-            {siteConfig.name.full}
-          </div>
-          {/* フッター */}
-          <div
-            style={{
+              display: 'flex',
               position: 'absolute',
-              bottom: 36,
-              right: 48,
-              color: 'rgba(255,255,255,0.78)',
-              fontSize: 24,
-              fontWeight: 500,
-              letterSpacing: '0.06em',
+              zIndex: 1,
+              right: 38,
+              top: 150,
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              opacity: 0.68,
             }}
           >
-            {serviceDomain}
+            <LayerMark logoUrl={logoUrl} scale={0.82} />
           </div>
-        </div>
+        </Shell>
       ),
-      {
-        width: 1200,
-        height: 630,
-        headers: {
-          'Cache-Control': 'public, immutable, max-age=31536000',
-        },
-      },
+      imageOptions(),
     );
   }
 
-  // デフォルト画像
   return new ImageResponse(
     (
-      <div style={{ ...baseStyle, ...gradientBg }}>
-        {circleAccent}
-        <span
-          style={{
-            fontSize: 48,
-            color: '#fff',
-            fontWeight: 700,
-            textShadow: '0 2px 8px rgba(0,0,0,0.10)',
-          }}
-        >
-          {siteConfig.name.full}
-        </span>
+      <Shell>
         <div
           style={{
-            position: 'absolute',
-            bottom: 36,
-            right: 48,
-            color: 'rgba(255,255,255,0.7)',
-            fontSize: 22,
-            fontWeight: 400,
-            letterSpacing: '0.05em',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            gap: 48,
           }}
         >
-          {serviceDomain}
+          <div style={{ display: 'flex', flexDirection: 'column', width: 760 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: 34,
+              }}
+            >
+              <span
+                style={{
+                  color: palette.primary,
+                  fontSize: 116,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                }}
+              >
+                {siteConfig.name.full}
+              </span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                color: palette.ink,
+                fontSize: 74,
+                fontWeight: 900,
+                lineHeight: 1.07,
+                margin: 0,
+              }}
+            >
+              <span>みんなの予定が、</span>
+              <span>すぐ決まる。</span>
+            </div>
+            <p
+              style={{
+                color: palette.muted,
+                fontSize: 31,
+                fontWeight: 700,
+                lineHeight: 1.4,
+                margin: '26px 0 0',
+              }}
+            >
+              候補を作って、リンクを送るだけ。
+            </p>
+          </div>
+          <LayerMark logoUrl={logoUrl} scale={0.86} offsetX={18} offsetY={28} />
         </div>
-      </div>
+      </Shell>
     ),
-    {
-      width: 1200,
-      height: 630,
-      headers: {
-        'Cache-Control': 'public, immutable, max-age=31536000',
-      },
-    },
+    imageOptions(),
   );
 }

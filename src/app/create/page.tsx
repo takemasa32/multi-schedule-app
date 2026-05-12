@@ -26,22 +26,22 @@ export const metadata: Metadata = {
 export default function CreateEventPage() {
   return (
     <>
-      <div className="bg-base-200 mb-6 py-4">
+      <div className="mb-6 border-b border-base-300 bg-base-200/50 py-4">
         <div className="container mx-auto max-w-5xl px-4">
           <Breadcrumbs items={[{ label: 'イベント作成' }]} />
         </div>
       </div>
 
       <div className="container mx-auto max-w-3xl px-4 pb-12">
-        <div className="fade-in mb-8 text-center">
-          <h1 className="mb-3 text-4xl font-bold">新規イベント作成</h1>
-          <p className="text-base-content/70 mx-auto max-w-xl">
-            候補日程を複数選択して、参加者に共有する{siteConfig.name.full}
-            を作成します。 作成後に共有用リンクが発行されます。
+        <div className="fade-in mb-8">
+          <h1 className="mb-3 text-3xl font-semibold leading-tight sm:text-4xl">新規イベント作成</h1>
+          <p className="max-w-2xl leading-7 text-base-content/70">
+            候補日程を設定すると、参加者へ送れる共有リンクが発行されます。
+            まずはイベント名から入力してください。
           </p>
         </div>
 
-        <Card className="fade-in animate-delay-100">
+        <Card className="fade-in animate-delay-100 border-base-300">
           <EventForm />
         </Card>
       </div>

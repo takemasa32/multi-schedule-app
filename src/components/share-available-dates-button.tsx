@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import ShareEventButton from './share-event-button';
 import { buildAvailableDatesMessage } from '@/lib/share-utils';
+import siteConfig from '@/lib/site-config';
 import type {
   EventDate,
   Participant,
@@ -63,7 +64,8 @@ export default function ShareAvailableDatesButton({
       </div>
       <ShareEventButton
         url={shareUrl}
-        text={`${eventTitle}\n${shareText}`}
+        title={`${eventTitle}｜${siteConfig.share.availableDatesTitle}`}
+        text={`${eventTitle}\n${siteConfig.share.availableDatesIntro}\n${shareText}`}
         label="共通日程を共有"
         ariaLabel="共通日程を共有"
         className="btn-sm mx-auto mt-2 md:ml-0"

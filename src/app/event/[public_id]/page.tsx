@@ -127,7 +127,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
 
   return (
     <>
-      <div className="bg-base-200 mb-6 py-4">
+      <div className="mb-6 border-b border-base-300 bg-base-200/50 py-4">
         <div className="container mx-auto max-w-5xl px-4">
           <Breadcrumbs items={[{ label: 'イベント詳細' }]} />
         </div>
