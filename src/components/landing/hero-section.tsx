@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import siteConfig from '@/lib/site-config';
+import HeroIllustration from '@/components/landing/hero-illustration';
 
 export default function HeroSection() {
   return (
@@ -10,27 +9,7 @@ export default function HeroSection() {
         <div
           className="pointer-events-none absolute -right-28 -top-14 z-0 h-[28rem] w-[40rem] sm:-right-24 sm:-top-20 sm:h-[36rem] sm:w-[54rem] md:-right-16 md:-top-20 md:h-[38rem] md:w-[58rem] lg:relative lg:right-auto lg:top-auto lg:col-start-2 lg:row-start-1 lg:h-[32rem] lg:w-full"
         >
-          <div className="absolute inset-0 opacity-[.56] sm:opacity-[.6] lg:opacity-100 [[data-theme=dark]_&]:hidden">
-            <Image
-              src={siteConfig.illustrations.hero}
-              alt="候補日程が重なり最適な時間帯へ集約される概念図"
-              fill
-              loading="eager"
-              sizes="(max-width: 1024px) 70vw, 50vw"
-              priority
-              className="object-contain object-right"
-            />
-          </div>
-          <div className="hero-illustration-dark absolute inset-0 hidden opacity-[.42] sm:opacity-[.46] lg:opacity-100 [[data-theme=dark]_&]:block">
-            <Image
-              src={siteConfig.illustrations.heroDark}
-              alt="候補日程が重なり最適な時間帯へ集約される概念図"
-              fill
-              loading="lazy"
-              sizes="(max-width: 1024px) 70vw, 50vw"
-              className="object-contain object-right"
-            />
-          </div>
+          <HeroIllustration />
         </div>
         <div className="relative z-10 w-full py-7 sm:py-10 lg:col-start-1 lg:row-start-1 lg:py-0">
           <div className="pointer-events-none absolute -inset-x-4 -inset-y-5 -z-10 bg-gradient-to-r from-base-100 via-base-100/88 to-base-100/16 lg:hidden" />

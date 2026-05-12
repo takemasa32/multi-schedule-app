@@ -19,10 +19,6 @@ body {
     @apply bg-base-100 border-base-300 overflow-hidden rounded-lg border shadow-sm transition-all;
   }
 
-  .card:hover {
-    @apply shadow-sm;
-  }
-
   /* Button Styles */
   /* DaisyUIのボタンクラス(btn, btn-primary, btn-secondary)を活用する */
   .btn-custom {

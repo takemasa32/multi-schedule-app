@@ -20,11 +20,6 @@ import {
 } from 'lucide-react';
 import Card from '@/components/layout/Card';
 import LandingActivitySection from '@/components/landing/landing-activity-section';
-import {
-  AnimatedDetails,
-  AnimatedItem,
-  AnimatedListItem,
-} from '@/components/landing/landing-motion';
 
 type IconItem = {
   icon: LucideIcon;
@@ -40,6 +35,11 @@ type TextItem = {
 type FaqItem = {
   q: string;
   a: string;
+};
+
+type StaticWrapperProps = {
+  children: ReactNode;
+  className?: string;
 };
 
 const values: IconItem[] = [
@@ -150,6 +150,18 @@ const faqs: FaqItem[] = [
   },
 ];
 
+function StaticItem({ children, className }: StaticWrapperProps) {
+  return <div className={className}>{children}</div>;
+}
+
+function StaticListItem({ children, className }: StaticWrapperProps) {
+  return <li className={className}>{children}</li>;
+}
+
+function StaticDetails({ children, className }: StaticWrapperProps) {
+  return <details className={className}>{children}</details>;
+}
+
 function SectionIntro({
   title,
   description,
@@ -160,26 +172,26 @@ function SectionIntro({
   className?: string;
 }) {
   return (
-    <AnimatedItem className={className}>
+    <StaticItem className={className}>
       <h2 className="text-base-content text-3xl font-semibold leading-tight sm:text-4xl">
         {title}
       </h2>
       <p className="text-base-content/70 mt-5 leading-8">{description}</p>
-    </AnimatedItem>
+    </StaticItem>
   );
 }
 
-function IconCard({ item, index }: { item: IconItem; index: number }) {
+function IconCard({ item }: { item: IconItem }) {
   const Icon = item.icon;
 
   return (
-    <AnimatedItem index={index + 1}>
+    <StaticItem>
       <Card className="h-full">
         <Icon className="text-primary mb-5 h-7 w-7" aria-hidden />
         <h3 className="text-lg font-semibold">{item.title}</h3>
         <p className="text-base-content/70 mt-3 text-sm leading-7">{item.desc}</p>
       </Card>
-    </AnimatedItem>
+    </StaticItem>
   );
 }
 
@@ -197,14 +209,11 @@ function CompactBenefit({ item }: { item: IconItem }) {
   );
 }
 
-function LoginBenefitRow({ item, index }: { item: IconItem; index: number }) {
+function LoginBenefitRow({ item }: { item: IconItem }) {
   const Icon = item.icon;
 
   return (
-    <AnimatedItem
-      index={index + 1}
-      className="border-base-300 flex gap-4 border-b p-5 last:border-b-0 sm:p-6"
-    >
+    <StaticItem className="border-base-300 flex gap-4 border-b p-5 last:border-b-0 sm:p-6">
       <div className="bg-primary/10 text-primary mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
         <Icon className="h-5 w-5" aria-hidden />
       </div>
@@ -212,21 +221,21 @@ function LoginBenefitRow({ item, index }: { item: IconItem; index: number }) {
         <h3 className="text-base-content font-semibold">{item.title}</h3>
         <p className="text-base-content/70 mt-2 text-sm leading-7">{item.desc}</p>
       </div>
-    </AnimatedItem>
+    </StaticItem>
   );
 }
 
-function UseCaseCard({ item, index }: { item: IconItem; index: number }) {
+function UseCaseCard({ item }: { item: IconItem }) {
   const Icon = item.icon;
 
   return (
-    <AnimatedItem index={index + 1}>
+    <StaticItem>
       <div className="border-base-300 h-full rounded-lg border p-5">
         <Icon className="text-primary h-6 w-6" aria-hidden />
         <h3 className="mt-4 text-lg font-semibold">{item.title}</h3>
         <p className="text-base-content/70 mt-3 text-sm leading-7">{item.desc}</p>
       </div>
-    </AnimatedItem>
+    </StaticItem>
   );
 }
 
@@ -234,9 +243,8 @@ function StepCard({ step, index }: { step: IconItem; index: number }) {
   const Icon = step.icon;
 
   return (
-    <AnimatedListItem
+    <StaticListItem
       className="border-base-300 bg-base-100 relative rounded-lg border p-5 shadow-sm md:min-h-52 md:p-6"
-      index={index + 1}
     >
       <div className="flex items-start justify-between gap-4">
         <span className="text-primary/25 text-5xl font-semibold leading-none md:text-6xl">
@@ -250,7 +258,7 @@ function StepCard({ step, index }: { step: IconItem; index: number }) {
         <h3 className="text-xl font-semibold">{step.title}</h3>
         <p className="text-base-content/70 mt-3 text-sm leading-7">{step.desc}</p>
       </div>
-    </AnimatedListItem>
+    </StaticListItem>
   );
 }
 
@@ -271,13 +279,13 @@ export default function LandingPage() {
               description="Synth には「合成」と「重ね合わせ」の意味を込めています。参加者それぞれの予定を重ねて全体像を可視化し、集まれる候補を自然に見つけることができるこのサービスを端的に表しました。"
             />
             <div className="grid gap-4 md:grid-cols-3">
-              {conceptItems.map((item, index) => (
-                <AnimatedItem key={item.title} index={index + 1}>
+              {conceptItems.map((item) => (
+                <StaticItem key={item.title}>
                   <Card className="h-full">
                     <h3 className="text-primary text-lg font-semibold">{item.title}</h3>
                     <p className="text-base-content/70 mt-3 text-sm leading-7">{item.desc}</p>
                   </Card>
-                </AnimatedItem>
+                </StaticItem>
               ))}
             </div>
           </div>
@@ -296,8 +304,8 @@ export default function LandingPage() {
             description="候補作成・回答・集計・確定までをひとつの流れにまとめています。説明より先に操作できること、でも迷った時には必要な情報が近くにあることを大切にしています。"
           />
           <div className="grid gap-4 md:grid-cols-3">
-            {values.map((item, index) => (
-              <IconCard key={item.title} item={item} index={index} />
+            {values.map((item) => (
+              <IconCard key={item.title} item={item} />
             ))}
           </div>
         </div>
@@ -306,7 +314,7 @@ export default function LandingPage() {
       <section className="bg-base-200/50 px-4 py-16">
         <div className="container mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-center">
-            <AnimatedItem>
+            <StaticItem>
               <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">
                 <span className="inline-block">3つの操作で、</span>
                 <span className="inline-block">日程が決まる。</span>
@@ -317,7 +325,7 @@ export default function LandingPage() {
               <Link href="/create" className="btn btn-primary mt-8 shadow-sm">
                 イベントを作成
               </Link>
-            </AnimatedItem>
+            </StaticItem>
             <ol className="relative grid gap-4 md:grid-cols-3 md:gap-5 md:before:bg-primary/20 md:before:absolute md:before:left-6 md:before:right-6 md:before:top-12 md:before:h-px md:before:content-['']">
               {steps.map((step, index) => (
                 <StepCard key={step.title} step={step} index={index} />
@@ -329,18 +337,18 @@ export default function LandingPage() {
 
       <section className="bg-base-100 px-4 py-16">
         <div className="container mx-auto max-w-5xl">
-          <AnimatedItem className="grid gap-4 md:grid-cols-3">
+          <StaticItem className="grid gap-4 md:grid-cols-3">
             {compactBenefits.map((item) => (
               <CompactBenefit key={item.title} item={item} />
             ))}
-          </AnimatedItem>
+          </StaticItem>
         </div>
       </section>
 
       <section className="border-base-300 bg-base-200/40 border-y px-4 py-16">
         <div className="container mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-center">
-            <AnimatedItem>
+            <StaticItem>
               <div className="bg-primary/10 text-primary mb-4 flex h-10 w-10 items-center justify-center rounded-lg">
                 <ShieldCheck className="h-5 w-5" aria-hidden />
               </div>
@@ -354,11 +362,11 @@ export default function LandingPage() {
               <Link href="/auth/signin" className="btn btn-outline mt-8">
                 ログインして使う
               </Link>
-            </AnimatedItem>
+            </StaticItem>
 
             <div className="border-base-300 bg-base-100 rounded-lg border">
-              {loginBenefits.map((item, index) => (
-                <LoginBenefitRow key={item.title} item={item} index={index} />
+              {loginBenefits.map((item) => (
+                <LoginBenefitRow key={item.title} item={item} />
               ))}
             </div>
           </div>
@@ -372,8 +380,8 @@ export default function LandingPage() {
             description="予定調整は、相手に負担をかけないことが大切です。どんな場面でも簡単に、楽に回答できる流れで、集まれる時間を見つけやすくしています。"
           />
           <div className="grid gap-4 md:grid-cols-3">
-            {useCases.map((item, index) => (
-              <UseCaseCard key={item.title} item={item} index={index} />
+            {useCases.map((item) => (
+              <UseCaseCard key={item.title} item={item} />
             ))}
           </div>
         </div>
@@ -383,21 +391,21 @@ export default function LandingPage() {
 
       <section className="bg-base-100 px-4 py-16">
         <div className="container mx-auto mb-16 max-w-4xl">
-          <AnimatedItem>
+          <StaticItem>
             <h2 className="text-3xl font-semibold sm:text-4xl">よくある質問</h2>
-          </AnimatedItem>
+          </StaticItem>
           <div className="divide-base-300 border-base-300 mt-8 divide-y border-y">
-            {faqs.map((faq, index) => (
-              <AnimatedDetails key={faq.q} className="group py-5" index={index + 1}>
+            {faqs.map((faq) => (
+              <StaticDetails key={faq.q} className="group py-5">
                 <summary className="cursor-pointer list-none text-lg font-semibold">
                   {faq.q}
                 </summary>
                 <p className="text-base-content/70 mt-3 leading-7">{faq.a}</p>
-              </AnimatedDetails>
+              </StaticDetails>
             ))}
           </div>
         </div>
-        <AnimatedItem className="container mx-auto max-w-3xl text-center">
+        <StaticItem className="container mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-semibold sm:text-4xl">次の予定調整は、これで決まり。</h2>
           <p className="text-base-content/70 mx-auto mt-5 max-w-2xl leading-8">
             候補を作るところから確定後の共有まで、すぐ終わる。簡単に。
@@ -405,7 +413,7 @@ export default function LandingPage() {
           <Link href="/create" className="btn btn-primary btn-lg mt-8 shadow-sm">
             無料でイベントを作成
           </Link>
-        </AnimatedItem>
+        </StaticItem>
       </section>
     </>
   );

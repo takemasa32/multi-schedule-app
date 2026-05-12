@@ -5,14 +5,13 @@ import Card from '@/components/layout/Card';
 import EventHistory from '@/components/event-history';
 import FavoriteEvents from '@/components/favorite-events';
 import { FavoriteEventsProvider } from '@/components/favorite-events-context';
-import { AnimatedItem } from '@/components/landing/landing-motion';
 
 export default function LandingActivitySection() {
   return (
     <section className="border-base-300 bg-base-200/40 border-y px-4 py-14">
       <div className="container mx-auto max-w-4xl">
         <FavoriteEventsProvider>
-          <AnimatedItem className="grid gap-5 lg:grid-cols-2 lg:items-start">
+          <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
             <Card>
               <div className="mb-4 flex items-center gap-2">
                 <Star className="text-warning h-5 w-5" aria-hidden />
@@ -32,7 +31,7 @@ export default function LandingActivitySection() {
               emptyStateActionLabel="イベントを作成する"
               containerClassName="m-0"
             />
-          </AnimatedItem>
+          </div>
         </FavoriteEventsProvider>
       </div>
     </section>
