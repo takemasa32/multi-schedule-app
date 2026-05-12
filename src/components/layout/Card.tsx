@@ -23,7 +23,7 @@ export default function Card({
     <div
       className={`card transition-all ${
         isHighlighted ? 'border-primary/50 bg-primary/5' : ''
-      } hover:shadow-md ${className}`}
+      } ${className}`}
     >
       {(title || subtitle) && (
         <div className="border-base-200 border-b px-6 py-4">

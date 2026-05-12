@@ -494,11 +494,11 @@ export default function EventFormClient() {
 
       {currentStep === 2 && step2SubStep === 'mode' && (
         <div className="space-y-4" data-testid="create-step-2-mode">
-          <p className="text-xs text-base-content/60">作成方法を選択してください。</p>
+          <p className="text-sm text-base-content/60">候補日程の作り方を選択してください。</p>
           <div role="radiogroup" aria-label="入力方式" className="grid gap-4 md:grid-cols-2">
             <label
-              className={`card cursor-pointer border transition-all ${
-                inputMode === 'auto' ? 'border-primary shadow-sm' : 'border-base-300'
+              className={`cursor-pointer rounded-lg border bg-base-100 transition-all ${
+                inputMode === 'auto' ? 'border-primary shadow-sm' : 'border-base-300 hover:border-primary/40'
               }`}
               data-testid="input-mode-auto"
             >
@@ -510,27 +510,28 @@ export default function EventFormClient() {
                 onChange={() => setInputMode('auto')}
                 disabled={isPending}
               />
-              <div className="card-body p-4">
-                <div className="flex items-center justify-between">
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold">自動で作成</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="badge badge-secondary">おすすめ</span>
-                    {inputMode === 'auto' && <span className="badge badge-primary">選択中</span>}
-                  </div>
+                  <span
+                    className={`h-3 w-3 rounded-full border ${
+                      inputMode === 'auto' ? 'border-primary bg-primary' : 'border-base-300'
+                    }`}
+                    aria-hidden
+                  />
                 </div>
                 <p className="mt-2 text-sm text-base-content/70">
                   期間と時間帯を入力すると候補枠を自動生成します。
                 </p>
-                <div className="mt-3 text-xs text-base-content/60">
-                  <p>向いている人: まとめて候補枠を作りたい方</p>
-                  <p>できること: 期間内の時間枠を一括生成</p>
-                  <p>所要感: 1〜2分</p>
+                <div className="mt-4 grid gap-2 text-xs text-base-content/60">
+                  <p>まとめて候補枠を作りたい場合に向いています。</p>
+                  <p>期間内の時間枠を一括生成できます。</p>
                 </div>
               </div>
             </label>
             <label
-              className={`card cursor-pointer border transition-all ${
-                inputMode === 'manual' ? 'border-primary shadow-sm' : 'border-base-300'
+              className={`cursor-pointer rounded-lg border bg-base-100 transition-all ${
+                inputMode === 'manual' ? 'border-primary shadow-sm' : 'border-base-300 hover:border-primary/40'
               }`}
               data-testid="input-mode-manual"
             >
@@ -542,16 +543,20 @@ export default function EventFormClient() {
                 onChange={() => setInputMode('manual')}
                 disabled={isPending}
               />
-              <div className="card-body p-4">
-                <div className="flex items-center justify-between">
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold">手動で選択</h3>
-                  {inputMode === 'manual' && <span className="badge badge-primary">選択中</span>}
+                  <span
+                    className={`h-3 w-3 rounded-full border ${
+                      inputMode === 'manual' ? 'border-primary bg-primary' : 'border-base-300'
+                    }`}
+                    aria-hidden
+                  />
                 </div>
                 <p className="mt-2 text-sm text-base-content/70">カレンダー表で候補枠を直接選びます。</p>
-                <div className="mt-3 text-xs text-base-content/60">
-                  <p>向いている人: 候補枠を細かく調整したい方</p>
-                  <p>できること: 表をドラッグして柔軟に選択</p>
-                  <p>所要感: 2〜3分</p>
+                <div className="mt-4 grid gap-2 text-xs text-base-content/60">
+                  <p>候補枠を細かく調整したい場合に向いています。</p>
+                  <p>表をドラッグして柔軟に選択できます。</p>
                 </div>
               </div>
             </label>
@@ -629,7 +634,7 @@ export default function EventFormClient() {
 
       {currentStep === 3 && (
         <div className="space-y-6" data-testid="create-step-3">
-          <div className="border-base-300 bg-base-100 rounded-md border p-4">
+          <div className="rounded-lg border border-base-300 bg-base-200/40 p-4">
             <div className="text-sm font-semibold">入力内容の確認</div>
             <div className="mt-3 grid gap-2 text-sm text-base-content/80">
               <div>

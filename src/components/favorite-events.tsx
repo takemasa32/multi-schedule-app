@@ -35,7 +35,7 @@ export default function FavoriteEvents() {
   }
 
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+    <ul className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
       {favorites.map((ev) => (
         <li key={ev.id} className="card bg-base-100 flex flex-col p-3 shadow-sm">
           <div className="flex-1">

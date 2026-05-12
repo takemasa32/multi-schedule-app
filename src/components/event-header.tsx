@@ -3,6 +3,7 @@
 import Card from '@/components/layout/Card';
 import ShareEventButton from '@/components/share-event-button';
 import FavoriteToggle from '@/components/favorite-toggle';
+import siteConfig from '@/lib/site-config';
 
 interface EventHeaderProps {
   eventId: string;
@@ -21,23 +22,30 @@ export function EventHeader({ eventId, title, description, isFinalized }: EventH
 
   return (
     <Card className="mb-8" isHighlighted={isFinalized}>
-      <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div className="flex-1">
           <div className="mb-2 flex items-center gap-2">
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
               {isFinalized && <span className="text-success mr-2">✓</span>}
               {title}
             </h1>
             <FavoriteToggle eventId={eventId} title={title} />
           </div>
-          {isFinalized && <div className="badge badge-success mb-3 text-white">日程確定済み</div>}
-          {description && <p className="text-base-content/70 whitespace-pre-wrap">{description}</p>}
+          {isFinalized && (
+            <div className="mb-3 inline-flex rounded-md bg-success/10 px-2.5 py-1 text-sm font-medium text-success">
+              日程確定済み
+            </div>
+          )}
+          {description && (
+            <p className="whitespace-pre-wrap leading-7 text-base-content/70">{description}</p>
+          )}
         </div>
         <ShareEventButton
           url={getShareUrl()}
           className="self-start"
-          title={`${title}|daySynth-日程調整`}
-          text={`${title} の予定を入力してください。`}
+          title={`${title}｜${siteConfig.share.eventTitleSuffix}`}
+          text={`${title}\n${isFinalized ? siteConfig.share.finalizedEventText : siteConfig.share.eventText}`}
+          includeTextInClipboard={true}
         />
       </div>
     </Card>

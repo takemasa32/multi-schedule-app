@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import siteConfig from '@/lib/site-config';
 
 interface ShareEventButtonProps {
   url: string;
@@ -31,8 +32,8 @@ export default function ShareEventButton({
       if (navigator.share) {
         await navigator.share({
           url,
-          title: title || 'イベント日程調整リンク',
-          text: text || 'このリンクから日程調整に参加できます。',
+          title: title || siteConfig.share.defaultTitle,
+          text: text || siteConfig.share.defaultText,
         });
         toast.success('リンクを共有しました');
       } else if (navigator.clipboard) {
