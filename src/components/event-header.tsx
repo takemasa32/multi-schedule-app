@@ -45,7 +45,6 @@ export function EventHeader({ eventId, title, description, isFinalized }: EventH
           className="self-start"
           title={`${title}｜${siteConfig.share.eventTitleSuffix}`}
           text={`${title}\n${isFinalized ? siteConfig.share.finalizedEventText : siteConfig.share.eventText}`}
-          includeTextInClipboard={true}
         />
       </div>
     </Card>

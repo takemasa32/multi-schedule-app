@@ -26,9 +26,8 @@ export default function HeroSection() {
               src={siteConfig.illustrations.heroDark}
               alt="候補日程が重なり最適な時間帯へ集約される概念図"
               fill
-              loading="eager"
+              loading="lazy"
               sizes="(max-width: 1024px) 70vw, 50vw"
-              priority
               className="object-contain object-right"
             />
           </div>

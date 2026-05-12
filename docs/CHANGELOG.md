@@ -4,7 +4,7 @@
 
 - LP の情報設計を見直し、バッジ・比較表・過度な装飾を削減して、候補作成から確定までの流れが伝わる構成へ変更。
 - DaySynth の「予定を重ねて最適日を見つける」価値を表す背景透過画像 `public/images/landing/daysynth-layered-availability-transparent-light.webp` を追加し、ヒーロー画像に採用。画像内に不正確なロゴ・文字・アイコンが入らないよう差し替え。
-- ダークモード用の背景透過画像 `public/images/landing/daysynth-layered-availability-transparent-dark.webp` を追加し、テーマに応じてヒーロー画像を切り替えるよう変更。
+- ダークモード用画像 `public/images/landing/daysynth-layered-availability-dark-matte.webp` を追加し、テーマに応じてヒーロー画像を切り替えるよう変更。
 - LP ヒーロー画像を WebP に最適化し、元生成 PNG と `tmp/imagegen/` の作業ファイルを整理。
 - スマホ幅のLPヒーローで、画像をテキスト下に縦積みせず右奥へ薄く重ねる配置に変更し、ファーストビューの縦長化を抑制。
 - ヒーロー画像の独自アニメーションを撤去し、静的な補助ビジュアルとして表示する方針へ調整。
