@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ShareEventButton from './share-event-button';
 import { buildAvailableDatesMessage } from '@/lib/share-utils';
 import siteConfig from '@/lib/site-config';
@@ -25,12 +25,15 @@ export default function ShareAvailableDatesButton({
   availabilities,
 }: Props) {
   const [minCount, setMinCount] = useState(participants.length);
+  const [shareUrl, setShareUrl] = useState('');
   const shareText = useMemo(
     () => buildAvailableDatesMessage(eventDates, availabilities, minCount),
     [eventDates, availabilities, minCount],
   );
-  const shareUrl =
-    typeof window !== 'undefined' ? `${window.location.origin}/event/${publicToken}` : '';
+
+  useEffect(() => {
+    setShareUrl(`${window.location.origin}/event/${publicToken}`);
+  }, [publicToken]);
 
   return (
     <div className="md:flex md:items-end md:justify-center md:gap-4">
@@ -41,6 +44,7 @@ export default function ShareAvailableDatesButton({
           min={1}
           max={participants.length}
           value={minCount}
+          suppressHydrationWarning
           onChange={(e) => {
             const value = Number(e.target.value);
             setMinCount(value);

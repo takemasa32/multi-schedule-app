@@ -1279,6 +1279,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       type="checkbox"
                       className="toggle toggle-primary toggle-sm"
                       checked={isPastEventGrayscaleEnabled}
+                      suppressHydrationWarning
                       onChange={(event) => onPastEventGrayscaleToggle?.(event.target.checked)}
                       aria-label="過去日程のグレー表示切り替え"
                     />
@@ -1293,6 +1294,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       value={minColoredCount}
                       onChange={(e) => onMinColoredCountChange(parseInt(e.target.value, 10) ?? 1)}
                       className="range range-primary range-sm w-full"
+                      suppressHydrationWarning
                       style={{
                         height: '0.5rem',
                         minHeight: '0.5rem',
