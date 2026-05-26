@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import type { ParticipantSummary } from '@/types/participant';
+import { formatParticipantUpdatedAt } from '@/lib/tooltip-utils';
 
 // ツールチップの状態を表す型
 export interface TooltipState {
@@ -202,7 +203,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
             </div>
           )}
           {hasNoParticipants ? (
-            <div className="py-2 text-center text-base-content/80">
+            <div className="text-base-content/80 py-2 text-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-1 h-5 w-5"
@@ -228,14 +229,26 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                     <span>参加可能（{tooltip.availableParticipants.length}名）</span>
                   </div>
                   <ul className="text-primary list-disc pl-5">
-                    {tooltip.availableParticipants.map((p, idx) => (
-                      <li key={`avail-${idx}`} className="mb-0.5">
-                        {p.name}
-                        {p.comment && (
-                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
-                        )}
-                      </li>
-                    ))}
+                    {tooltip.availableParticipants.map((p, idx) => {
+                      const updatedAt = formatParticipantUpdatedAt(p.updated_at);
+                      return (
+                        <li key={`avail-${idx}`} className="mb-0.5">
+                          <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-2">
+                            <span>{p.name}</span>
+                            {updatedAt && (
+                              <span className="text-base-content/50 text-[10px] leading-tight">
+                                最終更新 {updatedAt}
+                              </span>
+                            )}
+                          </span>
+                          {p.comment && (
+                            <div className="text-base-content/60 break-words text-xs">
+                              {p.comment}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -246,20 +259,32 @@ export const Tooltip: React.FC<TooltipProps> = ({ tooltip, portalElement }) => {
                     <span>参加不可（{tooltip.unavailableParticipants.length}名）</span>
                   </div>
                   <ul className="text-primary list-disc pl-5">
-                    {tooltip.unavailableParticipants.map((p, idx) => (
-                      <li key={`unavail-${idx}`} className="mb-0.5">
-                        {p.name}
-                        {p.comment && (
-                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
-                        )}
-                      </li>
-                    ))}
+                    {tooltip.unavailableParticipants.map((p, idx) => {
+                      const updatedAt = formatParticipantUpdatedAt(p.updated_at);
+                      return (
+                        <li key={`unavail-${idx}`} className="mb-0.5">
+                          <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-2">
+                            <span>{p.name}</span>
+                            {updatedAt && (
+                              <span className="text-base-content/50 text-[10px] leading-tight">
+                                最終更新 {updatedAt}
+                              </span>
+                            )}
+                          </span>
+                          {p.comment && (
+                            <div className="text-base-content/60 break-words text-xs">
+                              {p.comment}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
               {tooltip.availableParticipants.length === 0 &&
                 tooltip.unavailableParticipants.length > 0 && (
-                  <div className="mt-2 border-t border-base-300 pt-2 text-sm text-base-content/60">
+                  <div className="border-base-300 text-base-content/60 mt-2 border-t pt-2 text-sm">
                     <p>参加可能な方はいません</p>
                   </div>
                 )}

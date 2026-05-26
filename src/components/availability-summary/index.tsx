@@ -25,6 +25,7 @@ type Availability = {
   participant_id: string;
   event_date_id: string;
   availability: boolean;
+  created_at?: string;
 };
 
 type HeatmapCell = {
@@ -248,7 +249,8 @@ export default function AvailabilitySummary({
   // ツールチップ表示処理（Pointerイベント）
   const handlePointerEnter = (event: React.PointerEvent<Element>, dateId: string) => {
     const availableParticipants = participantsByDateIndex.get(dateId)?.availableParticipants ?? [];
-    const unavailableParticipants = participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
+    const unavailableParticipants =
+      participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
     setTooltip({
@@ -274,7 +276,8 @@ export default function AvailabilitySummary({
       event.nativeEvent.stopImmediatePropagation();
     }
     const availableParticipants = participantsByDateIndex.get(dateId)?.availableParticipants ?? [];
-    const unavailableParticipants = participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
+    const unavailableParticipants =
+      participantsByDateIndex.get(dateId)?.unavailableParticipants ?? [];
     const { dateLabel, timeLabel } = buildDateTimeLabel(eventDates, dateId);
     if (isMobile) {
       // モバイルは下部パネルで表示

@@ -3,6 +3,7 @@ import {
   buildParticipantsByDateIndex,
   calcTooltipPosition,
   fetchParticipantsByDate,
+  formatParticipantUpdatedAt,
 } from '../tooltip-utils';
 import type { Participant } from '@/types/participant';
 
@@ -59,6 +60,16 @@ describe('calcTooltipPosition', () => {
   });
 });
 
+describe('formatParticipantUpdatedAt', () => {
+  it('年を省略した最終更新日時を返す', () => {
+    expect(formatParticipantUpdatedAt('2026-05-26T09:15:00')).toBe('5/26 09:15');
+  });
+
+  it('不正な日時はnullを返す', () => {
+    expect(formatParticipantUpdatedAt('invalid')).toBeNull();
+  });
+});
+
 describe('buildDateTimeLabel', () => {
   const eventDates = [
     {
@@ -94,12 +105,19 @@ describe('fetchParticipantsByDate', () => {
       { id: 'p3', name: 'Charlie' },
     ];
     const availabilities = [
-      { participant_id: 'p1', event_date_id: 'd1', availability: true },
+      {
+        participant_id: 'p1',
+        event_date_id: 'd1',
+        availability: true,
+        created_at: '2026-05-26T09:15:00',
+      },
       { participant_id: 'p2', event_date_id: 'd1', availability: false },
       { participant_id: 'p3', event_date_id: 'd1', availability: false },
     ];
     const result = fetchParticipantsByDate(participants, availabilities, 'd1');
-    expect(result.availableParticipants).toEqual([{ name: 'Alice', comment: 'よろしく' }]);
+    expect(result.availableParticipants).toEqual([
+      { name: 'Alice', comment: 'よろしく', updated_at: '2026-05-26T09:15:00' },
+    ]);
     expect(result.unavailableParticipants).toEqual([
       { name: 'Bob', comment: null },
       { name: 'Charlie', comment: undefined },
@@ -115,7 +133,12 @@ describe('buildParticipantsByDateIndex', () => {
       { id: 'p3', name: 'Carol' },
     ];
     const availabilities = [
-      { participant_id: 'p1', event_date_id: 'd1', availability: true },
+      {
+        participant_id: 'p1',
+        event_date_id: 'd1',
+        availability: true,
+        created_at: '2026-05-26T09:15:00',
+      },
       { participant_id: 'p2', event_date_id: 'd1', availability: false },
       { participant_id: 'p3', event_date_id: 'd2', availability: true },
       { participant_id: 'missing', event_date_id: 'd2', availability: false },
@@ -123,7 +146,7 @@ describe('buildParticipantsByDateIndex', () => {
 
     const result = buildParticipantsByDateIndex(participants, availabilities);
     expect(result.get('d1')).toEqual({
-      availableParticipants: [{ name: 'Alice', comment: 'OK' }],
+      availableParticipants: [{ name: 'Alice', comment: 'OK', updated_at: '2026-05-26T09:15:00' }],
       unavailableParticipants: [{ name: 'Bob', comment: 'NG' }],
     });
     expect(result.get('d2')).toEqual({
