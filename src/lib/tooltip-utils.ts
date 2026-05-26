@@ -2,6 +2,24 @@ import { formatDate, formatTime } from '../components/availability-summary/date-
 import type { Participant, ParticipantSummary } from '@/types/participant';
 
 /**
+ * 参加者の最終更新日時を回答詳細表示用に整形する
+ * @param value 更新日時文字列
+ * @returns 表示用日時。日時が不正な場合はnull。
+ */
+export function formatParticipantUpdatedAt(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const month = String(date.getMonth() + 1);
+  const day = String(date.getDate());
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${month}/${day} ${hours}:${minutes}`;
+}
+
+/**
  * ツールチップの座標を画面端で調整する
  * @param x クリックされたX座標
  * @param y クリックされたY座標
@@ -62,6 +80,7 @@ export function buildParticipantsByDateIndex(
     participant_id: string;
     event_date_id: string;
     availability: boolean;
+    created_at?: string;
   }[],
 ): Map<
   string,
@@ -71,13 +90,16 @@ export function buildParticipantsByDateIndex(
   }
 > {
   const participantMap = new Map(
-    participants.map((participant) => [
-      participant.id,
-      {
+    participants.map((participant) => {
+      const summary: ParticipantSummary = {
         name: participant.name,
         comment: participant.comment,
-      },
-    ]),
+      };
+      if (participant.created_at) {
+        summary.updated_at = participant.created_at;
+      }
+      return [participant.id, summary] as const;
+    }),
   );
 
   const dateMap = new Map<
@@ -91,6 +113,13 @@ export function buildParticipantsByDateIndex(
   availabilities.forEach((availability) => {
     const participant = participantMap.get(availability.participant_id);
     if (!participant) return;
+    const participantSummary: ParticipantSummary = {
+      ...participant,
+    };
+    const updatedAt = availability.created_at ?? participant.updated_at;
+    if (updatedAt) {
+      participantSummary.updated_at = updatedAt;
+    }
 
     const current = dateMap.get(availability.event_date_id) ?? {
       availableParticipants: [],
@@ -98,9 +127,9 @@ export function buildParticipantsByDateIndex(
     };
 
     if (availability.availability) {
-      current.availableParticipants.push(participant);
+      current.availableParticipants.push(participantSummary);
     } else {
-      current.unavailableParticipants.push(participant);
+      current.unavailableParticipants.push(participantSummary);
     }
 
     dateMap.set(availability.event_date_id, current);
@@ -120,6 +149,7 @@ export function fetchParticipantsByDate(
     participant_id: string;
     event_date_id: string;
     availability: boolean;
+    created_at?: string;
   }[],
   dateId: string,
 ) {

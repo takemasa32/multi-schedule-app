@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ParticipantSummary } from '@/types/participant';
+import { formatParticipantUpdatedAt } from '@/lib/tooltip-utils';
 
 interface MobileInfoPanelProps {
   show: boolean;
@@ -44,7 +45,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
       >
         {/* ドラッグバー風アクセント＋タイトル＋閉じる */}
         <div className="bg-base-100/95 sticky top-0 z-10 flex flex-col items-center px-2 pb-1 pt-2">
-          <div className="mb-1 h-1 w-10 rounded-full bg-base-300" />
+          <div className="bg-base-300 mb-1 h-1 w-10 rounded-full" />
           <div className="flex min-h-8 w-full items-center justify-between">
             {(dateLabel || timeLabel) && (
               <div className="text-base-content max-w-[68vw] truncate text-sm font-bold sm:max-w-[460px] sm:text-base">
@@ -63,7 +64,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
         </div>
         <div className="px-2 pb-2">
           {hasNoParticipants ? (
-            <div className="py-4 text-center text-base-content/80">
+            <div className="text-base-content/80 py-4 text-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="mx-auto mb-2 h-6 w-6"
@@ -89,14 +90,26 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                     <span className="text-sm">参加可能（{availableParticipants.length}名）</span>
                   </div>
                   <ul className="text-primary list-disc pl-5 text-sm">
-                    {availableParticipants.map((p, idx) => (
-                      <li key={`avail-${idx}`} className="mb-0.5 truncate">
-                        {p.name}
-                        {p.comment && (
-                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
-                        )}
-                      </li>
-                    ))}
+                    {availableParticipants.map((p, idx) => {
+                      const updatedAt = formatParticipantUpdatedAt(p.updated_at);
+                      return (
+                        <li key={`avail-${idx}`} className="mb-1">
+                          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                            <span className="min-w-0 truncate">{p.name}</span>
+                            {updatedAt && (
+                              <span className="text-base-content/50 text-[10px] leading-tight">
+                                最終更新 {updatedAt}
+                              </span>
+                            )}
+                          </div>
+                          {p.comment && (
+                            <div className="text-base-content/60 break-words text-xs">
+                              {p.comment}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -107,14 +120,26 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
                     <span className="text-sm">参加不可（{unavailableParticipants.length}名）</span>
                   </div>
                   <ul className="text-primary list-disc pl-5 text-sm">
-                    {unavailableParticipants.map((p, idx) => (
-                      <li key={`unavail-${idx}`} className="mb-0.5 truncate">
-                        {p.name}
-                        {p.comment && (
-                          <div className="break-words text-xs text-base-content/60">{p.comment}</div>
-                        )}
-                      </li>
-                    ))}
+                    {unavailableParticipants.map((p, idx) => {
+                      const updatedAt = formatParticipantUpdatedAt(p.updated_at);
+                      return (
+                        <li key={`unavail-${idx}`} className="mb-1">
+                          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                            <span className="min-w-0 truncate">{p.name}</span>
+                            {updatedAt && (
+                              <span className="text-base-content/50 text-[10px] leading-tight">
+                                最終更新 {updatedAt}
+                              </span>
+                            )}
+                          </div>
+                          {p.comment && (
+                            <div className="text-base-content/60 break-words text-xs">
+                              {p.comment}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
