@@ -1,6 +1,186 @@
-# 複数日程調整アプリ
+# DaySynth
 
-複数の日程候補から最適な日程を決めるための調整アプリケーションです。
+DaySynth は、学生団体、サークル、バンド練習、小規模チーム向けの予定調整アプリです。ログイン不要で候補日を共有し、参加者の空き時間を集めて、複数の予定をまとめて確定できます。スマホ中心の操作性を重視し、ICS 出力や Google Calendar 連携にも対応しています。
+
+## サービス概要
+
+DaySynth は「短時間で集まれる候補を決める」ことに特化した、再利用しやすい OSS の予定調整基盤です。イベント作成から回答収集、確定、カレンダー連携までを一連の流れで扱えます。
+
+## 解決する課題
+
+- 参加者全員の予定を手作業で照合する負担を減らします。
+- ログイン必須の重い導線を避け、招待リンクだけで調整を始められます。
+- 複数の確定予定を扱えるため、練習日と予備日などをまとめて管理できます。
+- ICS と Google Calendar の連携で、確定後の反映漏れを減らします。
+
+## 主な機能
+
+- ログイン不要の公開回答フロー
+- 期間から候補日を自動生成するイベント作成
+- カレンダー上での手動選択による候補調整
+- 空き時間の可視化
+- 複数予定の確定とカレンダー連携
+- ICS ダウンロードと Google Calendar 連携
+- Google ログイン時の履歴同期、お気に入り、アカウントページ
+- 予定テンプレートの管理と回答の自動反映
+
+## 技術スタック
+
+- Next.js App Router
+- TypeScript
+- React 19
+- Supabase
+- Supabase RLS
+- NextAuth
+- Tailwind CSS / daisyUI
+- Jest
+- Playwright
+
+## デモURL
+
+- 公開デモ: [https://daysynth.k-tkms.com/](https://daysynth.k-tkms.com/)
+
+## スクリーンショット
+
+以下は公開ページの主要ビジュアルです。
+
+![DaySynth light hero](public/images/landing/daysynth-layered-availability-transparent-light.webp)
+
+![DaySynth dark hero](public/images/landing/daysynth-layered-availability-dark-matte.webp)
+
+## セットアップ手順
+
+### 前提条件
+
+- Node.js 20 以上
+- npm 10 系
+- Docker
+- Supabase CLI
+
+### 1. リポジトリを取得
+
+```bash
+git clone <repository-url>
+cd multi-schedule-app
+```
+
+### 2. 依存関係をインストール
+
+```bash
+npm ci
+```
+
+### 3. 環境変数を用意
+
+```bash
+cp .env.example .env.local
+```
+
+Supabase のローカル環境を起動して、表示された値を `.env.local` に反映します。
+
+### 4. Supabase ローカル環境を起動
+
+```bash
+npx supabase start
+```
+
+### 5. 開発サーバーを起動
+
+```bash
+npm run dev
+```
+
+## 環境変数
+
+`.env.example` に最小構成を置いています。主な変数は次のとおりです。
+
+| 変数                        | 用途                                      |
+| --------------------------- | ----------------------------------------- |
+| `SUPABASE_URL`              | Supabase API の URL                       |
+| `SUPABASE_ANON_KEY`         | クライアント公開用キー                    |
+| `SUPABASE_SERVICE_ROLE_KEY` | サーバー側で使う管理キー                  |
+| `SUPABASE_DB_URL`           | ローカルまたは接続先 DB URL               |
+| `SUPABASE_DB_PASSWORD`      | Supabase ローカル DB のパスワード         |
+| `NEXTAUTH_SECRET`           | NextAuth の署名用シークレット             |
+| `NEXTAUTH_URL`              | アプリのベース URL                        |
+| `GOOGLE_CLIENT_ID`          | Google ログイン用クライアント ID          |
+| `GOOGLE_CLIENT_SECRET`      | Google ログイン用クライアントシークレット |
+
+### 開発用ログイン
+
+ローカルでは開発用ログインを有効化できます。
+
+```bash
+ENABLE_DEV_LOGIN=true
+NEXT_PUBLIC_ENABLE_DEV_LOGIN=true
+DEV_LOGIN_ID=devuser
+DEV_LOGIN_PASSWORD=devpass
+```
+
+本番環境では自動で無効化される前提です。
+
+## Supabase設定の概要
+
+- `supabase/migrations/` にスキーマ変更を追加します。
+- ローカル検証は `npx supabase start` と `npx supabase db reset` を使います。
+- 型定義は `npx supabase gen types typescript --linked > src/lib/database.types.ts` で更新します。
+- クライアントから DB へ直接アクセスせず、サーバー経由で処理します。
+- RLS を前提に、公開データと認証データの境界を明確にしています。
+
+### よく使う Supabase コマンド
+
+```bash
+npx supabase stop
+npx supabase status
+npx supabase migration new <name>
+npx supabase migration up
+npx supabase db reset
+npx supabase db push
+npx supabase gen types typescript --linked > src/lib/database.types.ts
+```
+
+## 開発コマンド
+
+| コマンド                         | 用途                              |
+| -------------------------------- | --------------------------------- |
+| `npm run dev`                    | 開発サーバー起動                  |
+| `npm run build`                  | 本番ビルド                        |
+| `npm run start`                  | ビルド済みアプリ起動              |
+| `npm run lint`                   | ESLint 実行                       |
+| `npm run typecheck`              | 型チェック                        |
+| `npm run test`                   | Jest ウォッチ実行                 |
+| `npm run test:ci`                | CI 向け Jest 実行                 |
+| `npm run test:unit`              | Jest 実行                         |
+| `npm run test:e2e`               | Playwright 実行                   |
+| `npm run test:e2e:chrome`        | 公開フロー + 認証フローの推奨実行 |
+| `npm run test:e2e:chrome:public` | 公開フローのみ                    |
+| `npm run test:e2e:auth`          | 認証フローのみ                    |
+| `npm run format`                 | Prettier で整形                   |
+
+## デプロイ方法
+
+- Vercel へのデプロイを想定しています。
+- `vercel.json` で `/api/cron` の定期実行を設定しています。
+- 本番環境では `SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`NEXTAUTH_SECRET`、`NEXTAUTH_URL`、Google OAuth の設定を用意してください。
+- デプロイ前に `npm run build` と `npm run test:ci` を通しておくと安心です。
+
+## ロードマップ
+
+- 公開フローの導線改善
+- カレンダー連携の分かりやすいガイド強化
+- 小規模コミュニティ向けの共有テンプレート拡充
+- 自己ホスト向けセットアップ手順の簡略化
+- 英語ドキュメントの拡充
+
+## コントリビューション案内
+
+- 変更前に関連する仕様書と既存実装を確認してください。
+- 仕様に関わる変更は、先に issue で意図を共有すると安全です。
+- 変更後は `npm run lint`、`npm run typecheck`、`npm run test:ci` を実行してください。
+- UI 変更には必要に応じて Playwright のテストを追加してください。
+- 秘密情報、個人情報、非公開 URL はコミットしないでください。
+
+詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ## ドキュメント
 
@@ -18,246 +198,7 @@
 - [デザイン改善メモ（2026-05-11）](docs/architecture/design-refresh-2026-05-11.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
-### イベント作成機能
+## ライセンス
 
-- 期間から候補日程を自動生成
-- カレンダーで手動選択で候補日程を設定
-  - 期間を設定後、カレンダー上でクリック（ドラッグ）して必要な枠だけを選択
-
-### ログイン（任意）/アカウント機能
-
-- **ログイン不要で利用可能**（ゲスト利用を優先）
-- Google ログインを行うと **履歴の同期** が可能
-- アカウントページで **履歴・お気に入りの確認** と **ログアウト / 連携削除** が可能
-- ログイン時は **予定テンプレの管理** と **回答の自動反映・同期** が利用可能
-- 初回ログイン時は `/account` で **使い方ツアー（7ステップ）** を表示し、以降は **手動再表示** で確認可能
-
-## Supabase ローカル開発環境
-
-Supabase のローカル開発環境を使用して、オフラインでの開発や高速なフィードバックループを実現します。
-
-## 開発用ログイン（ローカル限定）
-
-ローカル環境でのみ利用できる開発用ログインを用意しています。以下の環境変数を設定し、`npm run dev` を再起動してください。
-
-```bash
-ENABLE_DEV_LOGIN=true
-DEV_LOGIN_ID=devuser
-DEV_LOGIN_PASSWORD=devpass
-NEXT_PUBLIC_ENABLE_DEV_LOGIN=true
-```
-
-※ 本番環境では `NODE_ENV=production` のため自動で無効化されます。
-
-### 前提条件
-
-- Docker がインストールされていること
-- Node.js と npm がインストールされていること
-
-### 基本コマンド
-
-```bash
-# Supabase ローカル環境の起動
-npx supabase start
-
-# Supabase ローカル環境の停止
-npx supabase stop
-
-# Supabase ローカル環境の状態確認
-npx supabase status
-```
-
-### ローカル環境の URL・認証情報
-
-Supabase を起動すると、以下のような情報が表示されます：
-
-```text
-API URL: http://localhost:14321
-GraphQL URL: http://localhost:14321/graphql/v1
-DB URL: postgresql://postgres:postgres@localhost:14322/postgres
-Studio URL: http://localhost:14323
-Inbucket URL: http://localhost:14324
-JWT secret: super-secret-jwt-token-with-at-least-32-characters-long
-anon key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-これらの情報を `.env.local` ファイルにコピーしてください。
-
-### マイグレーション管理
-
-```bash
-# 新しいマイグレーションファイルの作成
-npx supabase migration new マイグレーション名
-
-# マイグレーションの適用
-npx supabase migration up
-
-# データベースリセット（全テーブル削除後にマイグレーション再適用）
-npx supabase db reset
-
-# プロジェクトを現在のディレクトリにリンク
-npx supabase link
-
-# 最新のマイグレーションをデータベースにプッシュ
-npx supabase db push
-```
-
-### 型定義の生成
-
-```bash
-# TypeScript の型定義を生成
-npx supabase gen types typescript --linked > src/lib/database.types.ts
-```
-
-### データベース操作
-
-```bash
-# SQLエディタを開く
-npx supabase db studio
-
-# データベースのダンプを取得
-npx supabase db dump -f dump-filename.sql
-```
-
-### その他のコマンド
-
-```bash
-# Supabase CLIのヘルプを表示
-npx supabase -h
-
-# 特定コマンドのヘルプを表示
-npx supabase [コマンド] -h
-```
-
-### トラブルシューティング
-
-- **環境起動エラー**: Docker が起動していることを確認し、必要に応じて Docker のリソース設定を見直してください
-- **接続エラー**: ポート競合がないか確認し、必要に応じて実行中のプロセスを停止してください
-- **Docker Desktop on WSL で 5432x 帯のポート公開に失敗する場合**: このリポジトリでは元の `5432x` 系の最上位だけを `1` に置き換えた `1432x` 帯を使います。既存の `.env.local` がある場合は `SUPABASE_URL` と `SUPABASE_DB_URL` を README の値に合わせて更新してください
-- **DB マイグレーションエラー**: エラーメッセージを確認し、SQL の構文や参照整合性を修正してください
-
-## 環境変数の設定
-
-`.env.local.example` ファイルを `.env.local` としてコピーし、Supabase 起動時に表示される値で更新してください：
-
-```bash
-SUPABASE_URL=http://localhost:14321
-SUPABASE_ANON_KEY=[表示されたanonキー]
-SUPABASE_SERVICE_ROLE_KEY=[表示されたservice_roleキー]
-SUPABASE_DB_URL=postgresql://postgres:postgres@localhost:14322/postgres
-NEXTAUTH_SECRET=[ランダムなシークレット]
-NEXTAUTH_URL=http://localhost:3000
-GOOGLE_CLIENT_ID=[Google OAuth クライアントID]
-GOOGLE_CLIENT_SECRET=[Google OAuth クライアントシークレット]
-```
-
-## 開発フロー
-
-1. Supabase のローカル環境を起動: `npx supabase start`
-2. 開発サーバーを起動: `npm run dev`
-3. 必要に応じてマイグレーションを作成・適用
-4. 開発終了時に Supabase 環境を停止: `npx supabase stop`
-
-## テストの実行方法
-
-本プロジェクトは Jest（TypeScript 対応）によるユニットテスト・結合テストと、Playwright による E2E テストを実装しています。
-
-### ユニットテスト/結合テスト (Jest)
-
-- **開発中のテスト実行**: `npm run test` - ファイル変更を監視し、変更があった場合に自動的に再実行します。
-- **CI 環境用テスト実行**: `npm run test:ci` - テストがない場合でもエラーにならず、CI 環境に適しています。
-
-### 型確認
-
-- **TypeScript 型確認**: `npm run typecheck` - Next.js のルート型を生成したうえで `tsc --noEmit` を実行し、ビルド前に型エラーを確認します。
-
-### E2E テスト (Playwright)
-
-- 推奨（公開フロー + 認証フロー）: `npm run test:e2e:chrome`（事前に `http://localhost:3000` の起動が必要）
-- 公開フローのみ: `npm run test:e2e:chrome:public`
-- 認証フローのみ: `npm run test:e2e:auth`
-- すでに開発サーバーを起動済みで Playwright のみ実行したい場合: `npm run test:e2e`
-
-詳細な実行パターンと前提条件は、下部の「e2e テストについて」を参照してください。
-
-### Jest テスト実行時の注意事項
-
-- すべてのテストは Next.js 公式推奨の`next/jest`プリセットを利用しており、babel や ts-jest は不要です。
-- TypeScript 型エラーや Lint エラーが残っている場合、テストは失敗します。必ず型・Lint が通る状態で実行してください。
-- jsdom の`requestSubmit`未実装警告は各テストファイルでポリフィルを導入済みです。
-- テストの詳細・注意事項は`src/components/__tests__/`および`src/lib/__tests__/`ディレクトリの各テストファイルを参照してください。
-
-### 主なテスト内容
-
-- サーバーアクション（イベント作成・回答送信・日程確定など）の正常系・異常系
-- カレンダー連携（.ics 生成・Google カレンダーリンク生成）
-- お気に入り・履歴機能の UI/ロジック
-- バリデーション・エラーハンドリング
-- 型安全性・エラー時の挙動
-
-### テストファイルの場所
-
-- `src/lib/__tests__/` ... サーバーアクション・ユーティリティのテスト
-- `src/components/__tests__/` ... UI コンポーネントのテスト
-
-### 注意事項
-
-- テストは必ず型エラー・Lint エラーがない状態で実行・コミットしてください。
-- テスト追加時は仕様書に沿ったケースを網羅し、必要に応じてグローバルモックやポリフィルも追加してください。
-- Jest のグローバルモックや`@ts-expect-error`には必ず理由コメントを添えてください。
-- テストの実装・修正内容は必ずコミットメッセージや PR 本文に明記してください。
-
-## カレンダー連携（Google / ICS）
-
-本プロジェクトでは、複数確定日程に対応したカレンダー連携APIを提供します。いずれもローカル時間をそのまま扱い、Google には `ctz` を明示、ICSはZ無しで書き出します。
-
-- Google カレンダー: `/api/calendar/<event_id>?googleCalendar=true&dateId=<event_date_id>`
-- ICS ダウンロード: `/api/calendar/ics/<event_id>?dateId=<event_date_id>`
-
-旧API（`/api/generate-ics`）は廃止しました。UI からは `CalendarLinks` コンポーネント経由でこれらのエンドポイントを利用します。
-
-## e2e テストについて
-
-e2e テストは Playwright を使用しており、以下のようなテストケースをカバーしています：
-
-- イベント作成 → リンク共有 → 参加者回答 → 主催者確定 → カレンダー連携
-- 認証ありフロー（`/account`、予定一括管理、回答紐づけ、ツアー）を含む回帰確認
-- 公開フロー/認証フローを分けた実行と、自動サーバー起動付き検証
-
-### 使用方法
-
-- **Chromium向けの推奨実行（公開フロー + 認証フロー）**
-  `npm run test:e2e:chrome`
-  - `test:e2e:chrome:public`（公開フロー）と `test:e2e:auth`（認証必須フロー）を順次実行します。
-  - 公開フロー側の自動サーバー起動は行わないため、事前に `http://localhost:3000` を起動してください。
-
-- **公開フローのみ実行（`@auth-required` を除外）**
-  `npm run test:e2e:chrome:public`
-  - サーバー自動起動は行わないため、事前に `http://localhost:3000` を起動してください。
-
-- **認証フローのみ実行**
-  `npm run test:e2e:auth`
-  - 内部で `ENABLE_DEV_LOGIN` などの必要な環境変数を設定し、ビルド済みサーバーを `:3201` で起動して実行します。
-  - DB接続（`SUPABASE_DB_URL`）とローカル環境の準備が必要です。
-
-- **開発サーバー起動済みで Playwright のみ実行**
-  `npm run test:e2e`
-
-- **デバッグ実行（headed + debug）**
-  `npm run test:e2e:debug`
-
-- **テストレポートの確認**
-  テスト実行後、以下のコマンドで HTML レポートをブラウザで確認できます。
-
-#### E2E テスト実行時の注意事項
-
-- テスト実行には Supabase のローカル環境が起動している必要があります。起動していない場合は、`npx supabase start` で起動してください。
-- テストは実際のデータベースに影響を与えないよう設計されていますが、ローカル環境での実行を推奨します。
-- 認証付きE2Eを実行する場合は、少なくとも `SUPABASE_DB_URL` を解決できる状態にしてください（`.env.local` または環境変数）。
-- テストの詳細・注意事項は `e2e/` ディレクトリおよび各テストファイルを参照してください。
-
----
-
-**補足:**
-テストスクリプトは保守性のため最小構成に整理しています。E2E は `test:e2e:chrome` / `test:e2e:chrome:public` / `test:e2e:auth` / `test:e2e` / `test:e2e:debug` のみを提供します。
+- MIT License を採用しています。詳細は [LICENSE](LICENSE) を参照してください。
+- Copyright (c) 2026 @takemasa32
