@@ -2,6 +2,7 @@
   "name": "multi-schedule-app",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "next dev --turbopack",
