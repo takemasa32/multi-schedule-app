@@ -57,7 +57,7 @@ export default function AvailabilityForm({
   initialAvailabilities = {},
   mode = 'new',
   isAuthenticated = false,
-  hasSyncTargetEvents = false,
+  hasSyncTargetEvents: _hasSyncTargetEvents = false,
   lockedDateIds = [],
   autoFillAvailabilities = {},
   dailyAutoFillDateIds = [],
@@ -102,9 +102,7 @@ export default function AvailabilityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
-  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [showGuestConfirm, setShowGuestConfirm] = useState(false);
-  const [pendingSyncFormData, setPendingSyncFormData] = useState<FormData | null>(null);
   const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
@@ -446,9 +444,6 @@ export default function AvailabilityForm({
   const handleFormAction = useCallback(
     async (formData: FormData): Promise<void> => {
       try {
-        const syncScope = (formData.get('sync_scope') as string) ?? 'current';
-        const shouldOpenSyncReview =
-          syncScope === 'all' && (formData.get('sync_defer') as string) === 'true';
         formData.set('override_date_ids', JSON.stringify(overrideDateIds));
         // 編集モードの場合、既存の参加者IDを追加
         if (mode === 'edit' && initialParticipant?.id) {
@@ -458,14 +453,12 @@ export default function AvailabilityForm({
         const response = await submitAvailability(formData);
 
         if (response.success) {
-          // 同期確認が必要な場合は専用ページへ遷移し、それ以外は結果ページへ戻る。
           const hasPartialSyncWarning = response.warningCodes?.includes('POST_SYNC_PARTIAL_FAILURE');
           const warningQuery = hasPartialSyncWarning ? '?sync_warning=partial' : '';
-          router.replace(
-            shouldOpenSyncReview
-              ? `/event/${publicToken}/input/sync-review${warningQuery}`
-              : `/event/${publicToken}${warningQuery}`,
-          );
+          const participantQuery = response.participantId
+            ? `${warningQuery ? '&' : '?'}participant_id=${encodeURIComponent(response.participantId)}`
+            : '';
+          router.replace(`/event/${publicToken}/input/complete${warningQuery}${participantQuery}`);
         } else {
           setError(response.message || '送信に失敗しました');
         }
@@ -481,38 +474,11 @@ export default function AvailabilityForm({
 
   const promptSyncScope = useCallback(
     (formData: FormData) => {
-      if (!isAuthenticated || !hasSyncTargetEvents) {
-        setIsSubmitting(true);
-        void handleFormAction(formData);
-        return;
-      }
-      setPendingSyncFormData(formData);
-      setShowSyncConfirm(true);
-    },
-    [handleFormAction, hasSyncTargetEvents, isAuthenticated],
-  );
-
-  const handleSyncScopeChoice = useCallback(
-    (scope: 'current' | 'all') => {
-      if (!pendingSyncFormData) return;
-      pendingSyncFormData.set('sync_scope', scope);
-      if (scope === 'all') {
-        pendingSyncFormData.set('sync_defer', 'true');
-      } else {
-        pendingSyncFormData.delete('sync_defer');
-      }
-      setShowSyncConfirm(false);
       setIsSubmitting(true);
-      void handleFormAction(pendingSyncFormData);
-      setPendingSyncFormData(null);
+      void handleFormAction(formData);
     },
-    [handleFormAction, pendingSyncFormData],
+    [handleFormAction],
   );
-
-  const handleCloseSyncScopeConfirm = useCallback(() => {
-    setShowSyncConfirm(false);
-    setPendingSyncFormData(null);
-  }, []);
 
   const handleSignInAndContinue = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -1395,41 +1361,6 @@ export default function AvailabilityForm({
               </button>
             </div>
           </section>
-        )}
-
-        {/* 同期範囲の確認ダイアログ */}
-        {showSyncConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-base-100 w-full max-w-md rounded-lg p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold">回答後の保存方法</h3>
-              <p className="mb-6 text-sm text-base-content/70">
-                この回答をアカウント予定に保存し、他イベントへの反映も実行しますか？
-              </p>
-              <div className="flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleCloseSyncScopeConfirm}
-                  className="btn btn-ghost"
-                >
-                  確認へ戻る
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSyncScopeChoice('current')}
-                  className="btn btn-outline"
-                >
-                  このイベントのみ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSyncScopeChoice('all')}
-                  className="btn btn-primary"
-                >
-                  アカウント予定に保存して反映
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {showGuestConfirm && (

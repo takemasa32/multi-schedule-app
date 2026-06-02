@@ -679,8 +679,8 @@ export async function upsertUserScheduleBlocks({
   eventId: string;
   eventDates: EventDateRange[];
   selectedDateIds: string[];
-}): Promise<void> {
-  if (eventDates.length === 0) return;
+}): Promise<{ success: boolean; message?: string }> {
+  if (eventDates.length === 0) return { success: true };
   const selectedSet = new Set(selectedDateIds);
   const payload = eventDates.flatMap((date) =>
     splitToHourlyRanges(date.start_time, date.end_time).map((range) => ({
@@ -701,7 +701,10 @@ export async function upsertUserScheduleBlocks({
 
   if (error) {
     console.error('予定ブロックの更新に失敗しました:', error);
+    return { success: false, message: '予定ブロックの更新に失敗しました' };
   }
+
+  return { success: true };
 }
 
 export async function saveAvailabilityOverrides({
@@ -1071,6 +1074,98 @@ export async function applyUserAvailabilitySyncForEvent({
   }).length;
 
   return { success: true, message: 'イベントを更新しました', updatedCount };
+}
+
+/**
+ * 回答済み内容を自分の予定として保存し、他イベントの反映候補数を返す
+ *
+ * @param {string} eventId - 回答元イベントID
+ * @param {string} participantId - 保存対象の参加者ID
+ * @returns {Promise<{ success: boolean; message: string; previewCount: number }>} 保存結果と反映候補数
+ */
+export async function saveParticipantAnswerAsUserSchedule({
+  eventId,
+  participantId,
+}: {
+  eventId: string;
+  participantId: string;
+}): Promise<{ success: boolean; message: string; previewCount: number }> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, message: 'ログインが必要です', previewCount: 0 };
+  }
+  if (!eventId || !participantId) {
+    return { success: false, message: '回答情報が不足しています', previewCount: 0 };
+  }
+
+  const supabase = createSupabaseAdmin();
+  const { data: participant, error: participantError } = await supabase
+    .from('participants')
+    .select('id,event_id')
+    .eq('id', participantId)
+    .eq('event_id', eventId)
+    .maybeSingle();
+
+  if (participantError || !participant) {
+    console.error('予定保存対象の参加者取得エラー:', participantError);
+    return { success: false, message: '回答情報の取得に失敗しました', previewCount: 0 };
+  }
+
+  const { data: eventDates, error: eventDatesError } = await supabase
+    .from('event_dates')
+    .select('id,start_time,end_time')
+    .eq('event_id', eventId)
+    .order('start_time', { ascending: true });
+
+  if (eventDatesError || !eventDates || eventDates.length === 0) {
+    console.error('予定保存対象の日程取得エラー:', eventDatesError);
+    return { success: false, message: 'イベント日程の取得に失敗しました', previewCount: 0 };
+  }
+
+  const { data: availabilities, error: availabilitiesError } = await supabase
+    .from('availabilities')
+    .select('event_date_id,availability')
+    .eq('event_id', eventId)
+    .eq('participant_id', participantId);
+
+  if (availabilitiesError) {
+    console.error('予定保存対象の回答取得エラー:', availabilitiesError);
+    return { success: false, message: '回答内容の取得に失敗しました', previewCount: 0 };
+  }
+
+  const selectedDateIds = (availabilities ?? [])
+    .filter((row) => row.availability)
+    .map((row) => row.event_date_id);
+
+  const linkResult = await upsertUserEventLink({ userId, eventId, participantId });
+  if (!linkResult.success) {
+    return { success: false, message: 'イベント紐づけの保存に失敗しました', previewCount: 0 };
+  }
+
+  const scheduleResult = await upsertUserScheduleBlocks({
+    userId,
+    eventId,
+    eventDates: eventDates as EventDateRange[],
+    selectedDateIds,
+  });
+  if (!scheduleResult.success) {
+    return {
+      success: false,
+      message: scheduleResult.message ?? '自分の予定への保存に失敗しました',
+      previewCount: 0,
+    };
+  }
+
+  const preview = await buildUserAvailabilitySyncPreview(userId, {
+    excludeEventId: eventId,
+  });
+
+  return {
+    success: true,
+    message: '自分の予定として保存しました',
+    previewCount: preview.length,
+  };
 }
 
 export async function fetchUserScheduleBlocks(): Promise<UserScheduleBlockRow[]> {

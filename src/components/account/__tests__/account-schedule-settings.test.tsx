@@ -491,6 +491,74 @@ describe('AccountScheduleSettings', () => {
     expect(screen.queryByText(/保護/)).not.toBeInTheDocument();
   });
 
+  it('回答イベントへの反映は可から不可・不可から可の両方向を同時に適用できる', async () => {
+    const availableToUnavailableRange = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
+    const unavailableToAvailableRange = createFixedLocalTimeRange(2026, 1, 16, 10, 11);
+
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+      {
+        eventId: 'event-1',
+        publicToken: 'event-token-1',
+        title: 'イベントA',
+        isFinalized: false,
+        changes: {
+          total: 2,
+          availableToUnavailable: 1,
+          unavailableToAvailable: 1,
+          protected: 0,
+        },
+        dates: [
+          {
+            eventDateId: 'date-available-to-unavailable',
+            startTime: availableToUnavailableRange.startIso,
+            endTime: availableToUnavailableRange.endIso,
+            currentAvailability: true,
+            desiredAvailability: false,
+            willChange: true,
+            isProtected: false,
+          },
+          {
+            eventDateId: 'date-unavailable-to-available',
+            startTime: unavailableToAvailableRange.startIso,
+            endTime: unavailableToAvailableRange.endIso,
+            currentAvailability: false,
+            desiredAvailability: true,
+            willChange: true,
+            isProtected: false,
+          },
+        ],
+      },
+    ]);
+
+    render(<AccountScheduleSettings />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    expect(await screen.findByText('変更 2件')).toBeInTheDocument();
+    expect(screen.getByText('可→不可 1')).toBeInTheDocument();
+    expect(screen.getByText('不可→可 1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('sync-apply-event-1'));
+
+    await waitFor(() => {
+      expect(mockApplyUserAvailabilitySyncForEvent).toHaveBeenCalledWith({
+        eventId: 'event-1',
+        selectedAvailabilities: {
+          'date-available-to-unavailable': false,
+          'date-unavailable-to-available': true,
+        },
+        overwriteProtected: false,
+        allowFinalized: false,
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('イベントA')).not.toBeInTheDocument();
+    });
+  });
+
   it('回答イベントへの反映で複数イベントを同時適用しても競合せず全件再取得しない', async () => {
     let resolveFirst: (() => void) | null = null;
     let resolveSecond: (() => void) | null = null;

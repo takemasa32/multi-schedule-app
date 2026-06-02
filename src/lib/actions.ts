@@ -30,6 +30,7 @@ export type SubmitAvailabilityActionResult =
   | {
       success: true;
       message: string;
+      participantId?: string;
       warningCodes?: SubmitAvailabilityWarningCode[];
     }
   | {
@@ -802,6 +803,7 @@ export async function submitAvailability(
     return {
       success: true,
       message: '回答を送信しました。ありがとうございます！',
+      ...(persistedParticipantId ? { participantId: persistedParticipantId } : {}),
       ...(warningCodes.length > 0 ? { warningCodes } : {}),
     };
   } catch (err) {

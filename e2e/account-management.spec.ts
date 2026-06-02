@@ -388,15 +388,19 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.getByRole('button', { name: '確認へ進む' }).click();
     await page.getByLabel('利用規約を読み、同意します').check();
     await page.getByRole('button', { name: '回答を送信' }).click();
-    await page.waitForTimeout(400);
-    const syncScopeButton = page.getByRole('button', { name: 'アカウント予定に保存して反映' });
-    if (await syncScopeButton.isVisible().catch(() => false)) {
-      await syncScopeButton.click();
-      await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}/input/sync-review`), {
-        timeout: 10000,
-      });
-      await page.getByRole('link', { name: 'イベント結果ページへ戻る' }).click();
-      await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}$`), { timeout: 10000 });
+    await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}/input/complete`), {
+      timeout: 10000,
+    });
+    const saveScheduleButton = page.getByRole('button', { name: '保存する' });
+    if (await saveScheduleButton.isVisible().catch(() => false)) {
+      await saveScheduleButton.click();
+      const skipSyncLink = page.getByRole('link', { name: '反映しない' });
+      if (await skipSyncLink.isVisible({ timeout: 10000 }).catch(() => false)) {
+        await skipSyncLink.click();
+      } else {
+        await page.getByRole('link', { name: 'イベント結果を見る' }).click();
+      }
+      await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}`), { timeout: 10000 });
     }
 
     await expect
