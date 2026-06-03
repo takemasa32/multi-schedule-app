@@ -252,6 +252,7 @@ export default function AccountScheduleSettings({
   const [syncMessageMap, setSyncMessageMap] = useState<Record<string, string>>({});
   const [isSyncPreviewLoading, setIsSyncPreviewLoading] = useState(false);
   const [syncPreviewMessage, setSyncPreviewMessage] = useState<string | null>(null);
+  const [syncPreviewFailureReason, setSyncPreviewFailureReason] = useState<string | null>(null);
   const [syncApplyingEventIds, setSyncApplyingEventIds] = useState<Set<string>>(new Set());
   const [hasLoadedSyncPreview, setHasLoadedSyncPreview] = useState(false);
   const syncApplyingEventIdsRef = useRef<Set<string>>(new Set());
@@ -289,6 +290,7 @@ export default function AccountScheduleSettings({
     setIsSyncPreviewLoading(true);
     setHasLoadedSyncPreview(true);
     setSyncPreviewMessage(null);
+    setSyncPreviewFailureReason(null);
     try {
       const result = await fetchUserAvailabilitySyncPreviewResult();
       const preview = result.events;
@@ -308,6 +310,7 @@ export default function AccountScheduleSettings({
       setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
       setSyncMessageMap({});
       if (!result.success) {
+        setSyncPreviewFailureReason(result.reason);
         setSyncPreviewMessage(result.message);
         return preview;
       }
@@ -319,6 +322,7 @@ export default function AccountScheduleSettings({
       return preview;
     } catch (error) {
       console.error('反映対象取得エラー:', error);
+      setSyncPreviewFailureReason('error');
       setSyncPreviewMessage('反映対象の取得に失敗しました。時間をおいて再度お試しください。');
       return [];
     } finally {
@@ -330,6 +334,7 @@ export default function AccountScheduleSettings({
     if (
       !hasLoadedSyncPreview ||
       isSyncPreviewLoading ||
+      syncPreviewFailureReason ||
       syncApplyingEventIds.size > 0 ||
       syncPreviewEvents.length > 0
     ) {
@@ -341,6 +346,7 @@ export default function AccountScheduleSettings({
   }, [
     hasLoadedSyncPreview,
     isSyncPreviewLoading,
+    syncPreviewFailureReason,
     syncApplyingEventIds.size,
     syncPreviewEvents.length,
   ]);

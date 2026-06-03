@@ -421,11 +421,13 @@ describe('AccountScheduleSettings', () => {
         'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText(
-        '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
-      ),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+        ),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('回答イベントへの反映は変更がある最初の週を初期表示する', async () => {
