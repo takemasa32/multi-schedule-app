@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   applyUserAvailabilitySyncForEvent,
-  fetchUserAvailabilitySyncPreview,
+  fetchUserAvailabilitySyncPreviewResult,
   fetchUserScheduleBlocks,
   saveUserScheduleBlockChanges,
   type UserAvailabilitySyncPreviewEvent,
@@ -290,7 +290,8 @@ export default function AccountScheduleSettings({
     setHasLoadedSyncPreview(true);
     setSyncPreviewMessage(null);
     try {
-      const preview = await fetchUserAvailabilitySyncPreview();
+      const result = await fetchUserAvailabilitySyncPreviewResult();
+      const preview = result.events;
       setSyncPreviewEvents(preview);
       setSyncCellSelectionMap(
         Object.fromEntries(
@@ -306,6 +307,10 @@ export default function AccountScheduleSettings({
       setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
       setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
       setSyncMessageMap({});
+      if (!result.success) {
+        setSyncPreviewMessage(result.message);
+        return preview;
+      }
       if (preview.length === 0) {
         setSyncPreviewMessage(
           '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',

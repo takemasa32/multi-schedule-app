@@ -66,6 +66,18 @@ export type UserAvailabilitySyncPreviewEvent = {
   dates: SyncPreviewDateRow[];
 };
 
+export type UserAvailabilitySyncPreviewResult =
+  | {
+      success: true;
+      events: UserAvailabilitySyncPreviewEvent[];
+    }
+  | {
+      success: false;
+      reason: 'unauthenticated';
+      message: string;
+      events: [];
+    };
+
 const toLocalDateTimeString = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate(),
@@ -964,10 +976,27 @@ export async function syncUserAvailabilities({
 export async function fetchUserAvailabilitySyncPreview(
   options?: SyncPreviewBuildOptions,
 ): Promise<UserAvailabilitySyncPreviewEvent[]> {
+  const result = await fetchUserAvailabilitySyncPreviewResult(options);
+  return result.events;
+}
+
+export async function fetchUserAvailabilitySyncPreviewResult(
+  options?: SyncPreviewBuildOptions,
+): Promise<UserAvailabilitySyncPreviewResult> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
-  if (!userId) return [];
-  return buildUserAvailabilitySyncPreview(userId, options);
+  if (!userId) {
+    return {
+      success: false,
+      reason: 'unauthenticated',
+      message: 'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      events: [],
+    };
+  }
+  return {
+    success: true,
+    events: await buildUserAvailabilitySyncPreview(userId, options),
+  };
 }
 
 export async function applyUserAvailabilitySyncForEvent({
