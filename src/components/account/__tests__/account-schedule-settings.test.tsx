@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import AccountScheduleSettings from '@/components/account/account-schedule-settings';
 import {
   applyUserAvailabilitySyncForEvent,
-  fetchUserAvailabilitySyncPreview,
+  fetchUserAvailabilitySyncPreviewResult,
   fetchUserScheduleBlocks,
   saveUserScheduleBlockChanges,
 } from '@/lib/schedule-actions';
@@ -14,14 +14,15 @@ jest.mock('next-auth/react', () => ({
 
 jest.mock('@/lib/schedule-actions', () => ({
   applyUserAvailabilitySyncForEvent: jest.fn(),
-  fetchUserAvailabilitySyncPreview: jest.fn(),
+  fetchUserAvailabilitySyncPreviewResult: jest.fn(),
   fetchUserScheduleBlocks: jest.fn(),
   saveUserScheduleBlockChanges: jest.fn(),
 }));
 
 const mockUseSession = useSession as jest.Mock;
 const mockApplyUserAvailabilitySyncForEvent = applyUserAvailabilitySyncForEvent as jest.Mock;
-const mockFetchUserAvailabilitySyncPreview = fetchUserAvailabilitySyncPreview as jest.Mock;
+const mockFetchUserAvailabilitySyncPreviewResult =
+  fetchUserAvailabilitySyncPreviewResult as jest.Mock;
 const mockFetchUserScheduleBlocks = fetchUserScheduleBlocks as jest.Mock;
 const mockSaveUserScheduleBlockChanges = saveUserScheduleBlockChanges as jest.Mock;
 
@@ -103,11 +104,18 @@ const createSyncPreviewEvent = (eventId: string, title: string) => {
   };
 };
 
+const mockSuccessfulSyncPreviewEvents = (events: ReturnType<typeof createSyncPreviewEvent>[]) => {
+  mockFetchUserAvailabilitySyncPreviewResult.mockResolvedValue({
+    success: true,
+    events,
+  });
+};
+
 describe('AccountScheduleSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([]);
+    mockSuccessfulSyncPreviewEvents([]);
     mockApplyUserAvailabilitySyncForEvent.mockResolvedValue({
       success: true,
       message: 'イベントを更新しました',
@@ -393,6 +401,86 @@ describe('AccountScheduleSettings', () => {
     }
   });
 
+  it('回答イベントへの反映でサーバー側の認証が確認できない場合は差分なし扱いにしない', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreviewResult.mockResolvedValue({
+      success: false,
+      reason: 'unauthenticated',
+      message: 'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      events: [],
+    });
+
+    render(<AccountScheduleSettings />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    expect(
+      await screen.findByText(
+        'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
+        ),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('回答イベントへの反映の再取得失敗時は古いプレビューを残さない', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreviewResult
+      .mockResolvedValueOnce({
+        success: true,
+        events: [
+          {
+            eventId: 'event-1',
+            publicToken: 'event-token-1',
+            title: 'イベントA',
+            isFinalized: false,
+            changes: {
+              total: 1,
+              availableToUnavailable: 0,
+              unavailableToAvailable: 1,
+              protected: 0,
+            },
+            dates: [
+              {
+                eventDateId: 'date-1',
+                startTime: '2099-05-03T03:00:00Z',
+                endTime: '2099-05-03T04:00:00Z',
+                currentAvailability: false,
+                desiredAvailability: true,
+                willChange: true,
+                isProtected: false,
+              },
+            ],
+          },
+        ],
+      })
+      .mockRejectedValueOnce(new Error('network failed'));
+
+    render(<AccountScheduleSettings />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    expect(await screen.findByRole('link', { name: 'イベントA' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    expect(
+      await screen.findByText('反映対象の取得に失敗しました。時間をおいて再度お試しください。'),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'イベントA' })).not.toBeInTheDocument();
+    });
+  });
+
   it('回答イベントへの反映は変更がある最初の週を初期表示する', async () => {
     const firstWeek = createFixedLocalTimeRange(2026, 1, 9, 9, 10);
     const changedWeek = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
@@ -401,7 +489,7 @@ describe('AccountScheduleSettings', () => {
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+    mockSuccessfulSyncPreviewEvents([
       {
         eventId: 'event-1',
         publicToken: 'event-token-1',
@@ -452,7 +540,7 @@ describe('AccountScheduleSettings', () => {
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+    mockSuccessfulSyncPreviewEvents([
       {
         eventId: 'event-1',
         publicToken: 'event-token-1',
@@ -497,7 +585,7 @@ describe('AccountScheduleSettings', () => {
 
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+    mockSuccessfulSyncPreviewEvents([
       createSyncPreviewEvent('event-1', 'イベントA'),
       createSyncPreviewEvent('event-2', 'イベントB'),
     ]);
@@ -544,15 +632,13 @@ describe('AccountScheduleSettings', () => {
       expect(screen.queryByText('イベントA')).not.toBeInTheDocument();
     });
     expect(mockApplyUserAvailabilitySyncForEvent).toHaveBeenCalledTimes(2);
-    expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
+    expect(mockFetchUserAvailabilitySyncPreviewResult).toHaveBeenCalledTimes(1);
   });
 
   it('回答イベントへの反映でキャンセルしたイベントは一覧から除外される', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
-      createSyncPreviewEvent('event-1', 'イベントA'),
-    ]);
+    mockSuccessfulSyncPreviewEvents([createSyncPreviewEvent('event-1', 'イベントA')]);
 
     render(<AccountScheduleSettings />);
 

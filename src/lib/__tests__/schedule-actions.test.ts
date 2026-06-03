@@ -1,5 +1,7 @@
 import {
   applyUserAvailabilitySyncForEvent,
+  fetchUserAvailabilitySyncPreview,
+  fetchUserAvailabilitySyncPreviewResult,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
   upsertUserScheduleBlock,
@@ -330,5 +332,166 @@ describe('applyUserAvailabilitySyncForEvent', () => {
         { event_date_id: futureDateId, availability: true },
       ]),
     });
+  });
+});
+
+describe('fetchUserAvailabilitySyncPreviewResult', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({
+      user: { id: 'user-1' },
+    });
+  });
+
+  it('回答なしからアカウント予定の可へ変わる差分を検出する', async () => {
+    const eventId = 'event-1';
+    const participantId = 'participant-1';
+    const firstDateId = 'date-1';
+    const secondDateId = 'date-2';
+
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'user_event_links') {
+        const eqMock = jest.fn().mockResolvedValue({
+          data: [{ event_id: eventId, participant_id: participantId }],
+          error: null,
+        });
+        return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
+      }
+      if (table === 'user_schedule_blocks') {
+        const eqMock = jest.fn().mockResolvedValue({
+          data: [
+            {
+              start_time: '2099-06-03T14:00:00+00:00',
+              end_time: '2099-06-03T15:00:00+00:00',
+              availability: true,
+            },
+            {
+              start_time: '2099-06-03T15:00:00+00:00',
+              end_time: '2099-06-03T16:00:00+00:00',
+              availability: true,
+            },
+          ],
+          error: null,
+        });
+        return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
+      }
+      if (table === 'finalized_dates') {
+        return {
+          select: jest.fn().mockReturnValue({ in: jest.fn().mockResolvedValue({ data: [] }) }),
+        };
+      }
+      if (table === 'events') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: eventId,
+                  title: '同期対象イベント',
+                  public_token: 'event-token',
+                  is_finalized: false,
+                },
+              ],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === 'event_dates') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: firstDateId,
+                    event_id: eventId,
+                    start_time: '2099-06-03T14:00:00',
+                    end_time: '2099-06-03T15:00:00',
+                  },
+                  {
+                    id: secondDateId,
+                    event_id: eventId,
+                    start_time: '2099-06-03T15:00:00',
+                    end_time: '2099-06-03T16:00:00',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'user_event_availability_overrides') {
+        const inMock = jest.fn().mockResolvedValue({ data: [], error: null });
+        const eqMock = jest.fn().mockReturnValue({ in: inMock });
+        return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
+      }
+      if (table === 'availabilities') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await fetchUserAvailabilitySyncPreviewResult();
+
+    expect(result.success).toBe(true);
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]).toMatchObject({
+      eventId,
+      title: '同期対象イベント',
+      changes: {
+        total: 2,
+        availableToUnavailable: 0,
+        unavailableToAvailable: 2,
+        protected: 0,
+      },
+    });
+    expect(result.events[0]?.dates.filter((date) => date.willChange)).toEqual([
+      expect.objectContaining({
+        eventDateId: firstDateId,
+        currentAvailability: false,
+        desiredAvailability: true,
+      }),
+      expect.objectContaining({
+        eventDateId: secondDateId,
+        currentAvailability: false,
+        desiredAvailability: true,
+      }),
+    ]);
+  });
+
+  it('サーバー側でログイン状態を確認できない場合は認証失敗として返す', async () => {
+    mockedGetAuthSession.mockResolvedValue(null);
+
+    const result = await fetchUserAvailabilitySyncPreviewResult();
+
+    expect(result).toEqual({
+      success: false,
+      reason: 'unauthenticated',
+      message: 'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      events: [],
+    });
+    expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchUserAvailabilitySyncPreview', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('サーバー側でログイン状態を確認できない場合は差分なしの空配列に丸めない', async () => {
+    mockedGetAuthSession.mockResolvedValue(null);
+
+    await expect(fetchUserAvailabilitySyncPreview()).rejects.toThrow(
+      'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+    );
+    expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
   });
 });
