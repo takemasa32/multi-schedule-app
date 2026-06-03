@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import SyncReviewPage from '@/components/sync/sync-review-page';
 import {
   applyUserAvailabilitySyncForEvent,
-  fetchUserAvailabilitySyncPreview,
+  fetchUserAvailabilitySyncPreviewResult,
   type UserAvailabilitySyncPreviewEvent,
 } from '@/lib/schedule-actions';
 
@@ -13,12 +13,20 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/lib/schedule-actions', () => ({
   applyUserAvailabilitySyncForEvent: jest.fn(),
-  fetchUserAvailabilitySyncPreview: jest.fn(),
+  fetchUserAvailabilitySyncPreviewResult: jest.fn(),
 }));
 
 const mockUseRouter = useRouter as jest.Mock;
-const mockFetchUserAvailabilitySyncPreview = fetchUserAvailabilitySyncPreview as jest.Mock;
+const mockFetchUserAvailabilitySyncPreviewResult =
+  fetchUserAvailabilitySyncPreviewResult as jest.Mock;
 const mockApplyUserAvailabilitySyncForEvent = applyUserAvailabilitySyncForEvent as jest.Mock;
+
+const mockSuccessfulPreviewEvents = (events: UserAvailabilitySyncPreviewEvent[]) => {
+  mockFetchUserAvailabilitySyncPreviewResult.mockResolvedValue({
+    success: true,
+    events,
+  });
+};
 
 const createPreviewEvent = (eventId: string, title: string): UserAvailabilitySyncPreviewEvent => ({
   eventId,
@@ -58,7 +66,7 @@ describe('SyncReviewPage', () => {
   });
 
   it('初回ロード時に差分イベントが0件ならイベント結果ページへ自動遷移する', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([]);
+    mockSuccessfulPreviewEvents([]);
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
@@ -68,23 +76,19 @@ describe('SyncReviewPage', () => {
   });
 
   it('表示対象から現在イベントを除外できる', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
-      createPreviewEvent('other-event', '対象イベント'),
-    ]);
+    mockSuccessfulPreviewEvents([createPreviewEvent('other-event', '対象イベント')]);
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
     expect(await screen.findByTestId('sync-review-event-other-event')).toBeInTheDocument();
     expect(screen.queryByTestId('sync-review-event-current')).not.toBeInTheDocument();
-    expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledWith({
+    expect(mockFetchUserAvailabilitySyncPreviewResult).toHaveBeenCalledWith({
       excludeEventId: 'current',
     });
   });
 
   it('最後のイベントを適用して0件になったら自動遷移する', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
-      createPreviewEvent('other-event', '対象イベント'),
-    ]);
+    mockSuccessfulPreviewEvents([createPreviewEvent('other-event', '対象イベント')]);
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
@@ -94,13 +98,11 @@ describe('SyncReviewPage', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/event/public-token');
     });
-    expect(mockFetchUserAvailabilitySyncPreview).toHaveBeenCalledTimes(1);
+    expect(mockFetchUserAvailabilitySyncPreviewResult).toHaveBeenCalledTimes(1);
   });
 
   it('最後のイベントをキャンセルして0件になったら自動遷移する', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
-      createPreviewEvent('other-event', '対象イベント'),
-    ]);
+    mockSuccessfulPreviewEvents([createPreviewEvent('other-event', '対象イベント')]);
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
@@ -114,9 +116,7 @@ describe('SyncReviewPage', () => {
   });
 
   it('適用失敗時はメッセージを表示してページに残る', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
-      createPreviewEvent('other-event', '対象イベント'),
-    ]);
+    mockSuccessfulPreviewEvents([createPreviewEvent('other-event', '対象イベント')]);
     mockApplyUserAvailabilitySyncForEvent.mockResolvedValue({
       success: false,
       message: 'イベント更新に失敗しました',
@@ -133,7 +133,7 @@ describe('SyncReviewPage', () => {
   });
 
   it('反映対象の取得失敗時は0件扱いでリダイレクトせず、再試行導線を表示する', async () => {
-    mockFetchUserAvailabilitySyncPreview.mockRejectedValue(new Error('network failed'));
+    mockFetchUserAvailabilitySyncPreviewResult.mockRejectedValue(new Error('network failed'));
 
     render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
 
@@ -144,17 +144,37 @@ describe('SyncReviewPage', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
+  it('サーバー側の認証が確認できない場合は0件扱いでリダイレクトしない', async () => {
+    mockFetchUserAvailabilitySyncPreviewResult.mockResolvedValue({
+      success: false,
+      reason: 'unauthenticated',
+      message: 'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      events: [],
+    });
+
+    render(<SyncReviewPage publicToken="public-token" currentEventId="current" />);
+
+    expect(
+      await screen.findByText(
+        'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '再読み込み' })).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
   it('複数イベントをほぼ同時に適用しても競合せず最終的に自動遷移する', async () => {
     let resolveFirst: (() => void) | null = null;
     let resolveSecond: (() => void) | null = null;
 
-    mockFetchUserAvailabilitySyncPreview.mockResolvedValue([
+    mockSuccessfulPreviewEvents([
       createPreviewEvent('event-1', '対象イベント1'),
       createPreviewEvent('event-2', '対象イベント2'),
     ]);
     mockApplyUserAvailabilitySyncForEvent.mockImplementation(({ eventId }: { eventId: string }) => {
       return new Promise((resolve) => {
-        const responder = () => resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
+        const responder = () =>
+          resolve({ success: true, message: 'イベントを更新しました', updatedCount: 1 });
         if (eventId === 'event-1') {
           resolveFirst = responder;
           return;

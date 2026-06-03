@@ -1,5 +1,6 @@
 import {
   applyUserAvailabilitySyncForEvent,
+  fetchUserAvailabilitySyncPreview,
   fetchUserAvailabilitySyncPreviewResult,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
@@ -476,6 +477,21 @@ describe('fetchUserAvailabilitySyncPreviewResult', () => {
       message: 'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
       events: [],
     });
+    expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchUserAvailabilitySyncPreview', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('サーバー側でログイン状態を確認できない場合は差分なしの空配列に丸めない', async () => {
+    mockedGetAuthSession.mockResolvedValue(null);
+
+    await expect(fetchUserAvailabilitySyncPreview()).rejects.toThrow(
+      'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+    );
     expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
   });
 });

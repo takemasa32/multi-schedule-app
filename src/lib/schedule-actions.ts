@@ -977,6 +977,9 @@ export async function fetchUserAvailabilitySyncPreview(
   options?: SyncPreviewBuildOptions,
 ): Promise<UserAvailabilitySyncPreviewEvent[]> {
   const result = await fetchUserAvailabilitySyncPreviewResult(options);
+  if (!result.success) {
+    throw new Error(result.message);
+  }
   return result.events;
 }
 

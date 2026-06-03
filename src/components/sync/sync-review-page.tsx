@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import WeekNavigationBar from '@/components/week-navigation-bar';
 import {
   applyUserAvailabilitySyncForEvent,
-  fetchUserAvailabilitySyncPreview,
+  fetchUserAvailabilitySyncPreviewResult,
   type UserAvailabilitySyncPreviewEvent,
 } from '@/lib/schedule-actions';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
@@ -165,7 +165,9 @@ export default function SyncReviewPage({
   syncWarning = null,
 }: SyncReviewPageProps) {
   const router = useRouter();
-  const [syncPreviewEvents, setSyncPreviewEvents] = useState<UserAvailabilitySyncPreviewEvent[]>([]);
+  const [syncPreviewEvents, setSyncPreviewEvents] = useState<UserAvailabilitySyncPreviewEvent[]>(
+    [],
+  );
   const [syncCellSelectionMap, setSyncCellSelectionMap] = useState<
     Record<string, Record<string, boolean>>
   >({});
@@ -187,9 +189,15 @@ export default function SyncReviewPage({
     setIsSyncPreviewLoading(true);
     setSyncPreviewError(null);
     try {
-      const filteredPreview = await fetchUserAvailabilitySyncPreview({
+      const result = await fetchUserAvailabilitySyncPreviewResult({
         excludeEventId: currentEventId,
       });
+      const filteredPreview = result.events;
+
+      if (!result.success) {
+        setSyncPreviewError(result.message);
+        return;
+      }
 
       if (filteredPreview.length === 0) {
         router.replace(backToEventPath);
@@ -201,13 +209,17 @@ export default function SyncReviewPage({
         Object.fromEntries(
           filteredPreview.map((row) => [
             row.eventId,
-            Object.fromEntries(row.dates.map((date) => [date.eventDateId, date.desiredAvailability])),
+            Object.fromEntries(
+              row.dates.map((date) => [date.eventDateId, date.desiredAvailability]),
+            ),
           ]),
         ),
       );
       setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(filteredPreview));
       setSyncOverwriteMap(Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])));
-      setSyncAllowFinalizedMap(Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])));
+      setSyncAllowFinalizedMap(
+        Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])),
+      );
       setSyncMessageMap({});
     } catch (error) {
       console.error('反映対象取得エラー:', error);
@@ -310,13 +322,7 @@ export default function SyncReviewPage({
         });
       }
     },
-    [
-      backToEventPath,
-      router,
-      syncAllowFinalizedMap,
-      syncCellSelectionMap,
-      syncOverwriteMap,
-    ],
+    [backToEventPath, router, syncAllowFinalizedMap, syncCellSelectionMap, syncOverwriteMap],
   );
 
   const handleCancelForEvent = useCallback((eventId: string) => {
@@ -351,7 +357,7 @@ export default function SyncReviewPage({
   if (isSyncPreviewLoading) {
     return (
       <div className="py-8" data-testid="sync-review-page">
-        <p className="text-sm text-base-content/60">反映対象を確認しています...</p>
+        <p className="text-base-content/60 text-sm">反映対象を確認しています...</p>
       </div>
     );
   }
@@ -365,13 +371,17 @@ export default function SyncReviewPage({
         </Link>
       </div>
 
-      <p className="mb-4 text-sm text-base-content/60">
+      <p className="text-base-content/60 mb-4 text-sm">
         反映対象イベントごとに変更内容を確認し、「この変更を適用」または「この変更をキャンセル」を選べます。
       </p>
       {syncPreviewError && (
         <div className="alert alert-warning mb-4">
           <span>{syncPreviewError}</span>
-          <button type="button" className="btn btn-xs btn-outline" onClick={() => void loadSyncPreview()}>
+          <button
+            type="button"
+            className="btn btn-xs btn-outline"
+            onClick={() => void loadSyncPreview()}
+          >
             再読み込み
           </button>
         </div>
@@ -393,13 +403,12 @@ export default function SyncReviewPage({
               ? `${new Date(`${visibleDates[0]}T00:00:00`).toLocaleDateString('ja-JP', {
                   month: 'numeric',
                   day: 'numeric',
-                })} 〜 ${new Date(`${visibleDates[visibleDates.length - 1]}T00:00:00`).toLocaleDateString(
-                  'ja-JP',
-                  {
-                    month: 'numeric',
-                    day: 'numeric',
-                  },
-                )}`
+                })} 〜 ${new Date(
+                  `${visibleDates[visibleDates.length - 1]}T00:00:00`,
+                ).toLocaleDateString('ja-JP', {
+                  month: 'numeric',
+                  day: 'numeric',
+                })}`
               : '-';
 
           return (
@@ -416,7 +425,9 @@ export default function SyncReviewPage({
                     </Link>
                   </p>
                   <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                    <span className="badge badge-info badge-outline">変更 {event.changes.total}件</span>
+                    <span className="badge badge-info badge-outline">
+                      変更 {event.changes.total}件
+                    </span>
                     {event.changes.availableToUnavailable > 0 && (
                       <span className="badge badge-error badge-outline">
                         可→不可 {event.changes.availableToUnavailable}
@@ -473,7 +484,7 @@ export default function SyncReviewPage({
                                   day: 'numeric',
                                 })}
                               </span>
-                              <span className="text-xs text-base-content/60">
+                              <span className="text-base-content/60 text-xs">
                                 ({date.toLocaleDateString('ja-JP', { weekday: 'short' })})
                               </span>
                             </div>
@@ -511,7 +522,10 @@ export default function SyncReviewPage({
                             : 'bg-base-200/50 text-base-content/40';
 
                           return (
-                            <td key={`${dateKey}_${timeKey}`} className="border-base-300 border p-0.5 md:p-1">
+                            <td
+                              key={`${dateKey}_${timeKey}`}
+                              className="border-base-300 border p-0.5 md:p-1"
+                            >
                               <button
                                 type="button"
                                 className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
@@ -600,7 +614,7 @@ export default function SyncReviewPage({
               </div>
 
               {syncMessageMap[event.eventId] && (
-                <p className="mt-2 text-xs text-base-content/70">{syncMessageMap[event.eventId]}</p>
+                <p className="text-base-content/70 mt-2 text-xs">{syncMessageMap[event.eventId]}</p>
               )}
             </div>
           );
