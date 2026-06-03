@@ -386,7 +386,7 @@ describe('fetchUserAvailabilitySyncPreviewResult', () => {
               data: [
                 {
                   id: eventId,
-                  title: '6月ずとまよ',
+                  title: '同期対象イベント',
                   public_token: 'event-token',
                   is_finalized: false,
                 },
@@ -443,7 +443,7 @@ describe('fetchUserAvailabilitySyncPreviewResult', () => {
     expect(result.events).toHaveLength(1);
     expect(result.events[0]).toMatchObject({
       eventId,
-      title: '6月ずとまよ',
+      title: '同期対象イベント',
       changes: {
         total: 2,
         availableToUnavailable: 0,
