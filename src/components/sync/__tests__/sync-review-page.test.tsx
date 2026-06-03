@@ -163,6 +163,39 @@ describe('SyncReviewPage', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
+  it('再取得時に認証が確認できない場合は古いプレビューを残さない', async () => {
+    mockFetchUserAvailabilitySyncPreviewResult
+      .mockResolvedValueOnce({
+        success: true,
+        events: [createPreviewEvent('other-event', '対象イベント')],
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        reason: 'unauthenticated',
+        message:
+          'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+        events: [],
+      });
+
+    const { rerender } = render(
+      <SyncReviewPage publicToken="public-token" currentEventId="current" />,
+    );
+
+    expect(await screen.findByTestId('sync-review-event-other-event')).toBeInTheDocument();
+
+    rerender(<SyncReviewPage publicToken="public-token" currentEventId="changed-current" />);
+
+    expect(
+      await screen.findByText(
+        'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('sync-review-event-other-event')).not.toBeInTheDocument();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
   it('複数イベントをほぼ同時に適用しても競合せず最終的に自動遷移する', async () => {
     let resolveFirst: (() => void) | null = null;
     let resolveSecond: (() => void) | null = null;

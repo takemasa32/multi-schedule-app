@@ -9,6 +9,11 @@ import {
   fetchUserAvailabilitySyncPreviewResult,
   type UserAvailabilitySyncPreviewEvent,
 } from '@/lib/schedule-actions';
+import {
+  buildSyncPreviewState,
+  createEmptySyncPreviewState,
+  type SyncPreviewState,
+} from '@/components/sync/sync-preview-state';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 
 type SyncReviewPageProps = {
@@ -108,13 +113,6 @@ const resolveInitialSyncPreviewWeekPage = (event: UserAvailabilitySyncPreviewEve
   return page >= 0 ? page : 0;
 };
 
-const buildInitialSyncPreviewWeekPageMap = (
-  events: UserAvailabilitySyncPreviewEvent[],
-): Record<string, number> =>
-  Object.fromEntries(
-    events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]),
-  );
-
 const reconcileEventAfterApply = ({
   event,
   selectedAvailabilities,
@@ -186,6 +184,15 @@ export default function SyncReviewPage({
   );
 
   const loadSyncPreview = useCallback(async () => {
+    const applyPreviewState = (previewState: SyncPreviewState) => {
+      setSyncPreviewEvents(previewState.events);
+      setSyncCellSelectionMap(previewState.cellSelectionMap);
+      setSyncPreviewWeekPageMap(previewState.weekPageMap);
+      setSyncOverwriteMap(previewState.overwriteMap);
+      setSyncAllowFinalizedMap(previewState.allowFinalizedMap);
+      setSyncMessageMap(previewState.messageMap);
+    };
+
     setIsSyncPreviewLoading(true);
     setSyncPreviewError(null);
     try {
@@ -195,6 +202,7 @@ export default function SyncReviewPage({
       const filteredPreview = result.events;
 
       if (!result.success) {
+        applyPreviewState(createEmptySyncPreviewState());
         setSyncPreviewError(result.message);
         return;
       }
@@ -204,25 +212,12 @@ export default function SyncReviewPage({
         return;
       }
 
-      setSyncPreviewEvents(filteredPreview);
-      setSyncCellSelectionMap(
-        Object.fromEntries(
-          filteredPreview.map((row) => [
-            row.eventId,
-            Object.fromEntries(
-              row.dates.map((date) => [date.eventDateId, date.desiredAvailability]),
-            ),
-          ]),
-        ),
+      applyPreviewState(
+        buildSyncPreviewState(filteredPreview, (event) => resolveInitialSyncPreviewWeekPage(event)),
       );
-      setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(filteredPreview));
-      setSyncOverwriteMap(Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])));
-      setSyncAllowFinalizedMap(
-        Object.fromEntries(filteredPreview.map((row) => [row.eventId, false])),
-      );
-      setSyncMessageMap({});
     } catch (error) {
       console.error('反映対象取得エラー:', error);
+      applyPreviewState(createEmptySyncPreviewState());
       setSyncPreviewError('反映対象の取得に失敗しました。時間をおいて再度お試しください。');
     } finally {
       setIsSyncPreviewLoading(false);

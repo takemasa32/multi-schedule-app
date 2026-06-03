@@ -13,6 +13,11 @@ import {
 import { toComparableDate } from '@/lib/schedule-utils';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from '@/components/week-navigation-bar';
+import {
+  buildSyncPreviewState,
+  createEmptySyncPreviewState,
+  type SyncPreviewState,
+} from '@/components/sync/sync-preview-state';
 
 type ScheduleBlock = {
   id: string;
@@ -173,13 +178,6 @@ const resolveInitialSyncPreviewWeekPage = (event: UserAvailabilitySyncPreviewEve
   return page >= 0 ? page : 0;
 };
 
-const buildInitialSyncPreviewWeekPageMap = (
-  events: UserAvailabilitySyncPreviewEvent[],
-): Record<string, number> =>
-  Object.fromEntries(
-    events.map((event) => [event.eventId, resolveInitialSyncPreviewWeekPage(event)]),
-  );
-
 const reconcileEventAfterApply = ({
   event,
   selectedAvailabilities,
@@ -287,6 +285,15 @@ export default function AccountScheduleSettings({
   }, [datedMessage]);
 
   const loadSyncPreview = useCallback(async (): Promise<UserAvailabilitySyncPreviewEvent[]> => {
+    const applyPreviewState = (previewState: SyncPreviewState) => {
+      setSyncPreviewEvents(previewState.events);
+      setSyncCellSelectionMap(previewState.cellSelectionMap);
+      setSyncPreviewWeekPageMap(previewState.weekPageMap);
+      setSyncOverwriteMap(previewState.overwriteMap);
+      setSyncAllowFinalizedMap(previewState.allowFinalizedMap);
+      setSyncMessageMap(previewState.messageMap);
+    };
+
     setIsSyncPreviewLoading(true);
     setHasLoadedSyncPreview(true);
     setSyncPreviewMessage(null);
@@ -294,26 +301,15 @@ export default function AccountScheduleSettings({
     try {
       const result = await fetchUserAvailabilitySyncPreviewResult();
       const preview = result.events;
-      setSyncPreviewEvents(preview);
-      setSyncCellSelectionMap(
-        Object.fromEntries(
-          preview.map((row) => [
-            row.eventId,
-            Object.fromEntries(
-              row.dates.map((date) => [date.eventDateId, date.desiredAvailability]),
-            ),
-          ]),
-        ),
-      );
-      setSyncPreviewWeekPageMap(buildInitialSyncPreviewWeekPageMap(preview));
-      setSyncOverwriteMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
-      setSyncAllowFinalizedMap(Object.fromEntries(preview.map((row) => [row.eventId, false])));
-      setSyncMessageMap({});
       if (!result.success) {
+        applyPreviewState(createEmptySyncPreviewState());
         setSyncPreviewFailureReason(result.reason);
         setSyncPreviewMessage(result.message);
         return preview;
       }
+      applyPreviewState(
+        buildSyncPreviewState(preview, (event) => resolveInitialSyncPreviewWeekPage(event)),
+      );
       if (preview.length === 0) {
         setSyncPreviewMessage(
           '変更対象のイベントはありません（ログイン後に回答したイベントが未登録、または差分がありません）',
@@ -322,6 +318,7 @@ export default function AccountScheduleSettings({
       return preview;
     } catch (error) {
       console.error('反映対象取得エラー:', error);
+      applyPreviewState(createEmptySyncPreviewState());
       setSyncPreviewFailureReason('error');
       setSyncPreviewMessage('反映対象の取得に失敗しました。時間をおいて再度お試しください。');
       return [];

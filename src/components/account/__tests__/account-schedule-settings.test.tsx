@@ -430,6 +430,57 @@ describe('AccountScheduleSettings', () => {
     });
   });
 
+  it('回答イベントへの反映の再取得失敗時は古いプレビューを残さない', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockFetchUserAvailabilitySyncPreviewResult
+      .mockResolvedValueOnce({
+        success: true,
+        events: [
+          {
+            eventId: 'event-1',
+            publicToken: 'event-token-1',
+            title: 'イベントA',
+            isFinalized: false,
+            changes: {
+              total: 1,
+              availableToUnavailable: 0,
+              unavailableToAvailable: 1,
+              protected: 0,
+            },
+            dates: [
+              {
+                eventDateId: 'date-1',
+                startTime: '2099-05-03T03:00:00Z',
+                endTime: '2099-05-03T04:00:00Z',
+                currentAvailability: false,
+                desiredAvailability: true,
+                willChange: true,
+                isProtected: false,
+              },
+            ],
+          },
+        ],
+      })
+      .mockRejectedValueOnce(new Error('network failed'));
+
+    render(<AccountScheduleSettings />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    expect(await screen.findByRole('link', { name: 'イベントA' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    expect(
+      await screen.findByText('反映対象の取得に失敗しました。時間をおいて再度お試しください。'),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'イベントA' })).not.toBeInTheDocument();
+    });
+  });
+
   it('回答イベントへの反映は変更がある最初の週を初期表示する', async () => {
     const firstWeek = createFixedLocalTimeRange(2026, 1, 9, 9, 10);
     const changedWeek = createFixedLocalTimeRange(2026, 1, 16, 9, 10);
