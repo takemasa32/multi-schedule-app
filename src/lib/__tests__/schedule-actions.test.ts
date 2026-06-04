@@ -28,6 +28,12 @@ const createRangeMock = <T,>(pages: T[][]) =>
     }),
   );
 
+const createOrderedRangeChain = (rangeMock: jest.Mock) => {
+  const secondOrderMock = jest.fn().mockReturnValue({ range: rangeMock });
+  const firstOrderMock = jest.fn().mockReturnValue({ order: secondOrderMock });
+  return { firstOrderMock, secondOrderMock };
+};
+
 describe('saveAvailabilityOverrides', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -296,15 +302,17 @@ describe('applyUserAvailabilitySyncForEvent', () => {
       }
       if (table === 'user_event_availability_overrides') {
         const rangeMock = createRangeMock([[]]);
-        const inMock = jest.fn().mockReturnValue({ range: rangeMock });
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
+        const inMock = jest.fn().mockReturnValue({ order: firstOrderMock });
         const eqMock = jest.fn().mockReturnValue({ in: inMock });
         return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
       }
       if (table === 'availabilities' && fromMock.mock.calls.length === 7) {
         const rangeMock = createRangeMock([currentAvailabilities]);
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
         return {
           select: jest.fn().mockReturnValue({
-            in: jest.fn().mockReturnValue({ range: rangeMock }),
+            in: jest.fn().mockReturnValue({ order: firstOrderMock }),
           }),
         };
       }
@@ -440,15 +448,17 @@ describe('fetchUserAvailabilitySyncPreviewResult', () => {
       }
       if (table === 'user_event_availability_overrides') {
         const rangeMock = createRangeMock([[]]);
-        const inMock = jest.fn().mockReturnValue({ range: rangeMock });
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
+        const inMock = jest.fn().mockReturnValue({ order: firstOrderMock });
         const eqMock = jest.fn().mockReturnValue({ in: inMock });
         return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
       }
       if (table === 'availabilities') {
         const rangeMock = createRangeMock([[]]);
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
         return {
           select: jest.fn().mockReturnValue({
-            in: jest.fn().mockReturnValue({ range: rangeMock }),
+            in: jest.fn().mockReturnValue({ order: firstOrderMock }),
           }),
         };
       }
@@ -571,15 +581,17 @@ describe('fetchUserAvailabilitySyncPreviewResult', () => {
       }
       if (table === 'user_event_availability_overrides') {
         const rangeMock = createRangeMock([[]]);
-        const inMock = jest.fn().mockReturnValue({ range: rangeMock });
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
+        const inMock = jest.fn().mockReturnValue({ order: firstOrderMock });
         const eqMock = jest.fn().mockReturnValue({ in: inMock });
         return { select: jest.fn().mockReturnValue({ eq: eqMock }) };
       }
       if (table === 'availabilities') {
         const rangeMock = createRangeMock([[]]);
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
         return {
           select: jest.fn().mockReturnValue({
-            in: jest.fn().mockReturnValue({ range: rangeMock }),
+            in: jest.fn().mockReturnValue({ order: firstOrderMock }),
           }),
         };
       }

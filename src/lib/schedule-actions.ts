@@ -232,6 +232,8 @@ const fetchSyncPreviewOverrideRows = async (
       .select('event_id,event_date_id')
       .eq('user_id', userId)
       .in('event_id', eventIds)
+      .order('event_id', { ascending: true })
+      .order('event_date_id', { ascending: true })
       .range(from, to);
 
     if (error) {
@@ -258,6 +260,8 @@ const fetchSyncPreviewAvailabilityRows = async (
       .from('availabilities')
       .select('participant_id,event_date_id,availability')
       .in('participant_id', participantIds)
+      .order('participant_id', { ascending: true })
+      .order('event_date_id', { ascending: true })
       .range(from, to);
 
     if (error) {
@@ -286,6 +290,8 @@ const fetchAvailabilityOverrideRows = async (
       .select('event_id,event_date_id,availability')
       .eq('user_id', userId)
       .in('event_id', eventIds)
+      .order('event_id', { ascending: true })
+      .order('event_date_id', { ascending: true })
       .range(from, to);
 
     if (error) {
