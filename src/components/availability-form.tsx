@@ -450,6 +450,7 @@ export default function AvailabilityForm({
         const shouldOpenSyncReview =
           syncScope === 'all' && (formData.get('sync_defer') as string) === 'true';
         formData.set('override_date_ids', JSON.stringify(overrideDateIds));
+        formData.set('edited_date_ids', JSON.stringify(Object.keys(manuallyEditedDateIds)));
         // 編集モードの場合、既存の参加者IDを追加
         if (mode === 'edit' && initialParticipant?.id) {
           formData.append('participantId', initialParticipant.id);
@@ -476,7 +477,7 @@ export default function AvailabilityForm({
         setIsSubmitting(false);
       }
     },
-    [initialParticipant?.id, mode, overrideDateIds, publicToken, router],
+    [initialParticipant?.id, manuallyEditedDateIds, mode, overrideDateIds, publicToken, router],
   );
 
   const promptSyncScope = useCallback(
@@ -834,18 +835,16 @@ export default function AvailabilityForm({
           if (dailyAutoFillDateIdSet.has(date.id)) {
             return;
           }
-          if (manuallyEditedDateIds[date.id]) {
-            return;
-          }
           // この日程の時間帯ID
           const timeKey = getTimeKey(date.start_time, date.end_time);
 
           // 時間帯ごとの設定がある場合のみ適用する
           // 週入力の選択を優先（既存の選択を上書き）
           if (daySchedule.timeSlots[timeKey] !== undefined) {
-            newSelectedDates[date.id] = daySchedule.selected
-              ? daySchedule.timeSlots[timeKey]
-              : false;
+            const nextValue = daySchedule.selected ? daySchedule.timeSlots[timeKey] : false;
+            if (newSelectedDates[date.id] !== nextValue) {
+              newSelectedDates[date.id] = nextValue;
+            }
           }
         }
       });
@@ -858,7 +857,6 @@ export default function AvailabilityForm({
     eventDates,
     selectedDates,
     getTimeKey,
-    manuallyEditedDateIds,
     dailyAutoFillDateIdSet,
   ]);
 
