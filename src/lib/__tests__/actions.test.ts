@@ -437,6 +437,7 @@ describe('submitAvailability', () => {
       'submit_availability_bundle',
       expect.objectContaining({
         p_edited_date_ids: [],
+        p_weekly_applied_date_ids: [],
       }),
     );
   });
@@ -457,6 +458,28 @@ describe('submitAvailability', () => {
       'submit_availability_bundle',
       expect.objectContaining({
         p_edited_date_ids: ['date1'],
+        p_weekly_applied_date_ids: [],
+      }),
+    );
+  });
+
+  it('weekly_applied_date_ids が指定されていれば RPC に渡す', async () => {
+    mockedGetAuthSession.mockResolvedValue({ user: { id: 'user-1' } });
+
+    const formData = new FormData();
+    formData.set('eventId', 'eventid');
+    formData.set('publicToken', 'pubtok');
+    formData.set('participant_name', 'テスト太郎');
+    formData.set('weekly_applied_date_ids', JSON.stringify(['date2']));
+    formData.append('availability_date1', 'on');
+
+    const result = await submitAvailability(formData);
+    expect(result.success).toBe(true);
+    expect(rpcMock).toHaveBeenCalledWith(
+      'submit_availability_bundle',
+      expect.objectContaining({
+        p_edited_date_ids: [],
+        p_weekly_applied_date_ids: ['date2'],
       }),
     );
   });

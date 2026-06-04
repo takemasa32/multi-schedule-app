@@ -653,7 +653,9 @@ export async function submitAvailability(
     const session = await getAuthSession();
     const userId = session?.user?.id ?? null;
     const editedDateIdsRaw = formData.get('edited_date_ids') as string | null;
+    const weeklyAppliedDateIdsRaw = formData.get('weekly_applied_date_ids') as string | null;
     let editedDateIds: string[] = [];
+    let weeklyAppliedDateIds: string[] = [];
     if (editedDateIdsRaw) {
       try {
         const parsed = JSON.parse(editedDateIdsRaw);
@@ -662,6 +664,16 @@ export async function submitAvailability(
         }
       } catch (error) {
         console.error('edited_date_ids の解析に失敗しました:', error);
+      }
+    }
+    if (weeklyAppliedDateIdsRaw) {
+      try {
+        const parsed = JSON.parse(weeklyAppliedDateIdsRaw);
+        if (Array.isArray(parsed)) {
+          weeklyAppliedDateIds = parsed.filter((value): value is string => typeof value === 'string');
+        }
+      } catch (error) {
+        console.error('weekly_applied_date_ids の解析に失敗しました:', error);
       }
     }
     const supabase = createSupabaseAdmin();
@@ -677,6 +689,7 @@ export async function submitAvailability(
         p_user_id: userId,
         p_override_date_ids: overrideDateIds,
         p_edited_date_ids: editedDateIds,
+        p_weekly_applied_date_ids: weeklyAppliedDateIds,
       },
     );
 

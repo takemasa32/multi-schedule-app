@@ -1,7 +1,7 @@
 -- submit_availability_bundle の自動入力逆保存防止テスト（pgTAP）
 
 BEGIN;
-SELECT plan(12);
+SELECT plan(17);
 
 SELECT is(
   (
@@ -10,16 +10,16 @@ SELECT is(
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
       AND p.proname = 'submit_availability_bundle'
-      AND p.pronargs = 8
+      AND p.pronargs IN (8, 9)
   ),
   0::bigint,
-  '古い8引数の回答送信RPCは残らない'
+  '古い8引数と9引数の回答送信RPCは残らない'
 );
 
 SELECT is(
   has_function_privilege(
     'anon',
-    'public.submit_availability_bundle(uuid,text,uuid,text,text,jsonb,text,jsonb,jsonb)',
+    'public.submit_availability_bundle(uuid,text,uuid,text,text,jsonb,text,jsonb,jsonb,jsonb)',
     'EXECUTE'
   ),
   false,
@@ -46,6 +46,14 @@ VALUES
     '3時間イベントB',
     '',
     now()
+  ),
+  (
+    '10000000-0000-0000-0000-000000000003',
+    'SubmitBundleToken03',
+    '30000000-0000-0000-0000-000000000003',
+    '3時間イベントC',
+    '',
+    now()
   );
 
 INSERT INTO public.event_dates (id, event_id, start_time, end_time, created_at)
@@ -62,6 +70,13 @@ VALUES
     '10000000-0000-0000-0000-000000000002',
     '2099-06-02T10:00:00Z',
     '2099-06-02T13:00:00Z',
+    now()
+  ),
+  (
+    '10000000-0000-0000-0000-000000000103',
+    '10000000-0000-0000-0000-000000000003',
+    '2099-06-03T10:00:00Z',
+    '2099-06-03T13:00:00Z',
     now()
   );
 
@@ -92,6 +107,7 @@ SELECT ok(
     '[{"event_date_id":"10000000-0000-0000-0000-000000000101","availability":false}]'::jsonb,
     'pgtap-user-1',
     '[]'::jsonb,
+    '[]'::jsonb,
     '[]'::jsonb
   ) LIMIT 1),
   '自動入力未変更でも送信成功する'
@@ -119,9 +135,26 @@ SELECT ok(
     '[{"event_date_id":"10000000-0000-0000-0000-000000000102","availability":true}]'::jsonb,
     'pgtap-user-1',
     '[]'::jsonb,
-    '["10000000-0000-0000-0000-000000000102"]'::jsonb
+    '["10000000-0000-0000-0000-000000000102"]'::jsonb,
+    '[]'::jsonb
   ) LIMIT 1),
   '明示変更ありでも送信成功する'
+);
+
+SELECT ok(
+  (SELECT success FROM public.submit_availability_bundle(
+    '10000000-0000-0000-0000-000000000003',
+    'SubmitBundleToken03',
+    NULL,
+    '週入力新規補完',
+    NULL,
+    '[{"event_date_id":"10000000-0000-0000-0000-000000000103","availability":true}]'::jsonb,
+    'pgtap-user-1',
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '["10000000-0000-0000-0000-000000000103"]'::jsonb
+  ) LIMIT 1),
+  '週入力で新規補完した候補も送信成功する'
 );
 
 SELECT is(
@@ -158,6 +191,30 @@ SELECT is(
   (SELECT count(*)::bigint FROM public.user_schedule_blocks WHERE user_id='pgtap-user-1' AND start_time >= '2099-06-02T10:00:00Z' AND end_time <= '2099-06-02T13:00:00Z'),
   3::bigint,
   '明示変更した3時間候補は3件の1時間枠として保持される'
+);
+
+SELECT is(
+  (SELECT count(*)::bigint FROM public.user_schedule_blocks WHERE user_id='pgtap-user-1' AND start_time >= '2099-06-03T10:00:00Z' AND end_time <= '2099-06-03T13:00:00Z'),
+  3::bigint,
+  '週入力で新規補完した3時間候補は未保存枠に3件追加される'
+);
+
+SELECT is(
+  (SELECT availability FROM public.user_schedule_blocks WHERE user_id='pgtap-user-1' AND start_time='2099-06-03T10:00:00Z' AND end_time='2099-06-03T11:00:00Z'),
+  true,
+  '週入力で新規補完した先頭1時間は可として保存される'
+);
+
+SELECT is(
+  (SELECT source FROM public.user_schedule_blocks WHERE user_id='pgtap-user-1' AND start_time='2099-06-03T10:00:00Z' AND end_time='2099-06-03T11:00:00Z'),
+  'event',
+  '週入力で新規補完した枠も event 由来として新規保存される'
+);
+
+SELECT is(
+  (SELECT availability FROM public.user_schedule_blocks WHERE user_id='pgtap-user-1' AND start_time='2099-06-01T12:00:00Z' AND end_time='2099-06-01T13:00:00Z'),
+  true,
+  '週入力の新規保存を追加しても既存の可ブロックは壊れない'
 );
 
 SELECT finish();

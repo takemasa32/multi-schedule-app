@@ -233,6 +233,7 @@ describe('AvailabilityForm', () => {
     await waitFor(() => expect(submitAvailability).toHaveBeenCalled());
     const submitted = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
     expect(submitted.get('edited_date_ids')).toBe('[]');
+    expect(submitted.get('weekly_applied_date_ids')).toBe('[]');
   });
 
   it('ユーザーが候補を明示変更した場合は edited_date_ids に含めて送る', async () => {
@@ -265,6 +266,7 @@ describe('AvailabilityForm', () => {
     await waitFor(() => expect(submitAvailability).toHaveBeenCalled());
     const submitted = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
     expect(submitted.get('edited_date_ids')).toBe(JSON.stringify(['date2']));
+    expect(submitted.get('weekly_applied_date_ids')).toBe('[]');
   });
 
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
@@ -312,7 +314,7 @@ describe('AvailabilityForm', () => {
     expect(within(weeklySection).getByText(lastEnd)).toBeInTheDocument();
   });
 
-  it('曜日一括入力は edited_date_ids に含めず送る', async () => {
+  it('曜日一括入力で新規補完した候補は weekly_applied_date_ids に含めて送る', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated requireWeeklyStep />);
 
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
@@ -334,6 +336,41 @@ describe('AvailabilityForm', () => {
     await waitFor(() => expect(submitAvailability).toHaveBeenCalled());
     const submitted = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
     expect(submitted.get('edited_date_ids')).toBe('[]');
+    expect(submitted.get('weekly_applied_date_ids')).toBe(JSON.stringify(['date1']));
+  });
+
+  it('曜日一括入力で各日予定の自動入力枠は weekly_applied_date_ids に含めない', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        requireWeeklyStep
+        autoFillAvailabilities={{ date1: true }}
+        dailyAutoFillDateIds={['date1']}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
+    });
+
+    const weeklyCell = document.querySelector<HTMLElement>('td[data-day="月"][data-time-slot]');
+    if (!weeklyCell) throw new Error('曜日一括セルが見つかりません');
+    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.click(screen.getByLabelText('利用規約を読み、同意します'));
+    fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
+
+    await waitFor(() => expect(submitAvailability).toHaveBeenCalled());
+    const submitted = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
+    expect(submitted.get('edited_date_ids')).toBe('[]');
+    expect(submitted.get('weekly_applied_date_ids')).toBe('[]');
   });
 
   it('予定確認・修正で時間区切りの最下段に終了時刻を表示する', async () => {
