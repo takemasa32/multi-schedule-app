@@ -195,7 +195,7 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 ### GitHub 側の推奨設定
 
 - Default branch は `main` に設定します。
-- `main` の branch protection で Pull Request 必須、直接 push 禁止、必須ステータスチェック `quality` を有効化します。
+- `main` の branch protection で Pull Request 必須、直接 push 禁止、必須ステータスチェック `Quality checks` を有効化します。
 - マージ方法は `Squash merge` を有効化し、必要がなければ `Merge commit` と `Rebase merge` は無効化します。
 - 開いている PR の base branch が `develop` の場合は `main` へ付け替えます。
 - `develop` は移行直後に削除せず、参照用の read-only ブランチとして扱うか、移行確認後に削除を判断します。
