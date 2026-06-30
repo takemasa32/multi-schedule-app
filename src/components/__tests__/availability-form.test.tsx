@@ -8,6 +8,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AvailabilityForm from '../availability-form';
 
+const mockRouterReplace = jest.fn();
+
 jest.mock('@/lib/actions', () => ({
   submitAvailability: jest.fn(),
   checkParticipantExists: jest.fn(),
@@ -15,7 +17,7 @@ jest.mock('@/lib/actions', () => ({
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
-    replace: jest.fn(),
+    replace: mockRouterReplace,
   }),
 }));
 
@@ -52,7 +54,7 @@ describe('AvailabilityForm', () => {
     });
     localStorage.clear();
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
-    (submitAvailability as jest.Mock).mockResolvedValue({ success: true });
+    (submitAvailability as jest.Mock).mockResolvedValue({ success: true, participantId: 'part-1' });
   });
 
   const goToWeeklyStepAsGuest = () => {
@@ -484,7 +486,7 @@ describe('AvailabilityForm', () => {
     });
   });
 
-  it('最終送信時に同期範囲モーダルを表示し sync_scope=current で送信できる', async () => {
+  it('最終送信時は同期範囲モーダルを出さず完了ページへ遷移する', async () => {
     render(
       <AvailabilityForm
         {...defaultProps}
@@ -507,17 +509,19 @@ describe('AvailabilityForm', () => {
     fireEvent.click(screen.getByLabelText(/利用規約/));
     fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
 
-    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'このイベントのみ' }));
     await waitFor(() => {
       expect(submitAvailability).toHaveBeenCalled();
     });
     const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
-    expect(formDataArg.get('sync_scope')).toBe('current');
+    expect(screen.queryByText('回答後の保存方法')).not.toBeInTheDocument();
+    expect(formDataArg.get('sync_scope')).toBeNull();
     expect(formDataArg.get('sync_defer')).toBeNull();
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      '/event/token1/input/complete?participant_id=part-1',
+    );
   });
 
-  it('最終送信時に同期範囲モーダルから sync_scope=all と sync_defer=true で送信できる', async () => {
+  it('他イベント反映対象がある場合も回答送信だけを先に完了する', async () => {
     render(
       <AvailabilityForm
         {...defaultProps}
@@ -540,47 +544,16 @@ describe('AvailabilityForm', () => {
     fireEvent.click(screen.getByLabelText(/利用規約/));
     fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
 
-    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'アカウント予定に保存して反映' }));
     await waitFor(() => {
       expect(submitAvailability).toHaveBeenCalled();
     });
     const formDataArg = (submitAvailability as jest.Mock).mock.calls[0][0] as FormData;
-    expect(formDataArg.get('sync_scope')).toBe('all');
-    expect(formDataArg.get('sync_defer')).toBe('true');
-  });
-
-  it('同期範囲モーダルで確認へ戻るを選ぶと送信せず確認ステップへ戻る', async () => {
-    render(
-      <AvailabilityForm
-        {...defaultProps}
-        mode="new"
-        isAuthenticated
-        hasSyncTargetEvents
-        initialAvailabilities={{ date1: true }}
-      />,
+    expect(screen.queryByText('回答後の保存方法')).not.toBeInTheDocument();
+    expect(formDataArg.get('sync_scope')).toBeNull();
+    expect(formDataArg.get('sync_defer')).toBeNull();
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      '/event/token1/input/complete?participant_id=part-1',
     );
-
-    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
-    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
-    const weeklyNext = screen.queryByRole('button', { name: '次へ' });
-    if (weeklyNext) {
-      fireEvent.click(weeklyNext);
-      const skipWeeklySave = await screen.findByRole('button', { name: '更新せず次へ' });
-      fireEvent.click(skipWeeklySave);
-    }
-    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
-    fireEvent.click(screen.getByLabelText(/利用規約/));
-    fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
-
-    expect(await screen.findByText('回答後の保存方法')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '確認へ戻る' }));
-
-    await waitFor(() => {
-      expect(screen.queryByText('回答後の保存方法')).not.toBeInTheDocument();
-    });
-    expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
-    expect(submitAvailability).not.toHaveBeenCalled();
   });
 
   it('確認画面の名前欄は重複エラー時のみ表示する', async () => {
