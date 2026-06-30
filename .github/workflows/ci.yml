@@ -6,31 +6,36 @@ on:
   pull_request:
     branches: [main, develop]
 
-jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-      - run: npm ci
-      - run: npx eslint .
+permissions:
+  contents: read
 
-  test:
-    name: Test
+jobs:
+  quality:
+    name: Quality checks
     runs-on: ubuntu-latest
+    env:
+      CI: true
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_ANON_KEY: test-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_DB_PASSWORD: postgres
+      NEXTAUTH_SECRET: test-secret
+      NEXTAUTH_URL: http://127.0.0.1:3000
+      GOOGLE_CLIENT_ID: test-google-client-id
+      GOOGLE_CLIENT_SECRET: test-google-client-secret
+      ENABLE_DEV_LOGIN: 'false'
+      NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
+      ALLOW_DEV_LOGIN_IN_PRODUCTION: 'false'
+      NEXT_PUBLIC_ALLOW_DEV_LOGIN_IN_PRODUCTION: 'false'
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-20-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-20-
+          cache: npm
       - run: npm ci
-      - run: npm run test:ci -- --coverage
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:ci
+      - run: npm run build

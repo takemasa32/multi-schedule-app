@@ -10,13 +10,13 @@ export function formatParticipantUpdatedAt(value: string | null | undefined): st
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-
-  const month = String(date.getMonth() + 1);
-  const day = String(date.getDate());
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-
-  return `${month}/${day} ${hours}:${minutes}`;
+  return new Intl.DateTimeFormat('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
 }
 
 /**

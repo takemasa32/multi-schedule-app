@@ -14,6 +14,7 @@ import {
 
 type EventDateRange = {
   id: string;
+  event_id?: string;
   start_time: string;
   end_time: string;
 };
@@ -65,6 +66,18 @@ export type UserAvailabilitySyncPreviewEvent = {
   };
   dates: SyncPreviewDateRow[];
 };
+
+export type UserAvailabilitySyncPreviewResult =
+  | {
+      success: true;
+      events: UserAvailabilitySyncPreviewEvent[];
+    }
+  | {
+      success: false;
+      reason: 'unauthenticated';
+      message: string;
+      events: [];
+    };
 
 const toLocalDateTimeString = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
@@ -168,6 +181,165 @@ type SyncPreviewContext = {
   currentAvailabilitiesByParticipantId: Map<string, Map<string, boolean>>;
 };
 
+const SUPABASE_PAGE_SIZE = 1000;
+
+const fetchEventDateRanges = async (
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  eventIds: string[],
+): Promise<EventDateRange[]> => {
+  const rows: EventDateRange[] = [];
+  if (eventIds.length === 0) return rows;
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('event_dates')
+      .select('id,event_id,start_time,end_time')
+      .in('event_id', eventIds)
+      .order('start_time', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('イベント日程取得エラー:', error);
+      return rows;
+    }
+
+    rows.push(
+      ...((data ?? []).map((row) => ({
+        id: row.id,
+        event_id: row.event_id,
+        start_time: row.start_time,
+        end_time: row.end_time,
+      })) as EventDateRange[]),
+    );
+
+    if (!data || data.length < SUPABASE_PAGE_SIZE) return rows;
+  }
+};
+
+const fetchSyncPreviewOverrideRows = async (
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  userId: string,
+  eventIds: string[],
+): Promise<Array<{ event_id: string; event_date_id: string }>> => {
+  const rows: Array<{ event_id: string; event_date_id: string }> = [];
+  if (eventIds.length === 0) return rows;
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('user_event_availability_overrides')
+      .select('event_id,event_date_id')
+      .eq('user_id', userId)
+      .in('event_id', eventIds)
+      .order('event_id', { ascending: true })
+      .order('event_date_id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('上書き情報取得エラー:', error);
+      return rows;
+    }
+
+    rows.push(...((data ?? []) as typeof rows));
+
+    if (!data || data.length < SUPABASE_PAGE_SIZE) return rows;
+  }
+};
+
+const fetchSyncPreviewAvailabilityRows = async (
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  participantIds: string[],
+): Promise<Array<{ participant_id: string; event_date_id: string; availability: boolean }>> => {
+  const rows: Array<{ participant_id: string; event_date_id: string; availability: boolean }> = [];
+  if (participantIds.length === 0) return rows;
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('availabilities')
+      .select('participant_id,event_date_id,availability')
+      .in('participant_id', participantIds)
+      .order('participant_id', { ascending: true })
+      .order('event_date_id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('現在回答取得エラー:', error);
+      return rows;
+    }
+
+    rows.push(...((data ?? []) as typeof rows));
+
+    if (!data || data.length < SUPABASE_PAGE_SIZE) return rows;
+  }
+};
+
+const fetchAvailabilityOverrideRows = async (
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  userId: string,
+  eventIds: string[],
+): Promise<Array<{ event_id: string; event_date_id: string; availability: boolean }>> => {
+  const rows: Array<{ event_id: string; event_date_id: string; availability: boolean }> = [];
+  if (eventIds.length === 0) return rows;
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('user_event_availability_overrides')
+      .select('event_id,event_date_id,availability')
+      .eq('user_id', userId)
+      .in('event_id', eventIds)
+      .order('event_id', { ascending: true })
+      .order('event_date_id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('上書き情報取得エラー:', error);
+      return rows;
+    }
+
+    rows.push(...((data ?? []) as typeof rows));
+
+    if (!data || data.length < SUPABASE_PAGE_SIZE) return rows;
+  }
+};
+
+const fetchScheduleBlocksInRange = async ({
+  supabase,
+  userId,
+  minStart,
+  maxEnd,
+}: {
+  supabase: ReturnType<typeof createSupabaseAdmin>;
+  userId: string;
+  minStart: string;
+  maxEnd: string;
+}): Promise<ScheduleBlock[]> => {
+  const rows: ScheduleBlock[] = [];
+
+  for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('user_schedule_blocks')
+      .select('start_time,end_time,availability')
+      .eq('user_id', userId)
+      .lt('start_time', maxEnd)
+      .gt('end_time', minStart)
+      .order('start_time', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('予定ブロック取得エラー:', error);
+      return rows;
+    }
+
+    rows.push(...((data ?? []) as ScheduleBlock[]));
+
+    if (!data || data.length < SUPABASE_PAGE_SIZE) return rows;
+  }
+};
+
 const buildSyncPreviewContext = async (
   userId: string,
   options?: SyncPreviewBuildOptions,
@@ -224,10 +396,33 @@ const buildSyncPreviewContext = async (
   const scopedEventIds = Array.from(new Set(links.map((row) => row.event_id)));
   const scopedParticipantIds = Array.from(new Set(links.map((row) => row.participant_id)));
 
-  const { data: blocks } = await supabase
-    .from('user_schedule_blocks')
-    .select('start_time,end_time,availability')
-    .eq('user_id', userId);
+  const allEventDates = await fetchEventDateRanges(supabase, scopedEventIds);
+  const eventDatesByEventId = new Map<string, EventDateRange[]>();
+  allEventDates.forEach((row) => {
+    if (!row.event_id) return;
+    const current = eventDatesByEventId.get(row.event_id) ?? [];
+    current.push({
+      id: row.id,
+      event_id: row.event_id,
+      start_time: row.start_time,
+      end_time: row.end_time,
+    });
+    eventDatesByEventId.set(row.event_id, current);
+  });
+
+  const blocks =
+    allEventDates.length > 0
+      ? await fetchScheduleBlocksInRange({
+          supabase,
+          userId,
+          minStart: allEventDates
+            .map((row) => row.start_time)
+            .reduce((min, value) => (value < min ? value : min), allEventDates[0].start_time),
+          maxEnd: allEventDates
+            .map((row) => row.end_time)
+            .reduce((max, value) => (value > max ? value : max), allEventDates[0].end_time),
+        })
+      : [];
 
   const { data: finalizedDates } =
     allEventIds.length > 0
@@ -260,49 +455,20 @@ const buildSyncPreviewContext = async (
   }
   const eventsMap = new Map((eventsData ?? []).map((row) => [row.id, row]));
 
-  const { data: allEventDates, error: datesError } = await supabase
-    .from('event_dates')
-    .select('id,event_id,start_time,end_time')
-    .in('event_id', scopedEventIds)
-    .order('start_time', { ascending: true });
-  if (datesError) {
-    console.error('イベント日程取得エラー:', datesError);
-  }
-  const eventDatesByEventId = new Map<string, EventDateRange[]>();
-  (allEventDates ?? []).forEach((row) => {
-    const current = eventDatesByEventId.get(row.event_id) ?? [];
-    current.push({
-      id: row.id,
-      start_time: row.start_time,
-      end_time: row.end_time,
-    });
-    eventDatesByEventId.set(row.event_id, current);
-  });
-
-  const { data: overrides, error: overridesError } = await supabase
-    .from('user_event_availability_overrides')
-    .select('event_id,event_date_id')
-    .eq('user_id', userId)
-    .in('event_id', scopedEventIds);
-  if (overridesError) {
-    console.error('上書き情報取得エラー:', overridesError);
-  }
+  const overrides = await fetchSyncPreviewOverrideRows(supabase, userId, scopedEventIds);
   const protectedDateIdsByEventId = new Map<string, Set<string>>();
-  (overrides ?? []).forEach((row) => {
+  overrides.forEach((row) => {
     const set = protectedDateIdsByEventId.get(row.event_id) ?? new Set<string>();
     set.add(row.event_date_id);
     protectedDateIdsByEventId.set(row.event_id, set);
   });
 
-  const { data: currentAvailabilities, error: currentAvailabilitiesError } = await supabase
-    .from('availabilities')
-    .select('participant_id,event_date_id,availability')
-    .in('participant_id', scopedParticipantIds);
-  if (currentAvailabilitiesError) {
-    console.error('現在回答取得エラー:', currentAvailabilitiesError);
-  }
+  const currentAvailabilities = await fetchSyncPreviewAvailabilityRows(
+    supabase,
+    scopedParticipantIds,
+  );
   const currentAvailabilitiesByParticipantId = new Map<string, Map<string, boolean>>();
-  (currentAvailabilities ?? []).forEach((row) => {
+  currentAvailabilities.forEach((row) => {
     const map = currentAvailabilitiesByParticipantId.get(row.participant_id) ?? new Map();
     map.set(row.event_date_id, row.availability);
     currentAvailabilitiesByParticipantId.set(row.participant_id, map);
@@ -311,7 +477,7 @@ const buildSyncPreviewContext = async (
   return {
     links,
     eventsMap,
-    blocks: (blocks ?? []) as ScheduleBlock[],
+    blocks,
     busyIntervals,
     eventDatesByEventId,
     protectedDateIdsByEventId,
@@ -826,10 +992,20 @@ export async function syncUserAvailabilities({
   const targetEventIds = Array.from(new Set(links.map((link) => link.event_id)));
   const participantIds = Array.from(new Set(links.map((link) => link.participant_id)));
 
-  const { data: blocks } = await supabase
-    .from('user_schedule_blocks')
-    .select('start_time,end_time,availability')
-    .eq('user_id', userId);
+  const eventDatesRows = await fetchEventDateRanges(supabase, targetEventIds);
+  const blocks =
+    eventDatesRows.length > 0
+      ? await fetchScheduleBlocksInRange({
+          supabase,
+          userId,
+          minStart: eventDatesRows
+            .map((row) => row.start_time)
+            .reduce((min, value) => (value < min ? value : min), eventDatesRows[0].start_time),
+          maxEnd: eventDatesRows
+            .map((row) => row.end_time)
+            .reduce((max, value) => (value > max ? value : max), eventDatesRows[0].end_time),
+        })
+      : [];
 
   const { data: finalizedDates } =
     allEventIds.length > 0
@@ -853,49 +1029,30 @@ export async function syncUserAvailabilities({
       Boolean(row),
     );
 
-  const { data: eventDatesRows, error: eventDatesError } = await supabase
-    .from('event_dates')
-    .select('id,event_id,start_time,end_time')
-    .in('event_id', targetEventIds);
-  if (eventDatesError) {
-    console.error('イベント日程取得エラー:', eventDatesError);
-    return;
-  }
   const eventDatesByEventId = new Map<string, EventDateRange[]>();
-  (eventDatesRows ?? []).forEach((row) => {
+  eventDatesRows.forEach((row) => {
+    if (!row.event_id) return;
     const current = eventDatesByEventId.get(row.event_id) ?? [];
     current.push({
       id: row.id,
+      event_id: row.event_id,
       start_time: row.start_time,
       end_time: row.end_time,
     });
     eventDatesByEventId.set(row.event_id, current);
   });
 
-  const { data: overridesRows, error: overridesError } = await supabase
-    .from('user_event_availability_overrides')
-    .select('event_id,event_date_id,availability')
-    .eq('user_id', userId)
-    .in('event_id', targetEventIds);
-  if (overridesError) {
-    console.error('上書き情報取得エラー:', overridesError);
-  }
+  const overridesRows = await fetchAvailabilityOverrideRows(supabase, userId, targetEventIds);
   const overrideMapByEventId = new Map<string, Map<string, boolean>>();
-  (overridesRows ?? []).forEach((row) => {
+  overridesRows.forEach((row) => {
     const map = overrideMapByEventId.get(row.event_id) ?? new Map<string, boolean>();
     map.set(row.event_date_id, row.availability);
     overrideMapByEventId.set(row.event_id, map);
   });
 
-  const { data: currentAvailabilitiesRows, error: currentAvailabilitiesError } = await supabase
-    .from('availabilities')
-    .select('participant_id,event_date_id,availability')
-    .in('participant_id', participantIds);
-  if (currentAvailabilitiesError) {
-    console.error('現在回答取得エラー:', currentAvailabilitiesError);
-  }
+  const currentAvailabilitiesRows = await fetchSyncPreviewAvailabilityRows(supabase, participantIds);
   const currentAvailabilitiesByParticipantId = new Map<string, Set<string>>();
-  (currentAvailabilitiesRows ?? []).forEach((row) => {
+  currentAvailabilitiesRows.forEach((row) => {
     if (!row.availability) return;
     const set = currentAvailabilitiesByParticipantId.get(row.participant_id) ?? new Set<string>();
     set.add(row.event_date_id);
@@ -937,7 +1094,7 @@ export async function syncUserAvailabilities({
       const auto = computeAccountBlockAutoFill({
         start: date.start_time,
         end: date.end_time,
-        blocks: (blocks ?? []) as ScheduleBlock[],
+        blocks,
       });
 
       if (auto === true) {
@@ -967,10 +1124,30 @@ export async function syncUserAvailabilities({
 export async function fetchUserAvailabilitySyncPreview(
   options?: SyncPreviewBuildOptions,
 ): Promise<UserAvailabilitySyncPreviewEvent[]> {
+  const result = await fetchUserAvailabilitySyncPreviewResult(options);
+  if (!result.success) {
+    throw new Error(result.message);
+  }
+  return result.events;
+}
+
+export async function fetchUserAvailabilitySyncPreviewResult(
+  options?: SyncPreviewBuildOptions,
+): Promise<UserAvailabilitySyncPreviewResult> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
-  if (!userId) return [];
-  return buildUserAvailabilitySyncPreview(userId, options);
+  if (!userId) {
+    return {
+      success: false,
+      reason: 'unauthenticated',
+      message: 'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
+      events: [],
+    };
+  }
+  return {
+    success: true,
+    events: await buildUserAvailabilitySyncPreview(userId, options),
+  };
 }
 
 export async function applyUserAvailabilitySyncForEvent({
