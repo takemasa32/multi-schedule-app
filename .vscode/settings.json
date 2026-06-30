@@ -20,5 +20,6 @@
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "cSpell.words": ["chouseisan", "daysynth", "networkidle", "tappy"],
-  "chatgpt.openOnStartup": false
+  "chatgpt.openOnStartup": false,
+  "github.copilot.chat.localeOverride": "ja"
 }

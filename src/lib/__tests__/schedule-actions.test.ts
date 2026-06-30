@@ -2,6 +2,7 @@ import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreview,
   fetchUserAvailabilitySyncPreviewResult,
+  saveParticipantAnswerAsUserSchedule,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
   upsertUserScheduleBlock,
@@ -643,5 +644,239 @@ describe('fetchUserAvailabilitySyncPreview', () => {
       'ログイン状態を確認できませんでした。ページを再読み込みしてから再度お試しください。',
     );
     expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
+  });
+});
+
+describe('saveParticipantAnswerAsUserSchedule', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({
+      user: { id: 'user-1' },
+    });
+  });
+
+  it('別の参加者に紐づいた回答は保存できない', async () => {
+    const maybeSingleMock = jest.fn().mockResolvedValue({
+      data: { participant_id: 'participant-other' },
+      error: null,
+    });
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'user_event_links') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock }),
+            }),
+          }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await saveParticipantAnswerAsUserSchedule({
+      eventId: 'event-1',
+      participantId: 'participant-1',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      message: 'この回答は現在のアカウントに紐づいていないため保存できません',
+      previewCount: 0,
+    });
+  });
+
+  it('自分に紐づいた回答は予定へ保存できる', async () => {
+    let userEventLinksCallCount = 0;
+    let eventDatesCallCount = 0;
+    let availabilitiesCallCount = 0;
+    let userScheduleBlocksCallCount = 0;
+    const scheduleUpsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'user_event_links') {
+        userEventLinksCallCount += 1;
+        if (userEventLinksCallCount === 1) {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { participant_id: 'participant-1' },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        if (userEventLinksCallCount === 2) {
+          return { upsert: jest.fn().mockResolvedValue({ error: null }) };
+        }
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({
+              data: [{ event_id: 'event-2', participant_id: 'participant-2' }],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === 'participants') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: { id: 'participant-1', event_id: 'event-1' },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'event_dates') {
+        eventDatesCallCount += 1;
+        if (eventDatesCallCount === 1) {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({
+                  data: [
+                    {
+                      id: 'date-1',
+                      start_time: '2099-06-03T14:00:00',
+                      end_time: '2099-06-03T15:00:00',
+                    },
+                  ],
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        const rangeMock = createRangeMock([
+          [
+            {
+              id: 'date-2',
+              event_id: 'event-2',
+              start_time: '2099-06-04T14:00:00',
+              end_time: '2099-06-04T15:00:00',
+            },
+          ],
+        ]);
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({ range: rangeMock }),
+            }),
+          }),
+        };
+      }
+      if (table === 'availabilities') {
+        availabilitiesCallCount += 1;
+        if (availabilitiesCallCount === 1) {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({
+                  data: [{ event_date_id: 'date-1', availability: true }],
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        const rangeMock = createRangeMock([
+          [{ participant_id: 'participant-2', event_date_id: 'date-2', availability: false }],
+        ]);
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockReturnValue({ order: firstOrderMock }),
+          }),
+        };
+      }
+      if (table === 'user_schedule_blocks') {
+        userScheduleBlocksCallCount += 1;
+        if (userScheduleBlocksCallCount === 1) {
+          return { upsert: scheduleUpsertMock };
+        }
+        const rangeMock = createRangeMock([
+          [{ start_time: '2099-06-04T14:00:00', end_time: '2099-06-04T15:00:00', availability: true }],
+        ]);
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              lt: jest.fn().mockReturnValue({
+                gt: jest.fn().mockReturnValue({
+                  order: jest.fn().mockReturnValue({ range: rangeMock }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'finalized_dates') {
+        return {
+          select: jest.fn().mockReturnValue({ in: jest.fn().mockResolvedValue({ data: [] }) }),
+        };
+      }
+      if (table === 'events') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 'event-2',
+                  title: '同期対象イベント',
+                  public_token: 'event-2-token',
+                  is_finalized: false,
+                },
+              ],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === 'user_event_availability_overrides') {
+        const rangeMock = createRangeMock([[]]);
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              in: jest.fn().mockReturnValue({ order: firstOrderMock }),
+            }),
+          }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await saveParticipantAnswerAsUserSchedule({
+      eventId: 'event-1',
+      participantId: 'participant-1',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      message: '自分の予定として保存しました',
+      previewCount: 1,
+    });
+    expect(scheduleUpsertMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          user_id: 'user-1',
+          event_id: 'event-1',
+          availability: true,
+          source: 'event',
+        }),
+      ],
+      { onConflict: 'user_id,start_time,end_time' },
+    );
   });
 });
