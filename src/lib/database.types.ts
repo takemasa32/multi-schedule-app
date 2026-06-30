@@ -448,8 +448,6 @@ export type Database = {
           p_availabilities: Json;
           p_user_id: string | null;
           p_override_date_ids?: Json;
-          p_edited_date_ids?: Json;
-          p_weekly_applied_date_ids?: Json;
         };
         Returns: {
           success: boolean;

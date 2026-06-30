@@ -108,7 +108,6 @@ export default function AvailabilityForm({
   const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
-  const [weeklyAppliedDateIds, setWeeklyAppliedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
   const wizardTitleRef = useRef<HTMLHeadingElement | null>(null);
   const previousStepRef = useRef<WizardStep | null>(null);
@@ -135,10 +134,6 @@ export default function AvailabilityForm({
   const dailyAutoFillDateIdSet = useMemo(
     () => new Set(dailyAutoFillDateIds),
     [dailyAutoFillDateIds],
-  );
-  const initialAvailabilityDateIdSet = useMemo(
-    () => new Set(Object.keys(initialAvailabilities)),
-    [initialAvailabilities],
   );
 
   // セルのスタイルと状態を返す関数
@@ -192,18 +187,6 @@ export default function AvailabilityForm({
     });
     if (changedKeys.length > 0) {
       notifySelectionChange();
-      setWeeklyAppliedDateIds((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        changedKeys.forEach((key) => {
-          if (!next[key]) {
-            return;
-          }
-          delete next[key];
-          changed = true;
-        });
-        return changed ? next : prev;
-      });
       setManuallyEditedDateIds((prev) => {
         const next = { ...prev };
         changedKeys.forEach((key) => {
@@ -308,14 +291,6 @@ export default function AvailabilityForm({
       ...prev,
       [dateId]: true,
     }));
-    setWeeklyAppliedDateIds((prev) => {
-      if (!prev[dateId]) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next[dateId];
-      return next;
-    });
     setManuallyEditedDateIds((prev) => ({
       ...prev,
       [dateId]: true,
@@ -346,8 +321,6 @@ export default function AvailabilityForm({
     setCurrentStep(1);
     setWeekdayInitialized(false);
     hasAutoFillAppliedRef.current = false;
-    setWeeklyAppliedDateIds({});
-    setManuallyEditedDateIds({});
   }, [mode, eventId]);
 
   useEffect(() => {
@@ -477,8 +450,6 @@ export default function AvailabilityForm({
         const shouldOpenSyncReview =
           syncScope === 'all' && (formData.get('sync_defer') as string) === 'true';
         formData.set('override_date_ids', JSON.stringify(overrideDateIds));
-        formData.set('edited_date_ids', JSON.stringify(Object.keys(manuallyEditedDateIds)));
-        formData.set('weekly_applied_date_ids', JSON.stringify(Object.keys(weeklyAppliedDateIds)));
         // 編集モードの場合、既存の参加者IDを追加
         if (mode === 'edit' && initialParticipant?.id) {
           formData.append('participantId', initialParticipant.id);
@@ -505,15 +476,7 @@ export default function AvailabilityForm({
         setIsSubmitting(false);
       }
     },
-    [
-      initialParticipant?.id,
-      manuallyEditedDateIds,
-      mode,
-      overrideDateIds,
-      publicToken,
-      router,
-      weeklyAppliedDateIds,
-    ],
+    [initialParticipant?.id, mode, overrideDateIds, publicToken, router],
   );
 
   const promptSyncScope = useCallback(
@@ -880,10 +843,9 @@ export default function AvailabilityForm({
           // 時間帯ごとの設定がある場合のみ適用する
           // 週入力の選択を優先（既存の選択を上書き）
           if (daySchedule.timeSlots[timeKey] !== undefined) {
-            const nextValue = daySchedule.selected ? daySchedule.timeSlots[timeKey] : false;
-            if (newSelectedDates[date.id] !== nextValue) {
-              newSelectedDates[date.id] = nextValue;
-            }
+            newSelectedDates[date.id] = daySchedule.selected
+              ? daySchedule.timeSlots[timeKey]
+              : false;
           }
         }
       });
@@ -891,41 +853,13 @@ export default function AvailabilityForm({
 
     // 状態を更新
     setSelectedDates(newSelectedDates);
-    setWeeklyAppliedDateIds((prev) => {
-      const next = { ...prev };
-      let changed = false;
-
-      eventDates.forEach((date) => {
-        if (newSelectedDates[date.id] === selectedDates[date.id]) {
-          return;
-        }
-        if (dailyAutoFillDateIdSet.has(date.id) || manuallyEditedDateIds[date.id]) {
-          return;
-        }
-        if (initialAvailabilityDateIdSet.has(date.id)) {
-          if (!next[date.id]) {
-            return;
-          }
-          delete next[date.id];
-          changed = true;
-          return;
-        }
-        if (!next[date.id]) {
-          next[date.id] = true;
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
-    });
   }, [
     weekdaySelections,
     eventDates,
     selectedDates,
     getTimeKey,
-    dailyAutoFillDateIdSet,
-    initialAvailabilityDateIdSet,
     manuallyEditedDateIds,
+    dailyAutoFillDateIdSet,
   ]);
 
   const proceedToHeatmap = useCallback(() => {
