@@ -154,7 +154,7 @@ project-root/
 
 ### 5.2 プルリクエスト運用ルール
 
-1.  **ブランチ戦略**: Git Flow ベース (develop, release/x.y.z, hotfix/x.y.z, feature/_, bugfix/_)
+1.  **ブランチ戦略**: GitHub Flow ベース（長寿命ブランチは `main` のみ。`main` から `feature/_`、`fix/_`、`chore/_` などの短命ブランチを切って作業し、PR で統合する）
 2.  **PR 命名規則**: `[<type>] <ブランチ名>: <要約>`
 3.  **PR 本文テンプレート**: 背景・目的, 変更内容, 確認手順, 関連 Issue, チェックリスト
 4.  **レビュー要件**: 承認者 1 名以上、CI 全パス

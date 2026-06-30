@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-07-01
+
+- Git の運用方針を GitFlow から GitHub Flow へ移行し、`main` を唯一の長寿命ブランチとする前提を README / CONTRIBUTING / AGENTS / 仕様書へ反映。
+- GitHub Actions の CI は `main` 向け `push` / `pull_request` のみを監視するよう変更。
+- PR テンプレートを `main` 向け短命ブランチ運用と Draft PR 前提に更新。
+- 旧 `develop` ブランチは新規作業のベースに使わない方針を明文化。
+
 ## 2026-05-29
 
 - 回答送信前の同期範囲モーダルを廃止し、回答保存後に `/event/{public_id}/input/complete` で「アカウントに保存しますか？」を確認するフローへ変更。
