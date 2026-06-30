@@ -57,7 +57,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
-    "uuid": "^14.0.0",
+    "uuid": "^14.0.1",
     "web-haptics": "^0.0.6"
   },
   "devDependencies": {
@@ -82,10 +82,10 @@
     "next": "^16.2.6",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.0",
-    "supabase": "^2.72.9",
+    "supabase": "^2.108.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "undici": "^7.8.0",
+    "undici": "^7.28.0",
     "wait-on": "^8.0.3",
     "web-streams-polyfill": "^4.1.0"
   },
