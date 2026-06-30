@@ -1,5 +1,6 @@
 import {
   applyUserAvailabilitySyncForEvent,
+  saveParticipantAnswerAsUserSchedule,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
   upsertUserScheduleBlock,
@@ -17,6 +18,19 @@ jest.mock('@/lib/supabase', () => ({
 
 const mockedGetAuthSession = getAuthSession as jest.Mock;
 const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
+
+const createRangeMock = <T>(responses: T[]) => {
+  return jest.fn().mockImplementation((from: number) => {
+    const index = Math.floor(from / 1000);
+    return Promise.resolve({ data: responses[index] ?? [], error: null });
+  });
+};
+
+const createOrderedRangeChain = (rangeMock: jest.Mock) => {
+  const secondOrderMock = jest.fn().mockReturnValue({ range: rangeMock });
+  const firstOrderMock = jest.fn().mockReturnValue({ order: secondOrderMock });
+  return { firstOrderMock, secondOrderMock };
+};
 
 describe('saveAvailabilityOverrides', () => {
   beforeEach(() => {
@@ -330,5 +344,247 @@ describe('applyUserAvailabilitySyncForEvent', () => {
         { event_date_id: futureDateId, availability: true },
       ]),
     });
+  });
+});
+
+describe('saveParticipantAnswerAsUserSchedule', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({
+      user: { id: 'user-1' },
+    });
+  });
+
+  it('別の参加者に紐づいた回答は保存できない', async () => {
+    const userEventLinksMaybeSingleMock = jest.fn().mockResolvedValue({
+      data: { participant_id: 'participant-other' },
+      error: null,
+    });
+    const userEventLinksEqEventMock = jest
+      .fn()
+      .mockReturnValue({ maybeSingle: userEventLinksMaybeSingleMock });
+    const userEventLinksEqUserMock = jest.fn().mockReturnValue({ eq: userEventLinksEqEventMock });
+
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'user_event_links') {
+        return {
+          select: jest.fn().mockReturnValue({ eq: userEventLinksEqUserMock }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await saveParticipantAnswerAsUserSchedule({
+      eventId: 'event-1',
+      participantId: 'participant-1',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      message: 'この回答は現在のアカウントに紐づいていないため保存できません',
+      previewCount: 0,
+    });
+    expect(userEventLinksEqUserMock).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(userEventLinksEqEventMock).toHaveBeenCalledWith('event_id', 'event-1');
+  });
+
+  it('自分に紐づいた回答は予定へ保存し差分件数を返す', async () => {
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+    const userEventLinksMaybeSingleMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: { participant_id: 'participant-1' },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { participant_id: 'participant-1' },
+        error: null,
+      });
+    const userEventLinksEqEventMock = jest
+      .fn()
+      .mockReturnValue({ maybeSingle: userEventLinksMaybeSingleMock });
+    const userEventLinksEqUserMock = jest.fn().mockReturnValue({ eq: userEventLinksEqEventMock });
+    const userEventLinksSelectMock = jest.fn().mockReturnValue({ eq: userEventLinksEqUserMock });
+    const userEventLinksUpsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const eventDatesOrderMock = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'date-1',
+          start_time: '2099-06-03T14:00:00',
+          end_time: '2099-06-03T15:00:00',
+        },
+      ],
+      error: null,
+    });
+    const eventDatesEqMock = jest.fn().mockReturnValue({ order: eventDatesOrderMock });
+
+    const availabilitiesParticipantEqMock = jest.fn().mockResolvedValue({
+      data: [{ event_date_id: 'date-1', availability: true }],
+      error: null,
+    });
+    const availabilitiesEventEqMock = jest
+      .fn()
+      .mockReturnValue({ eq: availabilitiesParticipantEqMock });
+
+    const previewLinksEqMock = jest.fn().mockResolvedValue({
+      data: [{ event_id: 'event-2', participant_id: 'participant-2' }],
+      error: null,
+    });
+    const previewBlocksRangeMock = createRangeMock([
+      [{ start_time: '2099-06-04T14:00:00', end_time: '2099-06-04T15:00:00', availability: true }],
+    ]);
+    const previewBlocksOrderMock = jest.fn().mockReturnValue({ range: previewBlocksRangeMock });
+    const previewBlocksGtMock = jest.fn().mockReturnValue({ order: previewBlocksOrderMock });
+    const previewBlocksLtMock = jest.fn().mockReturnValue({ gt: previewBlocksGtMock });
+    const previewBlocksEqMock = jest.fn().mockReturnValue({ lt: previewBlocksLtMock });
+
+    const previewFinalizedInMock = jest.fn().mockResolvedValue({ data: [] });
+    const previewEventsInMock = jest.fn().mockResolvedValue({
+      data: [{ id: 'event-2', title: '同期対象イベント', public_token: 'event-2-token', is_finalized: false }],
+      error: null,
+    });
+    const previewEventDatesRangeMock = createRangeMock([
+      [
+        {
+          id: 'date-2',
+          event_id: 'event-2',
+          start_time: '2099-06-04T14:00:00',
+          end_time: '2099-06-04T15:00:00',
+        },
+      ],
+    ]);
+    const previewEventDatesOrderMock = jest
+      .fn()
+      .mockReturnValue({ range: previewEventDatesRangeMock });
+    const previewEventDatesInMock = jest
+      .fn()
+      .mockReturnValue({ order: previewEventDatesOrderMock });
+    const previewOverridesRangeMock = createRangeMock([[]]);
+    const { firstOrderMock: previewOverridesFirstOrderMock } =
+      createOrderedRangeChain(previewOverridesRangeMock);
+    const previewOverridesInMock = jest
+      .fn()
+      .mockReturnValue({ order: previewOverridesFirstOrderMock });
+    const previewOverridesEqMock = jest.fn().mockReturnValue({ in: previewOverridesInMock });
+    const previewAvailabilitiesRangeMock = createRangeMock([
+      [{ participant_id: 'participant-2', event_date_id: 'date-2', availability: false }],
+    ]);
+    const { firstOrderMock: previewAvailabilitiesFirstOrderMock } = createOrderedRangeChain(
+      previewAvailabilitiesRangeMock,
+    );
+    const previewAvailabilitiesInMock = jest
+      .fn()
+      .mockReturnValue({ order: previewAvailabilitiesFirstOrderMock });
+
+    let userEventLinksCallCount = 0;
+    let eventDatesCallCount = 0;
+    let availabilitiesCallCount = 0;
+    let userScheduleBlocksCallCount = 0;
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'user_event_links') {
+        userEventLinksCallCount += 1;
+      }
+      if (table === 'event_dates') {
+        eventDatesCallCount += 1;
+      }
+      if (table === 'availabilities') {
+        availabilitiesCallCount += 1;
+      }
+      if (table === 'user_schedule_blocks') {
+        userScheduleBlocksCallCount += 1;
+      }
+
+      if (table === 'user_event_links' && userEventLinksCallCount === 1) {
+        return { select: userEventLinksSelectMock };
+      }
+      if (table === 'participants') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({ maybeSingle: jest.fn().mockResolvedValue({
+                data: { id: 'participant-1', event_id: 'event-1' },
+                error: null,
+              }) }),
+            }),
+          }),
+        };
+      }
+      if (table === 'event_dates' && eventDatesCallCount === 1) {
+        return { select: jest.fn().mockReturnValue({ eq: eventDatesEqMock }) };
+      }
+      if (table === 'availabilities' && availabilitiesCallCount === 1) {
+        return { select: jest.fn().mockReturnValue({ eq: availabilitiesEventEqMock }) };
+      }
+      if (table === 'user_event_links' && userEventLinksCallCount === 2) {
+        return { upsert: userEventLinksUpsertMock };
+      }
+      if (table === 'user_schedule_blocks' && userScheduleBlocksCallCount === 1) {
+        return { upsert: upsertMock };
+      }
+      if (table === 'user_event_links' && userEventLinksCallCount === 3) {
+        return {
+          select: jest.fn().mockReturnValue({ eq: previewLinksEqMock }),
+        };
+      }
+      if (table === 'event_dates' && eventDatesCallCount === 2) {
+        return {
+          select: jest.fn().mockReturnValue({ in: previewEventDatesInMock }),
+        };
+      }
+      if (table === 'user_schedule_blocks' && userScheduleBlocksCallCount === 2) {
+        return {
+          select: jest.fn().mockReturnValue({ eq: previewBlocksEqMock }),
+        };
+      }
+      if (table === 'finalized_dates') {
+        return {
+          select: jest.fn().mockReturnValue({ in: previewFinalizedInMock }),
+        };
+      }
+      if (table === 'events') {
+        return {
+          select: jest.fn().mockReturnValue({ in: previewEventsInMock }),
+        };
+      }
+      if (table === 'user_event_availability_overrides') {
+        return {
+          select: jest.fn().mockReturnValue({ eq: previewOverridesEqMock }),
+        };
+      }
+      if (table === 'availabilities' && availabilitiesCallCount === 2) {
+        return {
+          select: jest.fn().mockReturnValue({ in: previewAvailabilitiesInMock }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: fromMock });
+
+    const result = await saveParticipantAnswerAsUserSchedule({
+      eventId: 'event-1',
+      participantId: 'participant-1',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      message: '自分の予定として保存しました',
+      previewCount: 0,
+    });
+    expect(userEventLinksUpsertMock).toHaveBeenCalled();
+    expect(upsertMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          user_id: 'user-1',
+          event_id: 'event-1',
+          availability: true,
+          source: 'event',
+        }),
+      ],
+      { onConflict: 'user_id,start_time,end_time' },
+    );
   });
 });

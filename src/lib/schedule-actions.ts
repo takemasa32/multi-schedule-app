@@ -1100,6 +1100,25 @@ export async function saveParticipantAnswerAsUserSchedule({
   }
 
   const supabase = createSupabaseAdmin();
+  const { data: existingLink, error: existingLinkError } = await supabase
+    .from('user_event_links')
+    .select('participant_id')
+    .eq('user_id', userId)
+    .eq('event_id', eventId)
+    .maybeSingle();
+
+  if (existingLinkError) {
+    console.error('予定保存前の紐づけ確認エラー:', existingLinkError);
+    return { success: false, message: '回答情報の確認に失敗しました', previewCount: 0 };
+  }
+  if (existingLink?.participant_id && existingLink.participant_id !== participantId) {
+    return {
+      success: false,
+      message: 'この回答は現在のアカウントに紐づいていないため保存できません',
+      previewCount: 0,
+    };
+  }
+
   const { data: participant, error: participantError } = await supabase
     .from('participants')
     .select('id,event_id')

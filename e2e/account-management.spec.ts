@@ -397,7 +397,12 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
       const skipSyncLink = page.getByRole('link', { name: '反映しない' });
       if (await skipSyncLink.isVisible({ timeout: 10000 }).catch(() => false)) {
         await skipSyncLink.click();
-      } else {
+      } else if (
+        await page
+          .getByRole('link', { name: 'イベント結果を見る' })
+          .isVisible({ timeout: 1500 })
+          .catch(() => false)
+      ) {
         await page.getByRole('link', { name: 'イベント結果を見る' }).click();
       }
       await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}`), { timeout: 10000 });

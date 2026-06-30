@@ -3,10 +3,12 @@ import AnswerCompletePage from '@/components/sync/answer-complete-page';
 import { saveParticipantAnswerAsUserSchedule } from '@/lib/schedule-actions';
 
 const mockRouterPush = jest.fn();
+const mockRouterReplace = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockRouterPush,
+    replace: mockRouterReplace,
   }),
 }));
 
@@ -46,7 +48,8 @@ describe('AnswerCompletePage', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/event/token-1/input/sync-review');
   });
 
-  it('保存後に他イベント差分がなければ完了メッセージを表示する', async () => {
+  it('保存後に他イベント差分がなければ通知後に結果ページへ自動遷移する', async () => {
+    jest.useFakeTimers();
     (saveParticipantAnswerAsUserSchedule as jest.Mock).mockResolvedValue({
       success: true,
       message: '自分の予定として保存しました',
@@ -64,12 +67,19 @@ describe('AnswerCompletePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '保存する' }));
 
-    expect(await screen.findByText('反映が必要な他イベントはありません。')).toBeInTheDocument();
+    expect(
+      await screen.findByText('他イベントへの反映は不要でした。イベント結果ページへ移動しています。'),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(saveParticipantAnswerAsUserSchedule).toHaveBeenCalledWith({
         eventId: 'event-1',
         participantId: 'participant-1',
       });
     });
+    jest.advanceTimersByTime(1200);
+    await waitFor(() => {
+      expect(mockRouterReplace).toHaveBeenCalledWith('/event/token-1');
+    });
+    jest.useRealTimers();
   });
 });

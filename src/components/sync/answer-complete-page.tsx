@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { saveParticipantAnswerAsUserSchedule } from '@/lib/schedule-actions';
 
 type AnswerCompletePageProps = {
@@ -31,6 +31,14 @@ export default function AnswerCompletePage({
     syncWarning === 'partial' ? '?sync_warning=partial' : ''
   }`;
   const canSaveSchedule = isAuthenticated && Boolean(participantId);
+
+  useEffect(() => {
+    if (saveState !== 'saved-no-preview') return;
+    const timerId = window.setTimeout(() => {
+      router.replace(eventPath);
+    }, 1200);
+    return () => window.clearTimeout(timerId);
+  }, [eventPath, router, saveState]);
 
   const handleSaveSchedule = () => {
     if (!participantId) return;
@@ -124,14 +132,9 @@ export default function AnswerCompletePage({
         ) : (
           <div className="space-y-4">
             <p className="text-base-content/80 text-sm">
-              反映が必要な他イベントはありません。
+              他イベントへの反映は不要でした。イベント結果ページへ移動しています。
             </p>
             {message && <p className="text-info text-sm">{message}</p>}
-            <div className="flex flex-wrap justify-end gap-2">
-              <Link href={eventPath} className="btn btn-primary">
-                イベント結果を見る
-              </Link>
-            </div>
           </div>
         )}
       </div>

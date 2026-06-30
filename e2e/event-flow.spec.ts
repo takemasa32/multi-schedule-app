@@ -33,7 +33,10 @@ async function waitForEventDetail(page: Page) {
     { timeout: 15000 },
   );
   if (page.url().includes('/input/complete')) {
-    await page.getByRole('link', { name: /イベント結果を見る|イベント結果ページへ戻る/ }).click();
+    const returnLink = page.getByRole('link', { name: /イベント結果を見る|イベント結果ページへ戻る/ });
+    if (await returnLink.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await returnLink.click();
+    }
     await page.waitForURL(
       (url) => {
         const current = url.toString();
