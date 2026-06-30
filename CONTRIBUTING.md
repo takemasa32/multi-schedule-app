@@ -6,9 +6,10 @@ DaySynth への貢献ありがとうございます。公開 OSS として安全
 
 1. 変更前に `README.md` と `specifications/`、関連する設計メモを確認してください。
 2. 影響範囲が広い変更は、先に issue で目的と方針を共有してください。
-3. 実装は最小スライスから始め、既存の挙動を壊さないことを優先してください。
-4. 変更後は `npm run lint`、`npm run typecheck`、`npm run test:ci` を実行してください。
-5. UI やフロー変更には、必要に応じて Playwright の E2E テストを追加してください。
+3. GitHub Flow を採用しています。`main` を最新化してから `feature/`、`fix/`、`chore/` などの短命ブランチを作成し、`main` 向け PR として変更を提案してください。
+4. 実装は最小スライスから始め、既存の挙動を壊さないことを優先してください。
+5. 変更後は `npm run lint`、`npm run typecheck`、`npm run test:ci` を実行してください。
+6. UI やフロー変更には、必要に応じて Playwright の E2E テストを追加してください。
 
 ## コーディング規約
 
@@ -19,6 +20,10 @@ DaySynth への貢献ありがとうございます。公開 OSS として安全
 
 ## PR の出し方
 
+- `main` 向け Pull Request を作成してください。作業途中は Draft PR での共有を推奨します。
+- ブランチ名は `feature/<要約>`、`fix/<要約>`、`chore/<要約>` などの用途別 prefix を推奨します。
+- `main` は直接 push せず、レビューと CI を通した PR で更新します。
+- マージ方法は `Squash and merge` を原則とし、1 PR = 1 つの論理変更としてまとめてください。
 - 変更の目的
 - 主な変更点
 - 実行した確認コマンド

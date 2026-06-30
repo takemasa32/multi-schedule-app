@@ -176,11 +176,29 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 
 - 変更前に関連する仕様書と既存実装を確認してください。
 - 仕様に関わる変更は、先に issue で意図を共有すると安全です。
+- GitHub Flow を採用しています。`main` から `feature/`、`fix/`、`chore/` などの短命ブランチを切り、`main` 向け PR としてレビューを依頼してください。
+- リリース専用ブランチは作らず、`main` にマージされた変更をそのままリリース対象として扱います。
 - 変更後は `npm run lint`、`npm run typecheck`、`npm run test:ci` を実行してください。
 - UI 変更には必要に応じて Playwright のテストを追加してください。
 - 秘密情報、個人情報、非公開 URL はコミットしないでください。
 
 詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+
+## Git 運用
+
+- 長寿命ブランチは `main` のみです。
+- 作業は `main` を最新化してから `feature/<要約>`、`fix/<要約>`、`chore/<要約>` などのブランチを作って進めます。
+- 変更は `main` 向け Pull Request で統合し、作業途中は Draft PR で早めに共有できます。
+- マージは `Squash and merge` を原則とし、`main` は常にデプロイ可能な状態を維持します。
+- 旧 `develop` ブランチは移行期間中の参照用として残す場合がありますが、新規作業のベースには使いません。
+
+### GitHub 側の推奨設定
+
+- Default branch は `main` に設定します。
+- `main` の branch protection で Pull Request 必須、直接 push 禁止、必須ステータスチェック `Quality checks` を有効化します。
+- マージ方法は `Squash merge` を有効化し、必要がなければ `Merge commit` と `Rebase merge` は無効化します。
+- 開いている PR の base branch が `develop` の場合は `main` へ付け替えます。
+- `develop` は移行直後に削除せず、参照用の read-only ブランチとして扱うか、移行確認後に削除を判断します。
 
 ## ドキュメント
 
