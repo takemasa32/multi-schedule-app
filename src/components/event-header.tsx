@@ -21,23 +21,21 @@ export function EventHeader({ eventId, title, description, isFinalized }: EventH
   };
 
   return (
-    <Card className="mb-8" isHighlighted={isFinalized}>
+    <Card className="mb-6" isHighlighted={isFinalized}>
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div className="flex-1">
-          <div className="mb-2 flex items-center gap-2">
-            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-              {isFinalized && <span className="text-success mr-2">✓</span>}
-              {title}
-            </h1>
+          <p className="page-eyebrow">EVENT</p>
+          <div className="flex items-start gap-2">
+            <h1 className="page-title">{title}</h1>
             <FavoriteToggle eventId={eventId} title={title} />
           </div>
           {isFinalized && (
-            <div className="mb-3 inline-flex rounded-md bg-success/10 px-2.5 py-1 text-sm font-medium text-success">
-              日程確定済み
+            <div className="border-success/25 bg-success/8 text-success mt-3 inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-sm font-medium">
+              <span aria-hidden="true">✓</span> 日程確定済み
             </div>
           )}
           {description && (
-            <p className="whitespace-pre-wrap leading-7 text-base-content/70">{description}</p>
+            <p className="text-base-content/70 whitespace-pre-wrap leading-7">{description}</p>
           )}
         </div>
         <ShareEventButton

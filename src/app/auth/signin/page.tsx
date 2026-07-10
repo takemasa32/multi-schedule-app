@@ -30,7 +30,8 @@ export default function SignInPage() {
   const [devId, setDevId] = useState('');
   const [devPassword, setDevPassword] = useState('');
   const [devError, setDevError] = useState<string | null>(null);
-  const allowDevLoginInProduction = process.env.NEXT_PUBLIC_ALLOW_DEV_LOGIN_IN_PRODUCTION === 'true';
+  const allowDevLoginInProduction =
+    process.env.NEXT_PUBLIC_ALLOW_DEV_LOGIN_IN_PRODUCTION === 'true';
   const isDevLoginEnabled =
     process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' &&
     (process.env.NODE_ENV !== 'production' || allowDevLoginInProduction);
@@ -57,13 +58,14 @@ export default function SignInPage() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-xl space-y-6 px-4 py-10">
+    <section className="app-page-narrow max-w-xl space-y-6 py-8 sm:py-12">
       <div className="text-center">
         <div className="bg-base-200 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
           <CircleUser className="text-base-content/70 h-6 w-6" aria-hidden="true" />
         </div>
-        <h1 className="text-xl font-bold">ログイン</h1>
-        <p className="text-base-content/60 text-sm">Googleアカウントでログインしてください。</p>
+        <p className="page-eyebrow">WELCOME BACK</p>
+        <h1 className="page-title">ログイン</h1>
+        <p className="page-description mx-auto">履歴や予定を別の端末でも引き継げます。</p>
       </div>
 
       {errorMessage && (
@@ -73,8 +75,8 @@ export default function SignInPage() {
         </div>
       )}
 
-      <div className="card bg-base-100 border-base-200 border shadow-sm">
-        <div className="card-body space-y-4">
+      <div className="surface">
+        <div className="space-y-5 p-5 sm:p-7">
           <button type="button" onClick={handleSignIn} className="btn btn-primary">
             Googleでログイン
           </button>
@@ -102,7 +104,7 @@ export default function SignInPage() {
                   />
                 </label>
               </div>
-              {devError && <p className="mt-2 text-sm text-error">{devError}</p>}
+              {devError && <p className="text-error mt-2 text-sm">{devError}</p>}
               <button type="button" onClick={handleDevSignIn} className="btn btn-outline mt-3">
                 開発用ログインで進む
               </button>

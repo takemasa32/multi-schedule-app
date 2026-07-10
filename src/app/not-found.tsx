@@ -16,10 +16,10 @@ export const metadata = {
  */
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="w-full max-w-md space-y-8">
+    <div className="status-page">
+      <div className="status-panel space-y-8">
         <div className="space-y-4">
-          <h1 className="text-primary text-6xl font-bold">404</h1>
+          <p className="page-eyebrow">404</p>
           <h2 className="text-2xl font-semibold">ページが見つかりません</h2>
           <p className="text-base-content/70">
             お探しのページは存在しないか、移動または削除された可能性があります。

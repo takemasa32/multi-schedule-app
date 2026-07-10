@@ -7,7 +7,6 @@ import { getMyLinkedParticipantIdForEvent } from '@/lib/actions';
 import { EventNotFoundError } from '@/lib/errors';
 import { notFound } from 'next/navigation';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
-import SectionDivider from '@/components/layout/SectionDivider';
 import siteConfig from '@/lib/site-config';
 import { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
@@ -126,20 +125,17 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   ]);
 
   return (
-    <>
-      <div className="mb-6 border-b border-base-300 bg-base-200/50 py-4">
-        <div className="container mx-auto max-w-5xl px-4">
-          <Breadcrumbs items={[{ label: 'イベント詳細' }]} />
-        </div>
+    <div className="app-page">
+      <div className="mb-6">
+        <Breadcrumbs items={[{ label: 'イベント詳細' }]} />
       </div>
       <div className="fade-in pb-12">
         {syncWarning === 'partial' && <SyncWarningBanner />}
         {(finalizeStatus === 'saved' || finalizeStatus === 'cleared') && (
           <FinalizeStatusBanner status={finalizeStatus} />
         )}
-        <SectionDivider title="イベント情報" />
         {/* 確実に揃っている情報は即時表示し、不要なスケルトンを避ける */}
-        <div className="my-8">
+        <div className="mb-8">
           <EventFormSection
             event={event}
             eventDates={eventDates}
@@ -152,7 +148,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
         {/* 参加者・確定・履歴など重い部分はサスペンス＋スケルトンで遅延描画 */}
         <Suspense
           fallback={
-            <div className="my-8">
+            <div className="mt-8">
               <EventDetailsSectionSkeleton />
             </div>
           }
@@ -173,7 +169,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
           />
         </Suspense>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -18,10 +18,10 @@ export const metadata = {
  */
 export default function ServerError() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="w-full max-w-md space-y-8">
+    <div className="status-page">
+      <div className="status-panel space-y-8">
         <div className="space-y-4">
-          <h1 className="text-error text-6xl font-bold">500</h1>
+          <p className="page-eyebrow text-error">500</p>
           <h2 className="text-2xl font-semibold">サーバーエラーが発生しました</h2>
           <p className="text-base-content/70">
             申し訳ありません。サーバーで問題が発生しました。 時間をおいて再度お試しください。

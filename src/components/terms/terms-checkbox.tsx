@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import styles from './terms-checkbox.module.css';
 
 type TermsCheckboxProps = {
   isChecked: boolean;
@@ -15,23 +16,18 @@ export default function TermsCheckbox({
   disabled = false,
 }: TermsCheckboxProps) {
   return (
-    <div className="form-control my-4">
-      <label className="label cursor-pointer justify-start gap-2">
+    <div className={styles.control}>
+      <label className={styles.label} htmlFor={id}>
         <input
           type="checkbox"
           id={id}
-          className="checkbox checkbox-primary"
+          className={styles.checkbox}
           checked={isChecked}
           onChange={(e) => onChange(e.target.checked)}
           disabled={disabled}
         />
-        <span className="label-text">
-          <Link
-            href="/terms"
-            className="link link-primary"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+        <span>
+          <Link href="/terms" className={styles.link} target="_blank" rel="noopener noreferrer">
             利用規約
           </Link>
           を読み、同意します

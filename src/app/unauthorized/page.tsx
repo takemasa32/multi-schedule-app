@@ -16,13 +16,13 @@ export const metadata = {
  */
 export default function Unauthorized() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="w-full max-w-md space-y-8">
+    <div className="status-page">
+      <div className="status-panel space-y-8">
         <div className="space-y-4">
-          <div className="text-warning text-6xl">
+          <div className="text-warning">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="mx-auto h-24 w-24"
+              className="mx-auto h-12 w-12"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

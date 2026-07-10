@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="legal-content">
+      <p className="page-eyebrow">PRIVACY</p>
       <h1 className="mb-6 text-3xl font-bold">プライバシーポリシー</h1>
 
       {/* プライバシーポリシーの最終更新日を明示 */}

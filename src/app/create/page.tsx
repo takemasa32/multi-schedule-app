@@ -1,5 +1,4 @@
 import EventForm from '@/components/event-form';
-import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import Card from '@/components/layout/Card';
 import siteConfig from '@/lib/site-config';
 import { Metadata } from 'next';
@@ -25,26 +24,19 @@ export const metadata: Metadata = {
 
 export default function CreateEventPage() {
   return (
-    <>
-      <div className="mb-6 border-b border-base-300 bg-base-200/50 py-4">
-        <div className="container mx-auto max-w-5xl px-4">
-          <Breadcrumbs items={[{ label: 'イベント作成' }]} />
-        </div>
-      </div>
+    <div className="app-page-narrow">
+      <header className="page-header fade-in">
+        <p className="page-eyebrow">EVENT SETUP</p>
+        <h1 className="page-title">新しいイベントを作成</h1>
+        <p className="page-description">
+          候補日程を設定すると、参加者へ送れる共有リンクが発行されます。
+          まずはイベント名から入力してください。
+        </p>
+      </header>
 
-      <div className="container mx-auto max-w-3xl px-4 pb-12">
-        <div className="fade-in mb-8">
-          <h1 className="mb-3 text-3xl font-semibold leading-tight sm:text-4xl">新規イベント作成</h1>
-          <p className="max-w-2xl leading-7 text-base-content/70">
-            候補日程を設定すると、参加者へ送れる共有リンクが発行されます。
-            まずはイベント名から入力してください。
-          </p>
-        </div>
-
-        <Card className="fade-in animate-delay-100 border-base-300">
-          <EventForm />
-        </Card>
-      </div>
-    </>
+      <Card className="fade-in" noPadding>
+        <EventForm />
+      </Card>
+    </div>
   );
 }

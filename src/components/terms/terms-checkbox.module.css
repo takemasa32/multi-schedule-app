@@ -1,0 +1,62 @@
+.control {
+  margin-block: 1rem;
+}
+
+.label {
+  display: flex;
+  min-height: 44px;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--color-base-content);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  cursor: pointer;
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  border-radius: 4px;
+  background: var(--color-base-100);
+  accent-color: var(--color-primary);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.checkbox:checked {
+  border-color: var(--color-primary);
+  transform: scale(1.03);
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.checkbox:disabled,
+.checkbox:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.link {
+  color: var(--color-primary);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  text-decoration-thickness: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkbox {
+    transition: none;
+  }
+}

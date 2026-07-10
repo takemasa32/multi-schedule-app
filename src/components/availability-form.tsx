@@ -165,35 +165,38 @@ export default function AvailabilityForm({
     [selectedDates, lockedDateIdSet, overrideDateIdSet],
   );
 
-  const applyDateSelection = useCallback((keys: string[], value: boolean) => {
-    const changedKeys: string[] = [];
-    setSelectedDates((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const key of keys) {
-        if (!key) {
-          continue;
-        }
-        if (next[key] === value) {
-          continue;
-        }
-        next[key] = value;
-        changed = true;
-        changedKeys.push(key);
-      }
-      return changed ? next : prev;
-    });
-    if (changedKeys.length > 0) {
-      notifySelectionChange();
-      setManuallyEditedDateIds((prev) => {
+  const applyDateSelection = useCallback(
+    (keys: string[], value: boolean) => {
+      const changedKeys: string[] = [];
+      setSelectedDates((prev) => {
+        let changed = false;
         const next = { ...prev };
-        changedKeys.forEach((key) => {
-          next[key] = true;
-        });
-        return next;
+        for (const key of keys) {
+          if (!key) {
+            continue;
+          }
+          if (next[key] === value) {
+            continue;
+          }
+          next[key] = value;
+          changed = true;
+          changedKeys.push(key);
+        }
+        return changed ? next : prev;
       });
-    }
-  }, [notifySelectionChange]);
+      if (changedKeys.length > 0) {
+        notifySelectionChange();
+        setManuallyEditedDateIds((prev) => {
+          const next = { ...prev };
+          changedKeys.forEach((key) => {
+            next[key] = true;
+          });
+          return next;
+        });
+      }
+    },
+    [notifySelectionChange],
+  );
 
   const dateSelectionController = useSelectionDragController({
     isSelected: (key) => Boolean(selectedDates[key]),
@@ -453,7 +456,9 @@ export default function AvailabilityForm({
         const response = await submitAvailability(formData);
 
         if (response.success) {
-          const hasPartialSyncWarning = response.warningCodes?.includes('POST_SYNC_PARTIAL_FAILURE');
+          const hasPartialSyncWarning = response.warningCodes?.includes(
+            'POST_SYNC_PARTIAL_FAILURE',
+          );
           const warningQuery = hasPartialSyncWarning ? '?sync_warning=partial' : '';
           const participantQuery = response.participantId
             ? `${warningQuery ? '&' : '?'}participant_id=${encodeURIComponent(response.participantId)}`
@@ -510,15 +515,7 @@ export default function AvailabilityForm({
       }
       setCurrentStep(confirmStep);
     }
-  }, [
-    confirmStep,
-    currentStep,
-    heatmapStep,
-    isNewMode,
-    name,
-    selectedDates,
-    weeklyStep,
-  ]);
+  }, [confirmStep, currentStep, heatmapStep, isNewMode, name, selectedDates, weeklyStep]);
 
   const handleOpenGuestConfirm = useCallback(() => {
     setShowGuestConfirm(true);
@@ -883,8 +880,7 @@ export default function AvailabilityForm({
     [isNewMode, showWeeklyStep],
   );
   const stepLabel = useMemo(() => {
-    const label = stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
-    return `ステップ${currentStep}: ${label}`;
+    return stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
   }, [currentStep, stepLabels]);
   const weeklyStepLeadMessage = useMemo(() => {
     if (isAuthenticated) {
@@ -914,8 +910,7 @@ export default function AvailabilityForm({
             const step = (index + 1) as WizardStep;
             return (
               <li key={label} className={`step ${currentStep >= step ? 'step-primary' : ''}`}>
-                <span className="sm:hidden">Step {step}</span>
-                <span className="hidden sm:inline">{label}</span>
+                <span>{label}</span>
               </li>
             );
           })}
@@ -1177,7 +1172,7 @@ export default function AvailabilityForm({
                           <span className="text-xs font-semibold md:text-sm">
                             {date.formattedDate.split('(')[0]}
                           </span>
-                          <span className="text-xs text-base-content/60">
+                          <span className="text-base-content/60 text-xs">
                             ({date.formattedDate.split('(')[1]}
                           </span>
                         </div>
