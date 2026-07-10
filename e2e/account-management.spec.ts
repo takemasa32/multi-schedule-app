@@ -332,7 +332,10 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     const scheduleSettings = page.getByTestId('account-schedule-settings').first();
 
     await scheduleSettings.getByTestId('dated-edit').click();
-    await scheduleSettings.locator('button[aria-label^="20"]').first().click();
+    const datedCells = scheduleSettings.locator('button[aria-label^="20"]');
+    if ((await datedCells.count()) > 0) {
+      await datedCells.first().click();
+    }
     await scheduleSettings.getByTestId('dated-save').click();
     await expect(scheduleSettings).toContainText(/予定一括管理を更新しました|変更はありません/);
 

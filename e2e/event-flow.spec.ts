@@ -1,5 +1,39 @@
 import { test, expect, Page } from '@playwright/test';
 
+const captureUiuxScreenshots = process.env.CAPTURE_UIUX_SCREENSHOTS === 'true';
+
+async function captureUiuxVariants(page: Page, baseName: string) {
+  if (!captureUiuxScreenshots) return;
+  const originalViewport = page.viewportSize() ?? { width: 1280, height: 720 };
+  const capture = async (device: 'desktop' | 'mobile', theme: 'light' | 'dark') => {
+    await page.evaluate((nextTheme) => {
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      document.documentElement.style.colorScheme = nextTheme;
+    }, theme);
+    if (baseName === 'terms-checkbox') {
+      await page.getByLabel('利用規約').scrollIntoViewIfNeeded();
+    } else {
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+    }
+    await page.waitForTimeout(250);
+    await page.screenshot({
+      path: `docs/screenshots/uiux-refresh/after-${baseName}-${device}-${theme}.png`,
+      fullPage: false,
+    });
+  };
+
+  await capture('desktop', 'light');
+  await capture('desktop', 'dark');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await capture('mobile', 'light');
+  await capture('mobile', 'dark');
+  await page.setViewportSize(originalViewport);
+  await page.evaluate(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = 'light';
+  });
+}
+
 // サーバー起動遅延＋JSレンダリング待ち対策
 async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 2000) {
   let lastErr;
@@ -27,13 +61,16 @@ async function waitForEventDetail(page: Page) {
   await page.waitForURL(
     (url) => {
       const current = url.toString();
+      if (current.includes('/input/complete')) return true;
       if (current === expectedUrl) return true;
-      return current.startsWith(expectedPrefix);
+      return current.startsWith(expectedPrefix) && !current.includes('/input');
     },
     { timeout: 15000 },
   );
   if (page.url().includes('/input/complete')) {
-    const returnLink = page.getByRole('link', { name: /イベント結果を見る|イベント結果ページへ戻る/ });
+    const returnLink = page.getByRole('link', {
+      name: /イベント結果を見る|イベント結果ページへ戻る/,
+    });
     if (await returnLink.isVisible({ timeout: 1500 }).catch(() => false)) {
       await returnLink.click();
     }
@@ -41,7 +78,7 @@ async function waitForEventDetail(page: Page) {
       (url) => {
         const current = url.toString();
         if (current === expectedUrl) return true;
-        return current.startsWith(expectedPrefix) && !current.includes('/input/');
+        return current.startsWith(expectedPrefix) && !current.includes('/input');
       },
       { timeout: 15000 },
     );
@@ -105,6 +142,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     if (await termsCheckbox.isVisible()) {
       await termsCheckbox.check();
     }
+    await captureUiuxVariants(page, 'terms-checkbox');
     await page.getByRole('button', { name: /イベントを作成/ }).click();
     try {
       await page.waitForURL(/\/event\//, { timeout: 15000 });
@@ -119,6 +157,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     adminUrl.searchParams.delete('admin');
     eventPublicUrl = adminUrl.toString();
     expect(eventPublicUrl).toMatch(/\/event\//);
+    await captureUiuxVariants(page, 'event-detail');
   });
 
   test('参加者がheatmapで回答', async ({ context }) => {
@@ -128,6 +167,8 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(participantPage.getByRole('link', { name: /新しく回答する/ })).toBeVisible();
     await participantPage.getByRole('link', { name: /新しく回答する/ }).click();
     await participantPage.waitForURL(/\/input/);
+    await expect(participantPage.getByLabel('お名前')).toBeVisible();
+    await captureUiuxVariants(participantPage, 'answer');
     participantName = `E2E参加者${Date.now()}`;
     await participantPage.getByLabel('お名前').fill(participantName);
     await proceedAsGuest(participantPage);
@@ -158,11 +199,17 @@ test.describe.serial('イベントE2Eフロー', () => {
       await backToSummaryBtn.click();
     }
 
-    // 参加者バッジ（表示選択）に新規回答者が反映されるまで待機
+    // 完了ページから戻った際のルーターキャッシュを更新して最新の回答を確認する
+    await participantPage.reload({ waitUntil: 'networkidle' });
+
+    // 参加者の表示選択に新規回答者が反映されるまで待機
     try {
-      await expect(participantPage.getByRole('button', { name: new RegExp(participantName) })).toBeVisible({
+      await expect(
+        participantPage.getByRole('button', { name: new RegExp(participantName) }),
+      ).toBeVisible({
         timeout: 15000,
       });
+      await captureUiuxVariants(participantPage, 'summary');
     } catch (e) {
       await dumpPageHtml(participantPage, 'DEBUG: 参加者表示失敗 page.content()');
       throw e;
@@ -248,9 +295,11 @@ test.describe.serial('イベントE2Eフロー', () => {
     }
 
     // 編集後も参加者が表示選択バッジに残ることを確認
-    await expect(page.getByRole('button', { name: new RegExp(participantNamePrefix) })).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(page.getByRole('button', { name: new RegExp(participantNamePrefix) })).toBeVisible(
+      {
+        timeout: 10000,
+      },
+    );
   });
 
   test('主催者確定・カレンダー連携', async ({ context }) => {
@@ -269,8 +318,11 @@ test.describe.serial('イベントE2Eフロー', () => {
     await openFinalizeLink.click();
     await adminPage.waitForURL(/\/finalize$/);
 
-    const selectableCell = adminPage.locator('button[data-selection-key][aria-pressed="false"]').first();
+    const selectableCell = adminPage
+      .locator('button[data-selection-key][aria-pressed="false"]')
+      .first();
     await expect(selectableCell).toBeVisible();
+    await captureUiuxVariants(adminPage, 'finalize');
     await selectableCell.click();
 
     await expect(adminPage.getByText(/選択中\s*1件/).first()).toBeVisible({

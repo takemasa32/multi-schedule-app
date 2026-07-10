@@ -17,9 +17,9 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
 
 test('トップページが表示される', async ({ page }) => {
   await gotoWithRetry(page, '/');
-  // 「今すぐ無料で日程調整を始める」ボタンの存在でトップページ表示を判定
+  // 現在の主要CTAの存在でトップページ表示を判定
   const ctaBtn = page.getByRole('link', {
-    name: /今すぐ無料で日程調整を始める/,
+    name: '日程調整を作成',
   });
   await expect(ctaBtn).toBeVisible({ timeout: 10000 });
 });

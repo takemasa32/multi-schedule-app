@@ -107,7 +107,7 @@ describe('参加者トグル機能の統合テスト', () => {
     const taroButton = screen.getByText('田中太郎').closest('button');
     fireEvent.click(taroButton!);
 
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
     expect(taroButton).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -127,8 +127,8 @@ describe('参加者トグル機能の統合テスト', () => {
     fireEvent.click(taroButton!);
     fireEvent.click(misakiButton!);
 
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
-    expect(misakiButton).toHaveClass('badge-outline', 'border-error');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
+    expect(misakiButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('除外を解除すると元の表示状態に戻る', () => {
@@ -145,11 +145,10 @@ describe('参加者トグル機能の統合テスト', () => {
     const hanakoButton = screen.getByText('佐藤花子').closest('button');
 
     fireEvent.click(hanakoButton!);
-    expect(hanakoButton).toHaveClass('badge-outline', 'border-error');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(hanakoButton!);
-    expect(hanakoButton).toHaveClass('badge-primary');
-    expect(hanakoButton).not.toHaveClass('badge-outline', 'border-error');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('全員除外してもヒートマップは表示されたまま', () => {

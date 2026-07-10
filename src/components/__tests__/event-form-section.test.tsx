@@ -35,7 +35,7 @@ describe('EventFormSection', () => {
         finalizedDateIds={['date1', 'date2']}
       />,
     );
-    expect(screen.getByText('日程が確定しました！')).toBeInTheDocument();
+    expect(screen.getByText('日程が確定しています')).toBeInTheDocument();
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(2);
   });
