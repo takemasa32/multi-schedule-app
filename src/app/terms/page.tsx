@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div className="legal-content">
-      <p className="page-eyebrow">利用規約</p>
+      <p className="page-eyebrow">TERMS</p>
       <h1 className="mb-6 text-3xl font-bold">利用規約</h1>
 
       {/* 利用規約の最終更新日を明示 */}

@@ -24,7 +24,7 @@ export default async function AccountPage() {
       <Breadcrumbs items={[{ label: 'アカウント' }]} />
       <div className="page-header flex items-end justify-between gap-4">
         <div>
-          <p className="page-eyebrow">アカウント設定</p>
+          <p className="page-eyebrow">ACCOUNT</p>
           <h1 className="page-title">アカウント</h1>
           <p className="page-description">予定の同期や利用履歴を管理します。</p>
         </div>

@@ -361,7 +361,7 @@ export default function SyncReviewPage({
     <div className="app-page py-8" data-testid="sync-review-page">
       <header className="page-header flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="page-eyebrow">予定の同期</p>
+          <p className="page-eyebrow">SYNC</p>
           <h1 className="page-title">他のイベントへ反映</h1>
           <p className="page-description">イベントごとに変更内容を確認してから反映できます。</p>
         </div>

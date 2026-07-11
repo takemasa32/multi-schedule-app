@@ -158,6 +158,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     adminUrl.searchParams.delete('admin');
     eventPublicUrl = adminUrl.toString();
     expect(eventPublicUrl).toMatch(/\/event\//);
+    await expect(page.getByRole('heading', { name: 'E2Eテストイベント' })).toBeVisible();
     await captureUiuxVariants(page, 'event-detail');
   });
 

@@ -101,7 +101,7 @@ export default function HistoryPage() {
       <div className="app-page">
         <Breadcrumbs items={[{ label: '閲覧履歴', href: '/history' }]} />
         <header className="page-header mt-5">
-          <p className="page-eyebrow">閲覧履歴</p>
+          <p className="page-eyebrow">HISTORY</p>
           <h1 className="page-title">イベント履歴</h1>
           <p className="page-description">
             最近開いたイベントやお気に入りへ、ここからすぐに戻れます。

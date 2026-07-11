@@ -5,20 +5,24 @@ const readSource = (relativePath: string) =>
   fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 
 describe('非LP画面の視覚契約', () => {
-  test('画面の役割を装飾的な英語ラベルに依存しない', () => {
-    const sources = [
-      'src/app/create/page.tsx',
-      'src/app/account/page.tsx',
-      'src/app/history/page.tsx',
-      'src/app/auth/signin/page.tsx',
-      'src/app/event/[public_id]/input/page.tsx',
-      'src/components/event-header.tsx',
-      'src/components/sync/sync-review-page.tsx',
-      'src/components/sync/answer-complete-page.tsx',
-    ].map(readSource);
+  test('アイブロウは画面種別を示す短い英語に限定する', () => {
+    const expectedLabels = new Map([
+      ['src/app/create/page.tsx', 'CREATE'],
+      ['src/app/account/page.tsx', 'ACCOUNT'],
+      ['src/app/history/page.tsx', 'HISTORY'],
+      ['src/app/auth/signin/page.tsx', 'SIGN IN'],
+      ['src/app/event/[public_id]/input/page.tsx', 'RESPOND'],
+      ['src/components/event-header.tsx', 'EVENT'],
+      ['src/components/sync/sync-review-page.tsx', 'SYNC'],
+      ['src/components/sync/answer-complete-page.tsx', 'COMPLETE'],
+    ]);
 
-    expect(sources.join('\n')).not.toMatch(
-      />(?:EVENT SETUP|ACCOUNT|YOUR EVENTS|WELCOME BACK|AVAILABILITY|SYNC REVIEW|SAVED)</,
+    expectedLabels.forEach((label, sourcePath) => {
+      expect(readSource(sourcePath)).toContain(`>${label}</p>`);
+    });
+
+    expect(Array.from(expectedLabels.keys()).map(readSource).join('\n')).not.toMatch(
+      />(?:EVENT SETUP|YOUR EVENTS|WELCOME BACK|AVAILABILITY|SYNC REVIEW|SAVED)</,
     );
   });
 

@@ -63,7 +63,7 @@ export default function SignInPage() {
         <div className="bg-base-200 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
           <CircleUser className="text-base-content/70 h-6 w-6" aria-hidden="true" />
         </div>
-        <p className="page-eyebrow">ログイン</p>
+        <p className="page-eyebrow">SIGN IN</p>
         <h1 className="page-title">ログイン</h1>
         <p className="page-description mx-auto">履歴や予定を別の端末でも引き継げます。</p>
       </div>
