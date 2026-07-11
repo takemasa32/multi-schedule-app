@@ -3,7 +3,7 @@ export default function Loading() {
   return (
     <div className="bg-base-100 flex min-h-[80vh] flex-col items-center px-2 py-8">
       {/* イベント情報カード */}
-      <div className="card mb-8 w-full max-w-2xl p-6 shadow-lg">
+      <div className="card mb-8 w-full max-w-2xl p-6">
         <div className="mb-2 flex flex-row items-start justify-between">
           {/* タイトル */}
           <div className="skeleton mb-2 h-12 w-60" />
@@ -23,7 +23,7 @@ export default function Loading() {
         <div className="border-base-200 flex-grow border-t" />
       </div>
       {/* 参加予定入力カード */}
-      <div className="card mb-8 w-full max-w-2xl p-6 shadow">
+      <div className="card mb-8 w-full max-w-2xl p-6">
         <div className="skeleton mb-2 h-7 w-56" />
         <div className="skeleton mb-4 h-5 w-72" />
         <div className="mb-2 flex gap-4">
@@ -32,7 +32,7 @@ export default function Loading() {
         </div>
       </div>
       {/* 回答状況カード */}
-      <div className="card mb-8 w-full max-w-2xl p-6 shadow">
+      <div className="card mb-8 w-full max-w-2xl p-6">
         <div className="skeleton mb-4 h-7 w-40" />
         {/* タブ切り替え */}
         <div className="mb-4 flex gap-2">

@@ -1228,7 +1228,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         <div className="flex flex-col gap-3">
           {/* スライダーによるフィルター設定 */}
           {onMinColoredCountChange && (
-            <details className="from-base-200/50 to-base-300/30 border-base-300/50 group collapse rounded-lg border bg-gradient-to-r">
+            <details className="bg-base-200/45 border-base-300 group collapse rounded-lg border">
               <summary className="collapse-title relative flex min-h-0 cursor-pointer items-center justify-between gap-2 px-3 py-1.5 sm:py-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-2 pr-5 sm:pr-6">
                   <div className="bg-primary h-2 w-2 rounded-full"></div>

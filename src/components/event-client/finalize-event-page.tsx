@@ -413,18 +413,18 @@ export default function FinalizeEventPage({
       {currentStep === 1 ? (
         <>
           <section className="surface p-3 sm:p-5 md:p-6">
-            <div className="mb-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 sm:gap-3">
-              <div className="bg-base-200 rounded-2xl px-3 py-2.5">
+            <div className="border-base-300 divide-base-300 mb-4 grid grid-cols-3 divide-x border-y text-sm">
+              <div className="px-2 py-3 sm:px-4">
                 <p className="text-base-content/60 text-[11px]">選択中</p>
                 <p className="mt-1 text-base font-bold md:text-lg">{selectedDateIds.length}件</p>
               </div>
-              <div className="bg-base-200 rounded-2xl px-3 py-2.5">
+              <div className="px-2 py-3 sm:px-4">
                 <p className="text-base-content/60 text-[11px]">全選択で参加可能</p>
                 <p className="mt-1 text-base font-bold md:text-lg">
                   {intersectionParticipants.length}人
                 </p>
               </div>
-              <div className="bg-base-200 rounded-2xl px-3 py-2.5">
+              <div className="px-2 py-3 sm:px-4">
                 <p className="text-base-content/60 text-[11px]">総参加者</p>
                 <p className="mt-1 text-base font-bold md:text-lg">{participants.length}人</p>
               </div>
@@ -458,7 +458,7 @@ export default function FinalizeEventPage({
             )}
 
             <div
-              className="border-base-300 mt-4 select-none overflow-x-auto overscroll-contain rounded-2xl border"
+              className="border-base-300 mt-4 select-none overflow-x-auto overscroll-contain rounded-lg border"
               style={{
                 overscrollBehaviorY: 'contain',
                 touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x',
@@ -614,7 +614,7 @@ export default function FinalizeEventPage({
             </div>
 
             {intersectionParticipants.length > 0 && (
-              <div className="border-base-300 bg-base-200/60 mt-4 rounded-2xl border px-4 py-3">
+              <div className="border-base-300 mt-4 border-l-2 pl-3">
                 <p className="text-sm font-semibold">
                   すべての選択日程で参加可能: {intersectionParticipants.length}人
                 </p>
@@ -659,18 +659,18 @@ export default function FinalizeEventPage({
                 <span>現在の確定内容から変更はありません。</span>
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-3 gap-2 md:gap-4">
-                <div className="border-base-300 bg-base-200/60 rounded-2xl border px-3 py-3 md:p-4">
+              <div className="border-base-300 divide-base-300 mt-4 grid grid-cols-3 divide-x border-y">
+                <div className="px-2 py-3 sm:px-4">
                   <p className="text-sm font-semibold">新しく確定する</p>
                   <p className="mt-1 text-lg font-bold md:text-2xl">
                     {newSelectedDateIds.length}件
                   </p>
                 </div>
-                <div className="border-base-300 bg-base-200/60 rounded-2xl border px-3 py-3 md:p-4">
+                <div className="px-2 py-3 sm:px-4">
                   <p className="text-sm font-semibold">解除する</p>
                   <p className="mt-1 text-lg font-bold md:text-2xl">{removedDateIds.length}件</p>
                 </div>
-                <div className="border-base-300 bg-base-200/60 rounded-2xl border px-3 py-3 md:p-4">
+                <div className="px-2 py-3 sm:px-4">
                   <p className="text-sm font-semibold">維持する</p>
                   <p className="mt-1 text-lg font-bold md:text-2xl">{keptDateIds.length}件</p>
                 </div>
@@ -678,12 +678,12 @@ export default function FinalizeEventPage({
             )}
 
             <div className="mt-4 grid gap-4 xl:grid-cols-3">
-              <div className="border-base-300 rounded-2xl border p-4">
+              <section className="border-base-300 border-t pt-4">
                 <h3 className="text-success font-semibold">今回確定する日程</h3>
                 {selectedDateIds.length > 0 ? (
-                  <ul className="mt-3 space-y-2 text-sm">
+                  <ul className="border-base-300 mt-3 divide-y border-y text-sm">
                     {selectedDateIds.map((dateId) => (
-                      <li key={dateId} className="bg-base-200/70 rounded-xl px-3 py-2">
+                      <li key={dateId} className="py-3">
                         <p>{formatDateLabel(dateId)}</p>
                         <p className="text-base-content/60 mt-1">
                           参加可能 {getAvailableParticipantsCount(dateId)}人
@@ -696,14 +696,14 @@ export default function FinalizeEventPage({
                     今回はすべての確定を解除します。
                   </p>
                 )}
-              </div>
+              </section>
 
-              <div className="border-base-300 rounded-2xl border p-4">
+              <section className="border-base-300 border-t pt-4">
                 <h3 className="text-error font-semibold">解除される日程</h3>
                 {removedDateIds.length > 0 ? (
-                  <ul className="mt-3 space-y-2 text-sm">
+                  <ul className="border-base-300 mt-3 divide-y border-y text-sm">
                     {removedDateIds.map((dateId) => (
-                      <li key={dateId} className="bg-error/10 rounded-xl px-3 py-2">
+                      <li key={dateId} className="text-error py-3">
                         {formatDateLabel(dateId)}
                       </li>
                     ))}
@@ -711,9 +711,9 @@ export default function FinalizeEventPage({
                 ) : (
                   <p className="text-base-content/60 mt-3 text-sm">解除される日程はありません。</p>
                 )}
-              </div>
+              </section>
 
-              <div className="border-base-300 rounded-2xl border p-4">
+              <section className="border-base-300 border-t pt-4">
                 <h3 className="font-semibold">全選択で参加可能な人</h3>
                 {intersectionParticipants.length > 0 ? (
                   <ul className="mt-3 flex flex-wrap gap-2 text-sm">
@@ -728,7 +728,7 @@ export default function FinalizeEventPage({
                     全選択に共通して参加できる人はいません。
                   </p>
                 )}
-              </div>
+              </section>
             </div>
           </section>
 

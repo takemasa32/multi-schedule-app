@@ -90,7 +90,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   return (
     <div className="app-page-narrow">
       <header className="page-header">
-        <p className="page-eyebrow">AVAILABILITY</p>
+        <p className="page-eyebrow">参加可否の入力</p>
         <h1 className="page-title">{pageTitle}</h1>
         {isEditMode ? (
           <p className="page-description">

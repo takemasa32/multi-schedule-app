@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <div className="legal-content">
-      <p className="page-eyebrow">PRIVACY</p>
+      <p className="page-eyebrow">プライバシー</p>
       <h1 className="mb-6 text-3xl font-bold">プライバシーポリシー</h1>
 
       {/* プライバシーポリシーの最終更新日を明示 */}

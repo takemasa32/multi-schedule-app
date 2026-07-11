@@ -122,6 +122,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await gotoWithRetry(page, '/create');
     await page.waitForLoadState('networkidle');
     await expect(page.getByLabel('イベントタイトル')).toBeVisible();
+    await captureUiuxVariants(page, 'create');
     await page.getByLabel('イベントタイトル').fill('E2Eテストイベント');
     await page.getByTestId('event-description-input').fill('E2E自動テスト用イベント');
     await page.getByTestId('create-next').click();

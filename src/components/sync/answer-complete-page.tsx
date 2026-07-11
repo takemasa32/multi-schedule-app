@@ -61,7 +61,7 @@ export default function AnswerCompletePage({
     <div className="app-page-narrow max-w-2xl py-8" data-testid="answer-complete-page">
       <div className="surface p-5 sm:p-7">
         <div className="mb-5">
-          <p className="page-eyebrow text-success">SAVED</p>
+          <p className="page-eyebrow text-success">回答完了</p>
           <h1 className="page-title">回答ありがとうございます</h1>
         </div>
 

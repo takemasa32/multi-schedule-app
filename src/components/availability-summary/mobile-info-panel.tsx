@@ -33,7 +33,7 @@ const MobileInfoPanel: React.FC<MobileInfoPanelProps> = ({
       }}
     >
       <div
-        className="bg-base-100/95 border-primary mx-auto w-full rounded-b-2xl border-b-4 shadow-2xl sm:max-w-[560px]"
+        className="bg-base-100 border-base-300 mx-auto w-full rounded-b-lg border-b sm:max-w-[560px]"
         role="dialog"
         aria-modal="false"
         aria-label="回答詳細パネル"

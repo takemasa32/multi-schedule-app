@@ -26,7 +26,7 @@ export default function CreateEventPage() {
   return (
     <div className="app-page-narrow">
       <header className="page-header fade-in">
-        <p className="page-eyebrow">EVENT SETUP</p>
+        <p className="page-eyebrow">イベント作成</p>
         <h1 className="page-title">新しいイベントを作成</h1>
         <p className="page-description">
           候補日程を設定すると、参加者へ送れる共有リンクが発行されます。
