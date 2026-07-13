@@ -4,15 +4,12 @@ import {
   BriefcaseBusiness,
   CalendarCheck2,
   CalendarPlus,
-  CheckCircle2,
   Clock3,
   Cloud,
   Gamepad2,
   History,
   Layers3,
   Music,
-  Share2,
-  ShieldCheck,
   Star,
   UserCheck,
   Users,
@@ -60,10 +57,10 @@ const values: IconItem[] = [
   },
 ];
 
-const steps: IconItem[] = [
-  { icon: CalendarPlus, title: '作る', desc: 'タイトルと候補枠を設定' },
-  { icon: Share2, title: '送る', desc: 'リンクをチャットやメールへ共有' },
-  { icon: CheckCircle2, title: '決める', desc: '回答の重なりから日程を確定' },
+const steps: TextItem[] = [
+  { title: '作る', desc: 'タイトルと候補枠を設定' },
+  { title: '送る', desc: 'リンクをチャットやメールへ共有' },
+  { title: '決める', desc: '回答の重なりから日程を確定' },
 ];
 
 const conceptItems: TextItem[] = [
@@ -239,21 +236,14 @@ function UseCaseCard({ item }: { item: IconItem }) {
   );
 }
 
-function StepCard({ step, index }: { step: IconItem; index: number }) {
-  const Icon = step.icon;
-
+function StepCard({ step, index }: { step: TextItem; index: number }) {
   return (
     <StaticListItem
       className="border-base-300 bg-base-100 relative rounded-lg border p-5 shadow-sm md:min-h-52 md:p-6"
     >
-      <div className="flex items-start justify-between gap-4">
-        <span className="text-primary/25 text-5xl font-semibold leading-none md:text-6xl">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
-          <Icon className="h-5 w-5" aria-hidden />
-        </div>
-      </div>
+      <span className="text-primary/25 block text-5xl font-semibold leading-none md:text-6xl">
+        {String(index + 1).padStart(2, '0')}
+      </span>
       <div className="mt-8">
         <h3 className="text-xl font-semibold">{step.title}</h3>
         <p className="text-base-content/70 mt-3 text-sm leading-7">{step.desc}</p>
@@ -349,9 +339,6 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-center">
             <StaticItem>
-              <div className="bg-primary/10 text-primary mb-4 flex h-10 w-10 items-center justify-center rounded-lg">
-                <ShieldCheck className="h-5 w-5" aria-hidden />
-              </div>
               <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">
                 <span className="block">ログインすると、</span>
                 <span className="block">次の調整が少し楽になる。</span>
