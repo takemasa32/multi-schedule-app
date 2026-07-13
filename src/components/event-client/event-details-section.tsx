@@ -56,9 +56,6 @@ export default function EventDetailsSection({
       <section className="surface mb-8 overflow-hidden">
         <div className="p-5 sm:px-6">
           <h2 className="section-heading">回答状況</h2>
-          <p className="section-description">
-            候補日ごとの参加できる人数と回答内容を確認できます。
-          </p>
         </div>
         <div className="border-base-300 border-t">
           {/* 回答集計コンポーネント */}

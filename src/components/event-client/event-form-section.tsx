@@ -154,7 +154,7 @@ export default function EventFormSection({
           <p className="text-base-content/70 mb-4 text-sm">
             {event.is_finalized
               ? 'イベントは確定していますが、引き続き回答を更新できます。'
-              : '名前と参加できる候補日を回答します。ログインは必要ありません。'}
+              : '参加できる候補日を回答してください。'}
           </p>
 
           <div className="flex flex-wrap gap-3">

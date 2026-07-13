@@ -28,10 +28,7 @@ export default function CreateEventPage() {
       <header className="page-header fade-in">
         <p className="page-eyebrow">CREATE</p>
         <h1 className="page-title">新しいイベントを作成</h1>
-        <p className="page-description">
-          候補日程を設定すると、参加者へ送れる共有リンクが発行されます。
-          まずはイベント名から入力してください。
-        </p>
+        <p className="page-description">イベントを作成後、参加者への共有リンクが発行されます。</p>
       </header>
 
       <Card className="fade-in" noPadding>

@@ -6,7 +6,6 @@ import { getFinalizedDateIds } from '@/lib/actions';
 import { getMyLinkedParticipantIdForEvent } from '@/lib/actions';
 import { EventNotFoundError } from '@/lib/errors';
 import { notFound } from 'next/navigation';
-import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import siteConfig from '@/lib/site-config';
 import { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
@@ -126,9 +125,6 @@ export default async function EventPage({ params, searchParams }: EventPageProps
 
   return (
     <div className="app-page">
-      <div className="mb-6">
-        <Breadcrumbs items={[{ label: 'イベント詳細' }]} />
-      </div>
       <div className="fade-in pb-12">
         {syncWarning === 'partial' && <SyncWarningBanner />}
         {(finalizeStatus === 'saved' || finalizeStatus === 'cleared') && (
