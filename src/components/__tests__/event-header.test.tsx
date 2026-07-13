@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { EventHeader } from '../event-header';
 import { FavoriteEventsProvider } from '../favorite-events-context';
 
@@ -40,5 +40,16 @@ describe('EventHeader', () => {
     expect(mockedShareEventButton).toHaveBeenCalledWith(
       expect.objectContaining({ url: expectedUrl }),
     );
+  });
+
+  it('イベント名と重複するアイブロウを表示しない', () => {
+    render(
+      <FavoriteEventsProvider>
+        <EventHeader eventId="abc123" title="タイトル" description="説明" isFinalized={false} />
+      </FavoriteEventsProvider>,
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'タイトル' })).toBeInTheDocument();
+    expect(screen.queryByText('EVENT')).not.toBeInTheDocument();
   });
 });

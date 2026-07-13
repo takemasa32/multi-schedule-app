@@ -24,7 +24,6 @@ export function EventHeader({ eventId, title, description, isFinalized }: EventH
     <Card className="mb-6" isHighlighted={isFinalized}>
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div className="flex-1">
-          <p className="page-eyebrow">EVENT</p>
           <div className="flex items-start gap-2">
             <h1 className="page-title">{title}</h1>
             <FavoriteToggle eventId={eventId} title={title} />

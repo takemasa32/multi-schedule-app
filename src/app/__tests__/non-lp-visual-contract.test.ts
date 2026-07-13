@@ -12,7 +12,6 @@ describe('非LP画面の視覚契約', () => {
       ['src/app/history/page.tsx', 'HISTORY'],
       ['src/app/auth/signin/page.tsx', 'SIGN IN'],
       ['src/app/event/[public_id]/input/page.tsx', 'RESPOND'],
-      ['src/components/event-header.tsx', 'EVENT'],
       ['src/components/sync/sync-review-page.tsx', 'SYNC'],
       ['src/components/sync/answer-complete-page.tsx', 'COMPLETE'],
     ]);
@@ -24,6 +23,8 @@ describe('非LP画面の視覚契約', () => {
     expect(Array.from(expectedLabels.keys()).map(readSource).join('\n')).not.toMatch(
       />(?:EVENT SETUP|YOUR EVENTS|WELCOME BACK|AVAILABILITY|SYNC REVIEW|SAVED)</,
     );
+
+    expect(readSource('src/components/event-header.tsx')).not.toContain('page-eyebrow');
   });
 
   test('確定画面で角丸カードと装飾グラデーションを反復しない', () => {
