@@ -108,11 +108,14 @@ export default function HistoryPage() {
           </p>
         </header>
         {status !== 'authenticated' && (
-          <div className="alert border-info/25 bg-info/8 text-base-content mb-8">
+          <div className="alert border-info/25 bg-info/8 text-base-content mb-8 flex-col items-start gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-sm">ログインすると履歴がデバイス間で同期されます。</p>
             </div>
-            <button onClick={() => void signIn('google')} className="btn btn-sm btn-outline">
+            <button
+              onClick={() => void signIn('google')}
+              className="btn btn-sm btn-outline shrink-0 whitespace-nowrap"
+            >
               Googleでログイン
             </button>
           </div>

@@ -10,6 +10,7 @@
  * - お気に入りが1件もない場合は案内メッセージを表示します。
  */
 import Link from 'next/link';
+import { Star } from 'lucide-react';
 import { useFavoriteEvents } from '@/components/favorite-events-context';
 
 export default function FavoriteEvents() {
@@ -52,10 +53,13 @@ export default function FavoriteEvents() {
             )}
           </div>
           <button
-            className="btn btn-xs btn-outline btn-error mt-2 self-end"
+            type="button"
+            className="btn btn-xs btn-ghost text-base-content/60 hover:text-error mt-2 self-end"
             title="お気に入りから削除"
+            aria-label={`${ev.title || ev.id}をお気に入りから削除`}
             onClick={() => removeFavorite(ev.id)}
           >
+            <Star aria-hidden="true" className="size-3.5" fill="currentColor" />
             解除
           </button>
         </li>

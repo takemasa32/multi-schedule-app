@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { EventHistoryItem, getEventHistory, clearEventHistory, setEventHistory } from '@/lib/utils';
 import { FavoriteEventsProvider, useFavoriteEvents } from '@/components/favorite-events-context';
 import { signIn, useSession } from 'next-auth/react';
+import { Star } from 'lucide-react';
 import { clearServerEventHistory, syncEventHistory } from '@/lib/event-history-actions';
 import { unlinkMyParticipantAnswerByEventPublicToken } from '@/lib/actions';
 import ConfirmationModal from '@/components/common/confirmation-modal';
@@ -189,7 +190,7 @@ function EventHistoryInner({
           {enableAnswerLinkEdit && hasLinkedAnswers && (
             <button
               type="button"
-              className="btn btn-xs btn-outline"
+              className="btn btn-xs btn-ghost text-base-content/70"
               onClick={() => setIsEditMode((prev) => !prev)}
               data-testid="event-history-answer-edit-toggle"
             >
@@ -279,10 +280,15 @@ function EventHistoryInner({
                     )}
 
                     <button
-                      className={`btn btn-xs ${
-                        isFavorite ? 'btn-outline btn-error' : 'btn-outline btn-primary'
+                      type="button"
+                      className={`btn btn-icon ${
+                        isFavorite
+                          ? 'text-warning bg-warning/15 hover:bg-warning/20'
+                          : 'btn-ghost text-base-content/55 hover:text-primary'
                       }`}
                       title={isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}
+                      aria-label={isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}
+                      aria-pressed={isFavorite}
                       onClick={() => {
                         if (isFavorite) {
                           removeFavorite(event.id);
@@ -295,7 +301,11 @@ function EventHistoryInner({
                         }
                       }}
                     >
-                      {isFavorite ? '解除' : '☆追加'}
+                      <Star
+                        aria-hidden="true"
+                        className="size-4"
+                        fill={isFavorite ? 'currentColor' : 'none'}
+                      />
                     </button>
                   </div>
                 </li>

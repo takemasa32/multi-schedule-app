@@ -100,6 +100,14 @@ body {
     @apply min-h-9;
   }
 
+  .btn-xs {
+    @apply h-8 min-h-8 px-2.5 text-xs;
+  }
+
+  .btn-icon {
+    @apply h-9 min-h-9 w-9 min-w-9 p-0;
+  }
+
   .app-page {
     @apply mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6;
   }
@@ -171,6 +179,17 @@ body {
   .legal-content p,
   .legal-content li {
     @apply text-base-content/80;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn-xs,
+  .btn-icon {
+    @apply h-10 min-h-10;
+  }
+
+  .btn-icon {
+    @apply w-10 min-w-10;
   }
 }
 

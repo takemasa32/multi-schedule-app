@@ -56,7 +56,7 @@ export default function EventOpenForm({
           onChange={(e) => setInput(e.target.value)}
           aria-label="イベントURLまたはID"
         />
-        <button type="submit" className="btn btn-secondary">
+        <button type="submit" className="btn btn-primary sm:w-auto">
           開く
         </button>
       </form>

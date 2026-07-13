@@ -10,7 +10,7 @@
  * - グローバル状態（FavoriteEventsProvider）を利用し、お気に入りの追加・削除を行います。
  * - ボタン押下でお気に入り状態をトグルし、UIに即時反映されます。
  */
-import { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
 import { useFavoriteEvents } from '@/components/favorite-events-context';
 
 interface Props {
@@ -20,11 +20,7 @@ interface Props {
 
 export default function FavoriteToggle({ eventId, title }: Props) {
   const { favorites, addFavorite, removeFavorite } = useFavoriteEvents();
-  const [isFavorite, setIsFavorite] = useState(false);
-
-  useEffect(() => {
-    setIsFavorite(favorites.some((ev) => ev.id === eventId));
-  }, [favorites, eventId]);
+  const isFavorite = favorites.some((event) => event.id === eventId);
 
   const handleToggle = () => {
     if (isFavorite) {
@@ -40,13 +36,15 @@ export default function FavoriteToggle({ eventId, title }: Props) {
 
   return (
     <button
-      className={`btn btn-sm ${isFavorite ? 'btn-warning' : 'btn-outline'}`}
+      className={`btn btn-icon border-base-300 ${
+        isFavorite ? 'border-warning bg-warning/15 text-warning' : 'btn-ghost text-base-content/60'
+      }`}
       onClick={handleToggle}
       aria-pressed={isFavorite}
       aria-label={isFavorite ? 'お気に入り解除' : 'お気に入り登録'}
       type="button"
     >
-      {isFavorite ? '★ お気に入り解除' : '☆ お気に入り登録'}
+      <Star aria-hidden="true" className="size-4" fill={isFavorite ? 'currentColor' : 'none'} />
     </button>
   );
 }
