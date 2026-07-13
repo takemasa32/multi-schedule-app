@@ -58,6 +58,8 @@
 - GitHub Flow を前提とし、`main` から切った短命ブランチを `main` 向け PR で統合する。
 - 大きな変更はドラフト PR で早期共有し、仕様検討は `/docs/architecture` にまとめてから着手。
 - PR テンプレートの必須項目（目的 / 変更点 / 動作確認 / 影響範囲 / スクショ / 関連 Issue）を満たす。
+- GitHubへ日本語本文を送る処理はWSL内でUTF-8のまま完結させる。Windows PowerShellのhere-stringやパイプを`gh --body-file -`へ渡さない。
+- Windows側から送信する必要がある場合は本文をUTF-8でBase64化し、WSL内で復号したJSONを`gh api --input -`へ渡す。送信後はAPIで再取得し、先頭BOMと`???`がないことを確認する。
 
 ---
 
