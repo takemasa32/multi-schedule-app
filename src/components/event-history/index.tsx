@@ -201,7 +201,7 @@ function EventHistoryInner({
             <button
               type="button"
               onClick={() => setIsClearConfirmOpen(true)}
-              className="text-sm text-base-content/60 hover:text-base-content/80"
+              className="text-base-content/60 hover:text-base-content/80 text-sm"
             >
               履歴をクリア
             </button>
@@ -210,7 +210,7 @@ function EventHistoryInner({
       </div>
 
       {status !== 'authenticated' && (
-        <div className="mb-2 text-xs text-base-content/60">
+        <div className="text-base-content/60 mb-2 text-xs">
           <span>ログインすると履歴を同期できます。</span>
           <button
             onClick={() => void signIn('google')}
@@ -222,9 +222,9 @@ function EventHistoryInner({
       )}
 
       {history.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-4">
+        <div className="border-base-300 bg-base-100 rounded-xl border border-dashed p-4">
           <p className="font-semibold">{emptyStateTitle}</p>
-          <p className="mt-1 text-sm leading-relaxed text-base-content/70">
+          <p className="text-base-content/70 mt-1 text-sm leading-relaxed">
             {emptyStateDescription}
           </p>
           {emptyStateActionHref && emptyStateActionLabel && (
@@ -249,7 +249,7 @@ function EventHistoryInner({
                     >
                       {event.title}
                     </Link>
-                    <p className="mt-1 text-xs text-base-content/60">
+                    <p className="text-base-content/60 mt-1 text-xs">
                       {formatTimestamp(event.createdAt)}
                       {event.isCreatedByMe && (
                         <span className="bg-primary/20 text-primary ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium">
@@ -263,7 +263,7 @@ function EventHistoryInner({
                       )}
                     </p>
                     {messageMap[event.id] && (
-                      <p className="mt-1 text-xs text-base-content/60">{messageMap[event.id]}</p>
+                      <p className="text-base-content/60 mt-1 text-xs">{messageMap[event.id]}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -283,8 +283,8 @@ function EventHistoryInner({
                       type="button"
                       className={`btn btn-icon ${
                         isFavorite
-                          ? 'text-warning bg-warning/15 hover:bg-warning/20'
-                          : 'btn-ghost text-base-content/55 hover:text-primary'
+                          ? 'border-warning/60 bg-warning/15 text-warning hover:bg-warning/20'
+                          : 'border-base-300 bg-base-100 text-base-content/65 hover:border-warning/50 hover:bg-warning/10 hover:text-warning'
                       }`}
                       title={isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}
                       aria-label={isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}
@@ -303,8 +303,9 @@ function EventHistoryInner({
                     >
                       <Star
                         aria-hidden="true"
-                        className="size-4"
+                        className="size-5"
                         fill={isFavorite ? 'currentColor' : 'none'}
+                        strokeWidth={2.25}
                       />
                     </button>
                   </div>

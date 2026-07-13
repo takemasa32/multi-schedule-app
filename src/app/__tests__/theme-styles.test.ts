@@ -18,4 +18,10 @@ describe('DaySynthテーマ定義', () => {
     expect(globalsCss).not.toContain('.drag-surface');
     expect(globalsCss).not.toContain('.participant-toggle');
   });
+
+  test('アイコン単独ボタンでDaisyUIの余白による縮小を防ぐ', () => {
+    expect(globalsCss).toContain('.btn.btn-icon');
+    expect(globalsCss).toContain('padding-inline: 0');
+    expect(globalsCss).toContain('flex-shrink: 0');
+  });
 });

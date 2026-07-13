@@ -18,7 +18,7 @@ export default function FavoriteEvents() {
 
   if (!isHydrated) {
     return (
-      <div className="rounded-xl border border-base-300 bg-base-100 p-4 text-sm text-base-content/60">
+      <div className="border-base-300 bg-base-100 text-base-content/60 rounded-xl border p-4 text-sm">
         お気に入りイベントを読み込んでいます...
       </div>
     );
@@ -26,9 +26,9 @@ export default function FavoriteEvents() {
 
   if (!favorites.length) {
     return (
-      <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-4">
+      <div className="border-base-300 bg-base-100 rounded-xl border border-dashed p-4">
         <p className="font-semibold">お気に入りはまだありません</p>
-        <p className="mt-1 text-sm leading-relaxed text-base-content/70">
+        <p className="text-base-content/70 mt-1 text-sm leading-relaxed">
           よく開くイベントを登録しておくと、ここからすぐにアクセスできます。
         </p>
       </div>
@@ -47,7 +47,7 @@ export default function FavoriteEvents() {
               {ev.title || ev.id}
             </Link>
             {ev.lastAccessed && (
-              <span className="mt-1 block text-xs text-base-content/50">
+              <span className="text-base-content/50 mt-1 block text-xs">
                 最終アクセス: {new Date(ev.lastAccessed).toLocaleDateString()}
               </span>
             )}
@@ -59,7 +59,7 @@ export default function FavoriteEvents() {
             aria-label={`${ev.title || ev.id}をお気に入りから削除`}
             onClick={() => removeFavorite(ev.id)}
           >
-            <Star aria-hidden="true" className="size-3.5" fill="currentColor" />
+            <Star aria-hidden="true" className="size-4" fill="currentColor" strokeWidth={2.25} />
             解除
           </button>
         </li>

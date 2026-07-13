@@ -3,6 +3,16 @@ import '@testing-library/jest-dom';
 import DateRangePicker from '../date-range-picker';
 
 describe('DateRangePicker', () => {
+  test('補足説明をキーボードで操作できるアイコンボタンとして表示する', () => {
+    render(<DateRangePicker onTimeSlotsChange={jest.fn()} allowPastDates />);
+
+    ['期間ヘルプ', '時間帯ヘルプ', '時間枠の長さヘルプ'].forEach((name) => {
+      const button = screen.getByRole('button', { name });
+      expect(button).not.toHaveAttribute('tabindex', '-1');
+      expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    });
+  });
+
   test('時間枠候補が10分〜6時間の選択肢に限定されている', () => {
     render(<DateRangePicker onTimeSlotsChange={jest.fn()} allowPastDates />);
 

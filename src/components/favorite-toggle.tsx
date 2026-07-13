@@ -37,14 +37,21 @@ export default function FavoriteToggle({ eventId, title }: Props) {
   return (
     <button
       className={`btn btn-icon border-base-300 ${
-        isFavorite ? 'border-warning bg-warning/15 text-warning' : 'btn-ghost text-base-content/60'
+        isFavorite
+          ? 'border-warning/60 bg-warning/15 text-warning hover:bg-warning/20'
+          : 'bg-base-100 text-base-content/65 hover:border-warning/50 hover:bg-warning/10 hover:text-warning'
       }`}
       onClick={handleToggle}
       aria-pressed={isFavorite}
       aria-label={isFavorite ? 'お気に入り解除' : 'お気に入り登録'}
       type="button"
     >
-      <Star aria-hidden="true" className="size-4" fill={isFavorite ? 'currentColor' : 'none'} />
+      <Star
+        aria-hidden="true"
+        className="size-5"
+        fill={isFavorite ? 'currentColor' : 'none'}
+        strokeWidth={2.25}
+      />
     </button>
   );
 }

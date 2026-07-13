@@ -223,6 +223,7 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 - [Motion導入方針（低影響・段階移行）](docs/architecture/motion-adoption-plan.md)
 - [AI駆動開発におけるデザイン品質ガイド](docs/architecture/ai-driven-design-guidelines.md)
 - [デザイン改善メモ（2026-05-11）](docs/architecture/design-refresh-2026-05-11.md)
+- [アイコン操作のサイズ設計（2026-07-13）](docs/architecture/icon-action-sizing-2026-07-13.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ## ライセンス

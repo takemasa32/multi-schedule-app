@@ -105,7 +105,7 @@ body {
   }
 
   .btn-icon {
-    @apply h-9 min-h-9 w-9 min-w-9 p-0;
+    @apply h-10 min-h-10 w-10 min-w-10 p-0;
   }
 
   .app-page {
@@ -189,8 +189,17 @@ body {
   }
 
   .btn-icon {
-    @apply w-10 min-w-10;
+    @apply h-11 min-h-11 w-11 min-w-11;
   }
+}
+
+/* DaisyUIのレイヤーより後で、アイコン単独操作の余白と縮小可否を確定する。 */
+.btn.btn-icon {
+  padding-inline: 0;
+}
+
+.btn.btn-icon > :where(svg) {
+  flex-shrink: 0;
 }
 
 /* Form Element Styles */

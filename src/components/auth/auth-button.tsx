@@ -13,14 +13,14 @@ export default function AuthButton() {
   };
 
   if (status === 'loading') {
-    return <span className="skeleton h-8 w-10 rounded-full" aria-label="ログイン確認中" />;
+    return <span className="skeleton h-10 w-10 rounded-full" aria-label="ログイン確認中" />;
   }
 
   if (session?.user) {
     return (
       <Link
         href="/account"
-        className="btn btn-ghost btn-circle btn-sm"
+        className="btn btn-icon btn-ghost btn-circle"
         aria-label="アカウントページへ"
       >
         <CircleUser className="h-5 w-5" aria-hidden="true" />
@@ -32,11 +32,11 @@ export default function AuthButton() {
     <button
       type="button"
       onClick={handleSignIn}
-      className="btn btn-ghost btn-sm flex h-8 min-h-8 w-10 flex-col items-center justify-center gap-0 px-0"
+      className="btn btn-icon btn-ghost flex flex-col items-center justify-center gap-0"
       aria-label="ゲストとしてログイン"
     >
-      <CircleUser className="h-4 w-4" aria-hidden="true" />
-      <span className="text-base-content/70 text-[9px] uppercase leading-none tracking-wide">
+      <CircleUser className="h-[18px] w-[18px]" aria-hidden="true" />
+      <span className="text-base-content/70 text-[9px] font-medium uppercase leading-none tracking-wide">
         guest
       </span>
     </button>

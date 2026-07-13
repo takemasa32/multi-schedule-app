@@ -5,6 +5,7 @@ import React from 'react';
 import PortalTooltip from './common/portal-tooltip';
 import { format, eachDayOfInterval, isEqual, parseISO, setHours, setMinutes } from 'date-fns';
 import { TimeSlot } from '@/lib/utils'; // 共通のTimeSlot型をインポート
+import { CircleHelp } from 'lucide-react';
 
 interface DateRangePickerProps {
   onDatesChange?: (dates: Date[]) => void; // 後方互換性のため残す
@@ -383,23 +384,7 @@ export default function DateRangePicker({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h3 className="text-sm font-semibold">期間</h3>
-          <button
-            type="button"
-            tabIndex={-1}
-            className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-            aria-label="期間ヘルプ"
-            onClick={(e) => {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const detail = {
-                x: rect.left,
-                y: rect.bottom,
-                text: 'イベント期間の開始日と終了日を指定します',
-              } as const;
-              window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-            }}
-          >
-            ?
-          </button>
+          <FormHelpButton label="期間ヘルプ" text="イベント期間の開始日と終了日を指定します" />
         </div>
         <div className="join w-full">
           <input
@@ -410,7 +395,7 @@ export default function DateRangePicker({
             onChange={handleStartDateChange}
             aria-label="開始日"
           />
-          <span className="join-item hidden items-center px-3 text-sm text-base-content/60 sm:flex">
+          <span className="join-item text-base-content/60 hidden items-center px-3 text-sm sm:flex">
             〜
           </span>
           <input
@@ -422,7 +407,7 @@ export default function DateRangePicker({
             aria-label="終了日"
           />
         </div>
-        <div className="flex justify-between text-[11px] text-base-content/60">
+        <div className="text-base-content/60 flex justify-between text-[11px]">
           <span>開始日</span>
           <span className="sm:hidden">〜</span>
           <span>終了日</span>
@@ -432,23 +417,10 @@ export default function DateRangePicker({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h3 className="text-sm font-semibold">時間帯</h3>
-          <button
-            type="button"
-            tabIndex={-1}
-            className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-            aria-label="時間帯ヘルプ"
-            onClick={(e) => {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const detail = {
-                x: rect.left,
-                y: rect.bottom,
-                text: '各日の開始・終了時刻を指定します。終了時刻が開始時刻より早い場合は翌日扱いになります。',
-              } as const;
-              window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-            }}
-          >
-            ?
-          </button>
+          <FormHelpButton
+            label="時間帯ヘルプ"
+            text="各日の開始・終了時刻を指定します。終了時刻が開始時刻より早い場合は翌日扱いになります。"
+          />
         </div>
         <div className="join w-full">
           <input
@@ -459,7 +431,7 @@ export default function DateRangePicker({
             onChange={handleDefaultStartTimeChange}
             aria-label="各日の開始時刻"
           />
-          <span className="join-item hidden items-center px-3 text-sm text-base-content/60 sm:flex">
+          <span className="join-item text-base-content/60 hidden items-center px-3 text-sm sm:flex">
             〜
           </span>
           <input
@@ -471,48 +443,31 @@ export default function DateRangePicker({
             aria-label="各日の終了時刻"
           />
         </div>
-        <div className="flex justify-between text-[11px] text-base-content/60">
+        <div className="text-base-content/60 flex justify-between text-[11px]">
           <span>開始時刻</span>
           <span className="sm:hidden">〜</span>
           <span>終了時刻</span>
         </div>
-        <span className="label-text-alt text-info text-xs">
-          00:00は翌日0:00として扱われます
-        </span>
+        <span className="label-text-alt text-info text-xs">00:00は翌日0:00として扱われます</span>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h3 className="text-sm font-semibold">時間枠の長さ</h3>
-          <span className="text-xs text-base-content/60">1枠の長さ</span>
+          <span className="text-base-content/60 text-xs">1枠の長さ</span>
         </div>
         <div className="form-control w-full">
           <div className="flex items-center justify-between gap-2">
             <label htmlFor="drp-interval-unit" className="label-text text-xs font-medium">
               長さ
             </label>
-            <button
-              type="button"
-              tabIndex={-1}
-              className="btn btn-xs btn-circle btn-ghost h-5 min-h-0 w-5 p-0"
-              aria-label="時間枠の長さヘルプ"
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const detail = {
-                  x: rect.left,
-                  y: rect.bottom,
-                  text: '各枠の長さを分単位で設定します',
-                } as const;
-                window.dispatchEvent(new CustomEvent('form:show-tip', { detail }));
-              }}
-            >
-              ?
-            </button>
+            <FormHelpButton label="時間枠の長さヘルプ" text="各枠の長さを分単位で設定します" />
           </div>
           <div className="mt-2 flex flex-nowrap gap-2 overflow-x-auto">
             {quickIntervals.map((value) => {
-              const label = selectableIntervalOptions.find((option) => option.value === value)
-                ?.label;
+              const label = selectableIntervalOptions.find(
+                (option) => option.value === value,
+              )?.label;
               return (
                 <button
                   key={value}
@@ -560,13 +515,44 @@ export default function DateRangePicker({
             </select>
           )}
           {isIntervalLocked && (
-            <span className="label-text-alt mt-1 text-base-content/60">
+            <span className="label-text-alt text-base-content/60 mt-1">
               既存イベントの設定に合わせて固定されています
             </span>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+interface FormHelpButtonProps {
+  label: string;
+  text: string;
+}
+
+/**
+ * フォーム項目の補足説明を表示するアイコンボタン。
+ *
+ * @param {FormHelpButtonProps} props - ボタンの表示内容
+ * @returns {JSX.Element} キーボードとタッチ操作に対応したヘルプボタン
+ */
+function FormHelpButton({ label, text }: FormHelpButtonProps) {
+  return (
+    <button
+      type="button"
+      className="btn btn-icon btn-ghost btn-circle text-base-content/55 hover:bg-base-200 hover:text-base-content"
+      aria-label={label}
+      onClick={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        window.dispatchEvent(
+          new CustomEvent('form:show-tip', {
+            detail: { x: rect.left, y: rect.bottom, text },
+          }),
+        );
+      }}
+    >
+      <CircleHelp className="size-[18px]" strokeWidth={2} aria-hidden="true" />
+    </button>
   );
 }
 
