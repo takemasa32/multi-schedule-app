@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { EventHeader } from '../event-header';
 import { FavoriteEventsProvider } from '../favorite-events-context';
@@ -23,9 +22,7 @@ jest.mock('../share-event-button', () => {
     __esModule: true,
     default: (props: ShareEventButtonProps) => {
       mockedShareEventButton(props);
-      const MockShareEventButton = () => <div data-testid="share-btn" />;
-      MockShareEventButton.displayName = 'MockShareEventButton';
-      return <MockShareEventButton />;
+      return <div data-testid="share-btn" />;
     },
   };
 });
@@ -42,8 +39,7 @@ describe('EventHeader', () => {
         <EventHeader eventId="abc123" title="タイトル" description="説明" isFinalized={false} />
       </FavoriteEventsProvider>,
     );
-    const { protocol, host } = window.location;
-    const expectedUrl = `${protocol}//${host}/event/abc123`;
+    const expectedUrl = `${window.location.origin}/event/abc123`;
     expect(mockedShareEventButton).toHaveBeenCalledWith(
       expect.objectContaining({ url: expectedUrl }),
     );

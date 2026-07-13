@@ -18,29 +18,21 @@ interface EventHeaderProps {
 export function EventHeader({ eventId, title, description, isFinalized }: EventHeaderProps) {
   const pathname = usePathname();
   const isEventDetailPage = pathname === `/event/${eventId}`;
-
-  // イベント公開用URLを生成
-  const getShareUrl = () => {
-    if (typeof window === 'undefined') return '';
-    const { protocol, host } = window.location;
-    return `${protocol}//${host}/event/${eventId}`;
-  };
+  const shareUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/event/${eventId}`;
 
   return (
     <>
       {isEventDetailPage && (
-        <div className="mb-2">
-          <nav aria-label="戻るナビゲーション">
-            <Link
-              href="/"
-              aria-label="ホームへ戻る"
-              className="text-base-content/55 hover:text-base-content/75 -ml-1 inline-flex min-h-11 items-center gap-1 rounded-md px-1 text-[13px] font-normal transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span>ホーム</span>
-            </Link>
-          </nav>
-        </div>
+        <nav className="mb-2" aria-label="戻るナビゲーション">
+          <Link
+            href="/"
+            aria-label="ホームへ戻る"
+            className="text-base-content/55 hover:text-base-content/75 -ml-1 inline-flex min-h-11 items-center gap-1 rounded-md px-1 text-[13px] font-normal transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>ホーム</span>
+          </Link>
+        </nav>
       )}
       <Card className="mb-6" isHighlighted={isFinalized}>
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
@@ -59,7 +51,7 @@ export function EventHeader({ eventId, title, description, isFinalized }: EventH
             )}
           </div>
           <ShareEventButton
-            url={getShareUrl()}
+            url={shareUrl}
             className="self-start"
             title={`${title}｜${siteConfig.share.eventTitleSuffix}`}
             text={`${title}\n${isFinalized ? siteConfig.share.finalizedEventText : siteConfig.share.eventText}`}
