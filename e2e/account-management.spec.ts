@@ -394,22 +394,47 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}/input/complete`), {
       timeout: 10000,
     });
+
+    // 回答送信だけでは既存のマイ予定を変更しない。
+    await expect
+      .poll(async () => {
+        const row = await db.query<{ source: string; event_id: string | null }>(
+          `select source,event_id from public.user_schedule_blocks
+           where user_id=$1 and start_time='2099-05-10T03:00:00Z' and end_time='2099-05-10T04:00:00Z'`,
+          [userId],
+        );
+        return row.rows[0] ?? null;
+      })
+      .toEqual({ source: 'manual', event_id: null });
+
     const saveScheduleButton = page.getByRole('button', { name: '保存する' });
-    if (await saveScheduleButton.isVisible().catch(() => false)) {
-      await saveScheduleButton.click();
-      const skipSyncLink = page.getByRole('link', { name: '反映しない' });
-      if (await skipSyncLink.isVisible({ timeout: 10000 }).catch(() => false)) {
-        await skipSyncLink.click();
-      } else if (
-        await page
-          .getByRole('link', { name: 'イベント結果を見る' })
-          .isVisible({ timeout: 1500 })
-          .catch(() => false)
-      ) {
-        await page.getByRole('link', { name: 'イベント結果を見る' }).click();
-      }
-      await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}`), { timeout: 10000 });
+    await expect(saveScheduleButton).toBeVisible();
+    await saveScheduleButton.click();
+
+    // 明示的な保存操作後にだけ、回答内容をマイ予定へ反映する。
+    await expect
+      .poll(async () => {
+        const row = await db.query<{ source: string; event_id: string | null }>(
+          `select source,event_id from public.user_schedule_blocks
+           where user_id=$1 and start_time='2099-05-10T03:00:00Z' and end_time='2099-05-10T04:00:00Z'`,
+          [userId],
+        );
+        return row.rows[0] ?? null;
+      })
+      .toEqual({ source: 'event', event_id: answerEvent.id });
+
+    const skipSyncLink = page.getByRole('link', { name: '反映しない' });
+    if (await skipSyncLink.isVisible({ timeout: 10000 }).catch(() => false)) {
+      await skipSyncLink.click();
+    } else if (
+      await page
+        .getByRole('link', { name: 'イベント結果を見る' })
+        .isVisible({ timeout: 1500 })
+        .catch(() => false)
+    ) {
+      await page.getByRole('link', { name: 'イベント結果を見る' }).click();
     }
+    await page.waitForURL(new RegExp(`/event/${answerEvent.publicToken}`), { timeout: 10000 });
 
     await expect
       .poll(

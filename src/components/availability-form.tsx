@@ -103,6 +103,8 @@ export default function AvailabilityForm({
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
   const [showGuestConfirm, setShowGuestConfirm] = useState(false);
+  const [showEmptyAvailabilityGuidance, setShowEmptyAvailabilityGuidance] = useState(false);
+  const [showAddDatesConfirm, setShowAddDatesConfirm] = useState(false);
   const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
@@ -185,6 +187,7 @@ export default function AvailabilityForm({
         return changed ? next : prev;
       });
       if (changedKeys.length > 0) {
+        setShowEmptyAvailabilityGuidance(false);
         notifySelectionChange();
         setManuallyEditedDateIds((prev) => {
           const next = { ...prev };
@@ -357,15 +360,20 @@ export default function AvailabilityForm({
     window.scrollTo({ top: Math.max(0, titleTop - 16), behavior: 'smooth' });
   }, [currentStep]);
 
+  const showMissingAvailabilityError = useCallback(() => {
+    setError('参加可能な候補日程が選択されていません。');
+    setShowEmptyAvailabilityGuidance(true);
+  }, []);
+
   // フォーム送信前のバリデーション用
-  const validateForm = async () => {
+  const validateForm = () => {
     if (!name.trim()) {
       setError('お名前を入力してください');
       return false;
     }
 
     if (!Object.values(selectedDates).some(Boolean)) {
-      setError('少なくとも1つの参加可能枠（○）を選択してください');
+      showMissingAvailabilityError();
       return false;
     }
 
@@ -404,7 +412,7 @@ export default function AvailabilityForm({
       setError('確認ステップで送信してください');
       return;
     }
-    if (!(await validateForm())) {
+    if (!validateForm()) {
       return;
     }
 
@@ -510,12 +518,21 @@ export default function AvailabilityForm({
 
     if (currentStep === heatmapStep) {
       if (!Object.values(selectedDates).some(Boolean)) {
-        setError('少なくとも1つの参加可能枠（○）を選択してください');
+        showMissingAvailabilityError();
         return;
       }
       setCurrentStep(confirmStep);
     }
-  }, [confirmStep, currentStep, heatmapStep, isNewMode, name, selectedDates, weeklyStep]);
+  }, [
+    confirmStep,
+    currentStep,
+    heatmapStep,
+    isNewMode,
+    name,
+    selectedDates,
+    showMissingAvailabilityError,
+    weeklyStep,
+  ]);
 
   const handleOpenGuestConfirm = useCallback(() => {
     setShowGuestConfirm(true);
@@ -529,6 +546,18 @@ export default function AvailabilityForm({
   const handleCloseGuestConfirm = useCallback(() => {
     setShowGuestConfirm(false);
   }, []);
+
+  const handleOpenAddDatesConfirm = useCallback(() => {
+    setShowAddDatesConfirm(true);
+  }, []);
+
+  const handleCloseAddDatesConfirm = useCallback(() => {
+    setShowAddDatesConfirm(false);
+  }, []);
+
+  const handleMoveToAddDates = useCallback(() => {
+    router.push(`/event/${publicToken}?action=add-dates`);
+  }, [publicToken, router]);
 
   const handlePrevStep = useCallback(() => {
     setError(null);
@@ -933,7 +962,23 @@ export default function AvailabilityForm({
               d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span>{error}</span>
+          <div className="flex-1 space-y-2">
+            <p>{error}</p>
+            {showEmptyAvailabilityGuidance && (
+              <div className="space-y-2">
+                <p className="text-sm">
+                  どこも参加できない場合は、イベントページから候補日程を追加できます。
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={handleOpenAddDatesConfirm}
+                >
+                  候補日程を追加
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1399,6 +1444,16 @@ export default function AvailabilityForm({
             />
           </div>
         )}
+
+        <ConfirmationModal
+          isOpen={showAddDatesConfirm}
+          title="候補日程を追加しますか？"
+          description="イベントページへ移動すると、現在入力中のデータが消えますがよろしいですか。"
+          confirmLabel="候補日程を追加"
+          cancelLabel="予定入力に戻る"
+          onConfirm={handleMoveToAddDates}
+          onCancel={handleCloseAddDatesConfirm}
+        />
 
         <ConfirmationModal
           isOpen={overrideConfirmDateId !== null}

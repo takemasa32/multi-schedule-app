@@ -27,6 +27,7 @@ interface EventPageProps {
   searchParams: Promise<{
     sync_warning?: string;
     finalize_status?: string;
+    action?: string;
   }>;
 }
 
@@ -93,7 +94,7 @@ export async function generateMetadata({
 
 export default async function EventPage({ params, searchParams }: EventPageProps) {
   const { public_id } = await params;
-  const { sync_warning: syncWarning, finalize_status: finalizeStatus } = await searchParams;
+  const { sync_warning: syncWarning, finalize_status: finalizeStatus, action } = await searchParams;
 
   let event;
   try {
@@ -162,6 +163,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
             availabilities={availabilitiesPromise}
             finalizedDateIds={finalizedDateIds}
             myParticipantId={myParticipantId}
+            openDateAddition={action === 'add-dates'}
           />
         </Suspense>
       </div>
@@ -197,6 +199,7 @@ async function EventDetailsSectionLoader({
   availabilities,
   finalizedDateIds,
   myParticipantId,
+  openDateAddition,
 }: {
   event: EventDetailsSectionEvent;
   eventDates: EventDate[];
@@ -204,6 +207,7 @@ async function EventDetailsSectionLoader({
   availabilities: Promise<Availability[]>;
   finalizedDateIds: string[];
   myParticipantId: string | null;
+  openDateAddition: boolean;
 }) {
   const availabilityList = await availabilities;
   return (
@@ -214,6 +218,7 @@ async function EventDetailsSectionLoader({
       availabilities={availabilityList || []}
       finalizedDateIds={finalizedDateIds}
       myParticipantId={myParticipantId}
+      openDateAddition={openDateAddition}
     />
   );
 }

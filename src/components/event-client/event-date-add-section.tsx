@@ -16,9 +16,14 @@ interface EventDateAddSectionProps {
     public_token: string;
   };
   eventDates: EventDate[];
+  initiallyOpen?: boolean;
 }
 
-export default function EventDateAddSection({ event, eventDates }: EventDateAddSectionProps) {
+export default function EventDateAddSection({
+  event,
+  eventDates,
+  initiallyOpen = false,
+}: EventDateAddSectionProps) {
   const inferPreferredMode = useCallback((dates: EventDate[]): 'auto' | 'manual' => {
     if (dates.length < 2) {
       return 'manual';
@@ -70,8 +75,13 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
     key: number;
   } | null>(null);
   const [optimisticSlotKeys, setOptimisticSlotKeys] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
+  useEffect(() => {
+    if (!initiallyOpen || !sectionRef.current) return;
+    sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [initiallyOpen]);
   const existingSlotKeySet = useMemo(() => {
     const set = new Set<string>(optimisticSlotKeys);
     eventDates.forEach((d) => {
@@ -328,7 +338,7 @@ export default function EventDateAddSection({ event, eventDates }: EventDateAddS
     `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}（${weekdayChars[date.getDay()]}）`;
 
   return (
-    <div className="my-4 flex flex-col gap-4">
+    <div ref={sectionRef} className="my-4 flex scroll-mt-6 flex-col gap-4">
       <button
         className="btn btn-outline btn-primary mb-4"
         type="button"
