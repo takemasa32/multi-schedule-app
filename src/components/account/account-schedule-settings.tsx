@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreviewResult,
+  fetchUserScheduleBounds,
   fetchUserScheduleBlocks,
   saveUserScheduleBlockChanges,
   type UserAvailabilitySyncPreviewEvent,
@@ -35,6 +36,20 @@ type BlockCell = {
   id?: string;
   availability: boolean;
   source: string;
+};
+
+const deriveScheduleBounds = (blocks: ScheduleBlock[]) => {
+  if (blocks.length === 0) return { minStartTime: null, maxEndTime: null };
+  return {
+    minStartTime: blocks.reduce(
+      (min, block) => (block.start_time < min ? block.start_time : min),
+      blocks[0].start_time,
+    ),
+    maxEndTime: blocks.reduce(
+      (max, block) => (block.end_time > max ? block.end_time : max),
+      blocks[0].end_time,
+    ),
+  };
 };
 
 const normalizeTime = (value: string): string => {
@@ -231,7 +246,13 @@ export default function AccountScheduleSettings({
 }: AccountScheduleSettingsProps) {
   const { status } = useSession();
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
+  const [scheduleBounds, setScheduleBounds] = useState<{
+    minStartTime: string | null;
+    maxEndTime: string | null;
+  }>({ minStartTime: null, maxEndTime: null });
   const [isLoading, setIsLoading] = useState(initialIsAuthenticated || status === 'authenticated');
+  const scheduleWeekCacheRef = useRef<Map<string, ScheduleBlock[]>>(new Map());
+  const scheduleLoadRequestRef = useRef(0);
 
   const [datedEditing, setDatedEditing] = useState(false);
   const [datedSaving, setDatedSaving] = useState(false);
@@ -259,16 +280,50 @@ export default function AccountScheduleSettings({
   const isAuthenticated =
     status === 'authenticated' || (status === 'loading' && initialIsAuthenticated);
 
+  const loadWeek = useCallback(
+    async (weekStartDate: string, force = false) => {
+      if (!isAuthenticated) return;
+      const requestId = scheduleLoadRequestRef.current + 1;
+      scheduleLoadRequestRef.current = requestId;
+      const cached = scheduleWeekCacheRef.current.get(weekStartDate);
+      if (cached && !force) {
+        setScheduleBlocks(cached);
+        return cached;
+      }
+
+      setIsLoading(true);
+      try {
+        const blocksData = await fetchUserScheduleBlocks(weekStartDate);
+        scheduleWeekCacheRef.current.set(weekStartDate, blocksData);
+        if (scheduleLoadRequestRef.current === requestId) {
+          setScheduleBlocks(blocksData);
+        }
+        return blocksData;
+      } finally {
+        if (scheduleLoadRequestRef.current === requestId) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [isAuthenticated],
+  );
+
   const loadAll = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoading(true);
     try {
-      const blocksData = await fetchUserScheduleBlocks();
-      setScheduleBlocks(blocksData);
+      const bounds = await fetchUserScheduleBounds();
+      const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const blocks = await loadWeek(toLocalDateKey(currentWeekStart), true);
+      if (!bounds.minStartTime && !bounds.maxEndTime && blocks && blocks.length > 0) {
+        setScheduleBounds(deriveScheduleBounds(blocks));
+      } else {
+        setScheduleBounds(bounds);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadWeek]);
 
   useEffect(() => {
     void loadAll();
@@ -482,17 +537,17 @@ export default function AccountScheduleSettings({
   }, [scheduleBlocks]);
 
   const weeklyDateBuckets = useMemo(() => {
-    if (blockCalendarData.dateKeys.length === 0) return [] as string[][];
+    if (!scheduleBounds.minStartTime || !scheduleBounds.maxEndTime) return [] as string[][];
     const today = new Date();
     const todayWeekStart = startOfWeek(today, { weekStartsOn: 1 });
     const todayWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
-    const firstWeekStart = startOfWeek(new Date(`${blockCalendarData.dateKeys[0]}T00:00:00`), {
+    const firstScheduleDate = toComparableDate(scheduleBounds.minStartTime);
+    const lastScheduleDate = toComparableDate(scheduleBounds.maxEndTime);
+    lastScheduleDate.setMilliseconds(lastScheduleDate.getMilliseconds() - 1);
+    const firstWeekStart = startOfWeek(firstScheduleDate, {
       weekStartsOn: 1,
     });
-    const lastWeekEnd = endOfWeek(
-      new Date(`${blockCalendarData.dateKeys[blockCalendarData.dateKeys.length - 1]}T00:00:00`),
-      { weekStartsOn: 1 },
-    );
+    const lastWeekEnd = endOfWeek(lastScheduleDate, { weekStartsOn: 1 });
     const rangeStart =
       firstWeekStart.getTime() <= todayWeekStart.getTime() ? firstWeekStart : todayWeekStart;
     const rangeEnd = lastWeekEnd.getTime() >= todayWeekEnd.getTime() ? lastWeekEnd : todayWeekEnd;
@@ -514,7 +569,7 @@ export default function AccountScheduleSettings({
       buckets.push(week);
     }
     return buckets;
-  }, [blockCalendarData.dateKeys]);
+  }, [scheduleBounds.maxEndTime, scheduleBounds.minStartTime]);
 
   useEffect(() => {
     if (weeklyDateBuckets.length === 0) {
@@ -538,6 +593,18 @@ export default function AccountScheduleSettings({
   const visibleBlockDates = useMemo(
     () => weeklyDateBuckets[Math.max(0, resolvedBlockPage)] ?? [],
     [resolvedBlockPage, weeklyDateBuckets],
+  );
+
+  const handleBlockPageChange = useCallback(
+    (page: number) => {
+      const week = weeklyDateBuckets[page];
+      if (!week) return;
+      setBlockPage(page);
+      setDatedDraftMap({});
+      setDatedEditing(false);
+      void loadWeek(week[0]);
+    },
+    [loadWeek, weeklyDateBuckets],
   );
 
   const datedPeriodLabel = useMemo(() => {
@@ -708,7 +775,16 @@ export default function AccountScheduleSettings({
     setDatedSaving(false);
     setDatedEditing(false);
     setDatedMessage(DATED_UPDATE_SUCCESS_MESSAGE);
-    const [, preview] = await Promise.all([loadAll(), loadSyncPreview()]);
+    const currentWeekStart = visibleBlockDates[0];
+    const [, preview] = await Promise.all([
+      (async () => {
+        scheduleWeekCacheRef.current.delete(currentWeekStart);
+        const bounds = await fetchUserScheduleBounds();
+        setScheduleBounds(bounds);
+        await loadWeek(currentWeekStart, true);
+      })(),
+      loadSyncPreview(),
+    ]);
     if (preview.length > 0) {
       setSyncPreviewMessage('変更のあるイベントを下で確認できます');
       requestAnimationFrame(() => {
@@ -784,7 +860,7 @@ export default function AccountScheduleSettings({
 
         {isLoading ? (
           <p className="text-base-content/60 text-sm">予定データを読み込んでいます...</p>
-        ) : blockCalendarData.dateKeys.length === 0 ? (
+        ) : weeklyDateBuckets.length === 0 ? (
           <p className="text-base-content/60 text-sm">予定データはまだありません。</p>
         ) : (
           <>
@@ -793,7 +869,7 @@ export default function AccountScheduleSettings({
                 periodLabel={datedPeriodLabel ?? '-'}
                 currentPage={resolvedBlockPage}
                 totalPages={weeklyDateBuckets.length}
-                onPageChange={setBlockPage}
+                onPageChange={handleBlockPageChange}
                 hidePageIndicator={true}
               />
             </div>

@@ -325,20 +325,19 @@ export async function getParticipantById(participantId: string, eventId: string)
   }
 
   // 参加者の回答を取得
-  const { data: availabilities, error: availError } = await supabase
-    .from('availabilities')
-    .select(
-      `
-      id,
-      event_date_id,
-      availability
-    `,
-    )
-    .eq('participant_id', participantId)
-    .eq('event_id', eventId);
-
-  if (availError) {
-    console.error('回答取得エラー:', availError);
+  let availabilities: Array<{ id: string; event_date_id: string; availability: boolean }>;
+  try {
+    const query = supabase
+      .from('availabilities')
+      .select('id,event_date_id,availability')
+      .eq('participant_id', participantId)
+      .eq('event_id', eventId);
+    availabilities = await fetchAllPaginatedWithOrder(
+      query as unknown as SupabaseQueryInterface,
+      'created_at',
+    );
+  } catch (error) {
+    console.error('回答取得エラー:', error);
     return null;
   }
 
@@ -507,13 +506,14 @@ export async function getAvailabilities(
 export async function getFinalizedDateIds(eventId: string, finalDateId: string | null) {
   const supabase = createSupabaseAdmin();
 
-  // 確定日程テーブルから確定した日程IDを取得
-  const { data, error } = await supabase
-    .from('finalized_dates')
-    .select('event_date_id')
-    .eq('event_id', eventId);
-
-  if (error) {
+  let data: Array<{ event_date_id: string }>;
+  try {
+    const query = supabase.from('finalized_dates').select('event_date_id').eq('event_id', eventId);
+    data = await fetchAllPaginatedWithOrder(
+      query as unknown as SupabaseQueryInterface,
+      'created_at',
+    );
+  } catch (error) {
     console.error('確定日程取得エラー:', error);
 
     // 互換性のため、エラーが発生した場合やデータがない場合は
@@ -525,7 +525,7 @@ export async function getFinalizedDateIds(eventId: string, finalDateId: string |
     return [];
   }
 
-  if (data && data.length > 0) {
+  if (data.length > 0) {
     // event_date_idの配列を返す
     return data.map((item) => item.event_date_id);
   } else if (finalDateId) {
@@ -535,7 +535,7 @@ export async function getFinalizedDateIds(eventId: string, finalDateId: string |
   }
 
   // event.is_finalizedがtrueかつfinalDateIdが存在する場合は必ず返す
-  if ((!data || data.length === 0) && finalDateId) {
+  if (data.length === 0 && finalDateId) {
     return [finalDateId];
   }
 
@@ -933,16 +933,15 @@ export async function getEventInfoFromUrl(eventUrl: string) {
       return { success: false, message: 'イベントが見つかりません' };
     }
 
-    const { data: eventDates, error: datesError } = await supabase
+    const eventDatesQuery = supabase
       .from('event_dates')
       .select('id, start_time, end_time')
-      .eq('event_id', event.id)
-      .order('start_time', { ascending: true });
-
-    if (datesError) {
-      console.error('Event dates retrieval error:', datesError);
-      return { success: false, message: 'イベント日程の取得に失敗しました' };
-    }
+      .eq('event_id', event.id);
+    const eventDates = await fetchAllPaginatedWithOrder<{
+      id: string;
+      start_time: string;
+      end_time: string;
+    }>(eventDatesQuery as unknown as SupabaseQueryInterface, 'start_time');
 
     return {
       success: true,
@@ -990,13 +989,17 @@ export async function copyAvailabilityBetweenEvents(
       return { success: false, message: 'コピー先のイベントが見つかりません' };
     }
 
-    const { data: targetDates, error: targetDatesError } = await supabase
+    const targetDatesQuery = supabase
       .from('event_dates')
       .select('id, start_time, end_time')
       .eq('event_id', targetEventId);
+    const targetDates = await fetchAllPaginatedWithOrder<{
+      id: string;
+      start_time: string;
+      end_time: string;
+    }>(targetDatesQuery as unknown as SupabaseQueryInterface, 'start_time');
 
-    if (targetDatesError || !targetDates || targetDates.length === 0) {
-      console.error('Target dates retrieval error:', targetDatesError);
+    if (targetDates.length === 0) {
       return { success: false, message: 'コピー先の日程情報が取得できません' };
     }
 
@@ -1019,13 +1022,17 @@ export async function copyAvailabilityBetweenEvents(
       };
     }
 
-    const { data: sourceAvailabilities, error: availError } = await supabase
+    const sourceAvailabilitiesQuery = supabase
       .from('availabilities')
       .select('event_date_id, availability, event_date:event_dates(start_time, end_time)')
       .eq('participant_id', sourceParticipant.id);
+    const sourceAvailabilities = await fetchAllPaginatedWithOrder<{
+      event_date_id: string;
+      availability: boolean;
+      event_date: { start_time: string; end_time: string } | null;
+    }>(sourceAvailabilitiesQuery as unknown as SupabaseQueryInterface, 'created_at');
 
-    if (availError || !sourceAvailabilities || sourceAvailabilities.length === 0) {
-      console.error('Source availabilities retrieval error:', availError);
+    if (sourceAvailabilities.length === 0) {
       return {
         success: false,
         message: 'コピー元の回答データが見つかりません',

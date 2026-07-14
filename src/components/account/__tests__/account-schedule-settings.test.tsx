@@ -4,6 +4,7 @@ import AccountScheduleSettings from '@/components/account/account-schedule-setti
 import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreviewResult,
+  fetchUserScheduleBounds,
   fetchUserScheduleBlocks,
   saveUserScheduleBlockChanges,
 } from '@/lib/schedule-actions';
@@ -15,6 +16,7 @@ jest.mock('next-auth/react', () => ({
 jest.mock('@/lib/schedule-actions', () => ({
   applyUserAvailabilitySyncForEvent: jest.fn(),
   fetchUserAvailabilitySyncPreviewResult: jest.fn(),
+  fetchUserScheduleBounds: jest.fn(),
   fetchUserScheduleBlocks: jest.fn(),
   saveUserScheduleBlockChanges: jest.fn(),
 }));
@@ -24,6 +26,7 @@ const mockApplyUserAvailabilitySyncForEvent = applyUserAvailabilitySyncForEvent 
 const mockFetchUserAvailabilitySyncPreviewResult =
   fetchUserAvailabilitySyncPreviewResult as jest.Mock;
 const mockFetchUserScheduleBlocks = fetchUserScheduleBlocks as jest.Mock;
+const mockFetchUserScheduleBounds = fetchUserScheduleBounds as jest.Mock;
 const mockSaveUserScheduleBlockChanges = saveUserScheduleBlockChanges as jest.Mock;
 
 const createLocalTimeRange = (startHour: number, endHour: number) => {
@@ -114,6 +117,10 @@ const mockSuccessfulSyncPreviewEvents = (events: ReturnType<typeof createSyncPre
 describe('AccountScheduleSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchUserScheduleBounds.mockResolvedValue({
+      minStartTime: null,
+      maxEndTime: null,
+    });
     mockFetchUserScheduleBlocks.mockResolvedValue([]);
     mockSuccessfulSyncPreviewEvents([]);
     mockApplyUserAvailabilitySyncForEvent.mockResolvedValue({
@@ -183,6 +190,56 @@ describe('AccountScheduleSettings', () => {
     await screen.findByRole('heading', { name: '予定一括管理' });
     expect(await screen.findByText(range.dateLabel)).toBeInTheDocument();
     expect(await screen.findByText('○')).toBeInTheDocument();
+  });
+
+  it('週移動時だけ対象週を取得し、取得済みの週はキャッシュから表示する', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    const today = new Date();
+    const diffToMonday = (today.getDay() + 6) % 7;
+    const currentMonday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - diffToMonday,
+    );
+    const previousMonday = new Date(currentMonday);
+    previousMonday.setDate(previousMonday.getDate() - 7);
+    const currentWeekKey = toDateKey(currentMonday);
+    const previousWeekKey = toDateKey(previousMonday);
+    mockFetchUserScheduleBounds.mockResolvedValue({
+      minStartTime: `${previousWeekKey}T09:00:00+00:00`,
+      maxEndTime: `${toDateKey(new Date(currentMonday.getTime() + 7 * 86400000))}T10:00:00+00:00`,
+    });
+    mockFetchUserScheduleBlocks.mockImplementation(async (weekStartDate: string) => [
+      {
+        id: `block-${weekStartDate}`,
+        start_time: `${weekStartDate}T09:00:00+00:00`,
+        end_time: `${weekStartDate}T10:00:00+00:00`,
+        availability: true,
+        source: 'event',
+        event_id: 'event-1',
+      },
+    ]);
+
+    render(<AccountScheduleSettings />);
+
+    await waitFor(() => {
+      expect(mockFetchUserScheduleBlocks).toHaveBeenCalledWith(currentWeekKey);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '前の週へ移動' }));
+    await waitFor(() => {
+      expect(mockFetchUserScheduleBlocks).toHaveBeenCalledWith(previousWeekKey);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '次の週へ移動' }));
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(
+          (_, element) =>
+            element?.textContent ===
+            `表示期間: ${toWeekPeriodLabelFromIso(`${currentWeekKey}T09:00:00`)}`,
+        ).length,
+      ).toBeGreaterThan(0);
+    });
+    expect(mockFetchUserScheduleBlocks).toHaveBeenCalledTimes(2);
   });
 
   it('表示中の週が2時間単位のみなら2時間区切りで表示する', async () => {
