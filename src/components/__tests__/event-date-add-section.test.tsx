@@ -3,6 +3,8 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EventDateAddSection from '../event-client/event-date-add-section';
 
+const originalTimeZone = process.env.TZ;
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: jest.fn(),
@@ -117,6 +119,7 @@ jest.mock('../manual-time-slot-picker', () => {
 
 describe('EventDateAddSection', () => {
   afterEach(() => {
+    process.env.TZ = originalTimeZone;
     jest.clearAllMocks();
     lastForcedIntervalMinutes = null;
     lastInitialDefaultStartTime = null;
@@ -144,7 +147,7 @@ describe('EventDateAddSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '日程を追加する' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'カレンダー手動選択' }));
+    fireEvent.click(screen.getByRole('button', { name: '日時を個別に選ぶ' }));
 
     await screen.findByTestId('mock-manual-time-slot-picker');
 
@@ -178,7 +181,8 @@ describe('EventDateAddSection', () => {
     expect(listItems[0].textContent).not.toContain('2099/1/1');
   });
 
-  test('既存日程が規則的な場合は期間ベースが自動選択される', async () => {
+  test('UTCより遅いタイムゾーンでも既存日程の翌日から自動延長できる', async () => {
+    process.env.TZ = 'America/New_York';
     const event = { id: 'e1', title: 'イベント', public_token: 'token' };
     const eventDates = [
       {
@@ -209,8 +213,28 @@ describe('EventDateAddSection', () => {
     expect(lastInitialEndDate?.getFullYear()).toBe(2099);
     expect(lastInitialEndDate?.getMonth()).toBe(0);
     expect(lastInitialEndDate?.getDate()).toBe(2);
-    const autoButton = screen.getByRole('button', { name: '期間ベース' });
-    expect(autoButton).toBeDisabled();
+    const autoButton = screen.getByRole('button', { name: '同じ時間割で追加' });
+    expect(autoButton).toHaveAttribute('aria-pressed', 'true');
+    expect(autoButton).toBeEnabled();
+    expect(screen.getByLabelText('延長したい最終日')).toHaveValue('2099-01-03');
+    expect(screen.getByText('1日・1枠を追加')).toBeInTheDocument();
     expect(screen.queryByTestId('mock-manual-time-slot-picker')).not.toBeInTheDocument();
+  });
+
+  test('開閉状態を親へ通知する', () => {
+    const onOpenChange = jest.fn();
+    render(
+      <EventDateAddSection
+        event={{ id: 'e1', title: 'イベント', public_token: 'token' }}
+        eventDates={[]}
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '日程を追加する' }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.click(screen.getByRole('button', { name: '閉じる' }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
   });
 });

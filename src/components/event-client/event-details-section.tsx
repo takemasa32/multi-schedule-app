@@ -47,6 +47,7 @@ export default function EventDetailsSection({
 }: EventDetailsSectionProps) {
   // 参加者名バッジのトグルUI
   const [excludedParticipantIds, setExcludedParticipantIds] = useState<string[]>([]);
+  const [isDateAdditionOpen, setIsDateAdditionOpen] = useState(openDateAddition);
   const handleToggleParticipant = (id: string) => {
     setExcludedParticipantIds((prev) =>
       prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id],
@@ -112,9 +113,11 @@ export default function EventDetailsSection({
       <section className="surface my-8 p-5 sm:p-6">
         <h2 className="section-heading mb-1">イベント日程の管理</h2>
         <p className="section-description mb-6">日程を確定するか、候補日を追加できます。</p>
-        <div className="flex flex-col gap-8 md:flex-row">
+        <div
+          className={isDateAdditionOpen ? 'flex flex-col gap-8' : 'flex flex-col gap-8 md:flex-row'}
+        >
           {/* 日程確定セクション */}
-          <div className="min-w-0 flex-1">
+          <div className={isDateAdditionOpen ? 'hidden' : 'min-w-0 flex-1'}>
             <FinalizeEventSection
               publicToken={event.public_token}
               eventDates={eventDates}
@@ -122,7 +125,7 @@ export default function EventDetailsSection({
               finalizedDateIds={finalizedDateIds}
             />
           </div>
-          <div className="divider md:divider-horizontal my-1 md:my-0" />
+          {!isDateAdditionOpen && <div className="divider md:divider-horizontal my-1 md:my-0" />}
           {/* 日程追加セクション */}
           <div className="min-w-0 flex-1" id="candidate-date-addition">
             <h3 className="mb-2 text-lg font-semibold">候補日程の追加</h3>
@@ -130,6 +133,7 @@ export default function EventDetailsSection({
               event={event}
               eventDates={eventDates}
               initiallyOpen={openDateAddition}
+              onOpenChange={setIsDateAdditionOpen}
             />
           </div>
         </div>
