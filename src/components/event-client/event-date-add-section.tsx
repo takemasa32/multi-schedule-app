@@ -17,12 +17,19 @@ interface EventDateAddSectionProps {
   };
   eventDates: EventDate[];
   initiallyOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
+
+const getLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
 
 export default function EventDateAddSection({
   event,
   eventDates,
   initiallyOpen = false,
+  onOpenChange,
 }: EventDateAddSectionProps) {
   const inferPreferredMode = useCallback((dates: EventDate[]): 'auto' | 'manual' => {
     if (dates.length < 2) {
@@ -51,10 +58,16 @@ export default function EventDateAddSection({
   const sortedDates = [...eventDates].sort((a, b) => a.start_time.localeCompare(b.start_time));
   const last = sortedDates[sortedDates.length - 1];
   const defaultLastDate = last ? last.start_time.slice(0, 10) : '';
+  const defaultExtendTo = useMemo(() => {
+    if (!defaultLastDate) return '';
+    const nextDate = new Date(`${defaultLastDate}T00:00:00`);
+    nextDate.setDate(nextDate.getDate() + 1);
+    return getLocalDateKey(nextDate);
+  }, [defaultLastDate]);
   const [addMode, setAddModeState] = useState<'auto' | 'manual'>(() =>
     inferPreferredMode(eventDates),
   );
-  const [extendTo, setExtendTo] = useState<string>(defaultLastDate);
+  const [extendTo, setExtendTo] = useState<string>(defaultExtendTo);
   const [quickSlots, setQuickSlots] = useState<TimeSlot[]>([]);
   const [manualSlots, setManualSlots] = useState<TimeSlot[]>([]);
   const [autoRangeSource, setAutoRangeSource] = useState<TimeSlot[]>([]);
@@ -82,6 +95,14 @@ export default function EventDateAddSection({
     if (!initiallyOpen || !sectionRef.current) return;
     sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [initiallyOpen]);
+
+  const setOpenState = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange],
+  );
   const existingSlotKeySet = useMemo(() => {
     const set = new Set<string>(optimisticSlotKeys);
     eventDates.forEach((d) => {
@@ -317,11 +338,6 @@ export default function EventDateAddSection({
     setQuickSlots(slots);
   }, [extendTo, last, eventDates]);
 
-  const getLocalDateKey = (date: Date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      '0',
-    )}-${String(date.getDate()).padStart(2, '0')}`;
   const weekdayChars = '日月火水木金土';
   const groupSlotsByDate = (slots: TimeSlot[]) => {
     const grouped: Record<string, { date: Date; count: number }> = {};
@@ -338,13 +354,17 @@ export default function EventDateAddSection({
     `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}（${weekdayChars[date.getDay()]}）`;
 
   return (
-    <div ref={sectionRef} className="my-4 flex scroll-mt-6 flex-col gap-4">
+    <div ref={sectionRef} className="relative my-4 flex scroll-mt-6 flex-col gap-4">
       <button
-        className="btn btn-outline btn-primary mb-4"
+        className={
+          open
+            ? 'btn btn-ghost btn-sm absolute -top-12 right-0'
+            : 'btn btn-outline btn-primary mb-4'
+        }
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpenState(!open)}
       >
-        {open ? '日程追加を閉じる' : '日程を追加する'}
+        {open ? '閉じる' : '日程を追加する'}
       </button>
       {open && (
         <div className="card bg-base-100 border-base-200 border">
@@ -355,22 +375,22 @@ export default function EventDateAddSection({
               <>
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="text-base-content/70 text-sm font-semibold">追加方式</span>
-                  <div className="btn-group">
+                  <div className="join" role="group" aria-label="日程の追加方式">
                     <button
                       type="button"
-                      className={`btn btn-sm ${addMode === 'auto' ? 'btn-primary btn-active' : 'btn-outline'}`}
+                      className={`btn join-item btn-sm ${addMode === 'auto' ? 'btn-primary' : 'btn-outline'}`}
                       onClick={() => setAddMode('auto')}
-                      disabled={addMode === 'auto'}
+                      aria-pressed={addMode === 'auto'}
                     >
-                      期間ベース
+                      同じ時間割で追加
                     </button>
                     <button
                       type="button"
-                      className={`btn btn-sm ${addMode === 'manual' ? 'btn-primary btn-active' : 'btn-outline'}`}
+                      className={`btn join-item btn-sm ${addMode === 'manual' ? 'btn-primary' : 'btn-outline'}`}
                       onClick={() => setAddMode('manual')}
-                      disabled={addMode === 'manual'}
+                      aria-pressed={addMode === 'manual'}
                     >
-                      カレンダー手動選択
+                      日時を個別に選ぶ
                     </button>
                   </div>
                 </div>
@@ -395,12 +415,19 @@ export default function EventDateAddSection({
                         onChange={(e) => setExtendTo(e.target.value)}
                         disabled={addModalState === 'loading'}
                       />
-                      <div className="my-2 text-sm">
-                        追加される日程:
+                      <div
+                        className="bg-base-200/60 my-3 rounded-lg p-3 text-sm"
+                        aria-live="polite"
+                      >
+                        <div className="font-semibold">
+                          {quickSlots.length > 0
+                            ? `${groupSlotsByDate(quickSlots).length}日・${quickSlots.length}枠を追加`
+                            : '追加される日程はありません'}
+                        </div>
                         <ul className="list-disc pl-5">
                           {(() => {
                             const grouped = groupSlotsByDate(quickSlots);
-                            if (grouped.length === 0) return <li>なし</li>;
+                            if (grouped.length === 0) return null;
                             return grouped.map(({ date, count }) => (
                               <li key={getLocalDateKey(date)}>
                                 {formatDateListItem(date)}: {count}枠追加
@@ -430,8 +457,10 @@ export default function EventDateAddSection({
                             <span className="loading loading-spinner loading-sm mr-2" />
                             追加準備中...
                           </>
+                        ) : quickSlots.length > 0 ? (
+                          `${formatDateListItem(new Date(`${extendTo}T00:00:00`))}まで追加`
                         ) : (
-                          'この日まで自動延長して追加'
+                          '追加する日程を選択'
                         )}
                       </button>
                     </div>
