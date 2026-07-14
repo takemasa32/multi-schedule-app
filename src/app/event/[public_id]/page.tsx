@@ -8,6 +8,7 @@ import { EventNotFoundError } from '@/lib/errors';
 import { notFound } from 'next/navigation';
 import siteConfig from '@/lib/site-config';
 import { Metadata, Viewport } from 'next';
+import { after } from 'next/server';
 import { Suspense } from 'react';
 import EventFormSection from '@/components/event-client/event-form-section';
 import EventDetailsSection from '@/components/event-client/event-details-section';
@@ -99,7 +100,10 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   let event;
   try {
     event = await getEvent(public_id);
-    await touchEventLastAccessedIfStale(public_id);
+    // 表示に不要なアクセス時刻更新はレスポンス後に実行し、初期表示を待たせない。
+    after(async () => {
+      await touchEventLastAccessedIfStale(public_id);
+    });
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();

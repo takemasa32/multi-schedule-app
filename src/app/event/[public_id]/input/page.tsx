@@ -9,6 +9,8 @@ import { notFound } from 'next/navigation';
 import AvailabilityForm from '@/components/availability-form';
 import siteConfig from '@/lib/site-config';
 import { Metadata } from 'next';
+import Link from 'next/link';
+import { after } from 'next/server';
 import { EventNotFoundError } from '@/lib/errors';
 import { getUserScheduleContext } from '@/lib/schedule-actions';
 
@@ -60,7 +62,9 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   let event;
   try {
     event = await getEvent(public_id);
-    await touchEventLastAccessedIfStale(public_id);
+    after(async () => {
+      await touchEventLastAccessedIfStale(public_id);
+    });
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();
@@ -126,7 +130,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
       </div>
 
       <div className="border-base-300 mt-6 border-t pt-5">
-        <a
+        <Link
           href={`/event/${public_id}`}
           className="text-primary hover:text-primary/80 inline-flex min-h-11 items-center text-sm font-medium"
         >
@@ -134,7 +138,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
             ←
           </span>
           回答状況の確認・集計に戻る
-        </a>
+        </Link>
       </div>
     </div>
   );

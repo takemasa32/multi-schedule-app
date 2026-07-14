@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import { after } from 'next/server';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import FinalizeEventPage from '@/components/event-client/finalize-event-page';
 import { EventNotFoundError } from '@/lib/errors';
@@ -53,7 +54,9 @@ export default async function FinalizeRoutePage({ params }: FinalizeRoutePagePro
   let event;
   try {
     event = await getEvent(publicId);
-    await touchEventLastAccessedIfStale(publicId);
+    after(async () => {
+      await touchEventLastAccessedIfStale(publicId);
+    });
   } catch (error) {
     if (error instanceof EventNotFoundError) {
       notFound();
@@ -74,10 +77,7 @@ export default async function FinalizeRoutePage({ params }: FinalizeRoutePagePro
       <div className="bg-base-200 mb-4 py-3 sm:mb-6 sm:py-4">
         <div className="container mx-auto max-w-5xl px-2 sm:px-4">
           <Breadcrumbs
-            items={[
-              { label: 'イベント詳細', href: `/event/${publicId}` },
-              { label: '日程の確定' },
-            ]}
+            items={[{ label: 'イベント詳細', href: `/event/${publicId}` }, { label: '日程の確定' }]}
           />
         </div>
       </div>

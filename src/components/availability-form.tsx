@@ -938,8 +938,14 @@ export default function AvailabilityForm({
           {stepLabels.map((label, index) => {
             const step = (index + 1) as WizardStep;
             return (
-              <li key={label} className={`step ${currentStep >= step ? 'step-primary' : ''}`}>
-                <span>{label}</span>
+              <li
+                key={label}
+                aria-label={label}
+                className={`step ${currentStep >= step ? 'step-primary' : ''}`}
+              >
+                <span className="hidden sm:inline" aria-hidden="true">
+                  {label}
+                </span>
               </li>
             );
           })}
