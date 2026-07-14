@@ -3,6 +3,8 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EventDateAddSection from '../event-client/event-date-add-section';
 
+const originalTimeZone = process.env.TZ;
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: jest.fn(),
@@ -117,6 +119,7 @@ jest.mock('../manual-time-slot-picker', () => {
 
 describe('EventDateAddSection', () => {
   afterEach(() => {
+    process.env.TZ = originalTimeZone;
     jest.clearAllMocks();
     lastForcedIntervalMinutes = null;
     lastInitialDefaultStartTime = null;
@@ -178,7 +181,8 @@ describe('EventDateAddSection', () => {
     expect(listItems[0].textContent).not.toContain('2099/1/1');
   });
 
-  test('既存日程が規則的な場合は期間ベースが自動選択される', async () => {
+  test('UTCより遅いタイムゾーンでも既存日程の翌日から自動延長できる', async () => {
+    process.env.TZ = 'America/New_York';
     const event = { id: 'e1', title: 'イベント', public_token: 'token' };
     const eventDates = [
       {

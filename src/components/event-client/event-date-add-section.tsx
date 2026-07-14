@@ -25,6 +25,26 @@ const getLocalDateKey = (date: Date) =>
     date.getDate(),
   ).padStart(2, '0')}`;
 
+const parseLocalDateKey = (dateKey: string): Date | null => {
+  const matched = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!matched) return null;
+
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+};
+
 export default function EventDateAddSection({
   event,
   eventDates,
@@ -60,7 +80,8 @@ export default function EventDateAddSection({
   const defaultLastDate = last ? last.start_time.slice(0, 10) : '';
   const defaultExtendTo = useMemo(() => {
     if (!defaultLastDate) return '';
-    const nextDate = new Date(`${defaultLastDate}T00:00:00`);
+    const nextDate = parseLocalDateKey(defaultLastDate);
+    if (!nextDate) return '';
     nextDate.setDate(nextDate.getDate() + 1);
     return getLocalDateKey(nextDate);
   }, [defaultLastDate]);
@@ -191,9 +212,7 @@ export default function EventDateAddSection({
     if (!last) {
       return null;
     }
-    const base = new Date(last.start_time.slice(0, 10));
-    base.setHours(0, 0, 0, 0);
-    return Number.isNaN(base.getTime()) ? null : base;
+    return parseLocalDateKey(last.start_time.slice(0, 10));
   }, [last]);
 
   const manualInitialDate = useMemo(() => {
@@ -305,10 +324,12 @@ export default function EventDateAddSection({
       return;
     }
     const slots: TimeSlot[] = [];
-    const lastDate = new Date(last.start_time.slice(0, 10));
-    lastDate.setHours(0, 0, 0, 0);
-    const to = new Date(extendTo);
-    to.setHours(0, 0, 0, 0);
+    const lastDate = parseLocalDateKey(last.start_time.slice(0, 10));
+    const to = parseLocalDateKey(extendTo);
+    if (!lastDate || !to) {
+      setQuickSlots([]);
+      return;
+    }
     const pattern = extractDailyPatterns(eventDates);
     if (pattern.length === 0) {
       setQuickSlots([]);
@@ -352,6 +373,10 @@ export default function EventDateAddSection({
   };
   const formatDateListItem = (date: Date) =>
     `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}（${weekdayChars[date.getDay()]}）`;
+  const formatDateKeyListItem = (dateKey: string) => {
+    const date = parseLocalDateKey(dateKey);
+    return date ? formatDateListItem(date) : dateKey;
+  };
 
   return (
     <div ref={sectionRef} className="relative my-4 flex scroll-mt-6 flex-col gap-4">
@@ -458,7 +483,7 @@ export default function EventDateAddSection({
                             追加準備中...
                           </>
                         ) : quickSlots.length > 0 ? (
-                          `${formatDateListItem(new Date(`${extendTo}T00:00:00`))}まで追加`
+                          `${formatDateKeyListItem(extendTo)}まで追加`
                         ) : (
                           '追加する日程を選択'
                         )}
