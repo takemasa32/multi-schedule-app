@@ -5,7 +5,7 @@
  */
 export default function Loading() {
   return (
-    <div className="app-page" aria-busy="true" aria-label="日程確定画面を読み込んでいます">
+    <PageLoadingShell pageClassName="app-page" label="日程確定画面を読み込んでいます">
       <div className="page-header" aria-hidden="true">
         <div className="skeleton h-4 w-40" />
       </div>
@@ -20,7 +20,7 @@ export default function Loading() {
           <div className="skeleton h-11 w-36 rounded-lg" />
         </div>
       </section>
-      <span className="sr-only">日程確定画面を読み込んでいます</span>
-    </div>
+    </PageLoadingShell>
   );
 }
+import PageLoadingShell from '@/components/loading/page-loading-shell';

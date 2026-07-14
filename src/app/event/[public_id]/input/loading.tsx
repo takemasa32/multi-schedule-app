@@ -5,7 +5,7 @@
  */
 export default function Loading() {
   return (
-    <div className="app-page-narrow" aria-busy="true" aria-label="回答画面を読み込んでいます">
+    <PageLoadingShell pageClassName="app-page-narrow" label="回答画面を読み込んでいます">
       <header className="page-header" aria-hidden="true">
         <div className="skeleton mb-3 h-3 w-20" />
         <div className="skeleton h-8 w-44 max-w-full" />
@@ -26,7 +26,7 @@ export default function Loading() {
           <div className="skeleton h-11 w-28 rounded-lg" />
         </div>
       </div>
-      <span className="sr-only">回答画面を読み込んでいます</span>
-    </div>
+    </PageLoadingShell>
   );
 }
+import PageLoadingShell from '@/components/loading/page-loading-shell';

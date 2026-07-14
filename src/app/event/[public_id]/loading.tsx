@@ -1,4 +1,5 @@
 import EventDetailsSectionSkeleton from '@/components/event-client/event-details-section-skeleton';
+import PageLoadingShell from '@/components/loading/page-loading-shell';
 
 /**
  * イベント詳細ページの初期表示と同じ幅・余白を維持するローディング表示
@@ -7,7 +8,7 @@ import EventDetailsSectionSkeleton from '@/components/event-client/event-details
  */
 export default function Loading() {
   return (
-    <div className="app-page" aria-busy="true" aria-label="イベントを読み込んでいます">
+    <PageLoadingShell pageClassName="app-page" label="イベント情報を読み込んでいます">
       <div className="pb-12">
         <section className="surface mb-8 overflow-hidden">
           <div className="space-y-4 p-5 sm:p-6">
@@ -21,8 +22,7 @@ export default function Loading() {
         </section>
 
         <EventDetailsSectionSkeleton />
-        <span className="sr-only">イベント情報を読み込んでいます</span>
       </div>
-    </div>
+    </PageLoadingShell>
   );
 }

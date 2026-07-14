@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { after } from 'next/server';
+import { deferEventLastAccessedTouch } from '@/lib/event-page-lifecycle';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import FinalizeEventPage from '@/components/event-client/finalize-event-page';
 import { EventNotFoundError } from '@/lib/errors';
@@ -11,7 +11,6 @@ import {
   getEventDates,
   getFinalizedDateIds,
   getParticipants,
-  touchEventLastAccessedIfStale,
 } from '@/lib/actions';
 
 type FinalizeRoutePageProps = {
@@ -54,9 +53,7 @@ export default async function FinalizeRoutePage({ params }: FinalizeRoutePagePro
   let event;
   try {
     event = await getEvent(publicId);
-    after(async () => {
-      await touchEventLastAccessedIfStale(publicId);
-    });
+    deferEventLastAccessedTouch(publicId);
   } catch (error) {
     if (error instanceof EventNotFoundError) {
       notFound();

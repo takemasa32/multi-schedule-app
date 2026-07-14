@@ -1,16 +1,11 @@
 // src/app/event/[public_id]/page.tsx
-import {
-  getEvent,
-  getEventDates,
-  getParticipantById,
-  touchEventLastAccessedIfStale,
-} from '@/lib/actions';
+import { getEvent, getEventDates, getParticipantById } from '@/lib/actions';
 import { notFound } from 'next/navigation';
 import AvailabilityForm from '@/components/availability-form';
 import siteConfig from '@/lib/site-config';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { after } from 'next/server';
+import { deferEventLastAccessedTouch } from '@/lib/event-page-lifecycle';
 import { EventNotFoundError } from '@/lib/errors';
 import { getUserScheduleContext } from '@/lib/schedule-actions';
 
@@ -62,9 +57,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   let event;
   try {
     event = await getEvent(public_id);
-    after(async () => {
-      await touchEventLastAccessedIfStale(public_id);
-    });
+    deferEventLastAccessedTouch(public_id);
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();

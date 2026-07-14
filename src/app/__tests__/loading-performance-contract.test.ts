@@ -9,7 +9,7 @@ describe('ローディングと鮮度の契約', () => {
     const pageSource = readSource('src/app/event/[public_id]/page.tsx');
     const actionSource = readSource('src/lib/actions.ts');
 
-    expect(pageSource).toContain('after(async () =>');
+    expect(pageSource).toContain('deferEventLastAccessedTouch(public_id);');
     expect(pageSource).not.toContain('await touchEventLastAccessedIfStale(public_id);\n  } catch');
     expect(actionSource).toContain('const getCachedEvent = cache(fetchEventByPublicToken);');
     expect(actionSource).not.toMatch(/unstable_cache|['"]use cache['"]/);
@@ -18,8 +18,7 @@ describe('ローディングと鮮度の契約', () => {
   test('イベント用スケルトンは実画面と同じコンテナを使い、読み込み状態を通知する', () => {
     const loadingSource = readSource('src/app/event/[public_id]/loading.tsx');
 
-    expect(loadingSource).toContain('className="app-page"');
-    expect(loadingSource).toContain('aria-busy="true"');
+    expect(loadingSource).toContain('pageClassName="app-page"');
     expect(loadingSource).toContain('<EventDetailsSectionSkeleton />');
   });
 
@@ -29,17 +28,15 @@ describe('ローディングと鮮度の契約', () => {
   ])('%s 画面に実レイアウトと対応する専用スケルトンがある', (segment, pageClass) => {
     const loadingSource = readSource(`src/app/event/[public_id]/${segment}/loading.tsx`);
 
-    expect(loadingSource).toContain(`className="${pageClass}"`);
-    expect(loadingSource).toContain('aria-busy="true"');
+    expect(loadingSource).toContain(`pageClassName="${pageClass}"`);
   });
 
   test('表示に不要なアクセス記録は各イベント画面でレスポンス後に実行する', () => {
-    const routeSources = ['', 'input/', 'finalize/']
-      .map((segment) => readSource(`src/app/event/[public_id]/${segment}page.tsx`))
-      .join('\n');
-
-    expect(routeSources.match(/after\(async \(\) =>/g)).toHaveLength(3);
-    expect(routeSources).not.toMatch(/event = await getEvent\([^)]*\);\n\s+await touchEvent/);
+    ['', 'input/', 'finalize/'].forEach((segment) => {
+      const pageSource = readSource(`src/app/event/[public_id]/${segment}page.tsx`);
+      expect(pageSource).toContain('deferEventLastAccessedTouch(');
+      expect(pageSource).not.toContain('touchEventLastAccessedIfStale(');
+    });
   });
 
   test('静的に描画できる作成・履歴ページを強制動的化しない', () => {
