@@ -88,19 +88,22 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   const pageTitle = isEditMode ? '回答を編集する' : '新しく回答する';
 
   return (
-    <div className="container mx-auto py-8 md:px-4">
-      <div className="mb-8">
-        <h2 className="mb-4 text-2xl font-bold">{pageTitle}</h2>
+    <div className="app-page-narrow">
+      <header className="page-header">
+        <p className="page-eyebrow">RESPOND</p>
+        <h1 className="page-title">{pageTitle}</h1>
         {isEditMode ? (
-          <p className="mb-4 text-base-content/70">
-            「{existingParticipant?.name}」さんの回答を編集しています。
+          <p className="page-description">
+            {event.title} — 「{existingParticipant?.name}」さんの回答を編集しています。
           </p>
         ) : (
-          <p className="mb-4 text-base-content/70">あなたの名前と参加可能な日程を入力してください。</p>
+          <p className="page-description">
+            {event.title} — お名前と参加できる候補日を入力してください。
+          </p>
         )}
-      </div>
+      </header>
 
-      <div className="bg-base rounded-lg shadow-md md:p-6">
+      <div className="surface overflow-visible p-3 sm:p-6">
         <AvailabilityForm
           eventId={event.id}
           publicToken={public_id}
@@ -122,25 +125,14 @@ export default async function EventPage({ params, searchParams }: EventPageProps
         />
       </div>
 
-      <div className="mt-6">
+      <div className="border-base-300 mt-6 border-t pt-5">
         <a
           href={`/event/${public_id}`}
-          className="flex items-center text-primary hover:text-primary/80"
+          className="text-primary hover:text-primary/80 inline-flex min-h-11 items-center text-sm font-medium"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="mr-1 h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
+          <span aria-hidden="true" className="mr-2">
+            ←
+          </span>
           回答状況の確認・集計に戻る
         </a>
       </div>

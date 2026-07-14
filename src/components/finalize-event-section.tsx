@@ -46,18 +46,23 @@ export default function FinalizeEventSection({
     .map((dateId) => eventDates.find((date) => date.id === dateId))
     .filter((date): date is NonNullable<typeof date> => Boolean(date));
 
-  const availableCounts = finalizedDateIds.map((dateId) =>
-    availabilities.filter((availability) => {
-      return availability.event_date_id === dateId && availability.availability;
-    }).length,
+  const availableCounts = finalizedDateIds.map(
+    (dateId) =>
+      availabilities.filter((availability) => {
+        return availability.event_date_id === dateId && availability.availability;
+      }).length,
   );
 
-  const candidateAvailabilityCounts = eventDates.map((date) =>
-    availabilities.filter((availability) => {
-      return availability.event_date_id === date.id && availability.availability;
-    }).length,
+  const candidateAvailabilityCounts = eventDates.map(
+    (date) =>
+      availabilities.filter((availability) => {
+        return availability.event_date_id === date.id && availability.availability;
+      }).length,
   );
-  const maxAvailableCount = candidateAvailabilityCounts.reduce((max, count) => Math.max(max, count), 0);
+  const maxAvailableCount = candidateAvailabilityCounts.reduce(
+    (max, count) => Math.max(max, count),
+    0,
+  );
   const peakCandidateCount = candidateAvailabilityCounts.filter(
     (count) => count === maxAvailableCount,
   ).length;
@@ -71,7 +76,7 @@ export default function FinalizeEventSection({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h3 className="text-xl font-bold">日程の確定</h3>
-          <p className="text-sm text-base-content/65">
+          <p className="text-base-content/65 text-sm">
             {finalizedDateIds.length > 0 ? `${finalizedDateIds.length}件を確定中` : '未確定'}
           </p>
         </div>
@@ -80,24 +85,27 @@ export default function FinalizeEventSection({
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-base-300 bg-base-200/60 px-4 py-3">
-          <p className="text-xs text-base-content/60">候補</p>
+      <div className="border-base-300 divide-base-300 grid grid-cols-2 divide-x border-y">
+        <div className="px-4 py-3">
+          <p className="text-base-content/60 text-xs">候補</p>
           <p className="mt-1 text-lg font-bold">{peakCandidateCount}件</p>
         </div>
-        <div className="rounded-2xl border border-base-300 bg-base-200/60 px-4 py-3">
-          <p className="text-xs text-base-content/60">平均参加可能</p>
-          <p className="mt-1 text-lg font-bold">{finalizedDateIds.length > 0 ? `${averageAvailable}人` : '-'}</p>
+        <div className="px-4 py-3">
+          <p className="text-base-content/60 text-xs">平均参加可能</p>
+          <p className="mt-1 text-lg font-bold">
+            {finalizedDateIds.length > 0 ? `${averageAvailable}人` : '-'}
+          </p>
         </div>
       </div>
 
       {finalizedDates.length > 0 && (
-        <div className="rounded-2xl border border-base-300 bg-base-100 p-4">
+        <div className="border-base-300 border-t pt-4">
           <p className="text-sm font-semibold">確定済みの日程</p>
-          <ul className="mt-3 space-y-2 text-sm">
+          <ul className="border-base-300 mt-3 divide-y border-y text-sm">
             {finalizedDates.map((date) => (
-              <li key={date.id} className="rounded-xl bg-base-200/60 px-3 py-2">
-                {formatDate(date.start_time)} {formatTime(date.start_time)}〜{formatTime(date.end_time)}
+              <li key={date.id} className="py-3">
+                {formatDate(date.start_time)} {formatTime(date.start_time)}〜
+                {formatTime(date.end_time)}
               </li>
             ))}
           </ul>

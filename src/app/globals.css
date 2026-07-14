@@ -1,6 +1,63 @@
 @import 'tailwindcss';
 @plugin 'daisyui';
 
+@plugin 'daisyui/theme' {
+  name: 'light';
+  default: true;
+  color-scheme: light;
+  --color-primary: oklch(55% 0.22 285);
+  --color-primary-content: oklch(98% 0.01 285);
+  --color-secondary: oklch(45% 0.06 275);
+  --color-secondary-content: oklch(98% 0.01 275);
+  --color-accent: oklch(64% 0.13 190);
+  --color-accent-content: oklch(20% 0.04 190);
+  --color-base-100: oklch(99% 0.004 285);
+  --color-base-200: oklch(96.5% 0.008 285);
+  --color-base-300: oklch(90% 0.012 285);
+  --color-base-content: oklch(25% 0.025 280);
+  --color-info: oklch(63% 0.13 235);
+  --color-info-content: oklch(20% 0.04 235);
+  --color-success: oklch(58% 0.13 155);
+  --color-success-content: oklch(98% 0.01 155);
+  --color-warning: oklch(75% 0.14 80);
+  --color-warning-content: oklch(23% 0.05 80);
+  --color-error: oklch(58% 0.19 25);
+  --color-error-content: oklch(98% 0.01 25);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin 'daisyui/theme' {
+  name: 'dark';
+  color-scheme: dark;
+  --color-primary: oklch(70% 0.17 285);
+  --color-primary-content: oklch(18% 0.03 285);
+  --color-secondary: oklch(75% 0.045 275);
+  --color-secondary-content: oklch(18% 0.025 275);
+  --color-accent: oklch(72% 0.11 190);
+  --color-accent-content: oklch(18% 0.03 190);
+  --color-base-100: oklch(20% 0.018 275);
+  --color-base-200: oklch(24% 0.02 275);
+  --color-base-300: oklch(32% 0.022 275);
+  --color-base-content: oklch(93% 0.012 275);
+  --color-info: oklch(72% 0.11 235);
+  --color-info-content: oklch(16% 0.04 235);
+  --color-success: oklch(70% 0.12 155);
+  --color-success-content: oklch(16% 0.03 155);
+  --color-warning: oklch(78% 0.12 80);
+  --color-warning-content: oklch(19% 0.04 80);
+  --color-error: oklch(70% 0.16 25);
+  --color-error-content: oklch(17% 0.04 25);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --depth: 0;
+  --noise: 0;
+}
+
 body {
   @apply bg-base-100 text-base-content;
   font-family:
@@ -8,81 +65,141 @@ body {
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
+  font-feature-settings: 'palt';
+  text-rendering: optimizeLegibility;
   transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+::selection {
+  @apply bg-primary/20 text-base-content;
+}
+
+:focus-visible {
+  @apply outline-primary outline-2 outline-offset-2;
 }
 
 /* Card Component Styles */
 @layer components {
   .card {
-    @apply bg-base-100 border-base-300 overflow-hidden rounded-lg border shadow-sm transition-all;
+    @apply bg-base-100 border-base-300 overflow-hidden rounded-xl border shadow-none;
   }
 
   /* Button Styles */
   /* DaisyUIのボタンクラス(btn, btn-primary, btn-secondary)を活用する */
   .btn-custom {
-    @apply font-medium transition-all duration-200;
+    @apply font-medium transition-colors duration-150;
   }
 
-  .hero-illustration-light {
-    display: block;
+  .btn {
+    @apply min-h-11 shadow-none;
   }
 
-  .hero-illustration-dark {
-    display: none;
-    -webkit-mask-image: radial-gradient(
-      ellipse 62% 50% at 70% 48%,
-      #000 0%,
-      #000 58%,
-      rgb(0 0 0 / 72%) 70%,
-      transparent 88%
-    );
-    mask-image: radial-gradient(
-      ellipse 62% 50% at 70% 48%,
-      #000 0%,
-      #000 58%,
-      rgb(0 0 0 / 72%) 70%,
-      transparent 88%
-    );
+  .btn-sm {
+    @apply min-h-9;
   }
 
-  :root[data-theme='dark'] .hero-illustration-light {
-    display: none;
+  .btn-xs {
+    @apply h-8 min-h-8 px-2.5 text-xs;
   }
 
-  :root[data-theme='dark'] .hero-illustration-dark {
-    display: block;
+  .btn-icon {
+    @apply h-10 min-h-10 w-10 min-w-10 p-0;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .hero-illustration-light {
-      display: none;
-    }
-
-    :root:not([data-theme]) .hero-illustration-dark {
-      display: block;
-    }
+  .app-page {
+    @apply mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6;
   }
 
-  @media (min-width: 1024px) {
-    .hero-illustration-dark {
-      -webkit-mask-image: radial-gradient(
-        ellipse 70% 58% at 62% 48%,
-        #000 0%,
-        #000 54%,
-        rgb(0 0 0 / 68%) 68%,
-        transparent 86%
-      );
-      mask-image: radial-gradient(
-        ellipse 70% 58% at 62% 48%,
-        #000 0%,
-        #000 54%,
-        rgb(0 0 0 / 68%) 68%,
-        transparent 86%
-      );
-    }
+  .app-page-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 pb-16 sm:px-6;
   }
+
+  .page-header {
+    @apply border-base-300 mb-8 border-b pb-6;
+  }
+
+  .page-eyebrow {
+    @apply text-primary mb-2 text-xs font-semibold tracking-[0.14em];
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold leading-tight tracking-tight sm:text-3xl;
+  }
+
+  .page-description {
+    @apply text-base-content/70 mt-3 max-w-2xl text-sm leading-6 sm:text-base;
+  }
+
+  .surface {
+    @apply border-base-300 bg-base-100 rounded-xl border;
+  }
+
+  .surface-section {
+    @apply border-base-300 border-b px-4 py-5 last:border-b-0 sm:px-6;
+  }
+
+  .section-heading {
+    @apply text-lg font-semibold tracking-tight sm:text-xl;
+  }
+
+  .section-description {
+    @apply text-base-content/65 mt-1 text-sm leading-6;
+  }
+
+  .empty-state {
+    @apply border-base-300 bg-base-200/35 rounded-xl border border-dashed px-5 py-10 text-center;
+  }
+
+  .status-page {
+    @apply mx-auto flex min-h-[55vh] w-full max-w-xl items-center px-4 py-12 text-center;
+  }
+
+  .status-panel {
+    @apply border-base-300 bg-base-100 w-full rounded-xl border p-6 sm:p-8;
+  }
+
+  .legal-content {
+    @apply mx-auto w-full max-w-3xl px-4 pb-16 text-[0.95rem] leading-7 sm:px-6;
+  }
+
+  .legal-content > h1 {
+    @apply mb-2 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl;
+  }
+
+  .legal-content h2 {
+    @apply border-base-300 mb-3 mt-10 border-b pb-2 text-xl font-semibold tracking-tight;
+  }
+
+  .legal-content h3 {
+    @apply mb-2 mt-7 text-base font-semibold;
+  }
+
+  .legal-content p,
+  .legal-content li {
+    @apply text-base-content/80;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn-xs,
+  .btn-icon {
+    @apply h-10 min-h-10;
+  }
+
+  .btn-icon {
+    @apply h-11 min-h-11 w-11 min-w-11;
+  }
+}
+
+/* DaisyUIのレイヤーより後で、アイコン単独操作の余白と縮小可否を確定する。 */
+.btn.btn-icon {
+  padding-inline: 0;
+}
+
+.btn.btn-icon > :where(svg) {
+  flex-shrink: 0;
 }
 
 /* Form Element Styles */
@@ -95,16 +212,39 @@ body {
     @apply text-base-content mb-2 block text-sm font-medium;
   }
 
-  .form-control input,
-  .form-control select,
-  .form-control textarea {
-    @apply border-base-300 bg-base-100 text-base-content w-full rounded-lg border px-4 py-2 transition-all;
+  .form-control :where(input, select, textarea):not(.input, .select, .textarea) {
+    @apply border-base-300 bg-base-100 text-base-content min-h-11 w-full rounded-lg border px-3 py-2 transition-colors;
   }
 
-  .form-control input:focus,
-  .form-control select:focus,
-  .form-control textarea:focus {
-    @apply border-primary ring-primary/20 outline-none ring-2;
+  .form-control :where(input, select, textarea):not(.input, .select, .textarea):focus {
+    @apply border-primary ring-primary/15 ring-3 outline-none;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    @apply border-base-300 bg-base-100 rounded-lg shadow-none;
+  }
+
+  .input:focus,
+  .select:focus,
+  .textarea:focus {
+    @apply border-primary ring-primary/15 ring-3 outline-none;
+  }
+
+  .alert {
+    @apply rounded-lg border shadow-none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -192,52 +332,4 @@ body {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* ヒートマップの最適化スタイル */
-@media (max-width: 640px) {
-  /* スマホ表示用のマージン調整 */
-  .table-container-mobile {
-    margin-left: -1rem;
-    margin-right: -1rem;
-    width: calc(100% + 2rem);
-  }
-
-  /* スマホ表示時のセル幅調整 */
-  .heatmap-cell-mobile {
-    min-width: 46px;
-    min-height: 46px;
-    padding: 0;
-  }
-}
-
-/* スクロール制御のための追加スタイル */
-.scroll-lock {
-  touch-action: none !important;
-  overscroll-behavior: contain;
-}
-
-.touch-x-only {
-  touch-action: pan-x;
-}
-
-.touch-y-only {
-  touch-action: pan-y;
-}
-
-/* タッチ操作の高度な制御 */
-.drag-surface {
-  touch-action: manipulation;
-  user-select: none;
-}
-
-/* ヒートマップのセル内容がスワイプ操作でも選択されないようにする */
-.cell-content {
-  pointer-events: auto;
-}
-
-/* drag/touch 操作時のブラウザ既定動作を無効化 */
-.touch-manipulation {
-  touch-action: none;
-  overscroll-behavior: contain;
 }

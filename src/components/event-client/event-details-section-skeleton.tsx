@@ -7,7 +7,7 @@ export default function EventDetailsSectionSkeleton() {
   return (
     <div className="space-y-8">
       {/* 回答状況カードのプレースホルダー */}
-      <div className="card bg-base-100 border-base-200 border shadow-md">
+      <div className="card bg-base-100 border-base-200 border">
         <div className="card-body p-0">
           <div className="border-base-200 border-b p-4">
             <span className="skeleton block h-6 w-32" />
@@ -36,7 +36,7 @@ export default function EventDetailsSectionSkeleton() {
       </div>
 
       {/* イベント管理カードのプレースホルダー */}
-      <div className="card bg-base-100 border-base-200 border shadow-md">
+      <div className="card bg-base-100 border-base-200 border">
         <div className="card-body">
           <span className="skeleton mb-2 h-6 w-48" />
           <div className="space-y-2">

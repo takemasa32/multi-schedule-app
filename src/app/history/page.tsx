@@ -98,16 +98,24 @@ export default function HistoryPage() {
 
   return (
     <FavoriteEventsProvider>
-      <div className="container mx-auto px-4 py-8">
+      <div className="app-page">
         <Breadcrumbs items={[{ label: '閲覧履歴', href: '/history' }]} />
-
-        <h1 className="mb-6 text-2xl font-bold">イベント閲覧履歴</h1>
+        <header className="page-header mt-5">
+          <p className="page-eyebrow">HISTORY</p>
+          <h1 className="page-title">イベント履歴</h1>
+          <p className="page-description">
+            最近開いたイベントやお気に入りへ、ここからすぐに戻れます。
+          </p>
+        </header>
         {status !== 'authenticated' && (
-          <div className="alert alert-info mb-6">
+          <div className="alert border-info/25 bg-info/8 text-base-content mb-8 flex-col items-start gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-sm">ログインすると履歴がデバイス間で同期されます。</p>
             </div>
-            <button onClick={() => void signIn('google')} className="btn btn-sm btn-outline">
+            <button
+              onClick={() => void signIn('google')}
+              className="btn btn-sm btn-outline shrink-0 whitespace-nowrap"
+            >
               Googleでログイン
             </button>
           </div>
@@ -115,15 +123,15 @@ export default function HistoryPage() {
 
         <EventOpenForm />
 
-        <section className="mb-8">
-          <h2 className="mb-2 text-lg font-semibold">お気に入りイベント</h2>
+        <section className="mb-10 mt-8">
+          <h2 className="section-heading mb-3">お気に入り</h2>
           <FavoriteEvents />
         </section>
 
         {!isHistoryLoaded ? null : history.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center">
+          <div className="empty-state">
             <p className="text-lg font-semibold">まだ閲覧履歴はありません</p>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-base-content/70">
+            <p className="text-base-content/70 mx-auto mt-2 max-w-xl text-sm leading-relaxed">
               イベントを開いたり作成したりすると、このページからまとめて再訪できます。共有されたURLやイベントIDがあれば、上のフォームから直接開けます。
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -138,7 +146,9 @@ export default function HistoryPage() {
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-base-content/60">{history.length}件のイベント履歴があります</p>
+              <p className="text-base-content/60 text-sm">
+                {history.length}件のイベント履歴があります
+              </p>
               <button
                 type="button"
                 onClick={() => setIsClearConfirmOpen(true)}
@@ -148,10 +158,10 @@ export default function HistoryPage() {
               </button>
             </div>
 
-            <div className="bg-base-200 overflow-hidden rounded-lg">
+            <div className="surface overflow-hidden">
               <ul className="divide-base-300 divide-y">
                 {history.map((event) => (
-                  <li key={event.id} className="hover:bg-base-300 p-4">
+                  <li key={event.id} className="hover:bg-base-200/60 p-4 transition-colors sm:px-5">
                     <div className="flex items-start justify-between">
                       <div>
                         <Link
@@ -160,7 +170,9 @@ export default function HistoryPage() {
                         >
                           {event.title}
                         </Link>
-                        <p className="mt-1 text-sm text-base-content/60">{formatDate(event.createdAt)}</p>
+                        <p className="text-base-content/60 mt-1 text-sm">
+                          {formatDate(event.createdAt)}
+                        </p>
                       </div>
 
                       <div className="flex items-center space-x-2">

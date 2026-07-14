@@ -1,0 +1,13 @@
+/* ヒートマップとドラッグ操作に限定したタッチ・スクロール制御。 */
+@media (max-width: 640px) {
+  .table-container-mobile {
+    margin-inline: -1rem;
+    width: calc(100% + 2rem);
+  }
+
+  .heatmap-cell-mobile {
+    min-width: 46px;
+    min-height: 46px;
+    padding: 0;
+  }
+}

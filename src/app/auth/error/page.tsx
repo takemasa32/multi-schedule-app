@@ -36,12 +36,12 @@ export default function AuthErrorPage() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-xl space-y-6 px-4 py-10">
+    <section className="app-page-narrow max-w-xl space-y-6 py-10">
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-500">
           <CircleAlert className="h-6 w-6" aria-hidden="true" />
         </div>
-        <h1 className="text-xl font-bold">認証エラー</h1>
+        <h1 className="page-title">認証エラー</h1>
         <p className="text-base-content/60 text-sm">ログイン処理で問題が発生しました。</p>
       </div>
 
@@ -50,8 +50,8 @@ export default function AuthErrorPage() {
         <span className="text-sm">{errorMessage}</span>
       </div>
 
-      <div className="card bg-base-100 border-base-200 border shadow-sm">
-        <div className="card-body space-y-4">
+      <div className="surface">
+        <div className="space-y-4 p-5 sm:p-6">
           <button type="button" onClick={handleSignIn} className="btn btn-primary">
             Googleで再ログイン
           </button>

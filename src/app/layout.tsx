@@ -1,6 +1,8 @@
 import { Toaster } from 'react-hot-toast';
 import type { Metadata } from 'next';
 import './globals.css';
+import '@/styles/landing.css';
+import '@/styles/interaction.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import siteConfig from '@/lib/site-config';
@@ -45,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Header />
             <GoogleAnalytics />
             <ExternalBrowserBanner />
-            <main className="container mx-auto flex-grow px-4 py-6 pt-16">{children}</main>
+            <main className="flex-grow pt-20 sm:pt-24">{children}</main>
             <Footer />
             <Toaster position="top-right" />
           </ThemeProvider>

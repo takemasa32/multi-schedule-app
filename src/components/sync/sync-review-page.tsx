@@ -351,24 +351,24 @@ export default function SyncReviewPage({
 
   if (isSyncPreviewLoading) {
     return (
-      <div className="py-8" data-testid="sync-review-page">
+      <div className="app-page py-8" data-testid="sync-review-page">
         <p className="text-base-content/60 text-sm">反映対象を確認しています...</p>
       </div>
     );
   }
 
   return (
-    <div className="py-8" data-testid="sync-review-page">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold">回答イベントへの反映確認</h2>
+    <div className="app-page py-8" data-testid="sync-review-page">
+      <header className="page-header flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="page-eyebrow">SYNC</p>
+          <h1 className="page-title">他のイベントへ反映</h1>
+          <p className="page-description">イベントごとに変更内容を確認してから反映できます。</p>
+        </div>
         <Link href={backToEventPath} className="btn btn-outline btn-sm">
           イベント結果ページへ戻る
         </Link>
-      </div>
-
-      <p className="text-base-content/60 mb-4 text-sm">
-        反映対象イベントごとに変更内容を確認し、「この変更を適用」または「この変更をキャンセル」を選べます。
-      </p>
+      </header>
       {syncPreviewError && (
         <div className="alert alert-warning mb-4">
           <span>{syncPreviewError}</span>
@@ -409,7 +409,7 @@ export default function SyncReviewPage({
           return (
             <div
               key={event.eventId}
-              className="bg-base-100 rounded-lg border p-3"
+              className="surface p-4 sm:p-5"
               data-testid={`sync-review-event-${event.eventId}`}
             >
               <div className="mb-2 flex items-center justify-between gap-2">

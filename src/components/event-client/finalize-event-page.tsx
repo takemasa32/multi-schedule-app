@@ -106,7 +106,10 @@ export default function FinalizeEventPage({
   const sortDateIds = useCallback(
     (dateIds: Iterable<string>) =>
       Array.from(new Set(dateIds)).sort((a, b) => {
-        return (dateOrderMap.get(a) ?? Number.MAX_SAFE_INTEGER) - (dateOrderMap.get(b) ?? Number.MAX_SAFE_INTEGER);
+        return (
+          (dateOrderMap.get(a) ?? Number.MAX_SAFE_INTEGER) -
+          (dateOrderMap.get(b) ?? Number.MAX_SAFE_INTEGER)
+        );
       }),
     [dateOrderMap],
   );
@@ -125,7 +128,9 @@ export default function FinalizeEventPage({
 
   const dateKeys = useMemo(
     () =>
-      Array.from(new Set(eventDates.map((eventDate) => extractDateString(eventDate.start_time)))).sort(),
+      Array.from(
+        new Set(eventDates.map((eventDate) => extractDateString(eventDate.start_time))),
+      ).sort(),
     [eventDates],
   );
 
@@ -263,7 +268,9 @@ export default function FinalizeEventPage({
     const allParticipantIds = [...new Set(participants.map((participant) => participant.id))];
     const availableByDate = selectedDateIds.map((dateId) =>
       availabilities
-        .filter((availability) => availability.event_date_id === dateId && availability.availability)
+        .filter(
+          (availability) => availability.event_date_id === dateId && availability.availability,
+        )
         .map((availability) => availability.participant_id),
     );
 
@@ -367,9 +374,7 @@ export default function FinalizeEventPage({
     } catch (caughtError) {
       console.error('確定処理でエラーが発生しました:', caughtError);
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : '確定処理中にエラーが発生しました。',
+        caughtError instanceof Error ? caughtError.message : '確定処理中にエラーが発生しました。',
       );
       setConfirmationKind(null);
       setIsProcessing(false);
@@ -377,21 +382,21 @@ export default function FinalizeEventPage({
   };
 
   return (
-    <div className="space-y-2.5 md:space-y-6">
-      <div className="rounded-2xl border border-base-300 bg-base-100 p-2.5 shadow-sm sm:p-4 md:rounded-3xl md:p-6">
+    <div className="space-y-4 md:space-y-6">
+      <div className="surface p-4 sm:p-6">
         <WizardProgress
           currentStep={currentStep}
           steps={finalizeSteps}
           currentLabel={currentStep === 1 ? '日程を選ぶ' : '内容を確認する'}
         />
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-bold md:text-2xl">{eventTitle}</h1>
+          <h1 className="text-xl font-semibold md:text-2xl">{eventTitle}</h1>
           <div className="flex flex-wrap gap-2">
-            <div className="rounded-full border border-base-300 bg-base-200 px-3 py-1.5 text-sm font-semibold">
+            <div className="border-primary/25 bg-primary/8 text-primary rounded-md border px-3 py-1.5 text-sm font-semibold">
               {selectedDateIds.length}件選択中
             </div>
             {finalizedDateIds.length > 0 && (
-              <div className="rounded-full border border-base-300 bg-base-200 px-3 py-1.5 text-sm text-base-content/70">
+              <div className="border-base-300 bg-base-200 text-base-content/70 rounded-md border px-3 py-1.5 text-sm">
                 現在 {finalizedDateIds.length}件
               </div>
             )}
@@ -407,18 +412,20 @@ export default function FinalizeEventPage({
 
       {currentStep === 1 ? (
         <>
-          <section className="rounded-2xl border border-base-300 bg-base-100 p-2.5 shadow-sm sm:p-4 md:rounded-3xl md:p-6">
-            <div className="mb-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 sm:gap-3">
-              <div className="rounded-2xl bg-base-200 px-3 py-2.5">
-                <p className="text-[11px] text-base-content/60">選択中</p>
+          <section className="surface p-3 sm:p-5 md:p-6">
+            <div className="border-base-300 divide-base-300 mb-4 grid grid-cols-3 divide-x border-y text-sm">
+              <div className="px-2 py-3 sm:px-4">
+                <p className="text-base-content/60 text-[11px]">選択中</p>
                 <p className="mt-1 text-base font-bold md:text-lg">{selectedDateIds.length}件</p>
               </div>
-              <div className="rounded-2xl bg-base-200 px-3 py-2.5">
-                <p className="text-[11px] text-base-content/60">全選択で参加可能</p>
-                <p className="mt-1 text-base font-bold md:text-lg">{intersectionParticipants.length}人</p>
+              <div className="px-2 py-3 sm:px-4">
+                <p className="text-base-content/60 text-[11px]">全選択で参加可能</p>
+                <p className="mt-1 text-base font-bold md:text-lg">
+                  {intersectionParticipants.length}人
+                </p>
               </div>
-              <div className="rounded-2xl bg-base-200 px-3 py-2.5">
-                <p className="text-[11px] text-base-content/60">総参加者</p>
+              <div className="px-2 py-3 sm:px-4">
+                <p className="text-base-content/60 text-[11px]">総参加者</p>
                 <p className="mt-1 text-base font-bold md:text-lg">{participants.length}人</p>
               </div>
             </div>
@@ -451,7 +458,7 @@ export default function FinalizeEventPage({
             )}
 
             <div
-              className="mt-4 select-none overflow-x-auto overscroll-contain rounded-2xl border border-base-300"
+              className="border-base-300 mt-4 select-none overflow-x-auto overscroll-contain rounded-lg border"
               style={{
                 overscrollBehaviorY: 'contain',
                 touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x',
@@ -473,7 +480,7 @@ export default function FinalizeEventPage({
                         >
                           <div className="flex flex-col items-center leading-tight">
                             <span className="text-xs font-semibold md:text-sm">{parts.label}</span>
-                            <span className="text-xs text-base-content/60">({parts.weekday})</span>
+                            <span className="text-base-content/60 text-xs">({parts.weekday})</span>
                           </div>
                         </th>
                       );
@@ -515,8 +522,11 @@ export default function FinalizeEventPage({
 
                           if (!dateId) {
                             return (
-                              <td key={`${dateKey}-${timeSlot}`} className="border-base-300 border p-0 md:p-px">
-                                <div className="bg-base-200/30 text-base-content/30 flex aspect-square w-full items-center justify-center rounded-sm px-1 text-xs font-semibold leading-none shadow-[inset_0_0_0_1px_rgba(148,163,184,0.14)] md:h-11 md:aspect-auto md:rounded-md md:px-2 md:text-sm">
+                              <td
+                                key={`${dateKey}-${timeSlot}`}
+                                className="border-base-300 border p-0 md:p-px"
+                              >
+                                <div className="bg-base-200/30 text-base-content/30 flex aspect-square w-full items-center justify-center rounded-sm px-1 text-xs font-semibold leading-none shadow-[inset_0_0_0_1px_rgba(148,163,184,0.14)] md:aspect-auto md:h-11 md:rounded-md md:px-2 md:text-sm">
                                   -
                                 </div>
                               </td>
@@ -558,7 +568,7 @@ export default function FinalizeEventPage({
                               <button
                                 type="button"
                                 data-selection-key={dateId}
-                                className="flex aspect-square w-full items-center justify-center rounded-sm px-1.5 text-xs font-semibold leading-none tabular-nums shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition-[transform,colors,box-shadow] duration-150 md:h-11 md:aspect-auto md:rounded-md md:px-2 md:text-sm"
+                                className="flex aspect-square w-full items-center justify-center rounded-sm px-1.5 text-xs font-semibold tabular-nums leading-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition-[transform,colors,box-shadow] duration-150 md:aspect-auto md:h-11 md:rounded-md md:px-2 md:text-sm"
                                 style={contentStyle}
                                 {...dateSelectionController.getCellProps(dateId, {
                                   role: 'switch',
@@ -571,7 +581,9 @@ export default function FinalizeEventPage({
                                   {!isMobile && (
                                     <span
                                       className={`mt-1 text-[10px] ${
-                                        isSelected ? 'text-primary-content/90' : 'text-base-content/70'
+                                        isSelected
+                                          ? 'text-primary-content/90'
+                                          : 'text-base-content/70'
                                       }`}
                                     >
                                       {availabilityPercent}%
@@ -602,7 +614,7 @@ export default function FinalizeEventPage({
             </div>
 
             {intersectionParticipants.length > 0 && (
-              <div className="mt-4 rounded-2xl border border-base-300 bg-base-200/60 px-4 py-3">
+              <div className="border-base-300 mt-4 border-l-2 pl-3">
                 <p className="text-sm font-semibold">
                   すべての選択日程で参加可能: {intersectionParticipants.length}人
                 </p>
@@ -610,11 +622,11 @@ export default function FinalizeEventPage({
             )}
           </section>
 
-          <div className="sticky bottom-2 z-20 rounded-2xl border border-base-300 bg-base-100/95 px-2.5 py-2.5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:bottom-3 sm:px-4 sm:py-3 md:static md:rounded-3xl md:px-6 md:py-4 md:shadow-sm">
+          <div className="surface bg-base-100/95 sticky bottom-2 z-20 px-3 py-3 backdrop-blur sm:bottom-3 sm:px-4 md:static md:px-6 md:py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-semibold">選択中 {selectedDateIds.length}件</p>
-                <p className="text-xs text-base-content/70 md:text-sm">
+                <p className="text-base-content/70 text-xs md:text-sm">
                   {selectedDateIds.length > 0
                     ? '確認へ進めます。'
                     : finalizedDateIds.length > 0
@@ -626,7 +638,11 @@ export default function FinalizeEventPage({
                 <Link href={`/event/${publicToken}`} className="btn btn-ghost btn-sm sm:btn-md">
                   詳細へ戻る
                 </Link>
-                <button type="button" className="btn btn-primary btn-sm sm:btn-md" onClick={proceedToConfirm}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm sm:btn-md"
+                  onClick={proceedToConfirm}
+                >
                   内容を確認する
                 </button>
               </div>
@@ -635,7 +651,7 @@ export default function FinalizeEventPage({
         </>
       ) : (
         <>
-          <section className="rounded-2xl border border-base-300 bg-base-100 p-2.5 shadow-sm sm:p-4 md:rounded-3xl md:p-6">
+          <section className="surface p-3 sm:p-5 md:p-6">
             <h2 className="text-lg font-semibold md:text-xl">変更内容の確認</h2>
 
             {unchangedSelection ? (
@@ -643,16 +659,18 @@ export default function FinalizeEventPage({
                 <span>現在の確定内容から変更はありません。</span>
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-3 gap-2 md:gap-4">
-                <div className="rounded-2xl border border-base-300 bg-base-200/60 px-3 py-3 md:p-4">
+              <div className="border-base-300 divide-base-300 mt-4 grid grid-cols-3 divide-x border-y">
+                <div className="px-2 py-3 sm:px-4">
                   <p className="text-sm font-semibold">新しく確定する</p>
-                  <p className="mt-1 text-lg font-bold md:text-2xl">{newSelectedDateIds.length}件</p>
+                  <p className="mt-1 text-lg font-bold md:text-2xl">
+                    {newSelectedDateIds.length}件
+                  </p>
                 </div>
-                <div className="rounded-2xl border border-base-300 bg-base-200/60 px-3 py-3 md:p-4">
+                <div className="px-2 py-3 sm:px-4">
                   <p className="text-sm font-semibold">解除する</p>
                   <p className="mt-1 text-lg font-bold md:text-2xl">{removedDateIds.length}件</p>
                 </div>
-                <div className="rounded-2xl border border-base-300 bg-base-200/60 px-3 py-3 md:p-4">
+                <div className="px-2 py-3 sm:px-4">
                   <p className="text-sm font-semibold">維持する</p>
                   <p className="mt-1 text-lg font-bold md:text-2xl">{keptDateIds.length}件</p>
                 </div>
@@ -660,42 +678,42 @@ export default function FinalizeEventPage({
             )}
 
             <div className="mt-4 grid gap-4 xl:grid-cols-3">
-              <div className="rounded-2xl border border-base-300 p-4">
-                <h3 className="font-semibold text-success">今回確定する日程</h3>
+              <section className="border-base-300 border-t pt-4">
+                <h3 className="text-success font-semibold">今回確定する日程</h3>
                 {selectedDateIds.length > 0 ? (
-                  <ul className="mt-3 space-y-2 text-sm">
+                  <ul className="border-base-300 mt-3 divide-y border-y text-sm">
                     {selectedDateIds.map((dateId) => (
-                      <li key={dateId} className="rounded-xl bg-base-200/70 px-3 py-2">
+                      <li key={dateId} className="py-3">
                         <p>{formatDateLabel(dateId)}</p>
-                        <p className="mt-1 text-base-content/60">
+                        <p className="text-base-content/60 mt-1">
                           参加可能 {getAvailableParticipantsCount(dateId)}人
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-sm text-base-content/60">
+                  <p className="text-base-content/60 mt-3 text-sm">
                     今回はすべての確定を解除します。
                   </p>
                 )}
-              </div>
+              </section>
 
-              <div className="rounded-2xl border border-base-300 p-4">
-                <h3 className="font-semibold text-error">解除される日程</h3>
+              <section className="border-base-300 border-t pt-4">
+                <h3 className="text-error font-semibold">解除される日程</h3>
                 {removedDateIds.length > 0 ? (
-                  <ul className="mt-3 space-y-2 text-sm">
+                  <ul className="border-base-300 mt-3 divide-y border-y text-sm">
                     {removedDateIds.map((dateId) => (
-                      <li key={dateId} className="rounded-xl bg-error/10 px-3 py-2">
+                      <li key={dateId} className="text-error py-3">
                         {formatDateLabel(dateId)}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-sm text-base-content/60">解除される日程はありません。</p>
+                  <p className="text-base-content/60 mt-3 text-sm">解除される日程はありません。</p>
                 )}
-              </div>
+              </section>
 
-              <div className="rounded-2xl border border-base-300 p-4">
+              <section className="border-base-300 border-t pt-4">
                 <h3 className="font-semibold">全選択で参加可能な人</h3>
                 {intersectionParticipants.length > 0 ? (
                   <ul className="mt-3 flex flex-wrap gap-2 text-sm">
@@ -706,26 +724,34 @@ export default function FinalizeEventPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-sm text-base-content/60">
+                  <p className="text-base-content/60 mt-3 text-sm">
                     全選択に共通して参加できる人はいません。
                   </p>
                 )}
-              </div>
+              </section>
             </div>
           </section>
 
-          <div className="rounded-2xl border border-base-300 bg-base-100 p-2.5 shadow-sm sm:p-4 md:rounded-3xl md:p-6">
+          <div className="surface p-3 sm:p-5 md:p-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <p className="text-sm text-base-content/70">
+              <p className="text-base-content/70 text-sm">
                 {selectedDateIds.length === 0 && finalizedDateIds.length > 0
                   ? 'この操作で、現在の確定をすべて解除します。'
                   : '問題なければ保存します。'}
               </p>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
-                <button type="button" className="btn btn-ghost btn-sm sm:btn-md" onClick={handleBack}>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm sm:btn-md"
+                  onClick={handleBack}
+                >
                   選び直す
                 </button>
-                <button type="button" className="btn btn-primary btn-sm sm:btn-md" onClick={openConfirmModal}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm sm:btn-md"
+                  onClick={openConfirmModal}
+                >
                   {selectedDateIds.length === 0 && finalizedDateIds.length > 0
                     ? 'この内容で解除する'
                     : 'この内容で保存する'}
@@ -774,7 +800,7 @@ export default function FinalizeEventPage({
           )}
           {removedDateIds.length > 0 && (
             <div>
-              <p className="font-semibold text-error">解除される日程</p>
+              <p className="text-error font-semibold">解除される日程</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {removedDateIds.map((dateId) => (
                   <li key={dateId}>{formatDateLabel(dateId)}</li>

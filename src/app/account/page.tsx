@@ -20,18 +20,19 @@ export default async function AccountPage() {
   const imageUrl = user?.image ?? '';
 
   return (
-    <section className="mx-auto w-full max-w-xl space-y-6">
+    <section className="app-page-narrow space-y-6">
       <Breadcrumbs items={[{ label: 'アカウント' }]} />
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">アカウント</h1>
+      <div className="page-header flex items-end justify-between gap-4">
+        <div>
+          <p className="page-eyebrow">ACCOUNT</p>
+          <h1 className="page-title">アカウント</h1>
+          <p className="page-description">予定の同期や利用履歴を管理します。</p>
+        </div>
         <AccountPageTour initialIsAuthenticated={Boolean(user)} />
       </div>
 
-      <div
-        className="card bg-base-100 border-base-200 border shadow-sm"
-        data-tour-id="account-profile-card"
-      >
-        <div className="card-body space-y-4">
+      <div className="surface" data-tour-id="account-profile-card">
+        <div className="space-y-5 p-5 sm:p-6">
           <div className="flex items-center gap-4">
             <div className="bg-base-200 flex h-12 w-12 items-center justify-center rounded-full">
               {imageUrl ? (

@@ -134,16 +134,15 @@ describe('参加者トグル機能', () => {
     const taroButton = screen.getByText('田中太郎').closest('button');
     expect(taroButton).toBeInTheDocument();
 
-    // 初期状態では通常表示（primary badge）
-    expect(taroButton).toHaveClass('badge-primary');
-    expect(taroButton).not.toHaveClass('badge-outline', 'border-error');
+    // 初期状態では表示対象
+    expect(taroButton).toHaveAttribute('aria-pressed', 'false');
 
     // バッジをクリックして非表示状態に切り替え
     fireEvent.click(taroButton!);
 
-    // 非表示状態のスタイルに変更されている
-    expect(taroButton).toHaveClass('badge-outline', 'border-error', 'text-error');
-    expect(taroButton).not.toHaveClass('badge-primary');
+    // 非表示状態へ変更されている
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
+    expect(taroButton).toHaveClass('line-through');
   });
 
   test('非表示状態の参加者バッジをクリックして表示状態に戻せる', () => {
@@ -163,12 +162,12 @@ describe('参加者トグル機能', () => {
 
     // まず非表示状態にする
     fireEvent.click(hanakoButton!);
-    expect(hanakoButton).toHaveClass('badge-outline', 'border-error');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'true');
 
     // 再度クリックして表示状態に戻す
     fireEvent.click(hanakoButton!);
-    expect(hanakoButton).toHaveClass('badge-primary');
-    expect(hanakoButton).not.toHaveClass('badge-outline', 'border-error');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'false');
+    expect(hanakoButton).not.toHaveClass('line-through');
   });
 
   test('複数の参加者を同時に非表示にできる', () => {
@@ -190,13 +189,13 @@ describe('参加者トグル機能', () => {
     fireEvent.click(taroButton!);
     fireEvent.click(jiroButton!);
 
-    // 両方とも非表示状態のスタイルになっている
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
-    expect(jiroButton).toHaveClass('badge-outline', 'border-error');
+    // 両方とも非表示状態になっている
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
+    expect(jiroButton).toHaveAttribute('aria-pressed', 'true');
 
     // 佐藤花子は表示状態のまま
     const hanakoButton = screen.getByText('佐藤花子').closest('button');
-    expect(hanakoButton).toHaveClass('badge-primary');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('参加者が0人の場合はトグルUIが表示されない', () => {
@@ -256,7 +255,7 @@ describe('参加者トグル機能', () => {
     expect(taroButton).toHaveAttribute('title', '表示に戻す');
   });
 
-  test('アイコンが状態に応じて正しく表示される', () => {
+  test('状態を色やアイコンに依存せずaria-pressedで伝える', () => {
     render(
       <EventDetailsSection
         event={mockEvent}
@@ -269,17 +268,13 @@ describe('参加者トグル機能', () => {
 
     const taroButton = screen.getByText('田中太郎').closest('button');
 
-    // 初期状態では👤アイコンが表示される
-    expect(taroButton).toHaveTextContent('👤');
-    expect(taroButton).not.toHaveTextContent('🚫');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'false');
 
-    // クリック後は🚫アイコンが表示される
     fireEvent.click(taroButton!);
-    expect(taroButton).toHaveTextContent('🚫');
-    expect(taroButton).not.toHaveTextContent('👤');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('バッジの視覚的なフィードバック（transition-all）が設定されている', () => {
+  test('トグルの視覚的なフィードバックが短い色変化に限定されている', () => {
     render(
       <EventDetailsSection
         event={mockEvent}
@@ -292,13 +287,12 @@ describe('参加者トグル機能', () => {
 
     const taroButton = screen.getByText('田中太郎').closest('button');
 
-    // transition-allクラスが設定されている
-    expect(taroButton).toHaveClass('transition-all');
+    expect(taroButton).toHaveClass('transition-colors');
     // カーソルポインターが設定されている
     expect(taroButton).toHaveClass('cursor-pointer');
   });
 
-  test('非表示状態のバッジが特別なスタイリング（背景色）を持つ', () => {
+  test('非表示状態を文字の装飾でも区別する', () => {
     render(
       <EventDetailsSection
         event={mockEvent}
@@ -311,12 +305,10 @@ describe('参加者トグル機能', () => {
 
     const taroButton = screen.getByText('田中太郎').closest('button');
 
-    // 初期状態では背景色クラスがない
-    expect(taroButton).not.toHaveClass('bg-error/10');
+    expect(taroButton).not.toHaveClass('line-through');
 
-    // クリック後は背景色クラスが追加される
     fireEvent.click(taroButton!);
-    expect(taroButton).toHaveClass('bg-error/10');
+    expect(taroButton).toHaveClass('line-through');
   });
 
   test('参加者リストが多い場合のレイアウト（flex-wrap）が正しく設定される', () => {
@@ -362,7 +354,7 @@ describe('参加者トグル機能', () => {
 
     // クリック後は田中太郎が除外されている状態
     // 実際の集計結果の変化は AvailabilitySummary のテストで検証
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('バッジクリック時のイベントハンドリングが正しく動作する', () => {
@@ -380,23 +372,23 @@ describe('参加者トグル機能', () => {
     const hanakoButton = screen.getByText('佐藤花子').closest('button');
 
     // 初期状態では全員が表示状態
-    expect(taroButton).toHaveClass('badge-primary');
-    expect(hanakoButton).toHaveClass('badge-primary');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'false');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'false');
 
     // 田中太郎を非表示にする
     fireEvent.click(taroButton!);
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
-    expect(hanakoButton).toHaveClass('badge-primary'); // 他の参加者は影響なし
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'false'); // 他の参加者は影響なし
 
     // 佐藤花子も非表示にする
     fireEvent.click(hanakoButton!);
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
-    expect(hanakoButton).toHaveClass('badge-outline', 'border-error');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'true');
 
     // 田中太郎を再び表示状態に戻す
     fireEvent.click(taroButton!);
-    expect(taroButton).toHaveClass('badge-primary');
-    expect(hanakoButton).toHaveClass('badge-outline', 'border-error'); // 佐藤花子は非表示のまま
+    expect(taroButton).toHaveAttribute('aria-pressed', 'false');
+    expect(hanakoButton).toHaveAttribute('aria-pressed', 'true'); // 佐藤花子は非表示のまま
   });
 
   test('参加者名が長い場合でも適切に表示される', () => {
@@ -420,7 +412,7 @@ describe('参加者トグル機能', () => {
     expect(screen.getByText('もう一人の長い名前の参加者')).toBeInTheDocument();
 
     const longNameButton = screen.getByText('とても長い名前の参加者さん').closest('button');
-    expect(longNameButton).toHaveClass('badge', 'px-3', 'py-2');
+    expect(longNameButton).toHaveClass('participant-toggle', 'px-3', 'py-2');
   });
 
   test('アクセシビリティ属性が適切に設定されている', () => {
@@ -474,7 +466,7 @@ describe('参加者トグル機能', () => {
 
     // 状態が変更されることを確認（実際のキーボードイベントではfireEvent.clickを使用）
     fireEvent.click(taroButton!);
-    expect(taroButton).toHaveClass('badge-outline', 'border-error');
+    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('動的に参加者が追加された場合でも正しく動作する', () => {
@@ -519,9 +511,9 @@ describe('参加者トグル機能', () => {
 
     // 新しい参加者のバッジも正常に動作する
     const newParticipantButton = screen.getByText('新規参加者').closest('button');
-    expect(newParticipantButton).toHaveClass('badge-primary');
+    expect(newParticipantButton).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(newParticipantButton!);
-    expect(newParticipantButton).toHaveClass('badge-outline', 'border-error');
+    expect(newParticipantButton).toHaveAttribute('aria-pressed', 'true');
   });
 });

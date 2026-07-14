@@ -21,20 +21,20 @@ export default function Card({
 }: CardProps) {
   return (
     <div
-      className={`card transition-all ${
-        isHighlighted ? 'border-primary/50 bg-primary/5' : ''
-      } ${className}`}
+      className={`card ${isHighlighted ? 'border-primary/40 bg-primary/[0.035]' : ''} ${className}`}
     >
       {(title || subtitle) && (
-        <div className="border-base-200 border-b px-6 py-4">
-          {title && <h3 className="text-lg font-bold">{title}</h3>}
+        <div className="border-base-300 border-b px-4 py-5 sm:px-6">
+          {title && <h3 className="text-lg font-semibold">{title}</h3>}
           {subtitle && <p className="text-base-content/70 mt-1 text-sm">{subtitle}</p>}
         </div>
       )}
 
       <div className={noPadding ? '' : 'p-4 sm:p-6'}>{children}</div>
 
-      {footer && <div className="bg-base-200/50 border-base-200 border-t px-6 py-4">{footer}</div>}
+      {footer && (
+        <div className="bg-base-200/35 border-base-300 border-t px-4 py-4 sm:px-6">{footer}</div>
+      )}
     </div>
   );
 }

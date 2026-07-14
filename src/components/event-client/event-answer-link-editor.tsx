@@ -112,7 +112,7 @@ export default function EventAnswerLinkEditor({
     <>
       <button
         type="button"
-        className="btn btn-xs btn-outline"
+        className="btn btn-xs btn-ghost text-base-content/70"
         data-testid="event-answer-link-open"
         onClick={() => {
           setMessage('');

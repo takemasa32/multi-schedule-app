@@ -97,12 +97,12 @@ export default function EventFormSection({
       {/* 確定済み日程表示・カレンダー連携 */}
       {event.is_finalized && finalizedDates.length > 0 && (
         <div>
-          <div className="alert alert-success mb-8 mt-4">
-            <span>日程が確定しました！</span>
+          <div className="alert alert-success border-success/25 bg-success/8 mb-6">
+            <span>日程が確定しています</span>
           </div>
           <div className="mb-8">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-lg font-bold">確定した日程:</h3>
+              <h2 className="section-heading">確定した日程</h2>
               <ShareEventButton
                 url={getShareUrl()}
                 className="btn-sm"
@@ -139,10 +139,10 @@ export default function EventFormSection({
         </div>
       )}
       {/* 参加回答ボタンエリア */}
-      <div className="card bg-base-100 border-base-200 mb-8 overflow-visible border shadow-md">
-        <div className="card-body">
+      <div className="surface mb-8 overflow-visible">
+        <div className="p-5 sm:p-6">
           <div className="mb-1 flex items-start justify-between gap-2">
-            <h3 className="card-title text-lg">参加予定を入力する</h3>
+            <h2 className="section-heading">参加予定を入力する</h2>
             <EventAnswerLinkEditor
               eventId={event.id}
               eventPublicToken={event.public_token}
@@ -151,10 +151,10 @@ export default function EventFormSection({
               onLinkedParticipantIdChange={setLinkedParticipantId}
             />
           </div>
-          <p className="mb-4 text-sm text-base-content/70">
+          <p className="text-base-content/70 mb-4 text-sm">
             {event.is_finalized
               ? 'イベントは確定していますが、引き続き回答を更新できます。'
-              : '以下のボタンから参加予定を入力してください。'}
+              : '参加できる候補日を回答してください。'}
           </p>
 
           <div className="flex flex-wrap gap-3">
@@ -164,20 +164,12 @@ export default function EventFormSection({
             {/* 既存の回答を編集ボタン（参加者が1人以上いる場合のみ） */}
             {participants.length > 0 && (
               <div className="dropdown dropdown-bottom dropdown-end relative">
-                <div tabIndex={0} role="button" className="btn btn-secondary m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="mr-1 h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                  </svg>
+                <button type="button" className="btn btn-outline">
                   既存の回答を編集
-                </div>
+                </button>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content menu bg-base-100 rounded-box absolute z-[100] max-h-60 w-52 overflow-y-auto p-2 shadow"
+                  className="dropdown-content menu bg-base-100 border-base-300 absolute z-[100] mt-2 max-h-60 w-56 overflow-y-auto rounded-lg border p-2 shadow-lg"
                   style={{ maxHeight: '300px' }}
                 >
                   {linkedParticipantId && (

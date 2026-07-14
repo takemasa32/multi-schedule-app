@@ -58,11 +58,11 @@ export default function AnswerCompletePage({
   };
 
   return (
-    <div className="container mx-auto max-w-2xl py-8 md:px-4" data-testid="answer-complete-page">
-      <div className="bg-base-100 rounded-lg border p-5 shadow-sm md:p-6">
+    <div className="app-page-narrow max-w-2xl py-8" data-testid="answer-complete-page">
+      <div className="surface p-5 sm:p-7">
         <div className="mb-5">
-          <p className="text-success mb-2 text-sm font-semibold">回答を保存しました</p>
-          <h2 className="text-2xl font-bold">回答ありがとうございます</h2>
+          <p className="page-eyebrow text-success">COMPLETE</p>
+          <h1 className="page-title">回答ありがとうございます</h1>
         </div>
 
         {syncWarning === 'partial' && (
@@ -86,9 +86,7 @@ export default function AnswerCompletePage({
           </div>
         ) : saveState === 'idle' || saveState === 'error' ? (
           <div className="space-y-4">
-            <p className="text-base-content/80 text-sm">
-              この回答をアカウントに保存しますか？
-            </p>
+            <p className="text-base-content/80 text-sm">この回答をアカウントに保存しますか？</p>
             {message && (
               <p className={saveState === 'error' ? 'text-error text-sm' : 'text-info text-sm'}>
                 {message}
@@ -111,9 +109,7 @@ export default function AnswerCompletePage({
           </div>
         ) : saveState === 'saved-with-preview' ? (
           <div className="space-y-4">
-            <p className="text-base-content/80 text-sm">
-              他の回答済みイベントにも反映しますか？
-            </p>
+            <p className="text-base-content/80 text-sm">他の回答済みイベントにも反映しますか？</p>
             {message && <p className="text-info text-sm">{message}</p>}
             <div className="flex flex-wrap justify-end gap-2">
               <Link href={eventPath} className="btn btn-outline" data-testid="complete-skip-sync">

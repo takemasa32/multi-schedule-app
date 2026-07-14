@@ -98,6 +98,17 @@ describe('EventHistory', () => {
     expect(screen.queryByTestId('event-history-unlink-event-2')).not.toBeInTheDocument();
   });
 
+  it('お気に入り操作を押下状態付きの十分な大きさのアイコンで表示する', async () => {
+    render(<EventHistory title="回答履歴" showClearButton={false} />);
+
+    const buttons = await screen.findAllByRole('button', { name: 'お気に入りに追加' });
+    expect(buttons).toHaveLength(historyItems.length);
+    buttons.forEach((button) => {
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+      expect(button.querySelector('svg')).toHaveClass('size-5');
+    });
+  });
+
   it('回答紐づきを解除すると状態を更新する', async () => {
     render(<EventHistory title="回答履歴" showClearButton={false} enableAnswerLinkEdit={true} />);
 
