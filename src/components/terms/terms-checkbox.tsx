@@ -27,7 +27,13 @@ export default function TermsCheckbox({
           disabled={disabled}
         />
         <span>
-          <Link href="/terms" className={styles.link} target="_blank" rel="noopener noreferrer">
+          <Link
+            href="/terms"
+            className={styles.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+          >
             利用規約
           </Link>
           を読み、同意します

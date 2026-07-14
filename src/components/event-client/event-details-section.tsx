@@ -86,7 +86,9 @@ export default function EventDetailsSection({
                   title={excludedParticipantIds.includes(p.id) ? '表示に戻す' : '非表示にする'}
                 >
                   {p.name}
-                  {myParticipantId === p.id && <span className="text-success text-xs">自分</span>}
+                  {myParticipantId === p.id && (
+                    <span className="text-success ml-1 text-xs">（自分）</span>
+                  )}
                 </button>
               ))}
             </div>

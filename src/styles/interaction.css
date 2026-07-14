@@ -11,30 +11,3 @@
     padding: 0;
   }
 }
-
-.scroll-lock {
-  touch-action: none !important;
-  overscroll-behavior: contain;
-}
-
-.touch-x-only {
-  touch-action: pan-x;
-}
-
-.touch-y-only {
-  touch-action: pan-y;
-}
-
-.drag-surface {
-  touch-action: manipulation;
-  user-select: none;
-}
-
-.cell-content {
-  pointer-events: auto;
-}
-
-.touch-manipulation {
-  touch-action: none;
-  overscroll-behavior: contain;
-}

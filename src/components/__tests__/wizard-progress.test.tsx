@@ -19,6 +19,12 @@ describe('WizardProgress', () => {
     expect(stepItems[1]).toHaveTextContent('候補（現在）');
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ステップ 2 \/ 3/)).not.toBeInTheDocument();
+    expect(screen.getByRole('list')).toHaveClass(
+      'grid-cols-1',
+      'sm:grid-flow-col',
+      'sm:auto-cols-fr',
+    );
+    expect(screen.getByRole('list')).not.toHaveClass('grid-cols-3');
   });
 
   test('最終ステップでも百分率を重複表示しない', () => {

@@ -15,9 +15,14 @@ describe('TermsCheckbox', () => {
   });
 
   test('利用規約を別タブで確認できる', () => {
-    render(<TermsCheckbox isChecked={true} onChange={() => undefined} />);
+    const onChange = jest.fn();
+    render(<TermsCheckbox isChecked={true} onChange={onChange} />);
 
-    expect(screen.getByRole('link', { name: '利用規約' })).toHaveAttribute('href', '/terms');
-    expect(screen.getByRole('link', { name: '利用規約' })).toHaveAttribute('target', '_blank');
+    const termsLink = screen.getByRole('link', { name: '利用規約' });
+    expect(termsLink).toHaveAttribute('href', '/terms');
+    expect(termsLink).toHaveAttribute('target', '_blank');
+
+    fireEvent.click(termsLink);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

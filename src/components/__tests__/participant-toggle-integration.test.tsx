@@ -108,7 +108,21 @@ describe('参加者トグル機能の統合テスト', () => {
     fireEvent.click(taroButton!);
 
     expect(taroButton).toHaveAttribute('aria-pressed', 'true');
-    expect(taroButton).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('自分の回答は参加者名と区切って表示する', () => {
+    render(
+      <EventDetailsSection
+        event={mockEvent}
+        eventDates={mockEventDates}
+        participants={mockParticipants}
+        availabilities={mockAvailabilities}
+        finalizedDateIds={mockFinalizedDateIds}
+        myParticipantId="participant1"
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '田中太郎 （自分）' })).toBeInTheDocument();
   });
 
   test('複数参加者の除外状態が同時に維持される', () => {
