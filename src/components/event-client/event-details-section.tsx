@@ -110,7 +110,7 @@ export default function EventDetailsSection({
       </section>
       {/* --- イベント管理・修正セクション --- */}
       <section className="surface my-8 p-5 sm:p-6">
-        <h2 className="section-heading mb-1">主催者向けの操作</h2>
+        <h2 className="section-heading mb-1">イベント日程の管理</h2>
         <p className="section-description mb-6">日程を確定するか、候補日を追加できます。</p>
         <div className="flex flex-col gap-8 md:flex-row">
           {/* 日程確定セクション */}
