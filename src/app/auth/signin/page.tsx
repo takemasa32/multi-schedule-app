@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { CircleAlert, CircleUser } from 'lucide-react';
 import { normalizeCallbackUrl } from '@/lib/redirect';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 
 const errorMessages: Record<string, string> = {
   Callback: '認証に失敗しました。もう一度ログインしてください。',
@@ -21,7 +21,7 @@ const resolveErrorMessage = (error?: string | null) => {
   return errorMessages[error] ?? errorMessages.Default;
 };
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
@@ -122,5 +122,13 @@ export default function SignInPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="app-page-narrow min-h-64" aria-hidden="true" />}>
+      <SignInContent />
+    </Suspense>
   );
 }

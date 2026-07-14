@@ -1,4 +1,4 @@
-import { getEvent, touchEventLastAccessedIfStale } from '@/lib/actions';
+import { getEvent } from '@/lib/actions';
 import { getEventDates } from '@/lib/actions';
 import { getParticipants } from '@/lib/actions';
 import { getAvailabilities } from '@/lib/actions';
@@ -8,6 +8,7 @@ import { EventNotFoundError } from '@/lib/errors';
 import { notFound } from 'next/navigation';
 import siteConfig from '@/lib/site-config';
 import { Metadata, Viewport } from 'next';
+import { deferEventLastAccessedTouch } from '@/lib/event-page-lifecycle';
 import { Suspense } from 'react';
 import EventFormSection from '@/components/event-client/event-form-section';
 import EventDetailsSection from '@/components/event-client/event-details-section';
@@ -99,7 +100,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   let event;
   try {
     event = await getEvent(public_id);
-    await touchEventLastAccessedIfStale(public_id);
+    deferEventLastAccessedTouch(public_id);
   } catch (err) {
     if (err instanceof EventNotFoundError) {
       notFound();

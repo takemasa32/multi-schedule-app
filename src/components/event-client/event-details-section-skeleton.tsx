@@ -5,14 +5,14 @@
  */
 export default function EventDetailsSectionSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" aria-hidden="true">
       {/* 回答状況カードのプレースホルダー */}
-      <div className="card bg-base-100 border-base-200 border">
-        <div className="card-body p-0">
-          <div className="border-base-200 border-b p-4">
+      <div className="surface overflow-hidden">
+        <div className="p-0">
+          <div className="border-base-300 border-b p-5 sm:px-6">
             <span className="skeleton block h-6 w-32" />
           </div>
-          <div className="space-y-4 p-4">
+          <div className="space-y-4 p-4 sm:p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <span className="skeleton h-32 w-full rounded" />
               <span className="skeleton h-32 w-full rounded" />
@@ -29,15 +29,15 @@ export default function EventDetailsSectionSkeleton() {
               <span className="skeleton h-8 w-24 rounded-full" />
             </div>
           </div>
-          <div className="border-base-200 border-t px-4 py-4">
+          <div className="border-base-300 border-t px-4 py-4 sm:px-6">
             <span className="skeleton block h-10 w-52 rounded" />
           </div>
         </div>
       </div>
 
       {/* イベント管理カードのプレースホルダー */}
-      <div className="card bg-base-100 border-base-200 border">
-        <div className="card-body">
+      <div className="surface p-5 sm:p-6">
+        <div>
           <span className="skeleton mb-2 h-6 w-48" />
           <div className="space-y-2">
             <span className="skeleton block h-4 w-full" />
@@ -65,7 +65,7 @@ export default function EventDetailsSectionSkeleton() {
       </div>
 
       {/* 閲覧履歴カードのプレースホルダー */}
-      <div className="bg-base-200 rounded-lg p-4">
+      <div className="surface p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="skeleton block h-5 w-40" />
           <span className="skeleton block h-4 w-24" />
