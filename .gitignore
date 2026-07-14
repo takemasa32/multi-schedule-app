@@ -78,3 +78,6 @@ junit.xml
 test-results/
 playwright-report/
 .playwright-cli
+
+# UI/UXの目視確認用スクリーンショット（PRコメントへ掲載し、リポジトリには含めない）
+docs/screenshots/uiux-refresh/

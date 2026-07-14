@@ -53,4 +53,4 @@ URL、データモデル、Server Actions、認証方式、イベントの業務
 - Jestで主要コンポーネントと状態遷移を確認する。
 - Playwrightで作成から回答、集計、確定までの公開フローと認証フローを確認する。
 - デスクトップとモバイル、ライトとダークで主要画面を撮影し、レイアウトとコントラストを目視確認する。
-- `CAPTURE_UIUX_SCREENSHOTS=true` を付けてイベントE2Eを実行すると、主要フローの4表示条件を `docs/screenshots/uiux-refresh/` へ保存できる。
+- `CAPTURE_UIUX_SCREENSHOTS=true` を付けてイベントE2Eを実行すると、主要フローの4表示条件をGit管理対象外の `docs/screenshots/uiux-refresh/` へ一時出力できる。確認用画像はリポジトリへ追加せず、必要に応じてPRコメントで共有する。
