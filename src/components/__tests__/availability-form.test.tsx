@@ -9,6 +9,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import AvailabilityForm from '../availability-form';
 
 const mockRouterReplace = jest.fn();
+const mockRouterPush = jest.fn();
 
 jest.mock('@/lib/actions', () => ({
   submitAvailability: jest.fn(),
@@ -16,7 +17,7 @@ jest.mock('@/lib/actions', () => ({
 }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockRouterPush,
     replace: mockRouterReplace,
   }),
 }));
@@ -209,9 +210,7 @@ describe('AvailabilityForm', () => {
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
     expect(
-      await screen.findByText(
-        '日程が多いため、曜日ごとにまとめて入力してください。',
-      ),
+      await screen.findByText('日程が多いため、曜日ごとにまとめて入力してください。'),
     ).toBeInTheDocument();
   });
 
@@ -332,16 +331,29 @@ describe('AvailabilityForm', () => {
     expect(selectedCell).toHaveTextContent('×');
   });
 
-  it('ヒートマップで○が0件のままは確認へ進めない', async () => {
+  it('参加可能枠が未選択の場合は候補日程追加への確認を表示できる', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();
     await applyWeeklyAndGoHeatmap();
 
     fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    expect(screen.getByText('参加可能な候補日程が選択されていません。')).toBeInTheDocument();
     expect(
-      screen.getByText('少なくとも1つの参加可能枠（○）を選択してください'),
+      screen.getByText('どこも参加できない場合は、イベントページから候補日程を追加できます。'),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('availability-step-confirm')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '候補日程を追加' }));
+    expect(screen.getByRole('dialog', { name: '候補日程を追加しますか？' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'イベントページへ移動すると、現在入力中のデータが消えますがよろしいですか。',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '予定入力に戻る' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: '候補日程を追加' }).at(-1)!);
+    expect(mockRouterPush).toHaveBeenCalledWith('/event/token1?action=add-dates');
   });
 
   it('編集回答は3ステップで遷移できる', () => {

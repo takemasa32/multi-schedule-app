@@ -43,6 +43,11 @@ type UserScheduleBlockRow = {
   updated_at?: string;
 };
 
+export type UserScheduleBounds = {
+  minStartTime: string | null;
+  maxEndTime: string | null;
+};
+
 type SyncPreviewDateRow = {
   eventDateId: string;
   startTime: string;
@@ -182,6 +187,25 @@ type SyncPreviewContext = {
 };
 
 const SUPABASE_PAGE_SIZE = 1000;
+
+const toLocalDateKey = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
+
+const resolveWeekRange = (
+  weekStartDate: string,
+): { rangeStart: string; rangeEnd: string } | null => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStartDate)) return null;
+  const weekStart = new Date(`${weekStartDate}T00:00:00`);
+  if (Number.isNaN(weekStart.getTime())) return null;
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  return {
+    rangeStart: toWallClockUtcIso(`${weekStartDate}T00:00:00`),
+    rangeEnd: toWallClockUtcIso(`${toLocalDateKey(weekEnd)}T00:00:00`),
+  };
+};
 
 const fetchEventDateRanges = async (
   supabase: ReturnType<typeof createSupabaseAdmin>,
@@ -1050,7 +1074,10 @@ export async function syncUserAvailabilities({
     overrideMapByEventId.set(row.event_id, map);
   });
 
-  const currentAvailabilitiesRows = await fetchSyncPreviewAvailabilityRows(supabase, participantIds);
+  const currentAvailabilitiesRows = await fetchSyncPreviewAvailabilityRows(
+    supabase,
+    participantIds,
+  );
   const currentAvailabilitiesByParticipantId = new Map<string, Set<string>>();
   currentAvailabilitiesRows.forEach((row) => {
     if (!row.availability) return;
@@ -1209,16 +1236,9 @@ export async function applyUserAvailabilitySyncForEvent({
   }
 
   const previewDateIds = new Set(target.dates.map((row) => row.eventDateId));
-  const { data: existingAvailabilities, error: existingAvailabilitiesError } = await supabase
-    .from('availabilities')
-    .select('event_date_id,availability')
-    .eq('event_id', eventId)
-    .eq('participant_id', link.participant_id);
-
-  if (existingAvailabilitiesError) {
-    console.error('既存回答取得エラー:', existingAvailabilitiesError);
-    return { success: false, message: '既存回答の取得に失敗しました', updatedCount: 0 };
-  }
+  const existingAvailabilities = await fetchSyncPreviewAvailabilityRows(supabase, [
+    link.participant_id,
+  ]);
 
   const preservedSelectedDates = (existingAvailabilities ?? [])
     .filter((row) => row.availability && !previewDateIds.has(row.event_date_id))
@@ -1308,27 +1328,13 @@ export async function saveParticipantAnswerAsUserSchedule({
     return { success: false, message: '回答情報の取得に失敗しました', previewCount: 0 };
   }
 
-  const { data: eventDates, error: eventDatesError } = await supabase
-    .from('event_dates')
-    .select('id,start_time,end_time')
-    .eq('event_id', eventId)
-    .order('start_time', { ascending: true });
+  const eventDates = await fetchEventDateRanges(supabase, [eventId]);
 
-  if (eventDatesError || !eventDates || eventDates.length === 0) {
-    console.error('予定保存対象の日程取得エラー:', eventDatesError);
+  if (eventDates.length === 0) {
     return { success: false, message: 'イベント日程の取得に失敗しました', previewCount: 0 };
   }
 
-  const { data: availabilities, error: availabilitiesError } = await supabase
-    .from('availabilities')
-    .select('event_date_id,availability')
-    .eq('event_id', eventId)
-    .eq('participant_id', participantId);
-
-  if (availabilitiesError) {
-    console.error('予定保存対象の回答取得エラー:', availabilitiesError);
-    return { success: false, message: '回答内容の取得に失敗しました', previewCount: 0 };
-  }
+  const availabilities = await fetchSyncPreviewAvailabilityRows(supabase, [participantId]);
 
   const selectedDateIds = (availabilities ?? [])
     .filter((row) => row.availability)
@@ -1342,7 +1348,7 @@ export async function saveParticipantAnswerAsUserSchedule({
   const scheduleResult = await upsertUserScheduleBlocks({
     userId,
     eventId,
-    eventDates: eventDates as EventDateRange[],
+    eventDates,
     selectedDateIds,
   });
   if (!scheduleResult.success) {
@@ -1364,26 +1370,88 @@ export async function saveParticipantAnswerAsUserSchedule({
   };
 }
 
-export async function fetchUserScheduleBlocks(): Promise<UserScheduleBlockRow[]> {
+/**
+ * ログインユーザーの予定期間境界を取得する
+ * @returns {Promise<UserScheduleBounds>} 最古の開始日時と最新の終了日時
+ */
+export async function fetchUserScheduleBounds(): Promise<UserScheduleBounds> {
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+  if (!userId) return { minStartTime: null, maxEndTime: null };
+
+  const supabase = createSupabaseAdmin();
+  const [firstResult, lastResult] = await Promise.all([
+    supabase
+      .from('user_schedule_blocks')
+      .select('start_time')
+      .eq('user_id', userId)
+      .order('start_time', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('user_schedule_blocks')
+      .select('end_time')
+      .eq('user_id', userId)
+      .order('end_time', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (firstResult.error || lastResult.error) {
+    console.error('予定期間取得エラー:', firstResult.error ?? lastResult.error);
+    return { minStartTime: null, maxEndTime: null };
+  }
+
+  return {
+    minStartTime: firstResult.data?.start_time ?? null,
+    maxEndTime: lastResult.data?.end_time ?? null,
+  };
+}
+
+/**
+ * ログインユーザーの指定週に重なる予定を取得する
+ * @param {string} weekStartDate 月曜日のYYYY-MM-DD
+ * @returns {Promise<UserScheduleBlockRow[]>} 指定週の予定
+ */
+export async function fetchUserScheduleBlocks(
+  weekStartDate: string,
+): Promise<UserScheduleBlockRow[]> {
   const session = await getAuthSession();
   const userId = session?.user?.id;
   if (!userId) {
     return [];
   }
-
-  const supabase = createSupabaseAdmin();
-  const { data, error } = await supabase
-    .from('user_schedule_blocks')
-    .select('id,start_time,end_time,availability,source,event_id,updated_at')
-    .eq('user_id', userId)
-    .order('start_time', { ascending: true });
-
-  if (error || !data) {
-    console.error('予定ブロック取得エラー:', error);
+  const weekRange = resolveWeekRange(weekStartDate);
+  if (!weekRange) {
+    console.error('予定ブロック取得エラー: 週開始日の形式が不正です');
     return [];
   }
 
-  return data as UserScheduleBlockRow[];
+  const supabase = createSupabaseAdmin();
+  const rows: UserScheduleBlockRow[] = [];
+
+  for (let page = 0; ; page += 1) {
+    const from = page * SUPABASE_PAGE_SIZE;
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('user_schedule_blocks')
+      .select('id,start_time,end_time,availability,source,event_id,updated_at')
+      .eq('user_id', userId)
+      .lt('start_time', weekRange.rangeEnd)
+      .gt('end_time', weekRange.rangeStart)
+      .order('start_time', { ascending: true })
+      .order('end_time', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error('予定ブロック取得エラー:', error);
+      return [];
+    }
+
+    rows.push(...((data ?? []) as UserScheduleBlockRow[]));
+    if (!data || data.length < SUPABASE_PAGE_SIZE) return rows;
+  }
 }
 
 export async function upsertUserScheduleBlock({

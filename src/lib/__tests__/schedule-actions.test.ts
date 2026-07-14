@@ -2,6 +2,8 @@ import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreview,
   fetchUserAvailabilitySyncPreviewResult,
+  fetchUserScheduleBounds,
+  fetchUserScheduleBlocks,
   saveParticipantAnswerAsUserSchedule,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
@@ -21,7 +23,7 @@ jest.mock('@/lib/supabase', () => ({
 const mockedGetAuthSession = getAuthSession as jest.Mock;
 const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
 
-const createRangeMock = <T,>(pages: T[][]) =>
+const createRangeMock = <T>(pages: T[][]) =>
   jest.fn((from: number) =>
     Promise.resolve({
       data: pages[Math.floor(from / 1000)] ?? [],
@@ -34,6 +36,96 @@ const createOrderedRangeChain = (rangeMock: jest.Mock) => {
   const firstOrderMock = jest.fn().mockReturnValue({ order: secondOrderMock });
   return { firstOrderMock, secondOrderMock };
 };
+
+describe('fetchUserScheduleBlocks', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGetAuthSession.mockResolvedValue({ user: { id: 'user-1' } });
+  });
+
+  it('1000件を超える予定ブロックも開始日時順にすべて取得する', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+      id: `block-${String(index).padStart(4, '0')}`,
+      start_time: `2026-01-01T${String(index % 24).padStart(2, '0')}:00:00+00:00`,
+      end_time: `2026-01-01T${String((index + 1) % 24).padStart(2, '0')}:00:00+00:00`,
+      availability: true,
+      source: 'event',
+      event_id: 'event-1',
+    }));
+    const secondPage = [
+      {
+        id: 'block-1000',
+        start_time: '2026-07-14T10:00:00+00:00',
+        end_time: '2026-07-14T11:00:00+00:00',
+        availability: false,
+        source: 'event',
+        event_id: 'event-2',
+      },
+    ];
+    const rangeMock = createRangeMock([firstPage, secondPage]);
+    const thirdOrderMock = jest.fn().mockReturnValue({ range: rangeMock });
+    const secondOrderMock = jest.fn().mockReturnValue({ order: thirdOrderMock });
+    const firstOrderMock = jest.fn().mockReturnValue({ order: secondOrderMock });
+    const gtMock = jest.fn().mockReturnValue({ order: firstOrderMock });
+    const ltMock = jest.fn().mockReturnValue({ gt: gtMock });
+    const eqMock = jest.fn().mockReturnValue({ lt: ltMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: eqMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({
+      from: jest.fn().mockReturnValue({ select: selectMock }),
+    });
+
+    const result = await fetchUserScheduleBlocks('2026-07-13');
+
+    expect(result).toHaveLength(1001);
+    expect(result.at(-1)?.id).toBe('block-1000');
+    expect(rangeMock).toHaveBeenNthCalledWith(1, 0, 999);
+    expect(rangeMock).toHaveBeenNthCalledWith(2, 1000, 1999);
+    expect(firstOrderMock).toHaveBeenCalledWith('start_time', { ascending: true });
+    expect(secondOrderMock).toHaveBeenCalledWith('end_time', { ascending: true });
+    expect(thirdOrderMock).toHaveBeenCalledWith('id', { ascending: true });
+  });
+
+  it('途中ページの取得に失敗した場合は不完全な一覧を返さない', async () => {
+    const rangeMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: Array.from({ length: 1000 }, (_, index) => ({ id: `block-${index}` })),
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: null, error: new Error('取得失敗') });
+    const thirdOrderMock = jest.fn().mockReturnValue({ range: rangeMock });
+    const secondOrderMock = jest.fn().mockReturnValue({ order: thirdOrderMock });
+    const firstOrderMock = jest.fn().mockReturnValue({ order: secondOrderMock });
+    const gtMock = jest.fn().mockReturnValue({ order: firstOrderMock });
+    const ltMock = jest.fn().mockReturnValue({ gt: gtMock });
+    const eqMock = jest.fn().mockReturnValue({ lt: ltMock });
+    const selectMock = jest.fn().mockReturnValue({ eq: eqMock });
+    mockedCreateSupabaseAdmin.mockReturnValue({
+      from: jest.fn().mockReturnValue({ select: selectMock }),
+    });
+
+    await expect(fetchUserScheduleBlocks('2026-07-13')).resolves.toEqual([]);
+  });
+
+  it('予定期間の最小開始日時と最大終了日時だけを取得する', async () => {
+    const maybeSingle = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { start_time: '2026-01-01T09:00:00+00:00' }, error: null })
+      .mockResolvedValueOnce({ data: { end_time: '2026-12-31T18:00:00+00:00' }, error: null });
+    const limit = jest.fn().mockReturnValue({ maybeSingle });
+    const order = jest.fn().mockReturnValue({ limit });
+    const eq = jest.fn().mockReturnValue({ order });
+    const select = jest.fn().mockReturnValue({ eq });
+    mockedCreateSupabaseAdmin.mockReturnValue({ from: jest.fn().mockReturnValue({ select }) });
+
+    await expect(fetchUserScheduleBounds()).resolves.toEqual({
+      minStartTime: '2026-01-01T09:00:00+00:00',
+      maxEndTime: '2026-12-31T18:00:00+00:00',
+    });
+    expect(order).toHaveBeenCalledWith('start_time', { ascending: true });
+    expect(order).toHaveBeenCalledWith('end_time', { ascending: false });
+  });
+});
 
 describe('saveAvailabilityOverrides', () => {
   beforeEach(() => {
@@ -328,11 +420,13 @@ describe('applyUserAvailabilitySyncForEvent', () => {
         return { select: jest.fn().mockReturnValue({ eq: userEqMock }) };
       }
       if (table === 'availabilities') {
-        const participantEqMock = jest
-          .fn()
-          .mockResolvedValue({ data: currentAvailabilities, error: null });
-        const eventEqMock = jest.fn().mockReturnValue({ eq: participantEqMock });
-        return { select: jest.fn().mockReturnValue({ eq: eventEqMock }) };
+        const rangeMock = createRangeMock([currentAvailabilities]);
+        const { firstOrderMock } = createOrderedRangeChain(rangeMock);
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockReturnValue({ order: firstOrderMock }),
+          }),
+        };
       }
       throw new Error(`unexpected table: ${table}`);
     });
@@ -740,19 +834,20 @@ describe('saveParticipantAnswerAsUserSchedule', () => {
       if (table === 'event_dates') {
         eventDatesCallCount += 1;
         if (eventDatesCallCount === 1) {
+          const rangeMock = createRangeMock([
+            [
+              {
+                id: 'date-1',
+                event_id: 'event-1',
+                start_time: '2099-06-03T14:00:00',
+                end_time: '2099-06-03T15:00:00',
+              },
+            ],
+          ]);
           return {
             select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
-                  data: [
-                    {
-                      id: 'date-1',
-                      start_time: '2099-06-03T14:00:00',
-                      end_time: '2099-06-03T15:00:00',
-                    },
-                  ],
-                  error: null,
-                }),
+              in: jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({ range: rangeMock }),
               }),
             }),
           };
@@ -778,14 +873,13 @@ describe('saveParticipantAnswerAsUserSchedule', () => {
       if (table === 'availabilities') {
         availabilitiesCallCount += 1;
         if (availabilitiesCallCount === 1) {
+          const rangeMock = createRangeMock([
+            [{ participant_id: 'participant-1', event_date_id: 'date-1', availability: true }],
+          ]);
+          const { firstOrderMock } = createOrderedRangeChain(rangeMock);
           return {
             select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                eq: jest.fn().mockResolvedValue({
-                  data: [{ event_date_id: 'date-1', availability: true }],
-                  error: null,
-                }),
-              }),
+              in: jest.fn().mockReturnValue({ order: firstOrderMock }),
             }),
           };
         }
@@ -805,7 +899,13 @@ describe('saveParticipantAnswerAsUserSchedule', () => {
           return { upsert: scheduleUpsertMock };
         }
         const rangeMock = createRangeMock([
-          [{ start_time: '2099-06-04T14:00:00', end_time: '2099-06-04T15:00:00', availability: true }],
+          [
+            {
+              start_time: '2099-06-04T14:00:00',
+              end_time: '2099-06-04T15:00:00',
+              availability: true,
+            },
+          ],
         ]);
         return {
           select: jest.fn().mockReturnValue({

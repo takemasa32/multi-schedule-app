@@ -33,6 +33,7 @@ interface EventDetailsSectionProps {
   availabilities: Availability[];
   finalizedDateIds: string[];
   myParticipantId?: string | null;
+  openDateAddition?: boolean;
 }
 
 export default function EventDetailsSection({
@@ -42,6 +43,7 @@ export default function EventDetailsSection({
   availabilities,
   finalizedDateIds,
   myParticipantId = null,
+  openDateAddition = false,
 }: EventDetailsSectionProps) {
   // 参加者名バッジのトグルUI
   const [excludedParticipantIds, setExcludedParticipantIds] = useState<string[]>([]);
@@ -122,9 +124,13 @@ export default function EventDetailsSection({
           </div>
           <div className="divider md:divider-horizontal my-1 md:my-0" />
           {/* 日程追加セクション */}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1" id="candidate-date-addition">
             <h3 className="mb-2 text-lg font-semibold">候補日程の追加</h3>
-            <EventDateAddSection event={event} eventDates={eventDates} />
+            <EventDateAddSection
+              event={event}
+              eventDates={eventDates}
+              initiallyOpen={openDateAddition}
+            />
           </div>
         </div>
       </section>

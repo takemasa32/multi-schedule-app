@@ -674,14 +674,13 @@ describe('getFinalizedDateIds', () => {
     mockedCreateSupabaseAdmin.mockImplementation(() => ({
       from: (table: string) => {
         if (table === 'finalized_dates') {
+          const range = jest.fn().mockResolvedValueOnce({
+            data: [{ event_date_id: 'd1' }, { event_date_id: 'd2' }],
+            error: null,
+          });
           return {
             select: jest.fn(() => ({
-              eq: jest.fn(() =>
-                Promise.resolve({
-                  data: [{ event_date_id: 'd1' }, { event_date_id: 'd2' }],
-                  error: null,
-                }),
-              ),
+              eq: jest.fn(() => ({ order: jest.fn(() => ({ range })) })),
             })),
           };
         }
@@ -699,7 +698,13 @@ describe('getFinalizedDateIds', () => {
         if (table === 'finalized_dates') {
           return {
             select: jest.fn(() => ({
-              eq: jest.fn(() => Promise.resolve({ data: null, error: { message: 'error' } })),
+              eq: jest.fn(() => ({
+                order: jest.fn(() => ({
+                  range: jest.fn(() =>
+                    Promise.resolve({ data: null, error: { message: 'error' } }),
+                  ),
+                })),
+              })),
             })),
           };
         }
