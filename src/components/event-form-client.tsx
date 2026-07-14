@@ -347,7 +347,7 @@ export default function EventFormClient() {
   }, [timeSlots]);
 
   const stepLabel = useMemo(() => {
-    if (currentStep === 1) return '基本情報を入力';
+    if (currentStep === 1) return 'イベント情報を入力';
     if (currentStep === 2 && step2SubStep === 'mode') return '入力方式を選ぶ';
     if (currentStep === 2 && step2SubStep === 'settings') return '候補条件を設定';
     if (currentStep === 2 && step2SubStep === 'calendar') return 'カレンダーで候補を選ぶ';
@@ -357,13 +357,13 @@ export default function EventFormClient() {
   const mainSteps = useMemo(
     () => [
       {
-        label: '基本情報',
-        shortLabel: '基本',
+        label: 'イベント情報',
+        shortLabel: 'イベント情報',
         description: 'イベント名と説明を入力します。',
       },
       {
         label: '候補日程',
-        shortLabel: '候補',
+        shortLabel: '候補日程',
         description: '入力方式を選び、候補枠を組み立てます。',
       },
       {
