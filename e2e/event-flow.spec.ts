@@ -71,9 +71,8 @@ async function waitForEventDetail(page: Page) {
     const returnLink = page.getByRole('link', {
       name: /イベント結果を見る|イベント結果ページへ戻る/,
     });
-    if (await returnLink.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await returnLink.click();
-    }
+    await expect(returnLink).toBeVisible({ timeout: 10_000 });
+    await returnLink.click();
     await page.waitForURL(
       (url) => {
         const current = url.toString();
@@ -493,9 +492,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     const dateStr = `${yyyy}-${mm}-${dd}`;
     await dateInput.fill(dateStr);
     // quickBtnがenabledになるまで待機
-    const quickBtn = page.getByRole('button', {
-      name: /この日まで自動延長して追加/,
-    });
+    const quickBtn = page.getByTestId('quick-extend-submit');
     await expect(quickBtn).toBeEnabled({ timeout: 5000 });
 
     // クイック自動延長ボタン押下
@@ -573,7 +570,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(successAlert).toBeHidden({ timeout: 10000 });
 
     // 同じ日程を再度追加し、重複エラーを検証
-    const autoModeButton = page.getByRole('button', { name: '期間ベース' });
+    const autoModeButton = page.getByTestId('event-date-add-mode-auto');
     await expect(autoModeButton).toBeVisible({ timeout: 5000 });
     if (await autoModeButton.isEnabled()) {
       await autoModeButton.click({ force: true });

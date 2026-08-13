@@ -402,6 +402,7 @@ export default function EventDateAddSection({
                   <span className="text-base-content/70 text-sm font-semibold">追加方式</span>
                   <div className="join" role="group" aria-label="日程の追加方式">
                     <button
+                      data-testid="event-date-add-mode-auto"
                       type="button"
                       className={`btn join-item btn-sm ${addMode === 'auto' ? 'btn-primary' : 'btn-outline'}`}
                       onClick={() => setAddMode('auto')}
@@ -410,6 +411,7 @@ export default function EventDateAddSection({
                       同じ時間割で追加
                     </button>
                     <button
+                      data-testid="event-date-add-mode-manual"
                       type="button"
                       className={`btn join-item btn-sm ${addMode === 'manual' ? 'btn-primary' : 'btn-outline'}`}
                       onClick={() => setAddMode('manual')}
@@ -462,6 +464,7 @@ export default function EventDateAddSection({
                         </ul>
                       </div>
                       <button
+                        data-testid="quick-extend-submit"
                         className={`btn btn-primary${addModalState === 'loading' ? 'loading' : ''}`}
                         type="button"
                         disabled={quickSlots.length === 0 || addModalState === 'loading'}

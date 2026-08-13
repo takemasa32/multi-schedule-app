@@ -54,7 +54,7 @@ LP以外の主要画面は、改修時にデスクトップ／モバイルの比
 イベントフローの比較画像を取得する場合は、開発サーバーを起動したうえで次を実行します。
 
 ```bash
-CAPTURE_UIUX_SCREENSHOTS=true npx playwright test --project=chromium e2e/event-flow.spec.ts
+CAPTURE_UIUX_SCREENSHOTS=true npm run test:e2e:chrome:public
 ```
 
 ## セットアップ手順
@@ -162,8 +162,8 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 | `npm run test:unit`              | Jest 実行                         |
 | `npm run test:e2e`               | Playwright 実行                   |
 | `npm run test:e2e:chrome`        | 公開フロー + 認証フローの推奨実行 |
-| `npm run test:e2e:chrome:public` | 公開フローのみ                    |
-| `npm run test:e2e:auth`          | 認証フローのみ                    |
+| `npm run test:e2e:chrome:public` | 専用ポート3200で公開フローを実行  |
+| `npm run test:e2e:auth`          | 専用ポート3201で認証フローを実行  |
 | `npm run format`                 | Prettier で整形                   |
 
 ## デプロイ方法
