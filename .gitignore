@@ -81,3 +81,5 @@ playwright-report/
 
 # UI/UXの目視確認用スクリーンショット（PRコメントへ掲載し、リポジトリには含めない）
 docs/screenshots/uiux-refresh/
+# プロダクト監査のローカル証拠画像（Markdown本文は管理し、画像はpushしない）
+docs/audit/screenshots/

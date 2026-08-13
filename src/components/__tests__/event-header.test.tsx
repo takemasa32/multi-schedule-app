@@ -67,7 +67,9 @@ describe('EventHeader', () => {
     const heading = screen.getByRole('heading', { level: 1, name: 'タイトル' });
 
     expect(backLink).toHaveAttribute('href', '/');
-    expect(backLink.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      backLink.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('イベントの子画面では戻る導線を重複表示しない', () => {

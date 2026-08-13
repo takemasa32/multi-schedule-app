@@ -39,6 +39,18 @@ describe('ローディングと鮮度の契約', () => {
     });
   });
 
+  test('回答画面は日程・参加者・認証情報の取得を並列化する', () => {
+    const pageSource = readSource('src/app/event/[public_id]/input/page.tsx');
+
+    expect(pageSource).toContain('const sessionPromise = getAuthSession();');
+    expect(pageSource).toContain(
+      'const [eventDates, participantResult, scheduleContext] = await Promise.all([',
+    );
+    expect(pageSource).toContain(
+      'getUserScheduleContext(event.id, eventDates, session?.user?.id ?? null)',
+    );
+  });
+
   test('静的に描画できる作成・履歴ページを強制動的化しない', () => {
     expect(readSource('src/app/create/page.tsx')).not.toContain("dynamic = 'force-dynamic'");
     expect(readSource('src/app/history/page.tsx')).not.toContain("dynamic = 'force-dynamic'");

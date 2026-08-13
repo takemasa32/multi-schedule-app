@@ -643,9 +643,17 @@ const splitToHourlyRanges = (start: string, end: string): Array<{ start: string;
   return result;
 };
 
+/**
+ * 回答画面に表示するユーザー予定のコンテキストを取得する。
+ * @param {string} eventId 対象イベントID
+ * @param {EventDateRange[]} eventDates 対象イベントの日程一覧
+ * @param {string | null | undefined} resolvedUserId 呼び出し元で解決済みのユーザーID
+ * @returns {Promise<ScheduleContext>} 回答画面用の予定コンテキスト
+ */
 export async function getUserScheduleContext(
   eventId: string,
   eventDates: EventDateRange[],
+  resolvedUserId?: string | null,
 ): Promise<ScheduleContext> {
   const toDateKey = (value: string): string => {
     const date = toComparableDate(value);
@@ -662,8 +670,7 @@ export async function getUserScheduleContext(
     return `${toHm(startDate)}-${toHm(endDate)}`;
   };
 
-  const session = await getAuthSession();
-  const userId = session?.user?.id;
+  const userId = resolvedUserId === undefined ? (await getAuthSession())?.user?.id : resolvedUserId;
   if (!userId) {
     return {
       isAuthenticated: false,
@@ -680,7 +687,6 @@ export async function getUserScheduleContext(
     };
   }
 
-  const supabase = createSupabaseAdmin();
   if (eventDates.length === 0) {
     return {
       isAuthenticated: true,
@@ -697,39 +703,56 @@ export async function getUserScheduleContext(
     };
   }
 
+  const supabase = createSupabaseAdmin();
+
   const startTimes = eventDates.map((d) => d.start_time);
   const endTimes = eventDates.map((d) => d.end_time);
   const minStart = startTimes.reduce((min, value) => (value < min ? value : min), startTimes[0]);
   const maxEnd = endTimes.reduce((max, value) => (value > max ? value : max), endTimes[0]);
 
-  const { data: blocks, error: blocksError } = await supabase
+  const blocksPromise = supabase
     .from('user_schedule_blocks')
     .select('start_time,end_time,availability,source')
     .eq('user_id', userId)
     .lt('start_time', maxEnd)
     .gt('end_time', minStart);
 
+  const relatedEventsPromise = (async () => {
+    const { data: linkEvents } = await supabase
+      .from('user_event_links')
+      .select('event_id,participant_id')
+      .eq('user_id', userId);
+    const linkedEventIds = (linkEvents ?? []).map((row) => row.event_id).filter(Boolean);
+    const { data: finalizedDates } =
+      linkedEventIds.length > 0
+        ? await supabase
+            .from('finalized_dates')
+            .select('event_id,event_date_id,event_dates(start_time,end_time)')
+            .in('event_id', linkedEventIds)
+        : { data: [] };
+
+    return { linkEvents, finalizedDates };
+  })();
+
+  const overridesPromise = supabase
+    .from('user_event_availability_overrides')
+    .select('event_date_id')
+    .eq('user_id', userId)
+    .eq('event_id', eventId);
+
+  const [
+    { data: blocks, error: blocksError },
+    { linkEvents, finalizedDates },
+    { data: overrides },
+  ] = await Promise.all([blocksPromise, relatedEventsPromise, overridesPromise]);
+
   if (blocksError) {
     console.error('予定ブロック取得エラー:', blocksError);
   }
 
-  const { data: linkEvents } = await supabase
-    .from('user_event_links')
-    .select('event_id,participant_id')
-    .eq('user_id', userId);
-
   const hasSyncTargetEvents = (linkEvents ?? []).some(
     (row) => row.event_id !== eventId && Boolean(row.participant_id),
   );
-  const linkedEventIds = (linkEvents ?? []).map((row) => row.event_id).filter(Boolean);
-
-  const { data: finalizedDates } =
-    linkedEventIds.length > 0
-      ? await supabase
-          .from('finalized_dates')
-          .select('event_id,event_date_id,event_dates(start_time,end_time)')
-          .in('event_id', linkedEventIds)
-      : { data: [] };
 
   const busyIntervals = (finalizedDates ?? [])
     .map((row) => {
@@ -744,12 +767,6 @@ export async function getUserScheduleContext(
     .filter((row): row is { event_id: string; start_time: string; end_time: string } =>
       Boolean(row),
     );
-
-  const { data: overrides } = await supabase
-    .from('user_event_availability_overrides')
-    .select('event_date_id')
-    .eq('user_id', userId)
-    .eq('event_id', eventId);
 
   const overrideDateIds = (overrides ?? []).map((row) => row.event_date_id);
 

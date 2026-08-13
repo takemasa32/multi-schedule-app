@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { deferEventLastAccessedTouch } from '@/lib/event-page-lifecycle';
 import { EventNotFoundError } from '@/lib/errors';
 import { getUserScheduleContext } from '@/lib/schedule-actions';
+import { getAuthSession } from '@/lib/auth';
 
 export async function generateMetadata({
   params,
@@ -66,18 +67,22 @@ export default async function EventPage({ params, searchParams }: EventPageProps
     throw err;
   }
 
+  const sessionPromise = getAuthSession();
   const eventDatesPromise = getEventDates(event.id);
   const participantPromise = participantId
     ? getParticipantById(participantId, event.id)
     : Promise.resolve(null);
+  const scheduleContextPromise = Promise.all([eventDatesPromise, sessionPromise]).then(
+    ([eventDates, session]) =>
+      getUserScheduleContext(event.id, eventDates, session?.user?.id ?? null),
+  );
 
   // フォーム表示に必要な情報が揃うまで待機し、不要なスケルトンを避ける
-  const [eventDates, participantResult] = await Promise.all([
+  const [eventDates, participantResult, scheduleContext] = await Promise.all([
     eventDatesPromise,
     participantPromise,
+    scheduleContextPromise,
   ]);
-
-  const scheduleContext = await getUserScheduleContext(event.id, eventDates);
 
   const existingParticipant = participantResult?.participant || null;
   const existingAvailabilities = participantResult?.availabilityMap || null;

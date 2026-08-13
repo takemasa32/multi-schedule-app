@@ -87,7 +87,7 @@ describe('date-utils', () => {
     const originalMaxTouchPointsDesc = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');
     const originalMsMaxTouchPointsDesc = Object.getOwnPropertyDescriptor(
       navigator,
-      'msMaxTouchPoints'
+      'msMaxTouchPoints',
     );
     const originalOntouchstart = Object.getOwnPropertyDescriptor(window, 'ontouchstart');
 

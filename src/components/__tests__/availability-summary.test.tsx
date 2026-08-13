@@ -90,12 +90,7 @@ describe('AvailabilitySummary', () => {
   });
 
   it('除外された参加者の回答がヒートマップ集計に反映される', () => {
-    render(
-      <AvailabilitySummary
-        {...defaultProps}
-        excludedParticipantIds={['p2']}
-      />,
-    );
+    render(<AvailabilitySummary {...defaultProps} excludedParticipantIds={['p2']} />);
 
     // Bob除外後
     // date1: Alice(○), Charlie(○) => 2

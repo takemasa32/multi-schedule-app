@@ -131,20 +131,23 @@ export default function AvailabilitySummary({
   // コンテナref追加 - ツールチップ外部クリック判定用
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ツールチップ表示のためのポータル用参照
-  const tooltipPortalRef = useRef<HTMLDivElement | null>(null);
+  // ツールチップ表示のためのポータル要素
+  const [tooltipPortalElement, setTooltipPortalElement] = useState<HTMLDivElement | null>(null);
   // コンポーネントマウント時にポータル要素を作成
-  useMemo(() => {
-    if (typeof document !== 'undefined') {
-      const portalElement =
-        document.getElementById('tooltip-portal') || document.createElement('div');
-      if (!document.getElementById('tooltip-portal')) {
-        portalElement.id = 'tooltip-portal';
-        document.body.appendChild(portalElement);
-      }
-      tooltipPortalRef.current = portalElement as HTMLDivElement;
+  useEffect(() => {
+    const existingPortal = document.getElementById('tooltip-portal');
+    const portalElement = existingPortal || document.createElement('div');
+    if (!existingPortal) {
+      portalElement.id = 'tooltip-portal';
+      document.body.appendChild(portalElement);
     }
-    return null;
+    setTooltipPortalElement(portalElement as HTMLDivElement);
+
+    return () => {
+      if (!existingPortal) {
+        portalElement.remove();
+      }
+    };
   }, []);
 
   // 日付をまとめる (重複を排除)
@@ -542,7 +545,7 @@ export default function AvailabilitySummary({
         />
       </div>
       {/* PCのみツールチップ */}
-      {!isMobile && <Tooltip tooltip={tooltip} portalElement={tooltipPortalRef.current} />}
+      {!isMobile && <Tooltip tooltip={tooltip} portalElement={tooltipPortalElement} />}
       {/* モバイルのみ下部パネル */}
       {isMobile && (
         <MobileInfoPanel

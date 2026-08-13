@@ -88,7 +88,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                         <span className="badge badge-xs badge-success ml-2">自分の回答</span>
                       )}
                       {participant.comment && (
-                        <div className="break-words text-xs text-base-content/60">
+                        <div className="text-base-content/60 break-words text-xs">
                           {participant.comment}
                         </div>
                       )}
@@ -159,7 +159,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
                         </div>
                       )}
                       {isAvailable === null && (
-                        <div className="mx-auto flex h-6 w-6 items-center justify-center text-base-content/40">
+                        <div className="text-base-content/40 mx-auto flex h-6 w-6 items-center justify-center">
                           {/* 未回答セルも中央揃えで表示 */}-
                         </div>
                       )}

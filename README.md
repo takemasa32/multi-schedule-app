@@ -54,7 +54,7 @@ LP以外の主要画面は、改修時にデスクトップ／モバイルの比
 イベントフローの比較画像を取得する場合は、開発サーバーを起動したうえで次を実行します。
 
 ```bash
-CAPTURE_UIUX_SCREENSHOTS=true npx playwright test --project=chromium e2e/event-flow.spec.ts
+CAPTURE_UIUX_SCREENSHOTS=true npm run test:e2e:chrome:public
 ```
 
 ## セットアップ手順
@@ -162,8 +162,8 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 | `npm run test:unit`              | Jest 実行                         |
 | `npm run test:e2e`               | Playwright 実行                   |
 | `npm run test:e2e:chrome`        | 公開フロー + 認証フローの推奨実行 |
-| `npm run test:e2e:chrome:public` | 公開フローのみ                    |
-| `npm run test:e2e:auth`          | 認証フローのみ                    |
+| `npm run test:e2e:chrome:public` | 専用ポート3200で公開フローを実行  |
+| `npm run test:e2e:auth`          | 専用ポート3201で認証フローを実行  |
 | `npm run format`                 | Prettier で整形                   |
 
 ## デプロイ方法
@@ -211,6 +211,11 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 
 ## ドキュメント
 
+- [見た目・使い勝手を維持する性能 / UX 改善方針（2026-08-13）](docs/architecture/performance-ux-preservation-plan-2026-08-13.md)
+- [現行プロダクト総合監査（2026-07-29）](docs/audit/2026-07-29-product-audit.md)
+- [過去の実装意図と今後の継承方針（2026-07-29）](docs/architecture/implementation-intent-review-2026-07-29.md)
+- [次期プロダクトアーキテクチャ案（2026-07-29）](docs/architecture/next-product-architecture-2026-07-29.md)
+- [プロダクト進化ロードマップ（2026-07-29）](docs/architecture/product-evolution-roadmap-2026-07-29.md)
 - [カレンダー操作UI共通ロジック](docs/architecture/calendar-interaction.md)
 - [アクセス権限・閲覧方針](docs/architecture/access-policy.md)
 - [プライバシーポリシー検討メモ](docs/architecture/privacy-policy.md)

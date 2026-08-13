@@ -126,7 +126,7 @@ export default function EventAnswerLinkEditor({
         <div className="modal modal-open" role="dialog" aria-modal="true">
           <div className="modal-box">
             <h4 className="text-base font-semibold">このイベントの回答紐づき編集</h4>
-            <p className="mt-1 text-sm text-base-content/60">
+            <p className="text-base-content/60 mt-1 text-sm">
               {linkedParticipant
                 ? `現在は「${linkedParticipant.name}」の回答が紐づいています。`
                 : '現在は未紐づけです。紐づける回答を選択してください。'}
@@ -144,7 +144,9 @@ export default function EventAnswerLinkEditor({
                   >
                     {isSubmitting ? '解除中...' : '紐づきを解除'}
                   </button>
-                  <p className="text-xs text-base-content/60">この操作で回答データは削除されません。</p>
+                  <p className="text-base-content/60 text-xs">
+                    この操作で回答データは削除されません。
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -173,7 +175,7 @@ export default function EventAnswerLinkEditor({
               )}
             </div>
 
-            {message && <p className="mt-3 text-xs text-base-content/70">{message}</p>}
+            {message && <p className="text-base-content/70 mt-3 text-xs">{message}</p>}
 
             <div className="modal-action">
               <button

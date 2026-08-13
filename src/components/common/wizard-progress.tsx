@@ -38,7 +38,7 @@ export default function WizardProgress({
         </h2>
       </div>
 
-      <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-flow-col sm:auto-cols-fr">
+      <ol className="mt-4 grid grid-cols-1 gap-2 sm:auto-cols-fr sm:grid-flow-col">
         {steps.map((step, index) => {
           const stepNumber = index + 1;
           const isActive = stepNumber === safeStep;

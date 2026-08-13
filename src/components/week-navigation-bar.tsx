@@ -38,7 +38,6 @@ export default function WeekNavigationBar({
     onPageChange(Math.min(safeTotalPages - 1, currentPage + 1));
   };
 
-
   return (
     <div className="bg-base-200 rounded-lg p-3">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

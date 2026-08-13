@@ -402,11 +402,6 @@ describe('submitAvailability', () => {
         data: null,
         error: { message: 'history failed' },
       });
-    mockedUpsertUserEventLink.mockResolvedValueOnce({
-      success: false,
-      message: 'link failed',
-    });
-
     const formData = new FormData();
     formData.set('eventId', 'eventid');
     formData.set('publicToken', 'pubtok');
@@ -420,6 +415,7 @@ describe('submitAvailability', () => {
         warningCodes: ['POST_SYNC_PARTIAL_FAILURE'],
       }),
     );
+    expect(mockedUpsertUserEventLink).not.toHaveBeenCalled();
   });
 });
 

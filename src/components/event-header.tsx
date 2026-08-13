@@ -18,7 +18,8 @@ interface EventHeaderProps {
 export function EventHeader({ eventId, title, description, isFinalized }: EventHeaderProps) {
   const pathname = usePathname();
   const isEventDetailPage = pathname === `/event/${eventId}`;
-  const shareUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/event/${eventId}`;
+  const shareUrl =
+    typeof window === 'undefined' ? '' : `${window.location.origin}/event/${eventId}`;
 
   return (
     <>
