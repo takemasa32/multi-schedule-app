@@ -3,26 +3,24 @@ import HeroIllustration from '@/components/landing/hero-illustration';
 
 export default function HeroSection() {
   return (
-    <section className="relative flex min-h-[60vh] items-center overflow-hidden bg-base-100 px-2 pb-10 pt-12 sm:min-h-[70vh] sm:px-4 sm:pb-16 sm:pt-24">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-base-300" />
+    <section className="bg-base-100 relative flex min-h-[60vh] items-center overflow-hidden px-2 pb-10 pt-12 sm:min-h-[70vh] sm:px-4 sm:pb-16 sm:pt-24">
+      <div className="bg-base-300 pointer-events-none absolute inset-x-0 bottom-0 h-px" />
       <div className="container relative z-10 mx-auto grid max-w-6xl lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:gap-10">
-        <div
-          className="pointer-events-none absolute -right-28 -top-14 z-0 h-[28rem] w-[40rem] sm:-right-24 sm:-top-20 sm:h-[36rem] sm:w-[54rem] md:-right-16 md:-top-20 md:h-[38rem] md:w-[58rem] lg:relative lg:right-auto lg:top-auto lg:col-start-2 lg:row-start-1 lg:h-[32rem] lg:w-full"
-        >
+        <div className="pointer-events-none absolute -right-28 -top-14 z-0 h-[28rem] w-[40rem] sm:-right-24 sm:-top-20 sm:h-[36rem] sm:w-[54rem] md:-right-16 md:-top-20 md:h-[38rem] md:w-[58rem] lg:relative lg:right-auto lg:top-auto lg:col-start-2 lg:row-start-1 lg:h-[32rem] lg:w-full">
           <HeroIllustration />
         </div>
         <div className="relative z-10 w-full py-7 sm:py-10 lg:col-start-1 lg:row-start-1 lg:py-0">
-          <div className="pointer-events-none absolute -inset-x-4 -inset-y-5 -z-10 bg-gradient-to-r from-base-100 via-base-100/88 to-base-100/16 lg:hidden" />
-          <h1 className="mb-4 text-4xl font-semibold leading-[1.05] tracking-normal text-base-content sm:text-5xl lg:text-6xl">
+          <div className="from-base-100 via-base-100/88 to-base-100/16 pointer-events-none absolute -inset-x-4 -inset-y-5 -z-10 bg-gradient-to-r lg:hidden" />
+          <h1 className="text-base-content mb-4 text-4xl font-semibold leading-[1.05] tracking-normal sm:text-5xl lg:text-6xl">
             DaySynth
           </h1>
-          <h2 className="mb-5 max-w-xl text-2xl font-semibold leading-relaxed text-base-content sm:text-3xl">
+          <h2 className="text-base-content mb-5 max-w-xl text-2xl font-semibold leading-relaxed sm:text-3xl">
             <span className="block">みんなの予定を重ねて、</span>
             <span className="block">
               <span className="text-primary">集まれる日だけ</span>を見つける。
             </span>
           </h2>
-          <p className="mb-7 max-w-xl text-base leading-8 text-base-content/70 sm:text-lg">
+          <p className="text-base-content/70 mb-7 max-w-xl text-base leading-8 sm:text-lg">
             候補を作ってリンクを送るだけ。参加者はログインなしで回答し、ヒートマップから最適な時間をそのまま確定できます。
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -41,7 +39,7 @@ export default function HeroSection() {
               使い方を見る
             </Link>
           </div>
-          <p className="mt-5 text-sm text-base-content/60">
+          <p className="text-base-content/60 mt-5 text-sm">
             無料・広告なし。ログインなしでも回答できます。
           </p>
         </div>

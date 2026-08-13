@@ -40,9 +40,7 @@ describe('AnswerCompletePage', () => {
     expect(screen.getByText('この回答をアカウントに保存しますか？')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '保存する' }));
 
-    expect(
-      await screen.findByText('他の回答済みイベントにも反映しますか？'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('他の回答済みイベントにも反映しますか？')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '反映する' }));
 
     expect(mockRouterPush).toHaveBeenCalledWith('/event/token-1/input/sync-review');
@@ -68,7 +66,9 @@ describe('AnswerCompletePage', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存する' }));
 
     expect(
-      await screen.findByText('他イベントへの反映は不要でした。イベント結果ページへ移動しています。'),
+      await screen.findByText(
+        '他イベントへの反映は不要でした。イベント結果ページへ移動しています。',
+      ),
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(saveParticipantAnswerAsUserSchedule).toHaveBeenCalledWith({

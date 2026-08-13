@@ -238,9 +238,7 @@ function UseCaseCard({ item }: { item: IconItem }) {
 
 function StepCard({ step, index }: { step: TextItem; index: number }) {
   return (
-    <StaticListItem
-      className="border-base-300 bg-base-100 relative rounded-lg border p-5 shadow-sm md:min-h-52 md:p-6"
-    >
+    <StaticListItem className="border-base-300 bg-base-100 relative rounded-lg border p-5 shadow-sm md:min-h-52 md:p-6">
       <span className="text-primary/25 block text-5xl font-semibold leading-none md:text-6xl">
         {String(index + 1).padStart(2, '0')}
       </span>
@@ -316,7 +314,7 @@ export default function LandingPage() {
                 イベントを作成
               </Link>
             </StaticItem>
-            <ol className="relative grid gap-4 md:grid-cols-3 md:gap-5 md:before:bg-primary/20 md:before:absolute md:before:left-6 md:before:right-6 md:before:top-12 md:before:h-px md:before:content-['']">
+            <ol className="md:before:bg-primary/20 relative grid gap-4 md:grid-cols-3 md:gap-5 md:before:absolute md:before:left-6 md:before:right-6 md:before:top-12 md:before:h-px md:before:content-['']">
               {steps.map((step, index) => (
                 <StepCard key={step.title} step={step} index={index} />
               ))}

@@ -117,7 +117,9 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
           <div key={date.id} className="py-4 first:pt-0 last:pb-0">
             <div className="mb-3 font-medium">
               {formatTimeRange(date.start_time, date.end_time)}
-              {date.label && <span className="ml-2 text-sm text-base-content/60">({date.label})</span>}
+              {date.label && (
+                <span className="text-base-content/60 ml-2 text-sm">({date.label})</span>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -186,7 +188,7 @@ export function CalendarLinks({ eventDates, eventId }: CalendarLinksProps) {
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-base-content/60">
+      <p className="text-base-content/60 mt-4 text-xs">
         ※ カレンダーに追加すると、イベント日時を自動設定します。
       </p>
     </div>

@@ -48,7 +48,9 @@ describe('EventOpenForm', () => {
     // 正しいID
     fireEvent.change(input, { target: { value: 'abcdefghij' } });
     fireEvent.click(button);
-    expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/有効なイベントIDまたはURLを入力してください/),
+    ).not.toBeInTheDocument();
     expect(mockPush).toHaveBeenCalledWith('/event/abcdefghij');
 
     // 正しいURL
@@ -56,7 +58,9 @@ describe('EventOpenForm', () => {
       target: { value: 'https://example.com/event/klmnopqrst' },
     });
     fireEvent.click(button);
-    expect(screen.queryByText(/有効なイベントIDまたはURLを入力してください/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/有効なイベントIDまたはURLを入力してください/),
+    ).not.toBeInTheDocument();
     expect(mockPush).toHaveBeenCalledWith('/event/klmnopqrst');
   });
 });
