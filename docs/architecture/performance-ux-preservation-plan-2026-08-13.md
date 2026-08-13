@@ -66,12 +66,12 @@
 ### 4.1 実行環境
 
 - WSL / Node.js `v22.20.0`
-- Next.js 実インストール `16.2.3`
-- Supabase CLI 実インストール `2.84.5`
+- Next.js 実インストール `16.3.0`
+- Supabase CLI 実インストール `2.108.0`
 - ローカルSupabase: `events 159件 / event_dates 3,455件 / participants 197件 / availabilities 1,349件`
 - 本番ビルド: コンパイル約5.0秒、TypeScript約6.4秒、静的13ページ生成
 
-注意: `package.json` は Next.js `^16.2.6`、Supabase CLI `^2.108.0` を要求する一方、既存 `node_modules` は古い。改善前に `npm ci` でlockfile基準の再現環境を作り、測定条件を統一する必要がある。
+初回監査では`package.json`と既存`node_modules`に差があったが、`npm ci`でlockfile基準へ復元した。改善実装ではNode.js 22、npm 10.9、Next.js 16.3、Supabase CLI 2.108へ揃えている。
 
 ### 4.2 イベント詳細
 
@@ -329,6 +329,8 @@ Next.jsのlazy loadingはClient Componentとライブラリを必要時まで遅
 - `flatted`
 - `follow-redirects`
 - `picomatch`
+
+2026-08-13の実装で上記候補はすべて直接利用がないことを再確認し、依存から削除した。
 
 実施前に、設定ファイル、テスト、CLI、transitive dependencyを確認する。1パッケージずつ削除し、lockfile、build、unit、E2Eを通す。削除は主にインストール・CI・供給網・保守コストへ効くものであり、未使用依存の削除を画面JavaScript改善として過大評価しない。
 

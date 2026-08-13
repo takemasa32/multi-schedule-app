@@ -573,7 +573,12 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
     });
   }, [handleWindowMouseMove, handleWindowMouseUp]);
 
-  endMouseDragRef.current = endMouseDrag;
+  useEffect(() => {
+    endMouseDragRef.current = endMouseDrag;
+    return () => {
+      endMouseDragRef.current = () => {};
+    };
+  }, [endMouseDrag]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
