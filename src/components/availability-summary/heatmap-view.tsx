@@ -20,6 +20,7 @@ const DARK_THEME_NAMES = new Set([
 const HEATMAP_CELL_RADIUS = '0.4rem';
 const HEATMAP_JOIN_BLEED_PX = 1;
 const HEATMAP_FADE_TRANSITION = 'background-color 220ms ease, filter 220ms ease, color 220ms ease';
+const MOBILE_WEEKDAY_FORMATTER = new Intl.DateTimeFormat('ja-JP', { weekday: 'short' });
 
 /**
  * テーマ名からダークテーマかどうかを判定する
@@ -812,6 +813,10 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
       }),
     [cellVisuals, uniqueDates, uniqueTimeSlots],
   );
+  const dateIsoValues = useMemo(
+    () => uniqueDates.map((dateInfo) => dateInfo.dateObj.toISOString()),
+    [uniqueDates],
+  );
 
   return (
     <div
@@ -845,16 +850,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
               <th className="bg-base-200 border-base-300 sticky left-0 top-0 isolate z-30 min-w-[50px] border-r px-1 py-1 text-left text-xs sm:min-w-[64px] sm:px-1.5 sm:py-2 sm:text-sm">
                 時間
               </th>
-              {uniqueDates.map((dateInfo, index, arr) => {
+              {uniqueDates.map((dateInfo, index) => {
                 const optimizedDisplay = getOptimizedDateDisplay(
                   dateInfo.dateObj.toISOString(),
                   index,
-                  arr.map((d) => d.dateObj.toISOString()),
+                  dateIsoValues,
                 );
                 const mobileMonthDay = `${dateInfo.dateObj.getMonth() + 1}/${dateInfo.dateObj.getDate()}`;
-                const mobileWeekday = dateInfo.dateObj.toLocaleDateString('ja-JP', {
-                  weekday: 'short',
-                });
+                const mobileWeekday = MOBILE_WEEKDAY_FORMATTER.format(dateInfo.dateObj);
                 // 列ヘッダーでも過去日程かどうかを判定し、視覚的な強調を行う
                 // SSR時（startOfToday === null or isDarkTheme === null）はスタイルを適用しない
                 const dateOnly = new Date(dateInfo.dateObj);
