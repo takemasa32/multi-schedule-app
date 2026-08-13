@@ -4,6 +4,7 @@ import {
   fetchUserAvailabilitySyncPreviewResult,
   fetchUserScheduleBounds,
   fetchUserScheduleBlocks,
+  getUserScheduleContext,
   saveParticipantAnswerAsUserSchedule,
   saveUserScheduleBlockChanges,
   saveAvailabilityOverrides,
@@ -22,6 +23,40 @@ jest.mock('@/lib/supabase', () => ({
 
 const mockedGetAuthSession = getAuthSession as jest.Mock;
 const mockedCreateSupabaseAdmin = createSupabaseAdmin as jest.Mock;
+
+describe('getUserScheduleContext', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('解決済みの未認証状態ではセッションとDBを再取得しない', async () => {
+    const result = await getUserScheduleContext('event-1', [], null);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        isAuthenticated: false,
+        lockedDateIds: [],
+        autoFillAvailabilities: {},
+      }),
+    );
+    expect(mockedGetAuthSession).not.toHaveBeenCalled();
+    expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
+  });
+
+  it('解決済みユーザーの日程が空ならDBを取得せず認証状態を返す', async () => {
+    const result = await getUserScheduleContext('event-1', [], 'user-1');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        isAuthenticated: true,
+        lockedDateIds: [],
+        autoFillAvailabilities: {},
+      }),
+    );
+    expect(mockedGetAuthSession).not.toHaveBeenCalled();
+    expect(mockedCreateSupabaseAdmin).not.toHaveBeenCalled();
+  });
+});
 
 const createRangeMock = <T>(pages: T[][]) =>
   jest.fn((from: number) =>

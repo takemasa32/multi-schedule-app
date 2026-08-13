@@ -715,7 +715,7 @@ export async function submitAvailability(
     }
 
     type NonCriticalTaskResult = {
-      task: 'event_history' | 'user_event_link';
+      task: 'event_history';
       success: boolean;
       message?: string;
       detail?: unknown;
@@ -747,36 +747,6 @@ export async function submitAvailability(
               task: 'event_history',
               success: false,
               message: 'イベント履歴同期で例外が発生しました',
-              detail: error,
-            } satisfies NonCriticalTaskResult;
-          }
-        })(),
-      );
-    }
-
-    if (userId && persistedParticipantId) {
-      nonCriticalTasks.push(
-        (async () => {
-          try {
-            const result = await upsertUserEventLink({
-              userId,
-              eventId,
-              participantId: persistedParticipantId,
-            });
-            if (!result.success) {
-              return {
-                task: 'user_event_link',
-                success: false,
-                message: result.message || 'イベント紐づけ更新に失敗しました',
-                detail: result,
-              } satisfies NonCriticalTaskResult;
-            }
-            return { task: 'user_event_link', success: true } satisfies NonCriticalTaskResult;
-          } catch (error) {
-            return {
-              task: 'user_event_link',
-              success: false,
-              message: 'イベント紐づけ更新で例外が発生しました',
               detail: error,
             } satisfies NonCriticalTaskResult;
           }
