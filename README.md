@@ -211,6 +211,7 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 
 ## ドキュメント
 
+- [既存回答編集メニューの再発防止設計（2026-08-13）](docs/architecture/existing-answer-menu-2026-08-13.md)
 - [見た目・使い勝手を維持する性能 / UX 改善方針（2026-08-13）](docs/architecture/performance-ux-preservation-plan-2026-08-13.md)
 - [現行プロダクト総合監査（2026-07-29）](docs/audit/2026-07-29-product-audit.md)
 - [過去の実装意図と今後の継承方針（2026-07-29）](docs/architecture/implementation-intent-review-2026-07-29.md)

@@ -7,6 +7,7 @@ import { addEventToHistory, EVENT_HISTORY_SYNC_MAX_ITEMS } from '@/lib/utils';
 import { recordEventHistory } from '@/lib/event-history-actions';
 import { useSession } from 'next-auth/react';
 import EventAnswerLinkEditor from '@/components/event-client/event-answer-link-editor';
+import ExistingAnswerMenu from '@/components/event-client/existing-answer-menu';
 
 import { EventDate } from './event-details-section';
 
@@ -163,36 +164,11 @@ export default function EventFormSection({
             </Link>
             {/* 既存の回答を編集ボタン（参加者が1人以上いる場合のみ） */}
             {participants.length > 0 && (
-              <div className="dropdown dropdown-bottom dropdown-end relative">
-                <button type="button" className="btn btn-outline">
-                  既存の回答を編集
-                </button>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu bg-base-100 border-base-300 absolute z-[100] mt-2 max-h-60 w-56 overflow-y-auto rounded-lg border p-2 shadow-lg"
-                  style={{ maxHeight: '300px' }}
-                >
-                  {linkedParticipantId && (
-                    <li>
-                      <Link
-                        href={`/event/${event.public_token}/input?participant_id=${linkedParticipantId}`}
-                      >
-                        自分の回答を編集
-                      </Link>
-                    </li>
-                  )}
-                  {participants.map((participant) => (
-                    <li key={participant.id}>
-                      <Link
-                        href={`/event/${event.public_token}/input?participant_id=${participant.id}`}
-                      >
-                        {participant.name}
-                        {participant.id === linkedParticipantId ? '（自分）' : ''}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ExistingAnswerMenu
+                eventPublicToken={event.public_token}
+                linkedParticipantId={linkedParticipantId}
+                participants={participants}
+              />
             )}
           </div>
         </div>

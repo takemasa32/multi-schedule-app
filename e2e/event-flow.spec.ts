@@ -269,13 +269,39 @@ test.describe.serial('イベントE2Eフロー', () => {
     await gotoWithRetry(page, eventAdminUrl);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000); // 安定化
-    await page.getByRole('button', { name: /既存の回答を編集/ }).click();
+    const editAnswerButton = page.getByRole('button', { name: /既存の回答を編集/ });
+    const editAnswerMenu = page.getByRole('menu', { name: '編集する回答を選択' });
+
+    await editAnswerButton.click();
+    await expect(editAnswerButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(editAnswerMenu).toBeVisible();
+    await editAnswerButton.press('ArrowDown');
+    await expect(editAnswerMenu.getByRole('menuitem').first()).toBeFocused();
+
+    // モバイルでもメニュー全体がビューポート内に収まることを確認する。
+    const desktopViewport = page.viewportSize() ?? { width: 1280, height: 720 };
+    await editAnswerButton.click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await editAnswerButton.click();
+    await expect(editAnswerMenu).toBeVisible();
+    const mobileMenuBox = await editAnswerMenu.boundingBox();
+    expect(mobileMenuBox).not.toBeNull();
+    expect(mobileMenuBox!.x).toBeGreaterThanOrEqual(0);
+    expect(mobileMenuBox!.x + mobileMenuBox!.width).toBeLessThanOrEqual(390);
+
+    // Escapeで閉じ、トリガーへフォーカスが戻ることを確認する。
+    await page.keyboard.press('Escape');
+    await expect(editAnswerButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(editAnswerButton).toBeFocused();
+
+    await page.setViewportSize(desktopViewport);
+    await editAnswerButton.click();
 
     const originalParticipantName = await page
-      .getByRole('link', { name: '週表示参加者' })
+      .getByRole('menuitem', { name: '週表示参加者' })
       .textContent();
     const participantNamePrefix = originalParticipantName?.split(' ')[0] || '週表示参加者';
-    await page.getByRole('link', { name: new RegExp(`^${participantNamePrefix}`) }).click();
+    await page.getByRole('menuitem', { name: new RegExp(`^${participantNamePrefix}`) }).click();
     await page.waitForURL(/\/input\?participant_id=/);
     await page.getByRole('button', { name: '次へ' }).click();
     await page.getByRole('button', { name: '確認へ進む' }).click();
