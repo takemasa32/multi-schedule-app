@@ -91,4 +91,20 @@ describe('ExistingAnswerMenu', () => {
     fireEvent.keyDown(firstItem, { key: 'ArrowDown' });
     expect(screen.getByRole('menuitem', { name: '佐藤花子' })).toHaveFocus();
   });
+
+  test('クリックで開いた後の下矢印キーでも先頭項目へ移動する', () => {
+    render(
+      <ExistingAnswerMenu
+        eventPublicToken="event-token"
+        linkedParticipantId={null}
+        participants={participants}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: '既存の回答を編集' });
+    fireEvent.click(button);
+    fireEvent.keyDown(button, { key: 'ArrowDown' });
+
+    expect(screen.getByRole('menuitem', { name: '田中太郎' })).toHaveFocus();
+  });
 });

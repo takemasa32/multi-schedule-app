@@ -12,9 +12,9 @@ interface ExistingAnswerMenuProps {
 
 /**
  * 既存回答の編集対象を選択するメニュー。
- * @param eventPublicToken イベントの公開トークン
- * @param linkedParticipantId 現在の利用者に紐づく参加者ID
- * @param participants 回答済み参加者の一覧
+ * @param eventPublicToken {string} イベントの公開トークン
+ * @param linkedParticipantId {string | null} 現在の利用者に紐づく参加者ID
+ * @param participants {{ id: string; name: string }[]} 回答済み参加者の一覧
  * @returns 明示的な開閉状態とキーボード操作を備えた編集メニュー
  */
 export default function ExistingAnswerMenu({
@@ -61,9 +61,18 @@ export default function ExistingAnswerMenu({
     }
   }, [isOpen]);
 
+  const focusFirstMenuItem = () => {
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  };
+
   const handleButtonKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowDown') return;
     event.preventDefault();
+    if (isOpen) {
+      focusFirstMenuItem();
+      focusFirstItemOnOpenRef.current = false;
+      return;
+    }
     focusFirstItemOnOpenRef.current = true;
     setIsOpen(true);
   };

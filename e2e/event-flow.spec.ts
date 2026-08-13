@@ -275,6 +275,8 @@ test.describe.serial('イベントE2Eフロー', () => {
     await editAnswerButton.click();
     await expect(editAnswerButton).toHaveAttribute('aria-expanded', 'true');
     await expect(editAnswerMenu).toBeVisible();
+    await editAnswerButton.press('ArrowDown');
+    await expect(editAnswerMenu.getByRole('menuitem').first()).toBeFocused();
 
     // モバイルでもメニュー全体がビューポート内に収まることを確認する。
     const desktopViewport = page.viewportSize() ?? { width: 1280, height: 720 };
