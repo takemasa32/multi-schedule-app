@@ -112,6 +112,7 @@ npm run dev
 | `SUPABASE_DB_PASSWORD`      | Supabase ローカル DB のパスワード         |
 | `NEXTAUTH_SECRET`           | NextAuth の署名用シークレット             |
 | `NEXTAUTH_URL`              | アプリのベース URL                        |
+| `NEXT_PUBLIC_GOOGLE_ANALYTICS` | GA4 の測定 ID（開発環境では送信しない） |
 | `GOOGLE_CLIENT_ID`          | Google ログイン用クライアント ID          |
 | `GOOGLE_CLIENT_SECRET`      | Google ログイン用クライアントシークレット |
 
@@ -230,6 +231,7 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 - [AI駆動開発におけるデザイン品質ガイド](docs/architecture/ai-driven-design-guidelines.md)
 - [デザイン改善メモ（2026-05-11）](docs/architecture/design-refresh-2026-05-11.md)
 - [アイコン操作のサイズ設計（2026-07-13）](docs/architecture/icon-action-sizing-2026-07-13.md)
+- [GA4 計測設計](docs/architecture/ga4-measurement.md)
 - [Googleログインとイベント履歴同期の設計](docs/auth/google-login-design.md)
 
 ## ライセンス

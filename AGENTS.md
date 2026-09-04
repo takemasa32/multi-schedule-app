@@ -56,6 +56,7 @@
 
 - コミットメッセージは **日本語 + Conventional Commits**（例: `feat: OOOを追加`）。
 - GitHub Flow を前提とし、`main` から切った短命ブランチを `main` 向け PR で統合する。
+- ブランチ名に `codex/` プレフィックスを付けず、変更内容に応じた簡潔な名前を使用する。
 - 大きな変更はドラフト PR で早期共有し、仕様検討は `/docs/architecture` にまとめてから着手。
 - PR テンプレートの必須項目（目的 / 変更点 / 動作確認 / 影響範囲 / スクショ / 関連 Issue）を満たす。
 - GitHubへ日本語本文を送る処理はWSL内でUTF-8のまま完結させる。Windows PowerShellのhere-stringやパイプを`gh --body-file -`へ渡さない。

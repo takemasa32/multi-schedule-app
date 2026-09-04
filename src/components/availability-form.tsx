@@ -10,6 +10,7 @@ import { addDays, endOfWeek, startOfWeek } from 'date-fns';
 import WeekNavigationBar from './week-navigation-bar';
 import { useRouter } from 'next/navigation';
 import ConfirmationModal from './common/confirmation-modal';
+import { toAnalyticsBoolean, trackEvent } from '@/components/analytics/google-analytics';
 
 interface AvailabilityFormProps {
   eventId: string;
@@ -111,6 +112,47 @@ export default function AvailabilityForm({
   const hasAutoFillAppliedRef = useRef(false);
   const wizardTitleRef = useRef<HTMLHeadingElement | null>(null);
   const previousStepRef = useRef<WizardStep | null>(null);
+  const entryAuthStateRef = useRef<'authenticated' | 'guest'>(
+    isAuthenticated ? 'authenticated' : 'guest',
+  );
+  const answerStartedKeyRef = useRef<string | null>(null);
+  const completedAnswerStepsRef = useRef(new Set<string>());
+  const weeklyUsedRef = useRef(false);
+  const answerSuccessTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isNewMode) return;
+    const funnelKey = `${eventId}:new`;
+    if (answerStartedKeyRef.current === funnelKey) return;
+    if (
+      trackEvent('answer_started', {
+        auth_state: entryAuthStateRef.current,
+      })
+    ) {
+      answerStartedKeyRef.current = funnelKey;
+    }
+  }, [eventId, isNewMode]);
+
+  const trackAnswerStepCompleted = useCallback(
+    (step: 'name' | 'weekly' | 'availability', weeklyUsed?: boolean) => {
+      if (!isNewMode || completedAnswerStepsRef.current.has(step)) return;
+      const params: {
+        step: 'name' | 'weekly' | 'availability';
+        auth_state: 'authenticated' | 'guest';
+        weekly_used?: 'yes' | 'no';
+      } = {
+        step,
+        auth_state: entryAuthStateRef.current,
+      };
+      if (weeklyUsed !== undefined) {
+        params.weekly_used = toAnalyticsBoolean(weeklyUsed);
+      }
+      if (trackEvent('answer_step_completed', params)) {
+        completedAnswerStepsRef.current.add(step);
+      }
+    },
+    [isNewMode],
+  );
 
   // エラー発生時に自動スクロール
   useScrollToError(error, errorRef);
@@ -464,6 +506,21 @@ export default function AvailabilityForm({
         const response = await submitAvailability(formData);
 
         if (response.success) {
+          if (!answerSuccessTrackedRef.current) {
+            const authState = isAuthenticated ? 'authenticated' : 'guest';
+            const tracked = isNewMode
+              ? trackEvent('answer_submitted', {
+                  auth_state: authState,
+                  weekly_used: toAnalyticsBoolean(weeklyUsedRef.current),
+                })
+              : trackEvent('answer_edited', {
+                  auth_state: authState,
+                  weekly_used: toAnalyticsBoolean(weeklyUsedRef.current),
+                });
+            if (tracked) {
+              answerSuccessTrackedRef.current = true;
+            }
+          }
           const hasPartialSyncWarning = response.warningCodes?.includes(
             'POST_SYNC_PARTIAL_FAILURE',
           );
@@ -482,7 +539,15 @@ export default function AvailabilityForm({
         setIsSubmitting(false);
       }
     },
-    [initialParticipant?.id, mode, overrideDateIds, publicToken, router],
+    [
+      initialParticipant?.id,
+      isAuthenticated,
+      isNewMode,
+      mode,
+      overrideDateIds,
+      publicToken,
+      router,
+    ],
   );
 
   const promptSyncScope = useCallback(
@@ -507,6 +572,7 @@ export default function AvailabilityForm({
         setError('お名前を入力してください');
         return;
       }
+      trackAnswerStepCompleted('name');
       setCurrentStep(weeklyStep ?? heatmapStep);
       return;
     }
@@ -521,6 +587,7 @@ export default function AvailabilityForm({
         showMissingAvailabilityError();
         return;
       }
+      trackAnswerStepCompleted('availability', weeklyUsedRef.current);
       setCurrentStep(confirmStep);
     }
   }, [
@@ -531,6 +598,7 @@ export default function AvailabilityForm({
     name,
     selectedDates,
     showMissingAvailabilityError,
+    trackAnswerStepCompleted,
     weeklyStep,
   ]);
 
@@ -813,6 +881,7 @@ export default function AvailabilityForm({
   const applyWeekdaySelections = useCallback(() => {
     // 更新する日程の選択状態を準備
     const newSelectedDates = { ...selectedDates };
+    let didApply = false;
 
     // 選択された曜日と時間帯のデータを処理
     Object.entries(weekdaySelections).forEach(([day, daySchedule]) => {
@@ -835,9 +904,11 @@ export default function AvailabilityForm({
           // 時間帯ごとの設定がある場合のみ適用する
           // 週入力の選択を優先（既存の選択を上書き）
           if (daySchedule.timeSlots[timeKey] !== undefined) {
-            newSelectedDates[date.id] = daySchedule.selected
-              ? daySchedule.timeSlots[timeKey]
-              : false;
+            const nextValue = daySchedule.selected ? daySchedule.timeSlots[timeKey] : false;
+            if (Boolean(newSelectedDates[date.id]) !== nextValue) {
+              didApply = true;
+            }
+            newSelectedDates[date.id] = nextValue;
           }
         }
       });
@@ -845,6 +916,10 @@ export default function AvailabilityForm({
 
     // 状態を更新
     setSelectedDates(newSelectedDates);
+    if (didApply) {
+      weeklyUsedRef.current = true;
+    }
+    return didApply;
   }, [
     weekdaySelections,
     eventDates,
@@ -860,9 +935,10 @@ export default function AvailabilityForm({
 
   const handleProceedFromWeeklyStep = useCallback(() => {
     setError(null);
-    applyWeekdaySelections();
+    const weeklyUsed = applyWeekdaySelections();
+    trackAnswerStepCompleted('weekly', weeklyUsed);
     proceedToHeatmap();
-  }, [applyWeekdaySelections, proceedToHeatmap]);
+  }, [applyWeekdaySelections, proceedToHeatmap, trackAnswerStepCompleted]);
 
   const selectedAvailableCount = useMemo(
     () => Object.values(selectedDates).filter(Boolean).length,

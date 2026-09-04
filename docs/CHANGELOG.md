@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-09-04
+
+- Google tag / GA4 の型付きイベント計測を追加し、作成・回答・共有・確定・Google OAuth 成功の操作ファネルを集計できるよう変更。
+- ページビューとイベント payload のパス、タイトル、リファラーを allowlist でサニタイズし、公開トークン、参加者情報、イベント内容、カレンダー URL を送らない境界を追加。
+- GA4 のイベント契約、管理画面設定、Enhanced measurement の無効化、GA ファネルと DB KPI の違いを `docs/architecture/ga4-measurement.md` に記録。
+
 ## 2026-08-13
 
 - 「既存の回答を編集」を明示的な開閉状態へ変更し、再クリック、外側操作、Escape、下矢印と支援技術向け状態通知に対応。

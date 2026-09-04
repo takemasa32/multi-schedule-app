@@ -1,12 +1,18 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ShareEventButton from '../share-event-button';
+import { trackEvent } from '@/components/analytics/google-analytics';
+
+jest.mock('@/components/analytics/google-analytics', () => ({
+  trackEvent: jest.fn(),
+}));
 
 // navigator.share, navigator.clipboard のモック
 const originalShare = navigator.share;
 
 // 元のclipboardプロパティ記述子を保存しておく
 const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(window.navigator, 'clipboard');
+const originalExecCommand = document.execCommand;
 
 describe('ShareEventButton', () => {
   const url = 'https://example.com/event/abc123';
@@ -22,6 +28,8 @@ describe('ShareEventButton', () => {
       Object.defineProperty(window.navigator, 'clipboard', originalClipboardDescriptor);
     }
 
+    document.execCommand = originalExecCommand;
+
     // Jest モックをクリア
     jest.clearAllMocks();
   });
@@ -33,6 +41,10 @@ describe('ShareEventButton', () => {
     fireEvent.click(screen.getByRole('button', { name: /共有/ }));
     await waitFor(() => {
       expect(shareMock).toHaveBeenCalledWith({ url, title, text });
+    });
+    expect(trackEvent).toHaveBeenCalledWith('share', {
+      method: 'web_share',
+      content_type: 'event',
     });
   });
 
@@ -49,6 +61,10 @@ describe('ShareEventButton', () => {
     await waitFor(() => {
       expect(writeTextMock).toHaveBeenCalledWith(url);
     });
+    expect(trackEvent).toHaveBeenCalledWith('share', {
+      method: 'clipboard',
+      content_type: 'event',
+    });
   });
 
   it('navigator.share/clipboardが両方使えない場合はinput要素でコピーされる', async () => {
@@ -63,6 +79,10 @@ describe('ShareEventButton', () => {
     fireEvent.click(screen.getByRole('button', { name: /共有/ }));
     await waitFor(() => {
       expect(document.execCommand).toHaveBeenCalledWith('copy');
+    });
+    expect(trackEvent).toHaveBeenCalledWith('share', {
+      method: 'fallback',
+      content_type: 'event',
     });
   });
 
@@ -114,5 +134,34 @@ describe('ShareEventButton', () => {
 
     // フォールバック機能が呼ばれることを確認（詳細な値の確認は実際のブラウザテストに委ねる）
     expect(document.execCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it('Web Shareのキャンセルや失敗時は共有イベントを送らない', async () => {
+    const shareMock = jest.fn().mockRejectedValue(new Error('cancelled'));
+    navigator.share = shareMock;
+    render(<ShareEventButton url={url} />);
+    fireEvent.click(screen.getByRole('button', { name: /共有/ }));
+
+    await waitFor(() => {
+      expect(shareMock).toHaveBeenCalled();
+    });
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it('fallbackコピーが失敗した場合は共有イベントを送らない', async () => {
+    // @ts-expect-error navigator.shareの型上書き
+    navigator.share = undefined;
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    });
+    document.execCommand = jest.fn().mockReturnValue(false);
+    render(<ShareEventButton url={url} />);
+    fireEvent.click(screen.getByRole('button', { name: /共有/ }));
+
+    await waitFor(() => {
+      expect(document.execCommand).toHaveBeenCalledWith('copy');
+    });
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 });

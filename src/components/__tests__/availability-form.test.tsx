@@ -7,6 +7,7 @@ if (!window.HTMLFormElement.prototype.requestSubmit) {
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AvailabilityForm from '../availability-form';
+import { trackEvent } from '@/components/analytics/google-analytics';
 
 const mockRouterReplace = jest.fn();
 const mockRouterPush = jest.fn();
@@ -20,6 +21,11 @@ jest.mock('next/navigation', () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
   }),
+}));
+
+jest.mock('@/components/analytics/google-analytics', () => ({
+  trackEvent: jest.fn(),
+  toAnalyticsBoolean: (value: boolean) => (value ? 'yes' : 'no'),
 }));
 
 import { submitAvailability, checkParticipantExists } from '@/lib/actions';
@@ -56,6 +62,7 @@ describe('AvailabilityForm', () => {
     localStorage.clear();
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
     (submitAvailability as jest.Mock).mockResolvedValue({ success: true, participantId: 'part-1' });
+    (trackEvent as jest.Mock).mockReturnValue(true);
   });
 
   const goToWeeklyStepAsGuest = () => {
@@ -531,6 +538,13 @@ describe('AvailabilityForm', () => {
     expect(mockRouterReplace).toHaveBeenCalledWith(
       '/event/token1/input/complete?participant_id=part-1',
     );
+    expect(trackEvent).toHaveBeenCalledWith('answer_submitted', {
+      auth_state: 'authenticated',
+      weekly_used: 'no',
+    });
+    expect(
+      (trackEvent as jest.Mock).mock.calls.filter(([name]) => name === 'answer_submitted'),
+    ).toHaveLength(1);
   });
 
   it('他イベント反映対象がある場合も回答送信だけを先に完了する', async () => {
@@ -566,6 +580,64 @@ describe('AvailabilityForm', () => {
     expect(mockRouterReplace).toHaveBeenCalledWith(
       '/event/token1/input/complete?participant_id=part-1',
     );
+  });
+
+  it('編集回答の保存成功では answer_edited を送り、新規回答イベントを送らない', async () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="edit"
+        isAuthenticated
+        initialParticipant={{ id: 'p1', name: '既存ユーザー' }}
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    fireEvent.click(screen.getByRole('button', { name: '回答を更新する' }));
+
+    await waitFor(() => {
+      expect(submitAvailability).toHaveBeenCalled();
+      expect(mockRouterReplace).toHaveBeenCalledWith(
+        '/event/token1/input/complete?participant_id=part-1',
+      );
+    });
+    expect(trackEvent).toHaveBeenCalledWith('answer_edited', {
+      auth_state: 'authenticated',
+      weekly_used: 'no',
+    });
+    expect(trackEvent).not.toHaveBeenCalledWith(
+      'answer_submitted',
+      expect.anything(),
+    );
+  });
+
+  it('回答保存が失敗した場合は成功イベントを送らない', async () => {
+    (submitAvailability as jest.Mock).mockResolvedValue({
+      success: false,
+      message: '保存に失敗しました',
+    });
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    fireEvent.click(screen.getByRole('button', { name: '回答を送信' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('保存に失敗しました')).toBeInTheDocument();
+    });
+    expect(trackEvent).not.toHaveBeenCalledWith('answer_submitted', expect.anything());
+    expect(mockRouterReplace).not.toHaveBeenCalled();
   });
 
   it('確認画面の名前欄は重複エラー時のみ表示する', async () => {

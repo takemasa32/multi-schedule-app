@@ -10,6 +10,7 @@ import { TimeSlot, addEventToHistory, EVENT_HISTORY_SYNC_MAX_ITEMS } from '@/lib
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
 import WizardProgress from './common/wizard-progress';
+import { normalizeIntervalUnit, trackEvent } from '@/components/analytics/google-analytics';
 
 type CreateEventSuccess = Extract<CreateEventActionResult, { success: true }>;
 
@@ -60,6 +61,32 @@ export default function EventFormClient() {
   const errorRef = useRef<HTMLDivElement | null>(null);
   const stepIndicatorRef = useRef<HTMLDivElement | null>(null);
   const lastStepRef = useRef<{ currentStep: Step; step2SubStep: Step2SubStep } | null>(null);
+  const createStartedTrackedRef = useRef(false);
+  const completedCreateStepsRef = useRef(new Set<string>());
+  const eventCreatedTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (createStartedTrackedRef.current) return;
+    if (trackEvent('create_started', {})) {
+      createStartedTrackedRef.current = true;
+    }
+  }, []);
+
+  const trackCreateStepCompleted = (
+    step: 'event_info' | 'input_mode' | 'candidate_settings' | 'manual_calendar' | 'confirmation',
+  ) => {
+    if (completedCreateStepsRef.current.has(step)) return;
+    const params: {
+      step: 'event_info' | 'input_mode' | 'candidate_settings' | 'manual_calendar' | 'confirmation';
+      input_mode?: 'auto' | 'manual';
+    } = { step };
+    if (inputMode) {
+      params.input_mode = inputMode;
+    }
+    if (trackEvent('create_step_completed', params)) {
+      completedCreateStepsRef.current.add(step);
+    }
+  };
 
   // 入力方式変更時に表示するスロットを更新
   useEffect(() => {
@@ -117,6 +144,7 @@ export default function EventFormClient() {
     setError(null);
     if (currentStep === 1) {
       if (!validateStep1()) return;
+      trackCreateStepCompleted('event_info');
       setCurrentStep(2);
       setStep2SubStep('mode');
       return;
@@ -124,6 +152,7 @@ export default function EventFormClient() {
 
     if (currentStep === 2 && step2SubStep === 'mode') {
       if (!validateStep2Mode()) return;
+      trackCreateStepCompleted('input_mode');
       setStep2SubStep('settings');
       return;
     }
@@ -140,16 +169,19 @@ export default function EventFormClient() {
           setManualSlots([]);
           setManualSelectionSettingsKey(null);
         }
+        trackCreateStepCompleted('candidate_settings');
         setStep2SubStep('calendar');
         return;
       }
       if (!validateStep2Settings()) return;
+      trackCreateStepCompleted('candidate_settings');
       setCurrentStep(3);
       return;
     }
 
     if (currentStep === 2 && step2SubStep === 'calendar') {
       if (!validateStep2Settings()) return;
+      trackCreateStepCompleted('manual_calendar');
       setCurrentStep(3);
       return;
     }
@@ -258,6 +290,17 @@ export default function EventFormClient() {
         if (!result.publicToken) {
           setError('イベント作成中にエラーが発生しました');
           return;
+        }
+
+        trackCreateStepCompleted('confirmation');
+        if (!eventCreatedTrackedRef.current && inputMode) {
+          const tracked = trackEvent('event_created', {
+            input_mode: inputMode,
+            interval_unit: normalizeIntervalUnit(sharedSettings?.intervalUnit),
+          });
+          if (tracked) {
+            eventCreatedTrackedRef.current = true;
+          }
         }
 
         // リダイレクト前に履歴に追加（ローカルストレージ）

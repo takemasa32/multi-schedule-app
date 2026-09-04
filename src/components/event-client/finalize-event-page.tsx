@@ -11,6 +11,7 @@ import WeekNavigationBar from '@/components/week-navigation-bar';
 import useScrollToError from '@/hooks/useScrollToError';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
+import { toAnalyticsBoolean, trackEvent } from '@/components/analytics/google-analytics';
 
 type FinalizeEventPageProps = {
   eventId: string;
@@ -78,6 +79,19 @@ export default function FinalizeEventPage({
   const [error, setError] = useState<string | null>(null);
   const [weekIndex, setWeekIndex] = useState(0);
   const errorRef = useRef<HTMLDivElement | null>(null);
+  const finalizeStartedTrackedRef = useRef(false);
+  const finalizationSuccessTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (finalizeStartedTrackedRef.current) return;
+    if (
+      trackEvent('finalize_started', {
+        has_existing_finalization: toAnalyticsBoolean(finalizedDateIds.length > 0),
+      })
+    ) {
+      finalizeStartedTrackedRef.current = true;
+    }
+  }, [finalizedDateIds.length]);
 
   useScrollToError(error, errorRef);
 
@@ -366,6 +380,20 @@ export default function FinalizeEventPage({
         setConfirmationKind(null);
         setIsProcessing(false);
         return;
+      }
+
+      if (!finalizationSuccessTrackedRef.current) {
+        const tracked =
+          selectedDateIds.length === 0
+            ? trackEvent('event_unfinalized', {})
+            : finalizedDateIds.length === 0
+              ? trackEvent('event_finalized', { selection_count: selectedDateIds.length })
+              : trackEvent('event_finalization_updated', {
+                  selection_count: selectedDateIds.length,
+                });
+        if (tracked) {
+          finalizationSuccessTrackedRef.current = true;
+        }
       }
 
       const status = selectedDateIds.length === 0 ? 'cleared' : 'saved';

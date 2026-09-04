@@ -4,6 +4,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import PostgresAdapter from '@auth/pg-adapter';
 import { Pool } from 'pg';
+import { cookies } from 'next/headers';
+import { GOOGLE_LOGIN_MARKER_COOKIE } from '@/lib/google-login-marker';
 
 const createAuthPool = () => {
   const databaseUrl = process.env.SUPABASE_DB_URL;
@@ -101,6 +103,24 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: sessionStrategy,
+  },
+  events: {
+    async signIn({ account }) {
+      if (account?.provider !== 'google') return;
+
+      try {
+        const cookieStore = await cookies();
+        cookieStore.set(GOOGLE_LOGIN_MARKER_COOKIE, '1', {
+          httpOnly: false,
+          maxAge: 60,
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
+      } catch {
+        // ログインを成功させるため、計測用マーカーの失敗は無視する
+      }
+    },
   },
   callbacks: {
     session({ session, user, token }) {

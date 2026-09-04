@@ -2,6 +2,11 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import siteConfig from '@/lib/site-config';
+import {
+  trackEvent,
+  type ShareContentType,
+  type ShareMethod,
+} from '@/components/analytics/google-analytics';
 
 interface ShareEventButtonProps {
   url: string;
@@ -12,6 +17,8 @@ interface ShareEventButtonProps {
   ariaLabel?: string;
   /** クリップボード使用時にテキストも含めるかどうか（デフォルト: false、URLのみ） */
   includeTextInClipboard?: boolean;
+  /** GA4 に送る共有対象の分類（デフォルト: 通常のイベント共有） */
+  contentType?: ShareContentType;
 }
 
 export default function ShareEventButton({
@@ -22,6 +29,7 @@ export default function ShareEventButton({
   label = 'イベントを共有',
   ariaLabel = 'イベントURLを共有',
   includeTextInClipboard = false,
+  contentType = 'event',
 }: ShareEventButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
 
@@ -29,17 +37,20 @@ export default function ShareEventButton({
     if (isSharing) return;
     setIsSharing(true);
     try {
+      let method: ShareMethod;
       if (navigator.share) {
         await navigator.share({
           url,
           title: title || siteConfig.share.defaultTitle,
           text: text || siteConfig.share.defaultText,
         });
+        method = 'web_share';
         toast.success('リンクを共有しました');
       } else if (navigator.clipboard) {
         // クリップボードAPI使用時、設定に応じてテキストを含める
         const clipboardText = includeTextInClipboard && text ? `${text}\n${url}` : url;
         await navigator.clipboard.writeText(clipboardText);
+        method = 'clipboard';
         toast.success('URLをコピーしました');
       } else {
         // fallback: input要素で選択コピー
@@ -47,10 +58,23 @@ export default function ShareEventButton({
         const input = document.createElement('input');
         input.value = clipboardText;
         document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
+        try {
+          input.select();
+          const copied = document.execCommand('copy');
+          if (copied === false) {
+            throw new Error('クリップボードへのコピーに失敗しました');
+          }
+        } finally {
+          document.body.removeChild(input);
+        }
+        method = 'fallback';
         toast.success('URLをコピーしました');
+      }
+
+      try {
+        trackEvent('share', { method, content_type: contentType });
+      } catch {
+        // 計測の失敗で共有操作の成功を取り消さない
       }
     } catch {
       toast.error('共有に失敗しました');

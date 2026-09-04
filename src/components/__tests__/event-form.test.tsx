@@ -9,6 +9,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EventFormClient from '../event-form-client';
+import { normalizeIntervalUnit, trackEvent } from '@/components/analytics/google-analytics';
 
 // useRouterのモックを追加
 jest.mock('next/navigation', () => ({
@@ -24,11 +25,18 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/lib/actions', () => ({
   createEvent: jest.fn(),
 }));
+
+jest.mock('@/components/analytics/google-analytics', () => ({
+  normalizeIntervalUnit: jest.fn(() => '60'),
+  trackEvent: jest.fn(),
+}));
 import { createEvent } from '@/lib/actions';
 
 describe('EventFormClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (trackEvent as jest.Mock).mockReturnValue(true);
+    (normalizeIntervalUnit as jest.Mock).mockReturnValue('60');
   });
 
   it('タイトル未入力時はバリデーションエラーを表示する', async () => {
@@ -125,6 +133,13 @@ describe('EventFormClient', () => {
     await waitFor(() => {
       expect(createEvent).toHaveBeenCalled();
     });
+    expect(trackEvent).toHaveBeenCalledWith('event_created', {
+      input_mode: 'auto',
+      interval_unit: '60',
+    });
+    expect(
+      (trackEvent as jest.Mock).mock.calls.filter(([name]) => name === 'event_created'),
+    ).toHaveLength(1);
   });
 
   it('確認から戻っても手動選択が保持される', async () => {
