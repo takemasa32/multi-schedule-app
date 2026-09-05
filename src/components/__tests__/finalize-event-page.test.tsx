@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import FinalizeEventPage from '@/components/event-client/finalize-event-page';
 import { finalizeEvent } from '@/lib/actions';
+import { trackEvent } from '@/components/analytics/google-analytics';
 
 const pushMock = jest.fn();
 const replaceMock = jest.fn();
@@ -17,6 +18,11 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/lib/actions', () => ({
   finalizeEvent: jest.fn(),
+}));
+
+jest.mock('@/components/analytics/google-analytics', () => ({
+  trackEvent: jest.fn(),
+  toAnalyticsBoolean: (value: boolean) => (value ? 'yes' : 'no'),
 }));
 
 describe('FinalizeEventPage', () => {
@@ -53,6 +59,7 @@ describe('FinalizeEventPage', () => {
     jest.clearAllMocks();
     window.scrollTo = jest.fn();
     (finalizeEvent as jest.Mock).mockResolvedValue({ success: true });
+    (trackEvent as jest.Mock).mockReturnValue(true);
   });
 
   it('選択ステップから確認ステップへ進める', async () => {
@@ -78,6 +85,9 @@ describe('FinalizeEventPage', () => {
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/event/public-1?finalize_status=saved');
       expect(refreshMock).toHaveBeenCalled();
+    });
+    expect(trackEvent).toHaveBeenCalledWith('event_finalization_updated', {
+      selection_count: 1,
     });
   });
 
@@ -106,5 +116,36 @@ describe('FinalizeEventPage', () => {
     expect(await screen.findByRole('button', { name: 'この内容で解除する' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'この内容で解除する' }));
     expect(await screen.findByText('すべての確定を解除しますか？')).toBeInTheDocument();
+  });
+
+  it('解除保存が成功した場合は event_unfinalized を送る', async () => {
+    render(<FinalizeEventPage {...mockProps} />);
+
+    const selectedSwitch = screen.getByRole('switch', { name: '選択済み' });
+    fireEvent.pointerDown(selectedSwitch, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      buttons: 1,
+      clientX: 10,
+      clientY: 10,
+    });
+    fireEvent.pointerUp(selectedSwitch, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      buttons: 0,
+      clientX: 10,
+      clientY: 10,
+    });
+    fireEvent.click(screen.getByRole('button', { name: '内容を確認する' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'この内容で解除する' }));
+    fireEvent.click(await screen.findByRole('button', { name: '解除する' }));
+
+    await waitFor(() => {
+      expect(finalizeEvent).toHaveBeenCalledWith('event-1', []);
+      expect(replaceMock).toHaveBeenCalledWith('/event/public-1?finalize_status=cleared');
+    });
+    expect(trackEvent).toHaveBeenCalledWith('event_unfinalized', {});
   });
 });

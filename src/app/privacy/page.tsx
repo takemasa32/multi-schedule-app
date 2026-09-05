@@ -141,13 +141,14 @@ export default function PrivacyPolicyPage() {
         <li>目的：ログイン認証</li>
       </ul>
 
-      <h4 className="mb-2 mt-4 text-lg font-semibold">
-        (2) Google Tag Manager / Google Analytics（GTM経由で読み込み、gtagで送信）
-      </h4>
+      <h4 className="mb-2 mt-4 text-lg font-semibold">(2) Google tag / Google Analytics 4</h4>
       <ul className="mb-4 list-disc pl-6">
         <li>送信先：Google</li>
         <li>
-          送信される可能性のある情報：Cookie等の識別子、閲覧ページURL、参照元、端末/ブラウザ情報、IPアドレス等（解析に必要な範囲）
+          送信される可能性のある情報：Cookie等の識別子、サニタイズ済みのページパス・ページタイトル・参照元、端末/ブラウザ情報、作成・回答・共有・確定・ログインの操作種別やステップ、入力方式、選択件数等の集計用パラメータ
+        </li>
+        <li>
+          送信しない情報：イベントURLの公開トークン、参加者ID・名前、イベントのタイトル・説明、回答内容、候補日時・確定日程のID、カレンダー連携URLなど個別の内容
         </li>
         <li>目的：アクセス解析、利用状況把握、品質改善</li>
       </ul>

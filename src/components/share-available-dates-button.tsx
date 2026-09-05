@@ -74,6 +74,7 @@ export default function ShareAvailableDatesButton({
         ariaLabel="共通日程を共有"
         className="btn-sm mx-auto mt-2 md:ml-0"
         includeTextInClipboard={true}
+        contentType="available_dates"
       />
     </div>
   );

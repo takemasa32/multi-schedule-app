@@ -112,6 +112,7 @@ export default function EventFormSection({
                 label="確定日程を共有"
                 ariaLabel="確定日程を共有"
                 includeTextInClipboard={true}
+                contentType="finalized"
               />
             </div>
             <ul className="list-disc space-y-1 pl-5">
