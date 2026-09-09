@@ -192,6 +192,45 @@ describe('AccountScheduleSettings', () => {
     expect(await screen.findByText('○')).toBeInTheDocument();
   });
 
+  it('予定表セルの読み上げに可否と未設定状態を含める', async () => {
+    const availableRange = createLocalTimeRange(9, 10);
+    const unavailableRange = createLocalTimeRange(10, 11);
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleBlocks.mockResolvedValue([
+      {
+        id: 'available-block',
+        start_time: availableRange.startIso,
+        end_time: availableRange.endIso,
+        availability: true,
+        source: 'manual',
+        event_id: null,
+      },
+      {
+        id: 'unavailable-block',
+        start_time: unavailableRange.startIso,
+        end_time: unavailableRange.endIso,
+        availability: false,
+        source: 'manual',
+        event_id: null,
+      },
+    ]);
+
+    render(<AccountScheduleSettings />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    await waitFor(() => {
+      expect(screen.queryByText('予定データを読み込んでいます...')).not.toBeInTheDocument();
+    });
+
+    const cellLabels = screen
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label'))
+      .filter((label): label is string => label !== null);
+    expect(cellLabels.some((label) => label.endsWith(' 可'))).toBe(true);
+    expect(cellLabels.some((label) => label.endsWith(' 不可'))).toBe(true);
+    expect(cellLabels.some((label) => label.endsWith(' 未設定'))).toBe(true);
+  });
+
   it('週移動時だけ対象週を取得し、取得済みの週はキャッシュから表示する', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     const today = new Date();
@@ -274,7 +313,7 @@ describe('AccountScheduleSettings', () => {
     });
 
     expect(
-      screen.getByRole('button', { name: new RegExp(`${firstRange.dateKey} .*:.*-.*:.*$`) }),
+      screen.getByRole('button', { name: new RegExp(`${firstRange.dateKey} .*:.*-.*:.*`) }),
     ).toBeInTheDocument();
     expect(
       screen
@@ -347,7 +386,7 @@ describe('AccountScheduleSettings', () => {
     fireEvent.click(screen.getByTestId('dated-edit'));
     fireEvent.click(
       screen.getByRole('button', {
-        name: new RegExp(`${range.dateKey} ${startClock}-${endClock}$`),
+        name: new RegExp(`${range.dateKey} ${startClock}-${endClock}`),
       }),
     );
     fireEvent.click(screen.getByTestId('dated-save-bottom'));
@@ -392,7 +431,7 @@ describe('AccountScheduleSettings', () => {
     fireEvent.click(screen.getByTestId('dated-edit'));
     fireEvent.click(
       screen.getByRole('button', {
-        name: new RegExp(`${dateKey} 23:00-24:00$`),
+        name: new RegExp(`${dateKey} 23:00-24:00`),
       }),
     );
     fireEvent.click(screen.getByTestId('dated-save-bottom'));
@@ -439,7 +478,7 @@ describe('AccountScheduleSettings', () => {
       fireEvent.click(screen.getByTestId('dated-edit'));
       fireEvent.click(
         screen.getByRole('button', {
-          name: new RegExp(`${range.dateKey} ${startClock}-${endClock}$`),
+          name: new RegExp(`${range.dateKey} ${startClock}-${endClock}`),
         }),
       );
       fireEvent.click(screen.getByTestId('dated-save-bottom'));
@@ -634,6 +673,28 @@ describe('AccountScheduleSettings', () => {
     expect(unavailableBadge).toHaveClass('badge-error');
     expect(screen.queryByText(/不可→可/)).not.toBeInTheDocument();
     expect(screen.queryByText(/保護/)).not.toBeInTheDocument();
+  });
+
+  it('同期プレビューセルの読み上げに状態と変更内容を含める', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    mockFetchUserScheduleBlocks.mockResolvedValue([]);
+    mockSuccessfulSyncPreviewEvents([createSyncPreviewEvent('event-1', 'イベントA')]);
+
+    render(<AccountScheduleSettings />);
+
+    await screen.findByRole('heading', { name: '予定一括管理' });
+    fireEvent.click(screen.getByTestId('sync-check-button'));
+
+    const changedCell = await screen.findByRole('button', {
+      name: /イベントA .* 可、変更あり（現在不可、変更後可）/,
+    });
+    expect(changedCell).toBeInTheDocument();
+
+    fireEvent.click(changedCell);
+
+    expect(
+      screen.getByRole('button', { name: /イベントA .* 不可、変更なし（現在不可）/ }),
+    ).toBeInTheDocument();
   });
 
   it('回答イベントへの反映は可から不可・不可から可の両方向を同時に適用できる', async () => {

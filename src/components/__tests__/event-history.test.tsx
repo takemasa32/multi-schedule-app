@@ -109,6 +109,22 @@ describe('EventHistory', () => {
     });
   });
 
+  it('見出しレベルとログイン案内の表示を呼び出し元から指定できる', async () => {
+    mockUseSession.mockReturnValue({ status: 'unauthenticated' });
+
+    render(
+      <EventHistory
+        title="回答履歴"
+        showClearButton={false}
+        headingLevel="h2"
+        showLoginPrompt={false}
+      />,
+    );
+
+    expect(await screen.findByRole('heading', { level: 2, name: '回答履歴' })).toBeInTheDocument();
+    expect(screen.queryByText('ログインすると履歴を同期できます。')).not.toBeInTheDocument();
+  });
+
   it('回答紐づきを解除すると状態を更新する', async () => {
     render(<EventHistory title="回答履歴" showClearButton={false} enableAnswerLinkEdit={true} />);
 

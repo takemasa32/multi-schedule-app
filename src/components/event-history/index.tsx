@@ -21,6 +21,8 @@ interface EventHistoryProps {
   emptyStateActionHref?: string;
   emptyStateActionLabel?: string;
   containerClassName?: string;
+  headingLevel?: 'h2' | 'h3';
+  showLoginPrompt?: boolean;
 }
 
 export default function EventHistory({
@@ -34,6 +36,8 @@ export default function EventHistory({
   emptyStateActionHref = '/create',
   emptyStateActionLabel = 'イベントを作成する',
   containerClassName = 'mb-4 mt-8',
+  headingLevel = 'h3',
+  showLoginPrompt = true,
 }: EventHistoryProps) {
   if (!withProvider) {
     return (
@@ -47,6 +51,8 @@ export default function EventHistory({
         emptyStateActionHref={emptyStateActionHref}
         emptyStateActionLabel={emptyStateActionLabel}
         containerClassName={containerClassName}
+        headingLevel={headingLevel}
+        showLoginPrompt={showLoginPrompt}
       />
     );
   }
@@ -63,6 +69,8 @@ export default function EventHistory({
         emptyStateActionHref={emptyStateActionHref}
         emptyStateActionLabel={emptyStateActionLabel}
         containerClassName={containerClassName}
+        headingLevel={headingLevel}
+        showLoginPrompt={showLoginPrompt}
       />
     </FavoriteEventsProvider>
   );
@@ -78,6 +86,8 @@ function EventHistoryInner({
   emptyStateActionHref = '/create',
   emptyStateActionLabel = 'イベントを作成する',
   containerClassName = 'mb-4 mt-8',
+  headingLevel = 'h3',
+  showLoginPrompt = true,
 }: EventHistoryProps) {
   const [history, setHistory] = useState<EventHistoryItem[]>([]);
   const { favorites, addFavorite, removeFavorite } = useFavoriteEvents();
@@ -185,7 +195,11 @@ function EventHistoryInner({
   return (
     <div className={containerClassName}>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-lg font-medium">{title}</h3>
+        {headingLevel === 'h2' ? (
+          <h2 className="text-lg font-medium">{title}</h2>
+        ) : (
+          <h3 className="text-lg font-medium">{title}</h3>
+        )}
         <div className="flex items-center gap-2">
           {enableAnswerLinkEdit && hasLinkedAnswers && (
             <button
@@ -209,7 +223,7 @@ function EventHistoryInner({
         </div>
       </div>
 
-      {status !== 'authenticated' && (
+      {showLoginPrompt && status !== 'authenticated' && (
         <div className="text-base-content/60 mb-2 text-xs">
           <span>ログインすると履歴を同期できます。</span>
           <button

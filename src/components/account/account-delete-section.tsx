@@ -16,6 +16,10 @@ export default function AccountDeleteSection() {
   const isAuthenticated = status === 'authenticated';
   const isDisabled = !isAuthenticated || confirmation !== DELETE_CONFIRM_TEXT || isPending;
 
+  if (status === 'unauthenticated') {
+    return null;
+  }
+
   const handleOpen = () => {
     dialogRef.current?.showModal();
   };

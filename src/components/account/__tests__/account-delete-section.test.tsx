@@ -31,6 +31,14 @@ describe('AccountDeleteSection', () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
   });
 
+  it('未ログイン時はアカウント削除の導線を表示しない', () => {
+    mockUseSession.mockReturnValue({ status: 'unauthenticated' });
+
+    render(<AccountDeleteSection />);
+
+    expect(screen.queryByRole('button', { name: 'アカウントを削除' })).not.toBeInTheDocument();
+  });
+
   it('確認文字が一致するまで削除ボタンが無効', () => {
     render(<AccountDeleteSection />);
 
