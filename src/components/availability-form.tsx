@@ -71,7 +71,7 @@ export default function AvailabilityForm({
 }: AvailabilityFormProps) {
   const router = useRouter();
   const isNewMode = mode === 'new';
-  const showWeeklyStep = !isAuthenticated || requireWeeklyStep;
+  const showWeeklyStep = isNewMode && (!isAuthenticated || requireWeeklyStep);
   const weeklyStep = showWeeklyStep ? ((isNewMode ? 2 : 1) as WizardStep) : null;
   const heatmapStep: WizardStep = isNewMode
     ? ((showWeeklyStep ? 3 : 2) as WizardStep)
@@ -111,6 +111,7 @@ export default function AvailabilityForm({
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
   const wizardTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const wizardProgressRef = useRef<HTMLDivElement | null>(null);
   const previousStepRef = useRef<WizardStep | null>(null);
   const entryAuthStateRef = useRef<'authenticated' | 'guest'>(
     isAuthenticated ? 'authenticated' : 'guest',
@@ -247,9 +248,13 @@ export default function AvailabilityForm({
     isSelected: (key) => Boolean(selectedDates[key]),
     applySelection: applyDateSelection,
     rangeResolver: ({ targetKey }) => (targetKey ? [targetKey] : []),
-    shouldIgnorePointerDown: (_event, _key) => isWeekdayModeActive,
-    shouldIgnorePointerEnter: (_event, _key) => isWeekdayModeActive,
-    disableBodyScroll: true,
+    shouldIgnorePointerDown: (_event, key) =>
+      isWeekdayModeActive || (lockedDateIdSet.has(key) && !overrideDateIdSet.has(key)),
+    shouldIgnorePointerEnter: (_event, key) =>
+      isWeekdayModeActive || (lockedDateIdSet.has(key) && !overrideDateIdSet.has(key)),
+    // 縦スクロールはブラウザ標準に委ね、回答ページ全体をロックしない。
+    disableBodyScroll: false,
+    preventDefaultEvents: false,
     onDragStart: notifyDragStart,
     onDragEnd: notifyDragEnd,
   });
@@ -307,8 +312,10 @@ export default function AvailabilityForm({
     rangeResolver: ({ targetKey }) => [targetKey],
     shouldIgnorePointerDown: (_event, _key) => !isWeekdayModeActive,
     shouldIgnorePointerEnter: (_event, _key) => !isWeekdayModeActive,
-    disableBodyScroll: true,
-    enableKeyboard: false,
+    // 曜日表も縦スクロールを妨げない。
+    disableBodyScroll: false,
+    preventDefaultEvents: false,
+    enableKeyboard: true,
     onDragStart: notifyDragStart,
     onDragEnd: notifyDragEnd,
   });
@@ -395,11 +402,14 @@ export default function AvailabilityForm({
     }
     if (previousStepRef.current === currentStep) return;
     previousStepRef.current = currentStep;
-    if (!wizardTitleRef.current) return;
+    const scrollTarget = wizardProgressRef.current ?? wizardTitleRef.current;
+    if (!scrollTarget) return;
 
-    // ステップ遷移時はウィザード見出しまで戻し、次にやることを認識しやすくする。
-    const titleTop = wizardTitleRef.current.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({ top: Math.max(0, titleTop - 16), behavior: 'smooth' });
+    // ステップ遷移時は固定ヘッダーに隠れない進捗表示まで戻し、次の操作を認識しやすくする。
+    const targetTop = scrollTarget.getBoundingClientRect().top + window.scrollY;
+    const headerBottom = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+    const scrollOffset = Math.max(16, headerBottom + 16);
+    window.scrollTo({ top: Math.max(0, targetTop - scrollOffset), behavior: 'smooth' });
   }, [currentStep]);
 
   const showMissingAvailabilityError = useCallback(() => {
@@ -802,6 +812,23 @@ export default function AvailabilityForm({
       .padStart(2, '0')}`;
   }, []);
 
+  const weekdayCandidateKeys = useMemo(() => {
+    const candidateKeys = new Set<string>();
+    eventDates.forEach((date) => {
+      const dateObj = new Date(date.start_time);
+      const weekday = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()] as WeekDay;
+      candidateKeys.add(getMatrixKey(weekday, getTimeKey(date.start_time, date.end_time)));
+    });
+    return candidateKeys;
+  }, [eventDates, getMatrixKey, getTimeKey]);
+
+  const formatTimeSlotLabel = useCallback((timeSlot: string) => {
+    const [startTime, endTime] = timeSlot.split('-');
+    const normalizedStart = (startTime ?? '').replace(/^0/, '');
+    const normalizedEnd = endTime === '00:00' ? '24:00' : (endTime ?? '').replace(/^0/, '');
+    return `${normalizedStart}〜${normalizedEnd}`;
+  }, []);
+
   // 週入力モード用の時間帯スロットを初期化する関数
   const initializeWeekdayTimeSlots = useCallback(() => {
     // 全ての時間帯を収集
@@ -987,12 +1014,6 @@ export default function AvailabilityForm({
   const stepLabel = useMemo(() => {
     return stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
   }, [currentStep, stepLabels]);
-  const weeklyStepLeadMessage = useMemo(() => {
-    if (isAuthenticated) {
-      return '日程が多いため、曜日ごとにまとめて入力してください。';
-    }
-    return '各曜日の予定を入力してください。';
-  }, [isAuthenticated]);
   const weekdayTimeSlots = useMemo(() => {
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
@@ -1005,11 +1026,12 @@ export default function AvailabilityForm({
   }, [weekdayTimeSlots]);
 
   return (
-    <div className="bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
-      <h2 ref={wizardTitleRef} className="mb-3 text-xl font-bold">
-        {mode === 'edit' ? `${initialParticipant?.name ?? '回答'}の編集` : '回答ウィザード'}
-      </h2>
-      <div className="mb-2 overflow-x-auto">
+    <div className="availability-form-shell bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
+      <div
+        ref={wizardProgressRef}
+        className="mb-3 overflow-x-auto"
+        data-testid="availability-step-progress"
+      >
         <ul className="steps w-full whitespace-nowrap text-xs sm:text-sm">
           {stepLabels.map((label, index) => {
             const step = (index + 1) as WizardStep;
@@ -1027,7 +1049,15 @@ export default function AvailabilityForm({
           })}
         </ul>
       </div>
-      <div className="mb-4 scroll-mt-24 text-base font-semibold">{stepLabel}</div>
+      <h2 ref={wizardTitleRef} className="mb-3 text-xl font-bold">
+        {mode === 'edit' ? `${initialParticipant?.name ?? '回答'}の編集` : '回答ウィザード'}
+      </h2>
+      <h3
+        id="availability-step-title"
+        className="availability-step-title mb-4 scroll-mt-24 text-base font-semibold"
+      >
+        {stepLabel}
+      </h3>
 
       {error && (
         <div className="alert alert-error mb-4" role="alert" aria-live="assertive" ref={errorRef}>
@@ -1087,7 +1117,7 @@ export default function AvailabilityForm({
               <input
                 type="text"
                 id="participant_name"
-                className="input input-bordered w-full"
+                className="input input-bordered h-11 min-h-11 w-full"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -1125,29 +1155,35 @@ export default function AvailabilityForm({
         )}
 
         {showWeeklyStep && weeklyStep !== null && currentStep === weeklyStep && (
-          <section className="space-y-4" data-testid="availability-step-weekly">
-            <div className="bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
-              <p>{weeklyStepLeadMessage}</p>
+          <section
+            className="space-y-4"
+            data-testid="availability-step-weekly"
+            aria-labelledby="availability-step-title"
+          >
+            <div className="availability-step-description bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
+              <p>まだ予定が入っていない日程を、曜日ごとにまとめて入力できます。</p>
+              <p>次の画面で日付ごとに調整できます。</p>
             </div>
 
-            <div className="bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
-              <h3 className="mb-3 text-lg font-bold">曜日一括入力</h3>
-              <div className="matrix-container -mx-1 mb-2 touch-none overflow-hidden sm:mx-0 sm:mb-3">
-                <table
-                  className="table-xs border-base-300 table w-full table-fixed border-collapse border text-center"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onTouchStart={(e) => e.preventDefault()}
-                  onTouchMove={(e) => e.preventDefault()}
-                >
+            <div className="availability-weekly-card bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">
+              <div
+                className="availability-weekly-matrix availability-table-region matrix-container mb-2 overflow-x-hidden sm:mb-3"
+                data-testid="availability-weekly-scroller"
+              >
+                <table className="availability-selection-table table-xs border-base-300 table w-full table-fixed border-collapse border text-center">
                   <thead>
                     <tr className="bg-base-200">
-                      <th className="border-base-300 w-10 border px-0.5 py-2 text-center md:w-14 md:px-2 md:py-3">
+                      <th
+                        scope="col"
+                        className="availability-time-column border-base-300 h-11 w-11 min-w-11 border px-0.5 py-2 text-center md:w-14 md:px-2 md:py-3"
+                      >
                         時間
                       </th>
                       {Object.keys(weekdaySelections).map((day) => (
                         <th
                           key={day}
-                          className="border-base-300 border px-0 py-0 text-center md:px-1 md:py-2"
+                          scope="col"
+                          className="border-base-300 h-11 min-w-11 border px-0 py-0 text-center md:px-1 md:py-2"
                         >
                           <span className="text-xs font-semibold md:text-sm">{day}</span>
                         </th>
@@ -1167,7 +1203,10 @@ export default function AvailabilityForm({
                     ) : (
                       <>
                         <tr>
-                          <th className="bg-base-100 border-base-300 h-1 border p-0 md:h-3"></th>
+                          <th
+                            scope="row"
+                            className="availability-time-column bg-base-100 border-base-300 h-1 border p-0 md:h-3"
+                          ></th>
                           {Object.keys(weekdaySelections).map((day) => (
                             <td key={`${day}-spacer`} className="h-1 md:h-3" />
                           ))}
@@ -1176,7 +1215,10 @@ export default function AvailabilityForm({
                           const [startTime] = timeSlot.split('-');
                           return (
                             <tr key={timeSlot}>
-                              <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                              <th
+                                scope="row"
+                                className="availability-time-column bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2"
+                              >
                                 <span
                                   className={`absolute left-2 text-xs font-medium ${
                                     rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
@@ -1187,25 +1229,42 @@ export default function AvailabilityForm({
                               </th>
                               {Object.entries(weekdaySelections).map(([day, daySchedule]) => {
                                 const matrixKey = getMatrixKey(day as WeekDay, timeSlot);
+                                const isCandidateCell = weekdayCandidateKeys.has(matrixKey);
+                                const isSelected = Boolean(daySchedule.timeSlots[timeSlot]);
+                                const cellLabel = `${day} ${formatTimeSlotLabel(timeSlot)} ${
+                                  isCandidateCell
+                                    ? isSelected
+                                      ? '選択済み'
+                                      : '未選択'
+                                    : '候補なし'
+                                }`;
                                 return (
                                   <td
                                     key={`${day}-${timeSlot}`}
-                                    className="border-base-300 border p-0 md:p-1"
+                                    className="availability-selection-cell border-base-300 h-11 min-w-11 border p-0 md:p-1"
                                     data-day={day}
                                     data-time-slot={timeSlot}
-                                    data-selection-key={matrixKey}
                                     {...weekdaySelectionController.getCellProps(matrixKey, {
-                                      disabled: !isWeekdayModeActive,
+                                      disabled: !isWeekdayModeActive || !isCandidateCell,
+                                      focusable: isWeekdayModeActive && isCandidateCell,
                                     })}
+                                    aria-label={cellLabel}
+                                    title={
+                                      !isCandidateCell
+                                        ? 'この曜日・時間に候補はありません'
+                                        : undefined
+                                    }
                                   >
                                     <div
-                                      className={`flex aspect-square w-full items-center justify-center rounded-md text-xs font-semibold leading-none md:aspect-auto md:h-10 md:text-sm ${
-                                        daySchedule.timeSlots[timeSlot]
-                                          ? 'bg-success text-success-content'
-                                          : 'bg-base-100 text-base-content/80'
+                                      className={`availability-selection-cell-content flex h-11 min-h-11 w-full items-center justify-center rounded-md text-xs font-semibold leading-none md:h-11 md:text-sm ${
+                                        !isCandidateCell
+                                          ? 'bg-base-200/60 text-base-content/40'
+                                          : isSelected
+                                            ? 'bg-success text-success-content'
+                                            : 'bg-base-100 text-base-content/80'
                                       }`}
                                     >
-                                      {daySchedule.timeSlots[timeSlot] ? '○' : '×'}
+                                      {!isCandidateCell ? '-' : isSelected ? '○' : '×'}
                                     </div>
                                   </td>
                                 );
@@ -1215,7 +1274,10 @@ export default function AvailabilityForm({
                         })}
                         {weekdayLastEndLabel && (
                           <tr className="h-0">
-                            <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                            <th
+                              scope="row"
+                              className="availability-time-column bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2"
+                            >
                               <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
                                 {weekdayLastEndLabel === '24:00'
                                   ? '24:00'
@@ -1232,9 +1294,12 @@ export default function AvailabilityForm({
                   </tbody>
                 </table>
               </div>
+              <p className="availability-operation-guide text-base-content/60 text-xs">
+                セルをタップ、またはセル内を上下左右にドラッグして切り替えます。- は候補外です。
+              </p>
             </div>
 
-            <div className="flex flex-wrap justify-between gap-2">
+            <div className="availability-step-actions flex flex-wrap justify-between gap-2">
               <button
                 type="button"
                 className="btn btn-outline"
@@ -1255,9 +1320,13 @@ export default function AvailabilityForm({
         )}
 
         {currentStep === heatmapStep && (
-          <section className="space-y-4" data-testid="availability-step-heatmap">
-            <div className="bg-base-200 rounded-lg p-1 text-sm sm:p-3">
-              <p>表で予定を確認・修正してください。</p>
+          <section
+            className="space-y-4"
+            data-testid="availability-step-heatmap"
+            aria-labelledby="availability-step-title"
+          >
+            <div className="availability-step-description bg-base-200 rounded-lg p-1 text-sm sm:p-3">
+              <p>候補日程ごとの予定を確認・修正できます。</p>
               {insertedAccountDatesLabel && (
                 <p className="text-base-content/60 mt-1 text-xs">
                   アカウント予定を反映済み（{insertedAccountDatesLabel}）
@@ -1277,23 +1346,24 @@ export default function AvailabilityForm({
             )}
 
             <div
-              className="table-container-mobile -mx-3 select-none overflow-x-auto overscroll-contain sm:mx-0"
-              style={{
-                overscrollBehaviorY: 'contain',
-                touchAction: dateSelectionController.isDragging ? 'none' : 'pan-x',
-              }}
+              className="availability-heatmap-scroller availability-table-region table-container-mobile select-none overflow-x-hidden sm:mx-0"
               onMouseLeave={handleMouseLeave}
+              data-testid="availability-heatmap-scroller"
             >
-              <table className="table-xs border-base-300 table w-full min-w-0 table-fixed border-collapse border text-center">
+              <table className="availability-selection-table table-xs border-base-300 table w-full min-w-0 table-fixed border-collapse border text-center">
                 <thead className="sticky top-0 z-20">
                   <tr className="bg-base-200">
-                    <th className="border-base-300 bg-base-200 sticky left-0 top-0 z-30 w-10 border px-0.5 py-2 text-center md:w-14 md:px-2 md:py-3">
+                    <th
+                      scope="col"
+                      className="availability-time-column border-base-300 bg-base-200 sticky left-0 top-0 z-30 h-11 w-11 min-w-11 border px-0.5 py-2 text-center md:w-14 md:px-2 md:py-3"
+                    >
                       <span className="text-xs">時間</span>
                     </th>
                     {heatmapData.dates.map((date) => (
                       <th
                         key={date.dateKey}
-                        className="border-base-300 heatmap-cell-mobile border px-0 py-0 text-center md:px-1 md:py-2"
+                        scope="col"
+                        className="border-base-300 heatmap-cell-mobile h-11 min-w-11 border px-0 py-0 text-center md:px-1 md:py-2"
                       >
                         <div className="flex flex-col items-center leading-tight">
                           <span className="text-xs font-semibold md:text-sm">
@@ -1309,7 +1379,10 @@ export default function AvailabilityForm({
                 </thead>
                 <tbody>
                   <tr>
-                    <th className="bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"></th>
+                    <th
+                      scope="row"
+                      className="availability-time-column bg-base-100 border-base-300 sticky left-0 z-10 h-1 border p-0 md:h-3"
+                    ></th>
                     {heatmapData.dates.map((date) => (
                       <td key={`${date.dateKey}-spacer`} className="h-1 md:h-3" />
                     ))}
@@ -1320,7 +1393,10 @@ export default function AvailabilityForm({
 
                     return (
                       <tr key={timeSlot}>
-                        <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                        <th
+                          scope="row"
+                          className="availability-time-column bg-base-100 border-base-300 sticky left-0 z-10 border px-1 py-0 text-right md:px-2"
+                        >
                           <span
                             className={`absolute left-2 text-xs font-medium ${
                               rowIndex === 0 ? 'top-0' : 'top-0 -translate-y-1/2'
@@ -1339,35 +1415,48 @@ export default function AvailabilityForm({
                           return (
                             <td
                               key={`${date.dateKey}-${timeSlot}`}
-                              className="border-base-300 border p-0 md:p-1"
+                              className="border-base-300 h-11 min-w-11 border p-0 md:p-1"
                               data-date-id={dateId}
                               data-time-slot={timeSlot}
                             >
                               {dateId ? (
-                                <div
-                                  className={`flex aspect-square w-full items-center justify-center rounded-md text-xs font-semibold leading-none transition-colors duration-150 md:aspect-auto md:h-10 md:text-sm ${className} ${
+                                <button
+                                  type="button"
+                                  className={`availability-selection-cell flex h-11 min-h-11 w-full items-center justify-center rounded-md text-xs font-semibold leading-none transition-colors duration-150 md:h-11 md:text-sm ${className} ${
                                     isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
                                   }`}
                                   data-date-id={dateId}
                                   data-selection-key={dateId}
                                   {...dateSelectionController.getCellProps(dateId, {
+                                    focusable: !isWeekdayModeActive && !isLocked,
                                     disabled: isWeekdayModeActive || isLocked,
                                   })}
+                                  tabIndex={isWeekdayModeActive || isLocked ? -1 : 0}
                                   onClick={() => {
                                     if (isLocked && dateId) {
                                       handleLockedOverride(dateId);
                                     }
                                   }}
                                   title={isConflict ? '確定イベントと重複しています' : undefined}
+                                  aria-label={`${date.formattedDate} ${formatTimeSlotLabel(timeSlot)} ${
+                                    isLocked
+                                      ? '確定予定と重複しています'
+                                      : status === 'available'
+                                        ? '選択済み'
+                                        : '未選択'
+                                  }`}
                                 >
                                   {status === 'available'
                                     ? '○'
                                     : status === 'unavailable'
                                       ? '×'
                                       : '-'}
-                                </div>
+                                </button>
                               ) : (
-                                <div className="bg-base-200/30 text-base-content/30 flex aspect-square w-full items-center justify-center rounded-md text-xs font-semibold leading-none md:aspect-auto md:h-10 md:text-sm">
+                                <div
+                                  className="bg-base-200/30 text-base-content/30 flex h-11 min-h-11 w-full items-center justify-center rounded-md text-xs font-semibold leading-none md:h-11 md:text-sm"
+                                  aria-hidden="true"
+                                >
                                   <span>-</span>
                                 </div>
                               )}
@@ -1379,7 +1468,10 @@ export default function AvailabilityForm({
                   })}
                   {heatmapLastEndLabel && (
                     <tr className="h-0">
-                      <th className="bg-base-100 border-base-300 relative border px-1 py-0 text-right md:px-2">
+                      <th
+                        scope="row"
+                        className="availability-time-column bg-base-100 border-base-300 sticky left-0 z-10 border px-1 py-0 text-right md:px-2"
+                      >
                         <span className="absolute left-2 top-0 -translate-y-1/2 text-xs font-medium">
                           {heatmapLastEndLabel}
                         </span>
@@ -1396,7 +1488,11 @@ export default function AvailabilityForm({
               </table>
             </div>
 
-            <div className="flex flex-wrap justify-between gap-2">
+            <p className="availability-operation-guide text-base-content/60 text-xs">
+              セルをタップ、またはセル内を上下左右にドラッグして予定を切り替えます。時刻列はスクロール用です。
+            </p>
+
+            <div className="availability-step-actions flex flex-wrap justify-between gap-2">
               <button type="button" className="btn btn-outline" onClick={handlePrevStep}>
                 戻る
               </button>

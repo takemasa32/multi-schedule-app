@@ -5,7 +5,7 @@ if (!window.HTMLFormElement.prototype.requestSubmit) {
 }
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, createEvent } from '@testing-library/react';
 import AvailabilityForm from '../availability-form';
 import { trackEvent } from '@/components/analytics/google-analytics';
 
@@ -60,6 +60,9 @@ describe('AvailabilityForm', () => {
       configurable: true,
     });
     localStorage.clear();
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.body.style.overscrollBehavior = '';
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
     (submitAvailability as jest.Mock).mockResolvedValue({ success: true, participantId: 'part-1' });
     (trackEvent as jest.Mock).mockReturnValue(true);
@@ -204,21 +207,158 @@ describe('AvailabilityForm', () => {
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
   });
 
-  it('未ログイン時の曜日一括入力では入力案内文言を表示する', () => {
+  it('曜日一括入力では適用対象と次画面で調整できることを案内する', () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();
-    expect(screen.getByText('各曜日の予定を入力してください。')).toBeInTheDocument();
+    expect(
+      screen.getByText('まだ予定が入っていない日程を、曜日ごとにまとめて入力できます。'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('次の画面で日付ごとに調整できます。')).toBeInTheDocument();
   });
 
-  it('ログイン済みかつ長い未入力期間がある場合は一時的な曜日入力案内を表示する', async () => {
+  it('曜日一括入力は候補外セルを無効化し、候補セルをキーボード操作できる', () => {
+    const singleDateEvent = [
+      {
+        id: 'date1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+    ];
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        eventDates={singleDateEvent}
+        mode="new"
+        isAuthenticated={false}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+
+    const weeklySection = screen.getByTestId('availability-step-weekly');
+    const candidateCell = weeklySection.querySelector<HTMLElement>(
+      'td[data-day="月"][data-time-slot]',
+    );
+    if (!candidateCell) throw new Error('候補セルが見つかりません');
+    const timeSlot = candidateCell.getAttribute('data-time-slot');
+    if (!timeSlot) throw new Error('候補セルの時間帯が見つかりません');
+    const unavailableCell = weeklySection.querySelector<HTMLElement>(
+      `td[data-day="火"][data-time-slot="${timeSlot}"]`,
+    );
+    if (!unavailableCell) throw new Error('候補外セルが見つかりません');
+
+    expect(candidateCell).toHaveAttribute('role', 'button');
+    expect(candidateCell).toHaveAttribute('tabindex', '0');
+    expect(candidateCell).toHaveAttribute('aria-label', expect.stringMatching(/^月 .* 未選択$/));
+    expect(unavailableCell).toHaveAttribute('role', 'button');
+    expect(unavailableCell).toHaveAttribute('aria-disabled', 'true');
+    expect(unavailableCell).not.toHaveAttribute('tabindex');
+    expect(unavailableCell).not.toHaveAttribute('data-selection-key');
+    expect(unavailableCell).toHaveTextContent('-');
+
+    fireEvent.keyDown(candidateCell, { key: 'Enter' });
+
+    expect(candidateCell).toHaveAttribute('aria-pressed', 'true');
+    expect(candidateCell).toHaveTextContent('○');
+  });
+
+  it('曜日一括入力は見出しを重複させず、表と操作案内を連続した順序で表示する', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+
+    const section = screen.getByTestId('availability-step-weekly');
+    const progress = screen.getByTestId('availability-step-progress');
+    const title = screen.getByRole('heading', { name: '曜日一括入力' });
+    const description = section.querySelector('.availability-step-description');
+    const table = section.querySelector('table');
+    const guide = section.querySelector('.availability-operation-guide');
+    const nextButton = screen.getByRole('button', { name: '次へ' });
+    const timeHeader = within(section).getByRole('columnheader', { name: '時間' });
+
+    expect(screen.getAllByRole('heading', { name: '曜日一括入力' })).toHaveLength(1);
+    expect(description).not.toBeNull();
+    expect(table).not.toBeNull();
+    expect(guide).not.toBeNull();
+    if (!description || !table || !guide) {
+      throw new Error('曜日一括入力の表示要素が見つかりません');
+    }
+
+    const orderedElements = [progress, title, description, table, guide, nextButton];
+    orderedElements.slice(0, -1).forEach((element, index) => {
+      expect(element.compareDocumentPosition(orderedElements[index + 1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(timeHeader).toHaveClass('availability-time-column');
+    expect(timeHeader).not.toHaveAttribute('data-selection-key');
+    expect(section.querySelector('.availability-selection-cell-content')).toHaveClass(
+      'availability-selection-cell-content',
+    );
+    expect(screen.getByTestId('availability-weekly-scroller')).toHaveClass(
+      'availability-table-region',
+      'overflow-x-hidden',
+    );
+    expect(screen.getByTestId('availability-weekly-scroller')).not.toHaveClass('overflow-x-auto');
+  });
+
+  it('回答画面のセル操作はbodyをロックせず、ヒートマップはbuttonとして操作できる', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const heatmapCell = document.querySelector<HTMLButtonElement>('[data-selection-key="date1"]');
+    if (!heatmapCell) throw new Error('ヒートマップセルが見つかりません');
+
+    expect(heatmapCell.tagName).toBe('BUTTON');
+    expect(heatmapCell).toHaveAttribute('tabindex', '0');
+    expect(heatmapCell).toHaveAttribute('aria-label', expect.stringContaining('未選択'));
+    expect(heatmapCell).toHaveClass('availability-selection-cell');
+
+    const pointerDown = createEvent.pointerDown(heatmapCell, {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      pointerId: 1,
+      pointerType: 'touch',
+    });
+    fireEvent(heatmapCell, pointerDown);
+
+    expect(pointerDown.defaultPrevented).toBe(false);
+    expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.touchAction).toBe('');
+
+    fireEvent.pointerUp(heatmapCell, { pointerId: 1, pointerType: 'touch' });
+  });
+
+  it('時刻列には選択イベントを付けず、ヒートマップの左右スクロールを無効にする', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const scroller = screen.getByTestId('availability-heatmap-scroller');
+    expect(scroller).toHaveClass('availability-table-region', 'overflow-x-hidden');
+
+    const timeColumns = scroller.querySelectorAll<HTMLElement>('.availability-time-column');
+    expect(timeColumns.length).toBeGreaterThan(0);
+    timeColumns.forEach((column) => {
+      expect(column).not.toHaveAttribute('data-selection-key');
+      expect(column).not.toHaveAttribute('aria-pressed');
+    });
+  });
+
+  it('ログイン済みの曜日一括入力でも同じ案内を表示する', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated requireWeeklyStep />);
 
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
     expect(
-      await screen.findByText('日程が多いため、曜日ごとにまとめて入力してください。'),
+      await screen.findByText('まだ予定が入っていない日程を、曜日ごとにまとめて入力できます。'),
     ).toBeInTheDocument();
+    expect(screen.getByText('次の画面で日付ごとに調整できます。')).toBeInTheDocument();
   });
 
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
@@ -338,6 +478,39 @@ describe('AvailabilityForm', () => {
     expect(selectedCell).toHaveTextContent('×');
   });
 
+  it('0:00開始の候補は24:00ではなく0:00として読み上げる', async () => {
+    const midnightStartEventDates = [
+      {
+        id: 'midnight-start-date',
+        start_time: '2025-05-12T00:00:00',
+        end_time: '2025-05-12T01:00:00',
+      },
+    ];
+    const weekdayNumber = new Date(midnightStartEventDates[0].start_time).getDay();
+    const weekdayLabel = ['日', '月', '火', '水', '木', '金', '土'][weekdayNumber];
+
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        requireWeeklyStep
+        eventDates={midnightStartEventDates}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const weeklySection = await screen.findByTestId('availability-step-weekly');
+    const candidateCell = weeklySection.querySelector<HTMLElement>(
+      `td[data-day="${weekdayLabel}"][data-time-slot="00:00-01:00"]`,
+    );
+
+    expect(candidateCell).toHaveAccessibleName(`${weekdayLabel} 0:00〜1:00 未選択`);
+    expect(candidateCell).not.toHaveAccessibleName(/24:00〜1:00/);
+  });
+
   it('参加可能枠が未選択の場合は候補日程追加への確認を表示できる', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();
@@ -363,7 +536,7 @@ describe('AvailabilityForm', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/event/token1?action=add-dates');
   });
 
-  it('編集回答は3ステップで遷移できる', () => {
+  it('編集回答は曜日一括入力を表示せず2ステップで遷移できる', () => {
     render(
       <AvailabilityForm
         {...defaultProps}
@@ -373,9 +546,9 @@ describe('AvailabilityForm', () => {
       />,
     );
 
-    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
+    expect(screen.queryByTestId('availability-step-weekly')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
     expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
   });
@@ -448,35 +621,6 @@ describe('AvailabilityForm', () => {
 
     expect(screen.queryByText('週予定の更新')).not.toBeInTheDocument();
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
-  });
-
-  it('編集モードで曜日セルを○→×にした場合はヒートマップの選択にも反映される', async () => {
-    render(
-      <AvailabilityForm
-        {...defaultProps}
-        mode="edit"
-        isAuthenticated={false}
-        initialParticipant={{ id: 'p1', name: '既存ユーザー' }}
-        initialAvailabilities={{ date1: true }}
-      />,
-    );
-
-    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
-    const weeklyCell = document.querySelector<HTMLElement>('td[data-day="月"][data-time-slot]');
-    if (!weeklyCell) throw new Error('曜日一括セルが見つかりません');
-    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
-    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
-
-    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
-
-    const heatmapSection = await screen.findByTestId('availability-step-heatmap');
-    expect(heatmapSection).toBeInTheDocument();
-    expect(
-      document.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
-    ).not.toBeInTheDocument();
-    const date1Cell = heatmapSection.querySelector<HTMLElement>('[data-selection-key="date1"]');
-    expect(date1Cell).not.toBeNull();
-    expect(date1Cell).toHaveTextContent('×');
   });
 
   it('競合枠セルの上書き確認が動作する', async () => {
@@ -607,10 +751,7 @@ describe('AvailabilityForm', () => {
       auth_state: 'authenticated',
       weekly_used: 'no',
     });
-    expect(trackEvent).not.toHaveBeenCalledWith(
-      'answer_submitted',
-      expect.anything(),
-    );
+    expect(trackEvent).not.toHaveBeenCalledWith('answer_submitted', expect.anything());
   });
 
   it('回答保存が失敗した場合は成功イベントを送らない', async () => {
