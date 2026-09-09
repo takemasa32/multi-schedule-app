@@ -5,7 +5,7 @@ if (!window.HTMLFormElement.prototype.requestSubmit) {
 }
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, createEvent } from '@testing-library/react';
 import AvailabilityForm from '../availability-form';
 import { trackEvent } from '@/components/analytics/google-analytics';
 
@@ -60,6 +60,9 @@ describe('AvailabilityForm', () => {
       configurable: true,
     });
     localStorage.clear();
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.body.style.overscrollBehavior = '';
     (checkParticipantExists as jest.Mock).mockResolvedValue({ exists: false });
     (submitAvailability as jest.Mock).mockResolvedValue({ success: true, participantId: 'part-1' });
     (trackEvent as jest.Mock).mockReturnValue(true);
@@ -208,6 +211,139 @@ describe('AvailabilityForm', () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();
     expect(screen.getByText('各曜日の予定を入力してください。')).toBeInTheDocument();
+  });
+
+  it('曜日一括入力は候補外セルを無効化し、候補セルをキーボード操作できる', () => {
+    const singleDateEvent = [
+      {
+        id: 'date1',
+        start_time: '2025-05-12T09:00:00.000Z',
+        end_time: '2025-05-12T10:00:00.000Z',
+      },
+    ];
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        eventDates={singleDateEvent}
+        mode="new"
+        isAuthenticated={false}
+      />,
+    );
+
+    goToWeeklyStepAsGuest();
+
+    const weeklySection = screen.getByTestId('availability-step-weekly');
+    const candidateCell = weeklySection.querySelector<HTMLElement>(
+      'td[data-day="月"][data-time-slot]',
+    );
+    if (!candidateCell) throw new Error('候補セルが見つかりません');
+    const timeSlot = candidateCell.getAttribute('data-time-slot');
+    if (!timeSlot) throw new Error('候補セルの時間帯が見つかりません');
+    const unavailableCell = weeklySection.querySelector<HTMLElement>(
+      `td[data-day="火"][data-time-slot="${timeSlot}"]`,
+    );
+    if (!unavailableCell) throw new Error('候補外セルが見つかりません');
+
+    expect(candidateCell).toHaveAttribute('role', 'button');
+    expect(candidateCell).toHaveAttribute('tabindex', '0');
+    expect(candidateCell).toHaveAttribute('aria-label', expect.stringMatching(/^月 .* 未選択$/));
+    expect(unavailableCell).toHaveAttribute('role', 'button');
+    expect(unavailableCell).toHaveAttribute('aria-disabled', 'true');
+    expect(unavailableCell).not.toHaveAttribute('tabindex');
+    expect(unavailableCell).not.toHaveAttribute('data-selection-key');
+    expect(unavailableCell).toHaveTextContent('-');
+
+    fireEvent.keyDown(candidateCell, { key: 'Enter' });
+
+    expect(candidateCell).toHaveAttribute('aria-pressed', 'true');
+    expect(candidateCell).toHaveTextContent('○');
+  });
+
+  it('曜日一括入力は見出しを重複させず、表と操作案内を連続した順序で表示する', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+
+    const section = screen.getByTestId('availability-step-weekly');
+    const progress = screen.getByTestId('availability-step-progress');
+    const title = screen.getByRole('heading', { name: '曜日一括入力' });
+    const description = section.querySelector('.availability-step-description');
+    const table = section.querySelector('table');
+    const guide = section.querySelector('.availability-operation-guide');
+    const nextButton = screen.getByRole('button', { name: '次へ' });
+    const timeHeader = within(section).getByRole('columnheader', { name: '時間' });
+
+    expect(screen.getAllByRole('heading', { name: '曜日一括入力' })).toHaveLength(1);
+    expect(description).not.toBeNull();
+    expect(table).not.toBeNull();
+    expect(guide).not.toBeNull();
+    if (!description || !table || !guide) {
+      throw new Error('曜日一括入力の表示要素が見つかりません');
+    }
+
+    const orderedElements = [progress, title, description, table, guide, nextButton];
+    orderedElements.slice(0, -1).forEach((element, index) => {
+      expect(element.compareDocumentPosition(orderedElements[index + 1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(timeHeader).toHaveClass('availability-time-column');
+    expect(timeHeader).not.toHaveAttribute('data-selection-key');
+    expect(section.querySelector('.availability-selection-cell-content')).toHaveClass(
+      'availability-selection-cell-content',
+    );
+    expect(screen.getByTestId('availability-weekly-scroller')).toHaveClass(
+      'availability-table-region',
+      'overflow-x-hidden',
+    );
+    expect(screen.getByTestId('availability-weekly-scroller')).not.toHaveClass('overflow-x-auto');
+  });
+
+  it('回答画面のセル操作はbodyをロックせず、ヒートマップはbuttonとして操作できる', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const heatmapCell = document.querySelector<HTMLButtonElement>('[data-selection-key="date1"]');
+    if (!heatmapCell) throw new Error('ヒートマップセルが見つかりません');
+
+    expect(heatmapCell.tagName).toBe('BUTTON');
+    expect(heatmapCell).toHaveAttribute('tabindex', '0');
+    expect(heatmapCell).toHaveAttribute('aria-label', expect.stringContaining('未選択'));
+    expect(heatmapCell).toHaveClass('availability-selection-cell');
+
+    const pointerDown = createEvent.pointerDown(heatmapCell, {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      pointerId: 1,
+      pointerType: 'touch',
+    });
+    fireEvent(heatmapCell, pointerDown);
+
+    expect(pointerDown.defaultPrevented).toBe(false);
+    expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.touchAction).toBe('');
+
+    fireEvent.pointerUp(heatmapCell, { pointerId: 1, pointerType: 'touch' });
+  });
+
+  it('時刻列には選択イベントを付けず、ヒートマップの左右スクロールを無効にする', () => {
+    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
+
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const scroller = screen.getByTestId('availability-heatmap-scroller');
+    expect(scroller).toHaveClass('availability-table-region', 'overflow-x-hidden');
+
+    const timeColumns = scroller.querySelectorAll<HTMLElement>('.availability-time-column');
+    expect(timeColumns.length).toBeGreaterThan(0);
+    timeColumns.forEach((column) => {
+      expect(column).not.toHaveAttribute('data-selection-key');
+      expect(column).not.toHaveAttribute('aria-pressed');
+    });
   });
 
   it('ログイン済みかつ長い未入力期間がある場合は一時的な曜日入力案内を表示する', async () => {
@@ -607,10 +743,7 @@ describe('AvailabilityForm', () => {
       auth_state: 'authenticated',
       weekly_used: 'no',
     });
-    expect(trackEvent).not.toHaveBeenCalledWith(
-      'answer_submitted',
-      expect.anything(),
-    );
+    expect(trackEvent).not.toHaveBeenCalledWith('answer_submitted', expect.anything());
   });
 
   it('回答保存が失敗した場合は成功イベントを送らない', async () => {

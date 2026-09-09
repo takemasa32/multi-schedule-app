@@ -35,7 +35,6 @@ interface EventPageProps {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 // 動的メタデータ生成関数

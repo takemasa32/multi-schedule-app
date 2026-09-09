@@ -103,18 +103,18 @@ npm run dev
 
 `.env.example` に最小構成を置いています。主な変数は次のとおりです。
 
-| 変数                        | 用途                                      |
-| --------------------------- | ----------------------------------------- |
-| `SUPABASE_URL`              | Supabase API の URL                       |
-| `SUPABASE_ANON_KEY`         | クライアント公開用キー                    |
-| `SUPABASE_SERVICE_ROLE_KEY` | サーバー側で使う管理キー                  |
-| `SUPABASE_DB_URL`           | ローカルまたは接続先 DB URL               |
-| `SUPABASE_DB_PASSWORD`      | Supabase ローカル DB のパスワード         |
-| `NEXTAUTH_SECRET`           | NextAuth の署名用シークレット             |
-| `NEXTAUTH_URL`              | アプリのベース URL                        |
-| `NEXT_PUBLIC_GOOGLE_ANALYTICS` | GA4 の測定 ID（開発環境では送信しない） |
-| `GOOGLE_CLIENT_ID`          | Google ログイン用クライアント ID          |
-| `GOOGLE_CLIENT_SECRET`      | Google ログイン用クライアントシークレット |
+| 変数                           | 用途                                      |
+| ------------------------------ | ----------------------------------------- |
+| `SUPABASE_URL`                 | Supabase API の URL                       |
+| `SUPABASE_ANON_KEY`            | クライアント公開用キー                    |
+| `SUPABASE_SERVICE_ROLE_KEY`    | サーバー側で使う管理キー                  |
+| `SUPABASE_DB_URL`              | ローカルまたは接続先 DB URL               |
+| `SUPABASE_DB_PASSWORD`         | Supabase ローカル DB のパスワード         |
+| `NEXTAUTH_SECRET`              | NextAuth の署名用シークレット             |
+| `NEXTAUTH_URL`                 | アプリのベース URL                        |
+| `NEXT_PUBLIC_GOOGLE_ANALYTICS` | GA4 の測定 ID（開発環境では送信しない）   |
+| `GOOGLE_CLIENT_ID`             | Google ログイン用クライアント ID          |
+| `GOOGLE_CLIENT_SECRET`         | Google ログイン用クライアントシークレット |
 
 ### 開発用ログイン
 
@@ -212,6 +212,8 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 
 ## ドキュメント
 
+- [回答入力UIのモバイル操作設計（2026-09-07）](docs/architecture/mobile-availability-input-2026-09-07.md)
+- [回答入力UIのデザインQA（最新結果）](design-qa.md)
 - [既存回答編集メニューの再発防止設計（2026-08-13）](docs/architecture/existing-answer-menu-2026-08-13.md)
 - [見た目・使い勝手を維持する性能 / UX 改善方針（2026-08-13）](docs/architecture/performance-ux-preservation-plan-2026-08-13.md)
 - [現行プロダクト総合監査（2026-07-29）](docs/audit/2026-07-29-product-audit.md)

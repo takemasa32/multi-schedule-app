@@ -64,6 +64,12 @@ export interface SelectionDragControllerOptions {
    */
   disableBodyScroll?: boolean;
   /**
+   * ポインターイベントの既定動作をキャンセルするかどうか
+   *
+   * タッチスクロールをブラウザへ委ねる画面では false を指定する。
+   */
+  preventDefaultEvents?: boolean;
+  /**
    * 初回クリック時に選択状態を決定するロジック
    * 省略時はトグル動作（!isSelected）となる
    */
@@ -140,6 +146,7 @@ export default function useSelectionDragController(
     onDragStart,
     onDragEnd,
     disableBodyScroll = false,
+    preventDefaultEvents = true,
     resolveInitialIntent,
     enableKeyboard = true,
   } = options;
@@ -251,8 +258,10 @@ export default function useSelectionDragController(
         return;
       }
 
-      event.preventDefault();
-      event.stopPropagation();
+      if (preventDefaultEvents) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
 
       startDragAtKey(key, event.pointerId ?? null);
       try {
@@ -261,7 +270,7 @@ export default function useSelectionDragController(
         // pointer capture が利用できない環境では無視
       }
     },
-    [shouldIgnorePointerDown, startDragAtKey],
+    [preventDefaultEvents, shouldIgnorePointerDown, startDragAtKey],
   );
 
   const handlePointerEnter = useCallback(
@@ -280,13 +289,17 @@ export default function useSelectionDragController(
         } catch {
           // pointer capture が利用できない環境では無視
         }
-        event.preventDefault();
+        if (preventDefaultEvents) {
+          event.preventDefault();
+        }
         return;
       }
-      event.preventDefault();
+      if (preventDefaultEvents) {
+        event.preventDefault();
+      }
       applyRangeSelection(key);
     },
-    [applyRangeSelection, shouldIgnorePointerEnter, startDragAtKey],
+    [applyRangeSelection, preventDefaultEvents, shouldIgnorePointerEnter, startDragAtKey],
   );
 
   const finishDrag = useCallback(
@@ -390,7 +403,6 @@ export default function useSelectionDragController(
         const props: Record<string, unknown> = {
           'aria-disabled': true,
           role,
-          'data-selection-key': key,
         };
         return props as HTMLAttributes<HTMLElement>;
       }
@@ -405,7 +417,9 @@ export default function useSelectionDragController(
           if (shouldIgnorePointerEnter?.(event, key) || !dragInfoRef.current.isDragging) {
             return;
           }
-          event.preventDefault();
+          if (preventDefaultEvents) {
+            event.preventDefault();
+          }
         },
         'aria-pressed': isSelected(key),
         'data-selection-key': key,
@@ -432,6 +446,7 @@ export default function useSelectionDragController(
       handlePointerDown,
       handlePointerEnter,
       isSelected,
+      preventDefaultEvents,
       shouldIgnorePointerEnter,
       toggleKey,
     ],

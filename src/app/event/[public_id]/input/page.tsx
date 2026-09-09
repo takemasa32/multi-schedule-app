@@ -90,7 +90,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   const pageTitle = isEditMode ? '回答を編集する' : '新しく回答する';
 
   return (
-    <div className="app-page-narrow">
+    <div className="app-page-narrow availability-input-page">
       <header className="page-header">
         <p className="page-eyebrow">RESPOND</p>
         <h1 className="page-title">{pageTitle}</h1>
@@ -105,7 +105,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
         )}
       </header>
 
-      <div className="surface overflow-visible p-3 sm:p-6">
+      <div className="availability-input-surface surface overflow-visible p-3 sm:p-6">
         <AvailabilityForm
           eventId={event.id}
           publicToken={public_id}

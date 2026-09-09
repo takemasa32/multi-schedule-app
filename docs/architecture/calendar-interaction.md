@@ -25,7 +25,7 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
   - 触覚フィードバックは `useHapticsFeedback` で共通化し、ドラッグ開始/終了に加えて『セル状態が実際に変わった瞬間』にも発火する（モバイル限定、`prefers-reduced-motion` では無効）。ドラッグ中はクールダウンで間引き、全マス連打は避ける。回答入力UI以外には適用しない。
   - `pointerdown/pointermove/pointerup` の捕捉と `document.elementFromPoint` を用いたセル解決
   - `rangeResolver` による連続セルの算出（回答ページでは日付 ID の配列に沿った範囲適用）
-  - ボディスクロール抑止（overflow/touchAction を退避・復元）
+  - 必要な画面だけで利用するボディスクロール抑止（overflow/touchAction を退避・復元）。回答入力ではブラウザ標準の縦スクロールを優先する。
   - キーボード操作（Space/Enter）でのトグル（必要時のみ `focusable` を付与）
   - セル以外から押下されたまま移動してきたポインタでも `pointermove` でセル上に侵入したタイミングでドラッグを開始し、ドラッグ中のポインタ ID を記録してスムーズに範囲更新を継続
 - **拡張ポイント**
@@ -50,11 +50,11 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 
 ## ページ別パラメータ
 
-| ページ               | rangeResolver                | shouldIgnorePointerDown  | 備考                                                    |
-| -------------------- | ---------------------------- | ------------------------ | ------------------------------------------------------- |
-| イベント回答         | 日付 ID 配列に基づく連続範囲 | 週次モード中は true      | `touchAction` をドラッグ中のみ none                     |
-| イベント作成（手動） | 単一セル（ペイント方式）     | -                        | 週単位でセルを塗る操作に最適化、`enableKeyboard: false` |
-| 週ごと回答入力       | 単一セル（曜日×時間帯）      | 週次モード OFF 時に true | key を `weekday__timeslot` に統一                       |
+| ページ               | rangeResolver                | shouldIgnorePointerDown  | 備考                                                                        |
+| -------------------- | ---------------------------- | ------------------------ | --------------------------------------------------------------------------- |
+| イベント回答         | 日付 ID 配列に基づく連続範囲 | 週次モード中は true      | 回答入力ではbodyロックと既定動作キャンセルを行わず、CSSで縦スクロールを許可 |
+| イベント作成（手動） | 単一セル（ペイント方式）     | -                        | 週単位でセルを塗る操作に最適化、`enableKeyboard: false`                     |
+| 週ごと回答入力       | 単一セル（曜日×時間帯）      | 週次モード OFF 時に true | 候補外セルはdisabled、候補セルはキーボード操作に対応                        |
 
 ## 共通仕様
 
@@ -97,11 +97,12 @@ src/hooks/useSelectionDragController.ts  ← 操作ロジック（入力共通�
 ## 今後の拡張余地
 
 - `resolveInitialIntent` を利用した「常にON」「範囲固定」などのカスタムモード
-- `enableKeyboard` を true に設定し、フォーカス管理を導入（data-testid と組み合わせ）
+- 他のカレンダー操作UIでも、画面の操作方式に合わせて `enableKeyboard` と `preventDefaultEvents` を設定する。
 - `rangeResolver` を2次元（行列）用に差し替え、時間帯ブロック全体選択を実現
 - ログ計測用のフックポイント（onDragStart/onDragEnd）にOpenTelemetryイベントを接続
 
 ## 開発メモ
 
-- 既存実装の `no-scroll` クラスは CSS 未定義だったため、overflow/touchAction を直接制御する実装で置き換え
+- 既存実装の `no-scroll` クラスは CSS 未定義だったため、必要な画面だけで overflow/touchAction を直接制御する実装へ整理。回答入力はCSSの `pan-y` / `pan-x pan-y` を優先し、body全体をロックしない。
+- 640px未満の回答入力では、セル内だけ`touch-action: none`とpointer captureを使い、時刻列は`pan-y`、表ラッパーは`pan-x pan-y` + `overflow-y: hidden`とする。ページ全体の`overflow`・`touch-action`・`overscroll-behavior`は変更しない。
 - 週次UIは `selected` フラグを従来挙動（過去互換）として維持。将来的に `timeSlots` から自動算出する際は別途ドメイン仕様を決めてから調整する。
