@@ -824,11 +824,9 @@ export default function AvailabilityForm({
 
   const formatTimeSlotLabel = useCallback((timeSlot: string) => {
     const [startTime, endTime] = timeSlot.split('-');
-    const normalize = (value: string) => {
-      if (value === '00:00') return '24:00';
-      return value.replace(/^0/, '');
-    };
-    return `${normalize(startTime ?? '')}〜${normalize(endTime ?? '')}`;
+    const normalizedStart = (startTime ?? '').replace(/^0/, '');
+    const normalizedEnd = endTime === '00:00' ? '24:00' : (endTime ?? '').replace(/^0/, '');
+    return `${normalizedStart}〜${normalizedEnd}`;
   }, []);
 
   // 週入力モード用の時間帯スロットを初期化する関数

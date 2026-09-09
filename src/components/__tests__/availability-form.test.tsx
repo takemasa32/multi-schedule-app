@@ -474,6 +474,39 @@ describe('AvailabilityForm', () => {
     expect(selectedCell).toHaveTextContent('×');
   });
 
+  it('0:00開始の候補は24:00ではなく0:00として読み上げる', async () => {
+    const midnightStartEventDates = [
+      {
+        id: 'midnight-start-date',
+        start_time: '2025-05-12T00:00:00',
+        end_time: '2025-05-12T01:00:00',
+      },
+    ];
+    const weekdayNumber = new Date(midnightStartEventDates[0].start_time).getDay();
+    const weekdayLabel = ['日', '月', '火', '水', '木', '金', '土'][weekdayNumber];
+
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        mode="new"
+        isAuthenticated
+        requireWeeklyStep
+        eventDates={midnightStartEventDates}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+
+    const weeklySection = await screen.findByTestId('availability-step-weekly');
+    const candidateCell = weeklySection.querySelector<HTMLElement>(
+      `td[data-day="${weekdayLabel}"][data-time-slot="00:00-01:00"]`,
+    );
+
+    expect(candidateCell).toHaveAccessibleName(`${weekdayLabel} 0:00〜1:00 未選択`);
+    expect(candidateCell).not.toHaveAccessibleName(/24:00〜1:00/);
+  });
+
   it('参加可能枠が未選択の場合は候補日程追加への確認を表示できる', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();

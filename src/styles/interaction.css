@@ -1,10 +1,6 @@
 /* 回答入力の表だけにタッチ・スクロール制御を適用する。 */
 @media (max-width: 639px) {
   /* ページ側の16px余白は残し、入力面とフォームのカード表現だけを外す。 */
-  .availability-input-page {
-    padding-inline: 0;
-  }
-
   .availability-input-surface {
     padding: 0;
     background: transparent;
