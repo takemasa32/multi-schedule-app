@@ -1014,12 +1014,6 @@ export default function AvailabilityForm({
   const stepLabel = useMemo(() => {
     return stepLabels[currentStep - 1] ?? stepLabels[0] ?? '';
   }, [currentStep, stepLabels]);
-  const weeklyStepLeadMessage = useMemo(() => {
-    if (isAuthenticated) {
-      return '日程が多いため、曜日ごとにまとめて入力してください。';
-    }
-    return '各曜日の予定を入力してください。';
-  }, [isAuthenticated]);
   const weekdayTimeSlots = useMemo(() => {
     const baseSchedule = Object.values(weekdaySelections)[0];
     return baseSchedule ? Object.keys(baseSchedule.timeSlots).sort() : [];
@@ -1167,7 +1161,8 @@ export default function AvailabilityForm({
             aria-labelledby="availability-step-title"
           >
             <div className="availability-step-description bg-info/10 border-info/20 rounded-lg border p-3 text-sm">
-              <p>{weeklyStepLeadMessage}</p>
+              <p>まだ予定が入っていない日程を、曜日ごとにまとめて入力できます。</p>
+              <p>次の画面で日付ごとに調整できます。</p>
             </div>
 
             <div className="availability-weekly-card bg-base-200 border-base-300 rounded-lg border p-1 shadow-sm sm:p-3">

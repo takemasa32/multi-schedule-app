@@ -207,10 +207,13 @@ describe('AvailabilityForm', () => {
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
   });
 
-  it('未ログイン時の曜日一括入力では入力案内文言を表示する', () => {
+  it('曜日一括入力では適用対象と次画面で調整できることを案内する', () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     goToWeeklyStepAsGuest();
-    expect(screen.getByText('各曜日の予定を入力してください。')).toBeInTheDocument();
+    expect(
+      screen.getByText('まだ予定が入っていない日程を、曜日ごとにまとめて入力できます。'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('次の画面で日付ごとに調整できます。')).toBeInTheDocument();
   });
 
   it('曜日一括入力は候補外セルを無効化し、候補セルをキーボード操作できる', () => {
@@ -346,15 +349,16 @@ describe('AvailabilityForm', () => {
     });
   });
 
-  it('ログイン済みかつ長い未入力期間がある場合は一時的な曜日入力案内を表示する', async () => {
+  it('ログイン済みの曜日一括入力でも同じ案内を表示する', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated requireWeeklyStep />);
 
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
     expect(
-      await screen.findByText('日程が多いため、曜日ごとにまとめて入力してください。'),
+      await screen.findByText('まだ予定が入っていない日程を、曜日ごとにまとめて入力できます。'),
     ).toBeInTheDocument();
+    expect(screen.getByText('次の画面で日付ごとに調整できます。')).toBeInTheDocument();
   });
 
   it('曜日一括入力で時間区切りの最下段に終了時刻を表示する', () => {
