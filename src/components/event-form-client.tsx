@@ -419,289 +419,282 @@ export default function EventFormClient() {
   );
 
   return (
-    <>
-      <span className="sr-only" role="status" aria-live="polite">
-        {isPending ? 'イベントを作成中…' : ''}
-      </span>
-      <form onSubmit={handleSubmit} className="space-y-6" aria-busy={isPending}>
-        <div ref={stepIndicatorRef}>
-          <WizardProgress currentStep={currentStep} steps={mainSteps} currentLabel={stepLabel} />
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div ref={stepIndicatorRef}>
+        <WizardProgress currentStep={currentStep} steps={mainSteps} currentLabel={stepLabel} />
+      </div>
 
-        {error && (
-          <div className="alert alert-error" role="alert" ref={errorRef}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 shrink-0 stroke-current"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{error}</span>
-          </div>
-        )}
-
-        {currentStep === 1 && (
-          <div className="space-y-6" data-testid="create-step-1">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium">
-                イベントタイトル
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="border-base-300 focus:border-primary focus:ring-primary mt-1 block w-full rounded-md border px-3 py-2 shadow-sm"
-                disabled={isPending}
-                placeholder="例：〇〇の日程調整"
-                aria-describedby="title-hint"
-              />
-              <p id="title-hint" className="text-base-content/60 mt-1 text-xs">
-                イベントの目的や内容が分かるタイトルを入力してください（必須）
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium">
-                説明
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                data-testid="event-description-input"
-                className="border-base-300 focus:border-primary focus:ring-primary mt-1 block w-full rounded-md border px-3 py-2 shadow-sm"
-                rows={3}
-                disabled={isPending}
-                placeholder="（任意）備考や注意事項があれば記入してください。"
-                aria-describedby="description-hint"
-              />
-              <p id="description-hint" className="text-base-content/60 mt-1 text-xs">
-                （任意）イベントの詳細や参加者へのメッセージを記入できます
-              </p>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleNext}
-                data-testid="create-next"
-              >
-                次へ
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 2 && step2SubStep === 'mode' && (
-          <div className="space-y-4" data-testid="create-step-2-mode">
-            <p className="text-base-content/60 text-sm">候補日程の作り方を選択してください。</p>
-            <div role="radiogroup" aria-label="入力方式" className="grid gap-4 md:grid-cols-2">
-              <label
-                className={`bg-base-100 cursor-pointer rounded-lg border transition-all ${
-                  inputMode === 'auto'
-                    ? 'border-primary shadow-sm'
-                    : 'border-base-300 hover:border-primary/40'
-                }`}
-                data-testid="input-mode-auto"
-              >
-                <input
-                  type="radio"
-                  name="input-mode"
-                  className="sr-only"
-                  checked={inputMode === 'auto'}
-                  onChange={() => setInputMode('auto')}
-                  disabled={isPending}
-                />
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold">自動で作成</h3>
-                    <span
-                      className={`h-3 w-3 rounded-full border ${
-                        inputMode === 'auto' ? 'border-primary bg-primary' : 'border-base-300'
-                      }`}
-                      aria-hidden
-                    />
-                  </div>
-                  <p className="text-base-content/70 mt-2 text-sm">
-                    期間と時間帯を入力すると候補枠を自動生成します。
-                  </p>
-                  <div className="text-base-content/60 mt-4 grid gap-2 text-xs">
-                    <p>まとめて候補枠を作りたい場合に向いています。</p>
-                    <p>期間内の時間枠を一括生成できます。</p>
-                  </div>
-                </div>
-              </label>
-              <label
-                className={`bg-base-100 cursor-pointer rounded-lg border transition-all ${
-                  inputMode === 'manual'
-                    ? 'border-primary shadow-sm'
-                    : 'border-base-300 hover:border-primary/40'
-                }`}
-                data-testid="input-mode-manual"
-              >
-                <input
-                  type="radio"
-                  name="input-mode"
-                  className="sr-only"
-                  checked={inputMode === 'manual'}
-                  onChange={() => setInputMode('manual')}
-                  disabled={isPending}
-                />
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold">手動で選択</h3>
-                    <span
-                      className={`h-3 w-3 rounded-full border ${
-                        inputMode === 'manual' ? 'border-primary bg-primary' : 'border-base-300'
-                      }`}
-                      aria-hidden
-                    />
-                  </div>
-                  <p className="text-base-content/70 mt-2 text-sm">
-                    カレンダー表で候補枠を直接選びます。
-                  </p>
-                  <div className="text-base-content/60 mt-4 grid gap-2 text-xs">
-                    <p>候補枠を細かく調整したい場合に向いています。</p>
-                    <p>表をドラッグして柔軟に選択できます。</p>
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <button type="button" className="btn" onClick={handleBack}>
-                戻る
-              </button>
-              <button type="button" className="btn btn-primary" onClick={handleNext}>
-                次へ
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 2 && step2SubStep === 'settings' && (
-          <div className="space-y-6" data-testid="create-step-2-settings">
-            <p className="text-base-content/60 text-sm">
-              候補日程の期間と時間帯を設定してください。
-            </p>
-
-            <div className="space-y-2">
-              <h3 className="text-base font-semibold">候補日程の設定</h3>
-              {inputMode === 'auto' && (
-                <DateRangePicker
-                  onTimeSlotsChange={handleTimeSlotsChange}
-                  onSettingsChange={setSharedSettings}
-                  {...autoInitialProps}
-                />
-              )}
-              {inputMode === 'manual' && (
-                <DateRangePicker
-                  onTimeSlotsChange={setManualCandidateSlots}
-                  onSettingsChange={setSharedSettings}
-                  allowPastDates
-                  {...autoInitialProps}
-                />
-              )}
-              <p className="text-base-content/60 mt-2 text-xs">
-                日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <button type="button" className="btn" onClick={handleBack}>
-                戻る
-              </button>
-              <button type="button" className="btn btn-primary" onClick={handleNext}>
-                {inputMode === 'manual' ? 'カレンダーへ' : '次へ'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 2 && step2SubStep === 'calendar' && inputMode === 'manual' && (
-          <div className="space-y-6" data-testid="create-step-2-calendar">
-            <p className="text-base-content/60 text-sm">カレンダーで日程候補を選択してください。</p>
-
-            <ManualTimeSlotPicker
-              onTimeSlotsChange={handleTimeSlotsChange}
-              initialSlots={manualSlots}
-              showDateRangePicker={false}
-              {...autoInitialProps}
+      {error && (
+        <div className="alert alert-error" role="alert" ref={errorRef}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 shrink-0 stroke-current"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
 
-            <div className="flex items-center justify-between">
-              <button type="button" className="btn" onClick={handleBack}>
-                戻る
-              </button>
-              <button type="button" className="btn btn-primary" onClick={handleNext}>
-                次へ
-              </button>
-            </div>
+      {currentStep === 1 && (
+        <div className="space-y-6" data-testid="create-step-1">
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium">
+              イベントタイトル
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="border-base-300 focus:border-primary focus:ring-primary mt-1 block w-full rounded-md border px-3 py-2 shadow-sm"
+              disabled={isPending}
+              placeholder="例：〇〇の日程調整"
+              aria-describedby="title-hint"
+            />
+            <p id="title-hint" className="text-base-content/60 mt-1 text-xs">
+              イベントの目的や内容が分かるタイトルを入力してください（必須）
+            </p>
           </div>
-        )}
 
-        {currentStep === 3 && (
-          <div className="space-y-6" data-testid="create-step-3">
-            <div className="border-base-300 bg-base-200/40 rounded-lg border p-4">
-              <div className="text-sm font-semibold">入力内容の確認</div>
-              <div className="text-base-content/80 mt-3 grid gap-2 text-sm">
-                <div>
-                  <span className="font-semibold">タイトル:</span> {title || '未入力'}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium">
+              説明
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              data-testid="event-description-input"
+              className="border-base-300 focus:border-primary focus:ring-primary mt-1 block w-full rounded-md border px-3 py-2 shadow-sm"
+              rows={3}
+              disabled={isPending}
+              placeholder="（任意）備考や注意事項があれば記入してください。"
+              aria-describedby="description-hint"
+            />
+            <p id="description-hint" className="text-base-content/60 mt-1 text-xs">
+              （任意）イベントの詳細や参加者へのメッセージを記入できます
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleNext}
+              data-testid="create-next"
+            >
+              次へ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 2 && step2SubStep === 'mode' && (
+        <div className="space-y-4" data-testid="create-step-2-mode">
+          <p className="text-base-content/60 text-sm">候補日程の作り方を選択してください。</p>
+          <div role="radiogroup" aria-label="入力方式" className="grid gap-4 md:grid-cols-2">
+            <label
+              className={`bg-base-100 cursor-pointer rounded-lg border transition-all ${
+                inputMode === 'auto'
+                  ? 'border-primary shadow-sm'
+                  : 'border-base-300 hover:border-primary/40'
+              }`}
+              data-testid="input-mode-auto"
+            >
+              <input
+                type="radio"
+                name="input-mode"
+                className="sr-only"
+                checked={inputMode === 'auto'}
+                onChange={() => setInputMode('auto')}
+                disabled={isPending}
+              />
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold">自動で作成</h3>
+                  <span
+                    className={`h-3 w-3 rounded-full border ${
+                      inputMode === 'auto' ? 'border-primary bg-primary' : 'border-base-300'
+                    }`}
+                    aria-hidden
+                  />
                 </div>
-                <div>
-                  <span className="font-semibold">説明:</span> {description || '未入力'}
-                </div>
-                <div>
-                  <span className="font-semibold">入力方式:</span> {inputModeLabel(inputMode)}
-                </div>
-                <div>
-                  <span className="font-semibold">日付範囲:</span> {dateRangeSummary}
-                </div>
-                <div>
-                  <span className="font-semibold">時間帯:</span> {timeRangeSummary}
+                <p className="text-base-content/70 mt-2 text-sm">
+                  期間と時間帯を入力すると候補枠を自動生成します。
+                </p>
+                <div className="text-base-content/60 mt-4 grid gap-2 text-xs">
+                  <p>まとめて候補枠を作りたい場合に向いています。</p>
+                  <p>期間内の時間枠を一括生成できます。</p>
                 </div>
               </div>
-            </div>
-
-            <TermsCheckbox
-              isChecked={termsAccepted}
-              onChange={setTermsAccepted}
-              id="event-form-terms"
-            />
-
-            <div className="flex items-center justify-between">
-              <button type="button" className="btn" onClick={handleBack} disabled={isPending}>
-                戻る
-              </button>
-              <button
-                type="submit"
-                className={`btn btn-primary btn-lg ${isPending ? 'cursor-not-allowed opacity-50' : ''}`}
+            </label>
+            <label
+              className={`bg-base-100 cursor-pointer rounded-lg border transition-all ${
+                inputMode === 'manual'
+                  ? 'border-primary shadow-sm'
+                  : 'border-base-300 hover:border-primary/40'
+              }`}
+              data-testid="input-mode-manual"
+            >
+              <input
+                type="radio"
+                name="input-mode"
+                className="sr-only"
+                checked={inputMode === 'manual'}
+                onChange={() => setInputMode('manual')}
                 disabled={isPending}
-              >
-                {isPending ? (
-                  <span className="inline-flex items-center">
-                    <span className="loading loading-spinner loading-sm mr-2" />
-                    イベントを作成中…
-                  </span>
-                ) : (
-                  'イベントを作成'
-                )}
-              </button>
+              />
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold">手動で選択</h3>
+                  <span
+                    className={`h-3 w-3 rounded-full border ${
+                      inputMode === 'manual' ? 'border-primary bg-primary' : 'border-base-300'
+                    }`}
+                    aria-hidden
+                  />
+                </div>
+                <p className="text-base-content/70 mt-2 text-sm">
+                  カレンダー表で候補枠を直接選びます。
+                </p>
+                <div className="text-base-content/60 mt-4 grid gap-2 text-xs">
+                  <p>候補枠を細かく調整したい場合に向いています。</p>
+                  <p>表をドラッグして柔軟に選択できます。</p>
+                </div>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button type="button" className="btn" onClick={handleBack}>
+              戻る
+            </button>
+            <button type="button" className="btn btn-primary" onClick={handleNext}>
+              次へ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 2 && step2SubStep === 'settings' && (
+        <div className="space-y-6" data-testid="create-step-2-settings">
+          <p className="text-base-content/60 text-sm">候補日程の期間と時間帯を設定してください。</p>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-semibold">候補日程の設定</h3>
+            {inputMode === 'auto' && (
+              <DateRangePicker
+                onTimeSlotsChange={handleTimeSlotsChange}
+                onSettingsChange={setSharedSettings}
+                {...autoInitialProps}
+              />
+            )}
+            {inputMode === 'manual' && (
+              <DateRangePicker
+                onTimeSlotsChange={setManualCandidateSlots}
+                onSettingsChange={setSharedSettings}
+                allowPastDates
+                {...autoInitialProps}
+              />
+            )}
+            <p className="text-base-content/60 mt-2 text-xs">
+              日付と時間帯を選択し、複数の候補枠を追加できます。最低1つ以上の時間枠を設定してください。
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button type="button" className="btn" onClick={handleBack}>
+              戻る
+            </button>
+            <button type="button" className="btn btn-primary" onClick={handleNext}>
+              {inputMode === 'manual' ? 'カレンダーへ' : '次へ'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 2 && step2SubStep === 'calendar' && inputMode === 'manual' && (
+        <div className="space-y-6" data-testid="create-step-2-calendar">
+          <p className="text-base-content/60 text-sm">カレンダーで日程候補を選択してください。</p>
+
+          <ManualTimeSlotPicker
+            onTimeSlotsChange={handleTimeSlotsChange}
+            initialSlots={manualSlots}
+            showDateRangePicker={false}
+            {...autoInitialProps}
+          />
+
+          <div className="flex items-center justify-between">
+            <button type="button" className="btn" onClick={handleBack}>
+              戻る
+            </button>
+            <button type="button" className="btn btn-primary" onClick={handleNext}>
+              次へ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 3 && (
+        <div className="space-y-6" data-testid="create-step-3">
+          <div className="border-base-300 bg-base-200/40 rounded-lg border p-4">
+            <div className="text-sm font-semibold">入力内容の確認</div>
+            <div className="text-base-content/80 mt-3 grid gap-2 text-sm">
+              <div>
+                <span className="font-semibold">タイトル:</span> {title || '未入力'}
+              </div>
+              <div>
+                <span className="font-semibold">説明:</span> {description || '未入力'}
+              </div>
+              <div>
+                <span className="font-semibold">入力方式:</span> {inputModeLabel(inputMode)}
+              </div>
+              <div>
+                <span className="font-semibold">日付範囲:</span> {dateRangeSummary}
+              </div>
+              <div>
+                <span className="font-semibold">時間帯:</span> {timeRangeSummary}
+              </div>
             </div>
           </div>
-        )}
-      </form>
-    </>
+
+          <TermsCheckbox
+            isChecked={termsAccepted}
+            onChange={setTermsAccepted}
+            id="event-form-terms"
+          />
+
+          <div className="flex items-center justify-between">
+            <button type="button" className="btn" onClick={handleBack} disabled={isPending}>
+              戻る
+            </button>
+            <button
+              type="submit"
+              className={`btn btn-primary btn-lg ${isPending ? 'cursor-not-allowed opacity-50' : ''}`}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <span className="inline-flex items-center" role="status" aria-live="polite">
+                  <span className="loading loading-spinner loading-sm mr-2" />
+                  イベントを作成中…
+                </span>
+              ) : (
+                'イベントを作成'
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </form>
   );
 }

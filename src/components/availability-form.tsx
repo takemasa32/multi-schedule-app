@@ -1075,15 +1075,7 @@ export default function AvailabilityForm({
         </div>
       )}
 
-      <span className="sr-only" role="status" aria-live="polite">
-        {isSubmitting ? '回答を送信中…' : isCheckingName ? '回答を確認中…' : ''}
-      </span>
-
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4"
-        aria-busy={isSubmitting || isCheckingName}
-      >
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input type="hidden" name="eventId" value={eventId} />
         <input type="hidden" name="publicToken" value={publicToken} />
         <input type="hidden" name="participant_name" value={name} />
@@ -1557,12 +1549,12 @@ export default function AvailabilityForm({
                 disabled={isSubmitting || isCheckingName}
               >
                 {isSubmitting ? (
-                  <span className="inline-flex items-center">
+                  <span className="inline-flex items-center" role="status" aria-live="polite">
                     <span className="loading loading-spinner loading-sm mr-2"></span>
                     回答を送信中…
                   </span>
                 ) : isCheckingName ? (
-                  <span className="inline-flex items-center">
+                  <span className="inline-flex items-center" role="status" aria-live="polite">
                     <span className="loading loading-spinner loading-sm mr-2"></span>
                     回答を確認中…
                   </span>

@@ -14,7 +14,7 @@ describe('WizardProgress', () => {
     expect(screen.getByRole('heading', { name: '候補日程を設定' })).toBeInTheDocument();
     expect(screen.getByText('2 / 3')).toBeInTheDocument();
     const progress = screen.getByRole('progressbar', { name: '候補日程を設定（2/3）' });
-    expect(progress).toHaveAttribute('aria-valuemin', '1');
+    expect(progress).toHaveAttribute('aria-valuemin', '0');
     expect(progress).toHaveAttribute('aria-valuemax', '3');
     expect(progress).toHaveAttribute('aria-valuenow', '2');
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
