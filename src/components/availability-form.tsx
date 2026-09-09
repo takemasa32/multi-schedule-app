@@ -71,7 +71,7 @@ export default function AvailabilityForm({
 }: AvailabilityFormProps) {
   const router = useRouter();
   const isNewMode = mode === 'new';
-  const showWeeklyStep = !isAuthenticated || requireWeeklyStep;
+  const showWeeklyStep = isNewMode && (!isAuthenticated || requireWeeklyStep);
   const weeklyStep = showWeeklyStep ? ((isNewMode ? 2 : 1) as WizardStep) : null;
   const heatmapStep: WizardStep = isNewMode
     ? ((showWeeklyStep ? 3 : 2) as WizardStep)

@@ -499,7 +499,7 @@ describe('AvailabilityForm', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/event/token1?action=add-dates');
   });
 
-  it('編集回答は3ステップで遷移できる', () => {
+  it('編集回答は曜日一括入力を表示せず2ステップで遷移できる', () => {
     render(
       <AvailabilityForm
         {...defaultProps}
@@ -509,9 +509,9 @@ describe('AvailabilityForm', () => {
       />,
     );
 
-    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
+    expect(screen.queryByTestId('availability-step-weekly')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
     expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
   });
@@ -584,35 +584,6 @@ describe('AvailabilityForm', () => {
 
     expect(screen.queryByText('週予定の更新')).not.toBeInTheDocument();
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
-  });
-
-  it('編集モードで曜日セルを○→×にした場合はヒートマップの選択にも反映される', async () => {
-    render(
-      <AvailabilityForm
-        {...defaultProps}
-        mode="edit"
-        isAuthenticated={false}
-        initialParticipant={{ id: 'p1', name: '既存ユーザー' }}
-        initialAvailabilities={{ date1: true }}
-      />,
-    );
-
-    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
-    const weeklyCell = document.querySelector<HTMLElement>('td[data-day="月"][data-time-slot]');
-    if (!weeklyCell) throw new Error('曜日一括セルが見つかりません');
-    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
-    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
-
-    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
-
-    const heatmapSection = await screen.findByTestId('availability-step-heatmap');
-    expect(heatmapSection).toBeInTheDocument();
-    expect(
-      document.querySelector<HTMLInputElement>('input[name="availability_date1"]'),
-    ).not.toBeInTheDocument();
-    const date1Cell = heatmapSection.querySelector<HTMLElement>('[data-selection-key="date1"]');
-    expect(date1Cell).not.toBeNull();
-    expect(date1Cell).toHaveTextContent('×');
   });
 
   it('競合枠セルの上書き確認が動作する', async () => {
