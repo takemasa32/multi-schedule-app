@@ -12,11 +12,12 @@ export default function Loading() {
         <div className="skeleton mt-3 h-4 w-72 max-w-full" />
       </header>
       <div className="surface space-y-6 p-4 sm:p-6" aria-hidden="true">
-        <div className="skeleton h-6 w-48 max-w-full" />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="skeleton h-10 w-full" />
-          <div className="skeleton h-10 w-full" />
-          <div className="skeleton h-10 w-full" />
+        <div className="border-base-300 space-y-3 border-b pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="skeleton h-6 w-36 max-w-full" />
+            <div className="skeleton h-4 w-10" />
+          </div>
+          <div className="skeleton h-1.5 w-full rounded-full" />
         </div>
         <div className="space-y-2">
           <div className="skeleton h-4 w-28" />

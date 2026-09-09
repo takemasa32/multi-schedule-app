@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { submitAvailability, checkParticipantExists } from '@/lib/actions';
 import TermsCheckbox from './terms/terms-checkbox';
 import useScrollToError from '@/hooks/useScrollToError';
+import WizardProgress from '@/components/common/wizard-progress';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
 import useHapticsFeedback from '@/hooks/useHapticsFeedback';
 import { addDays, endOfWeek, startOfWeek } from 'date-fns';
@@ -110,7 +111,6 @@ export default function AvailabilityForm({
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
   const hasAutoFillAppliedRef = useRef(false);
-  const wizardTitleRef = useRef<HTMLHeadingElement | null>(null);
   const wizardProgressRef = useRef<HTMLDivElement | null>(null);
   const previousStepRef = useRef<WizardStep | null>(null);
   const entryAuthStateRef = useRef<'authenticated' | 'guest'>(
@@ -402,7 +402,7 @@ export default function AvailabilityForm({
     }
     if (previousStepRef.current === currentStep) return;
     previousStepRef.current = currentStep;
-    const scrollTarget = wizardProgressRef.current ?? wizardTitleRef.current;
+    const scrollTarget = wizardProgressRef.current;
     if (!scrollTarget) return;
 
     // ステップ遷移時は固定ヘッダーに隠れない進捗表示まで戻し、次の操作を認識しやすくする。
@@ -1026,38 +1026,19 @@ export default function AvailabilityForm({
   }, [weekdayTimeSlots]);
 
   return (
-    <div className="availability-form-shell bg-base-100 mb-8 animate-fadeIn rounded-lg border p-4 shadow-sm transition-all md:p-6">
-      <div
-        ref={wizardProgressRef}
-        className="mb-3 overflow-x-auto"
-        data-testid="availability-step-progress"
-      >
-        <ul className="steps w-full whitespace-nowrap text-xs sm:text-sm">
-          {stepLabels.map((label, index) => {
-            const step = (index + 1) as WizardStep;
-            return (
-              <li
-                key={label}
-                aria-label={label}
-                className={`step ${currentStep >= step ? 'step-primary' : ''}`}
-              >
-                <span className="hidden sm:inline" aria-hidden="true">
-                  {label}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+    <div className="availability-form-shell mb-8 animate-fadeIn">
+      <div ref={wizardProgressRef} className="mb-4" data-testid="availability-step-progress">
+        <WizardProgress
+          currentStep={currentStep}
+          steps={stepLabels.map((label) => ({ label }))}
+          headingId="availability-step-title"
+          currentLabel={
+            mode === 'edit'
+              ? `${initialParticipant?.name ?? '回答'}の編集 · ${stepLabel}`
+              : stepLabel
+          }
+        />
       </div>
-      <h2 ref={wizardTitleRef} className="mb-3 text-xl font-bold">
-        {mode === 'edit' ? `${initialParticipant?.name ?? '回答'}の編集` : '回答ウィザード'}
-      </h2>
-      <h3
-        id="availability-step-title"
-        className="availability-step-title mb-4 scroll-mt-24 text-base font-semibold"
-      >
-        {stepLabel}
-      </h3>
 
       {error && (
         <div className="alert alert-error mb-4" role="alert" aria-live="assertive" ref={errorRef}>
@@ -1094,7 +1075,11 @@ export default function AvailabilityForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        aria-busy={isSubmitting || isCheckingName}
+      >
         <input type="hidden" name="eventId" value={eventId} />
         <input type="hidden" name="publicToken" value={publicToken} />
         <input type="hidden" name="participant_name" value={name} />
@@ -1540,6 +1525,7 @@ export default function AvailabilityForm({
                 name="comment"
                 className="textarea textarea-bordered w-full"
                 value={comment}
+                disabled={isSubmitting || isCheckingName}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
               />
@@ -1549,11 +1535,16 @@ export default function AvailabilityForm({
               isChecked={termsAccepted}
               onChange={setTermsAccepted}
               id="availability-form-terms"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCheckingName}
             />
 
             <div className="flex flex-wrap justify-between gap-2">
-              <button type="button" className="btn btn-outline" onClick={handlePrevStep}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handlePrevStep}
+                disabled={isSubmitting || isCheckingName}
+              >
                 戻る
               </button>
               <button
@@ -1562,15 +1553,15 @@ export default function AvailabilityForm({
                 disabled={isSubmitting || isCheckingName}
               >
                 {isSubmitting ? (
-                  <>
+                  <span className="inline-flex items-center" role="status" aria-live="polite">
                     <span className="loading loading-spinner loading-sm mr-2"></span>
-                    送信中...
-                  </>
+                    回答を送信中…
+                  </span>
                 ) : isCheckingName ? (
-                  <>
+                  <span className="inline-flex items-center" role="status" aria-live="polite">
                     <span className="loading loading-spinner loading-sm mr-2"></span>
-                    名前を確認中...
-                  </>
+                    回答を確認中…
+                  </span>
                 ) : mode === 'edit' ? (
                   '回答を更新する'
                 ) : (
