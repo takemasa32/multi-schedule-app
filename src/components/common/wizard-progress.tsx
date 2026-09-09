@@ -42,7 +42,7 @@ export default function WizardProgress({
         className="bg-base-200 mt-3 h-1.5 overflow-hidden rounded-full"
         role="progressbar"
         aria-label={`${label}（${safeStep}/${steps.length}）`}
-        aria-valuemin={1}
+        aria-valuemin={0}
         aria-valuemax={steps.length}
         aria-valuenow={safeStep}
       >
