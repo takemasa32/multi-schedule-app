@@ -807,14 +807,14 @@ export default function AccountScheduleSettings({
       data-testid="account-schedule-settings"
       data-tour-id="account-schedule-settings"
     >
-      <h3 className="mb-2 text-lg font-semibold">マイ予定設定</h3>
+      <h2 className="mb-2 text-lg font-semibold">マイ予定設定</h2>
       <p className="text-base-content/60 mb-4 text-sm">
         日付ごとの予定を管理し、回答済みイベントへの反映内容を確認できます。
       </p>
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h4 className="text-sm font-semibold">予定一括管理</h4>
+          <h3 className="text-sm font-semibold">予定一括管理</h3>
           {datedEditing ? (
             <div className="flex gap-2">
               <button
@@ -951,7 +951,13 @@ export default function AccountScheduleSettings({
                                 }))
                               }
                               disabled={!datedEditing}
-                              aria-label={`${dateKey} ${row.label}`}
+                              aria-label={`${dateKey} ${row.label} ${
+                                state === 'available'
+                                  ? '可'
+                                  : state === 'unavailable'
+                                    ? '不可'
+                                    : '未設定'
+                              }`}
                             >
                               {state === 'available' ? '○' : state === 'unavailable' ? '×' : '-'}
                             </button>
@@ -1002,7 +1008,7 @@ export default function AccountScheduleSettings({
           data-tour-id="account-sync-section"
         >
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-semibold">回答イベントへの反映</h5>
+            <h3 className="text-sm font-semibold">回答イベントへの反映</h3>
             <button
               type="button"
               className="btn btn-sm btn-outline"
@@ -1142,6 +1148,7 @@ export default function AccountScheduleSettings({
                                   <td
                                     key={`${dateKey}_${timeKey}`}
                                     className="border-base-300 text-base-content/30 border text-center text-xs"
+                                    aria-label={`${event.title} ${dateKey} ${timeKey}: 未設定、変更なし`}
                                   >
                                     -
                                   </td>
@@ -1152,6 +1159,13 @@ export default function AccountScheduleSettings({
                                   ? selection[slot.eventDateId]
                                   : slot.desiredAvailability;
                               const willApplyChange = selected !== slot.currentAvailability;
+                              const currentAvailabilityLabel = slot.currentAvailability
+                                ? '可'
+                                : '不可';
+                              const selectedAvailabilityLabel = selected ? '可' : '不可';
+                              const changeLabel = willApplyChange
+                                ? `変更あり（現在${currentAvailabilityLabel}、変更後${selectedAvailabilityLabel}）`
+                                : `変更なし（現在${currentAvailabilityLabel}）`;
                               const cellClass = willApplyChange
                                 ? selected
                                   ? 'bg-success text-success-content ring-success ring-2'
@@ -1180,7 +1194,7 @@ export default function AccountScheduleSettings({
                                       }))
                                     }
                                     disabled={!slot.willChange}
-                                    aria-label={`${event.title} ${dateKey} ${timeKey}`}
+                                    aria-label={`${event.title} ${dateKey} ${timeKey}: ${selectedAvailabilityLabel}、${changeLabel}`}
                                   >
                                     {selected ? '○' : '×'}
                                     {slot.isProtected && (

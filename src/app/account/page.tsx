@@ -18,6 +18,7 @@ export default async function AccountPage() {
   const displayName = user?.name ?? '未設定';
   const email = user?.email ?? '未設定';
   const imageUrl = user?.image ?? '';
+  const isAuthenticated = Boolean(user);
 
   return (
     <section className="app-page-narrow space-y-6">
@@ -26,9 +27,8 @@ export default async function AccountPage() {
         <div>
           <p className="page-eyebrow">ACCOUNT</p>
           <h1 className="page-title">アカウント</h1>
-          <p className="page-description">予定の同期や利用履歴を管理します。</p>
         </div>
-        <AccountPageTour initialIsAuthenticated={Boolean(user)} />
+        <AccountPageTour initialIsAuthenticated={isAuthenticated} />
       </div>
 
       <div className="surface" data-tour-id="account-profile-card">
@@ -49,31 +49,35 @@ export default async function AccountPage() {
                 <CircleUser className="text-base-content/70 h-6 w-6" aria-hidden="true" />
               )}
             </div>
-            <div>
-              <p className="text-base-content/60 text-sm">名前</p>
-              <p className="text-base font-semibold">{displayName}</p>
+            {user ? (
+              <div>
+                <p className="text-base-content/60 text-sm">名前</p>
+                <p className="text-base font-semibold">{displayName}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-base-content/60 text-sm">アカウント</p>
+                <p className="text-base font-semibold">ゲスト</p>
+                <p className="text-base-content/70 mt-1 text-sm">現在ログインしていません</p>
+              </div>
+            )}
+          </div>
+
+          {user && (
+            <div className="space-y-1">
+              <p className="text-base-content/60 text-sm">メールアドレス</p>
+              <p className="text-base">{email}</p>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-base-content/60 text-sm">メールアドレス</p>
-            <p className="text-base">{email}</p>
-          </div>
-
-          {!user && (
-            <p className="text-base-content/60 text-sm">
-              アカウント情報を確認するにはログインしてください。
-            </p>
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            <AccountActions isAuthenticated={Boolean(user)} />
-            <AccountDeleteSection />
+            <AccountActions isAuthenticated={isAuthenticated} />
+            {user && <AccountDeleteSection />}
           </div>
         </div>
       </div>
 
-      <AccountActivity isAuthenticated={Boolean(user)} />
+      <AccountActivity isAuthenticated={isAuthenticated} />
     </section>
   );
 }
