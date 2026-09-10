@@ -284,7 +284,8 @@ describe('AvailabilityForm', () => {
       throw new Error('曜日一括入力の表示要素が見つかりません');
     }
 
-    const orderedElements = [progress, title, description, table, guide, nextButton];
+    expect(progress).toContainElement(title);
+    const orderedElements = [progress, description, table, guide, nextButton];
     orderedElements.slice(0, -1).forEach((element, index) => {
       expect(element.compareDocumentPosition(orderedElements[index + 1])).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -548,7 +549,7 @@ describe('AvailabilityForm', () => {
 
     expect(screen.getByTestId('availability-step-heatmap')).toBeInTheDocument();
     expect(screen.queryByTestId('availability-step-weekly')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '2');
     fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
     expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
   });
