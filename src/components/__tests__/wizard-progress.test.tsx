@@ -8,23 +8,18 @@ const steps = [
 ];
 
 describe('WizardProgress', () => {
-  test('画面名とステップ一覧だけで現在位置を伝える', () => {
+  test('現在の作業名とコンパクトな進捗で現在位置を伝える', () => {
     render(<WizardProgress currentStep={2} steps={steps} currentLabel="候補日程を設定" />);
 
     expect(screen.getByRole('heading', { name: '候補日程を設定' })).toBeInTheDocument();
-    const stepItems = screen.getAllByRole('listitem');
-    expect(stepItems).toHaveLength(3);
-    expect(stepItems[0]).toHaveTextContent('イベント情報（完了）');
-    expect(stepItems[1]).toHaveAttribute('aria-current', 'step');
-    expect(stepItems[1]).toHaveTextContent('候補（現在）');
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    const progress = screen.getByRole('progressbar', { name: '候補日程を設定（2/3）' });
+    expect(progress).toHaveAttribute('aria-valuemin', '0');
+    expect(progress).toHaveAttribute('aria-valuemax', '3');
+    expect(progress).toHaveAttribute('aria-valuenow', '2');
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ステップ 2 \/ 3/)).not.toBeInTheDocument();
-    expect(screen.getByRole('list')).toHaveClass(
-      'grid-cols-1',
-      'sm:grid-flow-col',
-      'sm:auto-cols-fr',
-    );
-    expect(screen.getByRole('list')).not.toHaveClass('grid-cols-3');
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   test('最終ステップでも百分率を重複表示しない', () => {
@@ -32,8 +27,7 @@ describe('WizardProgress', () => {
 
     expect(screen.getByRole('heading', { name: '確認・作成' })).toBeInTheDocument();
     expect(screen.queryByText('100%')).not.toBeInTheDocument();
-    const stepItems = screen.getAllByRole('listitem');
-    expect(stepItems[2]).toHaveAttribute('aria-current', 'step');
-    expect(stepItems[2]).toHaveTextContent('確認（現在）');
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3');
   });
 });

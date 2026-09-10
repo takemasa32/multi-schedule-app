@@ -418,46 +418,10 @@ export default function EventFormClient() {
     [],
   );
 
-  const step2SubSteps = useMemo(() => {
-    const steps = [
-      {
-        label: '入力方式の選択',
-        shortLabel: '方式',
-      },
-      {
-        label: '候補条件の設定',
-        shortLabel: '設定',
-      },
-    ];
-
-    if (inputMode === 'manual') {
-      steps.push({
-        label: 'カレンダーで候補を選択',
-        shortLabel: '選択',
-      });
-    }
-
-    return steps;
-  }, [inputMode]);
-
-  const currentSubStep = useMemo(() => {
-    if (currentStep !== 2) return null;
-    if (step2SubStep === 'mode') return 1;
-    if (step2SubStep === 'settings') return 2;
-    return 3;
-  }, [currentStep, step2SubStep]);
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div ref={stepIndicatorRef}>
-        <WizardProgress
-          currentStep={currentStep}
-          steps={mainSteps}
-          currentLabel={stepLabel}
-          subSteps={currentStep === 2 ? step2SubSteps : undefined}
-          currentSubStep={currentSubStep}
-          subStepLabel="候補日程ステップの進行"
-        />
+        <WizardProgress currentStep={currentStep} steps={mainSteps} currentLabel={stepLabel} />
       </div>
 
       {error && (
@@ -720,10 +684,10 @@ export default function EventFormClient() {
               disabled={isPending}
             >
               {isPending ? (
-                <>
+                <span className="inline-flex items-center" role="status" aria-live="polite">
                   <span className="loading loading-spinner loading-sm mr-2" />
-                  イベント作成中...
-                </>
+                  イベントを作成中…
+                </span>
               ) : (
                 'イベントを作成'
               )}
