@@ -32,13 +32,11 @@ export default function AuthButton() {
     <button
       type="button"
       onClick={handleSignIn}
-      className="btn btn-icon btn-ghost flex flex-col items-center justify-center gap-0"
-      aria-label="ゲストとしてログイン"
+      className="btn btn-ghost btn-sm min-h-10 gap-1 px-2"
+      aria-label="Googleでログイン"
     >
-      <CircleUser className="h-[18px] w-[18px]" aria-hidden="true" />
-      <span className="text-base-content/70 text-[9px] font-medium uppercase leading-none tracking-wide">
-        guest
-      </span>
+      <CircleUser className="h-5 w-5" aria-hidden="true" />
+      <span>ログイン</span>
     </button>
   );
 }

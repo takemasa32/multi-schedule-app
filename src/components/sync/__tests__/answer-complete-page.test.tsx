@@ -21,6 +21,30 @@ describe('AnswerCompletePage', () => {
     jest.clearAllMocks();
   });
 
+  it('未ログインの回答完了後に任意ログインと結果表示を選べる', () => {
+    render(
+      <AnswerCompletePage
+        eventId="event-1"
+        publicToken="token-1"
+        participantId="participant-1"
+        isAuthenticated={false}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: '回答が完了しました' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Googleでログイン' })).toHaveAttribute(
+      'href',
+      '/auth/signin?callbackUrl=%2Fevent%2Ftoken-1',
+    );
+    expect(screen.getByRole('link', { name: 'イベント結果を見る' })).toHaveAttribute(
+      'href',
+      '/event/token-1',
+    );
+    expect(
+      screen.getByText(/今回の回答はアカウントの予定に自動保存されません/),
+    ).toBeInTheDocument();
+  });
+
   it('保存後に他イベント差分があれば反映確認を質問する', async () => {
     (saveParticipantAnswerAsUserSchedule as jest.Mock).mockResolvedValue({
       success: true,

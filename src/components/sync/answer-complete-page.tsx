@@ -61,8 +61,7 @@ export default function AnswerCompletePage({
     <div className="app-page-narrow max-w-2xl py-8" data-testid="answer-complete-page">
       <div className="surface p-5 sm:p-7">
         <div className="mb-5">
-          <p className="page-eyebrow text-success">COMPLETE</p>
-          <h1 className="page-title">回答ありがとうございます</h1>
+          <h1 className="page-title">回答が完了しました</h1>
         </div>
 
         {syncWarning === 'partial' && (
@@ -75,10 +74,20 @@ export default function AnswerCompletePage({
 
         {!canSaveSchedule ? (
           <div className="space-y-4">
-            <p className="text-base-content/70 text-sm">
-              ログインすると、回答をアカウントに保存して次回以降の入力に利用できます。
-            </p>
+            {!isAuthenticated && (
+              <p className="text-base-content/70 text-sm">
+                ログインすると、今後の回答を予定として保存し、履歴を端末間で同期できます。今回の回答はアカウントの予定に自動保存されません。
+              </p>
+            )}
             <div className="flex flex-wrap justify-end gap-2">
+              {!isAuthenticated && (
+                <Link
+                  href={`/auth/signin?callbackUrl=${encodeURIComponent(eventPath)}`}
+                  className="btn btn-outline"
+                >
+                  Googleでログイン
+                </Link>
+              )}
               <Link href={eventPath} className="btn btn-primary">
                 イベント結果を見る
               </Link>
