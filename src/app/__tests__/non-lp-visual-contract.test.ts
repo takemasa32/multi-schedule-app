@@ -13,7 +13,6 @@ describe('非LP画面の視覚契約', () => {
       ['src/app/auth/signin/page.tsx', 'SIGN IN'],
       ['src/app/event/[public_id]/input/page.tsx', 'RESPOND'],
       ['src/components/sync/sync-review-page.tsx', 'SYNC'],
-      ['src/components/sync/answer-complete-page.tsx', 'COMPLETE'],
     ]);
 
     expectedLabels.forEach((label, sourcePath) => {

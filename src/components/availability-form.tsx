@@ -104,7 +104,6 @@ export default function AvailabilityForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
-  const [showGuestConfirm, setShowGuestConfirm] = useState(false);
   const [showEmptyAvailabilityGuidance, setShowEmptyAvailabilityGuidance] = useState(false);
   const [showAddDatesConfirm, setShowAddDatesConfirm] = useState(false);
   const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
@@ -568,12 +567,6 @@ export default function AvailabilityForm({
     [handleFormAction],
   );
 
-  const handleSignInAndContinue = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const callbackUrl = `${window.location.pathname}${window.location.search}`;
-    router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  }, [router]);
-
   const handleNextStep = useCallback(() => {
     setError(null);
 
@@ -611,19 +604,6 @@ export default function AvailabilityForm({
     trackAnswerStepCompleted,
     weeklyStep,
   ]);
-
-  const handleOpenGuestConfirm = useCallback(() => {
-    setShowGuestConfirm(true);
-  }, []);
-
-  const handleContinueAsGuest = useCallback(() => {
-    setShowGuestConfirm(false);
-    handleNextStep();
-  }, [handleNextStep]);
-
-  const handleCloseGuestConfirm = useCallback(() => {
-    setShowGuestConfirm(false);
-  }, []);
 
   const handleOpenAddDatesConfirm = useCallback(() => {
     setShowAddDatesConfirm(true);
@@ -1104,34 +1084,11 @@ export default function AvailabilityForm({
               />
             </div>
 
-            {!isAuthenticated && (
-              <div className="flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={handleOpenGuestConfirm}
-                  data-testid="availability-guest-continue"
-                >
-                  ログインせずに進む
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleSignInAndContinue}
-                  data-testid="availability-login-continue"
-                >
-                  ログインして進む
-                </button>
-              </div>
-            )}
-
-            {isAuthenticated && (
-              <div className="flex justify-end">
-                <button type="button" className="btn btn-primary" onClick={handleNextStep}>
-                  次へ
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end">
+              <button type="button" className="btn btn-primary" onClick={handleNextStep}>
+                次へ
+              </button>
+            </div>
           </section>
         )}
 
@@ -1566,48 +1523,6 @@ export default function AvailabilityForm({
               </button>
             </div>
           </section>
-        )}
-
-        {showGuestConfirm && (
-          <div className="modal modal-open" role="dialog" aria-modal="true">
-            <div className="modal-box max-w-lg">
-              <h3 className="mb-2 text-lg font-bold">ログイン方法を選択してください</h3>
-              <p className="text-base-content/80 text-sm leading-relaxed">
-                ログインすると回答履歴の同期や、次回入力の自動反映が利用できます。おすすめは
-                <span className="text-primary font-semibold">「ログインして回答」</span>
-                です。
-              </p>
-              <div className="mt-5 space-y-2">
-                <button
-                  type="button"
-                  className="btn btn-primary w-full"
-                  onClick={handleSignInAndContinue}
-                  data-testid="availability-guest-confirm-signin"
-                >
-                  ログインして回答
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline w-full"
-                  onClick={handleContinueAsGuest}
-                  data-testid="availability-guest-confirm-continue"
-                >
-                  ログインせず回答
-                </button>
-              </div>
-              <div className="modal-action">
-                <button type="button" className="btn btn-ghost" onClick={handleCloseGuestConfirm}>
-                  戻る
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="modal-backdrop"
-              aria-label="ログイン確認を閉じる"
-              onClick={handleCloseGuestConfirm}
-            />
-          </div>
         )}
 
         <ConfirmationModal

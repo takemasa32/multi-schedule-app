@@ -72,8 +72,7 @@ describe('AvailabilityForm', () => {
     fireEvent.change(screen.getByLabelText(/お名前/), {
       target: { value: 'テスト太郎' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'ログインせずに進む' }));
-    fireEvent.click(screen.getByRole('button', { name: 'ログインせず回答' }));
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
   };
 
   const applyWeeklyAndGoHeatmap = async () => {
@@ -154,22 +153,15 @@ describe('AvailabilityForm', () => {
     ).toBeInTheDocument();
   });
 
-  it('未ログイン導線の文言を表示する', () => {
-    render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
-    expect(screen.getByRole('button', { name: 'ログインして進む' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ログインせずに進む' })).toBeInTheDocument();
-  });
-
-  it('未ログインで進むと確認ダイアログにログイン導線を表示する', () => {
+  it('未ログインでも名前入力後に確認なしで次へ進む', () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
     fireEvent.change(screen.getByLabelText(/お名前/), {
       target: { value: 'テスト太郎' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'ログインせずに進む' }));
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
 
-    expect(screen.getByText('ログイン方法を選択してください')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ログインして回答' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ログインせず回答' })).toBeInTheDocument();
+    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('ログイン済みで再描画するとステップ1を再評価表示する', () => {

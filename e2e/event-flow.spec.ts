@@ -94,10 +94,8 @@ async function dumpPageHtml(page: Page, label: string) {
 }
 
 async function proceedAsGuest(page: Page) {
-  await page.getByRole('button', { name: 'ログインせずに進む' }).click();
-  const continueAsGuestButton = page.getByTestId('availability-guest-confirm-continue');
-  await expect(continueAsGuestButton).toBeVisible();
-  await continueAsGuestButton.click();
+  await page.getByRole('button', { name: '次へ' }).click();
+  await expect(page.getByRole('dialog', { name: 'ログイン方法を選択してください' })).toHaveCount(0);
 }
 
 let eventAdminUrl: string;
@@ -174,14 +172,14 @@ test.describe.serial('イベントE2Eフロー', () => {
     await participantPage.getByLabel('お名前').fill(participantName);
     await proceedAsGuest(participantPage);
     await participantPage.getByRole('button', { name: '次へ' }).click();
-    const dateDivs = participantPage.locator('div[data-date-id]');
-    await dateDivs.first().click();
-    if ((await dateDivs.count()) >= 2) {
-      await dateDivs.nth(1).click();
+    const dateCells = participantPage.locator('button[data-selection-key]');
+    await dateCells.first().click();
+    if ((await dateCells.count()) >= 2) {
+      await dateCells.nth(1).click();
     }
-    await expect(dateDivs.first()).toContainText('○');
-    if ((await dateDivs.count()) >= 2) {
-      await expect(dateDivs.nth(1)).toContainText('○');
+    await expect(dateCells.first()).toHaveText('○');
+    if ((await dateCells.count()) >= 2) {
+      await expect(dateCells.nth(1)).toHaveText('○');
     }
     await participantPage.getByRole('button', { name: '確認へ進む' }).click();
     await participantPage.getByLabel('コメント・メモ').fill('E2Eコメント');
@@ -303,7 +301,6 @@ test.describe.serial('イベントE2Eフロー', () => {
     const participantNamePrefix = originalParticipantName?.split(' ')[0] || '週表示参加者';
     await page.getByRole('menuitem', { name: new RegExp(`^${participantNamePrefix}`) }).click();
     await page.waitForURL(/\/input\?participant_id=/);
-    await page.getByRole('button', { name: '次へ' }).click();
     await page.getByRole('button', { name: '確認へ進む' }).click();
     await expect(page.locator('#participant_name_confirm')).toHaveCount(0);
     const editTermsCheckbox = page.getByLabel(/利用規約/);

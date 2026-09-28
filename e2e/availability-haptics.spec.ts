@@ -25,10 +25,7 @@ async function gotoWithRetry(page: Page, url: string, maxRetry = 10, interval = 
 }
 
 async function proceedAsGuest(page: Page) {
-  await page.getByRole('button', { name: 'ログインせずに進む' }).click();
-  const continueAsGuestButton = page.getByTestId('availability-guest-confirm-continue');
-  await expect(continueAsGuestButton).toBeVisible();
-  await continueAsGuestButton.click();
+  await page.getByRole('button', { name: '次へ' }).click();
 }
 
 let eventPublicUrl = '';
