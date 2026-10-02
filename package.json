@@ -73,7 +73,7 @@
     "supabase": "^2.108.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "undici": "^7.28.0",
+    "undici": "^7.29.1",
     "wait-on": "^8.0.3",
     "web-streams-polyfill": "^4.1.0"
   },
