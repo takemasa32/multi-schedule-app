@@ -7,7 +7,7 @@ import useScrollToError from '@/hooks/useScrollToError';
 import WizardProgress from '@/components/common/wizard-progress';
 import useSelectionDragController from '@/hooks/useSelectionDragController';
 import useHapticsFeedback from '@/hooks/useHapticsFeedback';
-import { addDays, endOfWeek, startOfWeek } from 'date-fns';
+import { addDays, format, startOfWeek } from 'date-fns';
 import WeekNavigationBar from './week-navigation-bar';
 import { useRouter } from 'next/navigation';
 import ConfirmationModal from './common/confirmation-modal';
@@ -105,7 +105,6 @@ export default function AvailabilityForm({
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
   const [showEmptyAvailabilityGuidance, setShowEmptyAvailabilityGuidance] = useState(false);
-  const [showAddDatesConfirm, setShowAddDatesConfirm] = useState(false);
   const [overrideConfirmDateId, setOverrideConfirmDateId] = useState<string | null>(null);
   const [overrideDateIds, setOverrideDateIds] = useState<string[]>(initialOverrideDateIds);
   const [manuallyEditedDateIds, setManuallyEditedDateIds] = useState<Record<string, true>>({});
@@ -119,6 +118,9 @@ export default function AvailabilityForm({
   const completedAnswerStepsRef = useRef(new Set<string>());
   const weeklyUsedRef = useRef(false);
   const answerSuccessTrackedRef = useRef(false);
+  const draftKey = `availability-draft:${eventId}:${isAuthenticated ? 'account' : 'guest'}:${initialParticipant?.id ?? 'new'}`;
+  const [loadedDraftKey, setLoadedDraftKey] = useState<string | null>(null);
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     if (!isNewMode) return;
@@ -359,9 +361,11 @@ export default function AvailabilityForm({
     if (initialParticipant?.name) {
       setName(initialParticipant.name);
     } else {
-      const savedName = localStorage.getItem('participantName');
-      if (savedName) {
-        setName(savedName);
+      try {
+        const savedName = localStorage.getItem('participantName');
+        if (savedName) setName(savedName);
+      } catch {
+        // 保存が制限されたブラウザでも入力を続けられるようにする。
       }
     }
     if (initialParticipant?.comment) {
@@ -393,6 +397,132 @@ export default function AvailabilityForm({
     });
     hasAutoFillAppliedRef.current = true;
   }, [autoFillAvailabilities, isAuthenticated, isNewMode]);
+
+  // 同じタブ内の移動・再読込では入力を復元し、規約への同意は保存しない。
+  useEffect(() => {
+    submittedRef.current = false;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      const draft: unknown = raw ? JSON.parse(raw) : null;
+      if (
+        draft &&
+        typeof draft === 'object' &&
+        'name' in draft &&
+        typeof draft.name === 'string' &&
+        'comment' in draft &&
+        typeof draft.comment === 'string' &&
+        'selectedDates' in draft &&
+        draft.selectedDates &&
+        typeof draft.selectedDates === 'object'
+      ) {
+        const savedSelections = draft.selectedDates;
+        const restored: Record<string, boolean> = {};
+        for (const date of eventDates) {
+          if (date.id in savedSelections) {
+            const value: unknown = Reflect.get(savedSelections, date.id);
+            if (typeof value === 'boolean') restored[date.id] = value;
+          }
+        }
+        setName(draft.name);
+        setComment(draft.comment);
+        if ('weeklyUsed' in draft && typeof draft.weeklyUsed === 'boolean')
+          weeklyUsedRef.current = draft.weeklyUsed;
+        setSelectedDates((prev) => ({ ...prev, ...restored }));
+        setManuallyEditedDateIds(Object.fromEntries(Object.keys(restored).map((id) => [id, true])));
+        if ('overrideDateIds' in draft && Array.isArray(draft.overrideDateIds)) {
+          setOverrideDateIds(
+            draft.overrideDateIds.filter(
+              (id): id is string =>
+                typeof id === 'string' && eventDates.some((date) => date.id === id),
+            ),
+          );
+        }
+        if (
+          'weekdaySelections' in draft &&
+          draft.weekdaySelections &&
+          typeof draft.weekdaySelections === 'object'
+        ) {
+          const weekly = draft.weekdaySelections;
+          const restoredWeekly = {} as Record<WeekDay, WeekDaySchedule>;
+          for (const day of ['月', '火', '水', '木', '金', '土', '日'] as const) {
+            const value: unknown = Reflect.get(weekly, day);
+            if (
+              value &&
+              typeof value === 'object' &&
+              'selected' in value &&
+              typeof value.selected === 'boolean' &&
+              'timeSlots' in value &&
+              value.timeSlots &&
+              typeof value.timeSlots === 'object'
+            ) {
+              restoredWeekly[day] = {
+                selected: value.selected,
+                timeSlots: Object.fromEntries(
+                  Object.entries(value.timeSlots).filter(
+                    (entry): entry is [string, boolean] => typeof entry[1] === 'boolean',
+                  ),
+                ),
+              };
+            }
+          }
+          if (Object.keys(restoredWeekly).length === 7) {
+            setWeekdaySelections(restoredWeekly);
+            setWeekdayInitialized(true);
+          }
+        }
+        if (
+          draft.name.trim() &&
+          'currentStep' in draft &&
+          typeof draft.currentStep === 'number' &&
+          'showWeeklyStep' in draft &&
+          draft.showWeeklyStep === showWeeklyStep &&
+          Number.isInteger(draft.currentStep) &&
+          draft.currentStep >= 1 &&
+          draft.currentStep <= confirmStep
+        ) {
+          setCurrentStep(
+            draft.currentStep === confirmStep && !Object.values(restored).some(Boolean)
+              ? heatmapStep
+              : (draft.currentStep as WizardStep),
+          );
+        }
+      }
+    } catch {
+      // 破損した下書きや保存制限があっても通常の入力を妨げない。
+    }
+    setLoadedDraftKey(draftKey);
+  }, [draftKey, eventDates, confirmStep, heatmapStep, showWeeklyStep]);
+
+  useEffect(() => {
+    if (loadedDraftKey !== draftKey || submittedRef.current) return;
+    try {
+      sessionStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          name,
+          comment,
+          selectedDates,
+          overrideDateIds,
+          weekdaySelections,
+          currentStep,
+          showWeeklyStep,
+          weeklyUsed: weeklyUsedRef.current,
+        }),
+      );
+    } catch {
+      // 下書き保存の失敗を回答処理へ伝播させない。
+    }
+  }, [
+    loadedDraftKey,
+    draftKey,
+    name,
+    comment,
+    selectedDates,
+    overrideDateIds,
+    weekdaySelections,
+    currentStep,
+    showWeeklyStep,
+  ]);
 
   useEffect(() => {
     if (previousStepRef.current === null) {
@@ -482,7 +612,11 @@ export default function AvailabilityForm({
     // );
 
     // 名前をLocalStorageに保存
-    localStorage.setItem('participantName', name);
+    try {
+      localStorage.setItem('participantName', name);
+    } catch {
+      // 名前の保存ができなくても送信は継続する。
+    }
 
     try {
       // 既存の参加者がいるか確認
@@ -515,6 +649,12 @@ export default function AvailabilityForm({
         const response = await submitAvailability(formData);
 
         if (response.success) {
+          submittedRef.current = true;
+          try {
+            sessionStorage.removeItem(draftKey);
+          } catch {
+            // 保存制限があっても送信成功を優先する。
+          }
           if (!answerSuccessTrackedRef.current) {
             const authState = isAuthenticated ? 'authenticated' : 'guest';
             const tracked = isNewMode
@@ -549,6 +689,7 @@ export default function AvailabilityForm({
       }
     },
     [
+      draftKey,
       initialParticipant?.id,
       isAuthenticated,
       isNewMode,
@@ -605,14 +746,6 @@ export default function AvailabilityForm({
     weeklyStep,
   ]);
 
-  const handleOpenAddDatesConfirm = useCallback(() => {
-    setShowAddDatesConfirm(true);
-  }, []);
-
-  const handleCloseAddDatesConfirm = useCallback(() => {
-    setShowAddDatesConfirm(false);
-  }, []);
-
   const handleMoveToAddDates = useCallback(() => {
     router.push(`/event/${publicToken}?action=add-dates`);
   }, [publicToken, router]);
@@ -654,33 +787,16 @@ export default function AvailabilityForm({
     if (uniqueDateKeys.length === 0) {
       return [] as string[][];
     }
-    const firstWeekStart = startOfWeek(new Date(`${uniqueDateKeys[0]}T00:00:00`), {
-      weekStartsOn: 1,
-    });
-    const lastWeekEnd = endOfWeek(
-      new Date(`${uniqueDateKeys[uniqueDateKeys.length - 1]}T00:00:00`),
-      { weekStartsOn: 1 },
+    const anchors = new Set(
+      uniqueDateKeys.map((key) =>
+        format(startOfWeek(new Date(`${key}T00:00:00`), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+      ),
     );
-
-    const buckets: string[][] = [];
-    for (
-      let cursor = new Date(firstWeekStart);
-      cursor.getTime() <= lastWeekEnd.getTime();
-      cursor = addDays(cursor, 7)
-    ) {
-      const week: string[] = [];
-      for (let i = 0; i < 7; i += 1) {
-        const date = addDays(cursor, i);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-          2,
-          '0',
-        )}-${String(date.getDate()).padStart(2, '0')}`;
-        week.push(key);
-      }
-      buckets.push(week);
-    }
-
-    return buckets;
+    return Array.from(anchors).map((anchor) =>
+      Array.from({ length: 7 }, (_, index) =>
+        format(addDays(new Date(`${anchor}T00:00:00`), index), 'yyyy-MM-dd'),
+      ),
+    );
   }, [uniqueDateKeys]);
 
   useEffect(() => {
@@ -1045,7 +1161,7 @@ export default function AvailabilityForm({
                 <button
                   type="button"
                   className="btn btn-sm btn-outline"
-                  onClick={handleOpenAddDatesConfirm}
+                  onClick={handleMoveToAddDates}
                 >
                   候補日程を追加
                 </button>
@@ -1069,8 +1185,6 @@ export default function AvailabilityForm({
 
         {isNewMode && currentStep === 1 && (
           <section className="space-y-4" data-testid="availability-step-1">
-            <div className="bg-base-200 rounded-md p-3 text-sm">まずは名前を入力してください。</div>
-
             <div>
               <label htmlFor="participant_name" className="mb-1 block text-sm font-medium">
                 お名前 <span className="text-error">*</span>
@@ -1446,6 +1560,20 @@ export default function AvailabilityForm({
             <div className="bg-base-200 rounded-lg p-3 text-sm">
               <p>お名前: {name || '未入力'}</p>
               <p>参加可能枠（○）: {selectedAvailableCount}件</p>
+              <details className="mt-2">
+                <summary className="cursor-pointer">選択した日時を確認</summary>
+                <ul className="mt-2 space-y-1">
+                  {eventDates
+                    .filter((date) => selectedDates[date.id])
+                    .map((date) => (
+                      <li key={date.id}>
+                        {format(new Date(date.start_time), 'yyyy/MM/dd')}{' '}
+                        {format(new Date(date.start_time), 'HH:mm')}〜
+                        {format(new Date(date.end_time), 'yyyy/MM/dd HH:mm')}
+                      </li>
+                    ))}
+                </ul>
+              </details>
             </div>
 
             <div>
@@ -1524,16 +1652,6 @@ export default function AvailabilityForm({
             </div>
           </section>
         )}
-
-        <ConfirmationModal
-          isOpen={showAddDatesConfirm}
-          title="候補日程を追加しますか？"
-          description="イベントページへ移動すると、現在入力中のデータが消えますがよろしいですか。"
-          confirmLabel="候補日程を追加"
-          cancelLabel="予定入力に戻る"
-          onConfirm={handleMoveToAddDates}
-          onCancel={handleCloseAddDatesConfirm}
-        />
 
         <ConfirmationModal
           isOpen={overrideConfirmDateId !== null}

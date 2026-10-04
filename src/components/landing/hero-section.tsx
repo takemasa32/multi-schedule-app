@@ -33,7 +33,7 @@ export default function HeroSection() {
               </Link>
             </div>
             <Link
-              href="#concept"
+              href="#how-to-use"
               className="btn btn-ghost btn-lg focus-visible:ring-primary/30 w-full px-6 text-base focus-visible:ring-4 sm:w-auto"
             >
               使い方を見る

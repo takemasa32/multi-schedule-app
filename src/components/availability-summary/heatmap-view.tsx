@@ -116,7 +116,10 @@ interface HeatmapViewProps {
   maxAvailable: number;
   onPointerTooltipStart: (e: React.PointerEvent<Element>, dateId: string) => void;
   onPointerTooltipEnd: (e: React.PointerEvent<Element>, dateId: string) => void;
-  onPointerTooltipClick: (e: React.PointerEvent<Element>, dateId: string) => void;
+  onPointerTooltipClick: (
+    e: React.PointerEvent<Element> | React.KeyboardEvent<Element>,
+    dateId: string,
+  ) => void;
   isDragging?: boolean;
   /** カラー表示する最小参加人数 */
   minColoredCount: number;
@@ -1093,6 +1096,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                           <div
                             className="relative h-full min-h-8 w-full overflow-hidden sm:min-h-9"
                             style={wrapperStyle}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${dateInfo.date} ${timeSlot.startTime}〜${timeSlot.endTime}、${availableCount}人参加可能、回答の詳細`}
+                            onKeyDown={(event) => {
+                              if (event.key !== 'Enter' && event.key !== ' ') return;
+                              event.preventDefault();
+                              onPointerTooltipClick(event, dateId);
+                            }}
                           >
                             {effectiveRaisedTopVisual && (
                               <div

@@ -60,6 +60,7 @@ describe('AvailabilityForm', () => {
       configurable: true,
     });
     localStorage.clear();
+    sessionStorage.clear();
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     document.body.style.overscrollBehavior = '';
@@ -78,6 +79,69 @@ describe('AvailabilityForm', () => {
   const applyWeeklyAndGoHeatmap = async () => {
     fireEvent.click(screen.getByRole('button', { name: '次へ' }));
   };
+
+  it('同じタブで回答へ戻ると名前・選択・コメントを復元し、同意は復元しない', () => {
+    const { unmount } = render(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: '下書き太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    fireEvent.click(screen.getByRole('button', { name: '確認へ進む' }));
+    fireEvent.change(screen.getByLabelText(/コメント/), { target: { value: '入力中のメモ' } });
+    fireEvent.click(screen.getByLabelText(/利用規約/));
+    unmount();
+
+    render(<AvailabilityForm {...defaultProps} isAuthenticated />);
+    expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
+    expect(screen.getByText('お名前: 下書き太郎')).toBeInTheDocument();
+    expect(screen.getByText('参加可能枠（○）: 1件')).toBeInTheDocument();
+    expect(screen.getByLabelText(/コメント/)).toHaveValue('入力中のメモ');
+    expect(screen.getByLabelText(/利用規約/)).not.toBeChecked();
+    expect(screen.getByText(/2025\/05\/12/)).toBeInTheDocument();
+  });
+
+  it('別イベントの回答には下書きを復元しない', () => {
+    const { unmount } = render(<AvailabilityForm {...defaultProps} />);
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: '下書き太郎' } });
+    unmount();
+    render(<AvailabilityForm {...defaultProps} eventId="other-event" />);
+    expect(screen.getByLabelText(/お名前/)).toHaveValue('');
+  });
+
+  it('破損した下書きがあっても入力できる', () => {
+    sessionStorage.setItem('availability-draft:event1:guest:new', '{broken');
+    render(<AvailabilityForm {...defaultProps} />);
+    goToWeeklyStepAsGuest();
+    expect(screen.getByTestId('availability-step-weekly')).toBeInTheDocument();
+  });
+
+  it('候補のない週を飛ばして次の候補を表示する', () => {
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        eventDates={[
+          eventDates[0],
+          {
+            ...eventDates[1],
+            start_time: '2025-06-03T09:00:00.000Z',
+            end_time: '2025-06-03T10:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: 'テスト太郎' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    expect(document.querySelector('[data-selection-key="date1"]')).toBeInTheDocument();
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '次の週へ移動' }));
+    expect(document.querySelector('[data-selection-key="date2"]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '次の週へ移動' })).toBeDisabled();
+  });
 
   it('新規回答は4ステップ遷移できる', async () => {
     render(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated={false} />);
@@ -173,7 +237,7 @@ describe('AvailabilityForm', () => {
 
     rerender(<AvailabilityForm {...defaultProps} mode="new" isAuthenticated />);
     expect(screen.getByTestId('availability-step-1')).toBeInTheDocument();
-    expect(screen.getByText('まずは名前を入力してください。')).toBeInTheDocument();
+    expect(screen.getByLabelText(/お名前/)).toBeInTheDocument();
   });
 
   it('ログイン済みかつ未充足日が0日の場合はStep2を表示しない', () => {
@@ -517,16 +581,8 @@ describe('AvailabilityForm', () => {
     expect(screen.queryByTestId('availability-step-confirm')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '候補日程を追加' }));
-    expect(screen.getByRole('dialog', { name: '候補日程を追加しますか？' })).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'イベントページへ移動すると、現在入力中のデータが消えますがよろしいですか。',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '予定入力に戻る' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getAllByRole('button', { name: '候補日程を追加' }).at(-1)!);
     expect(mockRouterPush).toHaveBeenCalledWith('/event/token1?action=add-dates');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('編集回答は曜日一括入力を表示せず2ステップで遷移できる', () => {
@@ -675,6 +731,7 @@ describe('AvailabilityForm', () => {
     expect(mockRouterReplace).toHaveBeenCalledWith(
       '/event/token1/input/complete?participant_id=part-1',
     );
+    expect(sessionStorage.getItem('availability-draft:event1:account:new')).toBeNull();
     expect(trackEvent).toHaveBeenCalledWith('answer_submitted', {
       auth_state: 'authenticated',
       weekly_used: 'no',

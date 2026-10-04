@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
+import { addDays, format, startOfWeek } from 'date-fns';
 import { finalizeEvent } from '@/lib/actions';
 import ConfirmationModal from '@/components/common/confirmation-modal';
 import WizardProgress from '@/components/common/wizard-progress';
@@ -151,17 +151,13 @@ export default function FinalizeEventPage({
   const weekAnchors = useMemo(() => {
     if (dateKeys.length === 0) return [] as string[];
 
-    const first = startOfWeek(new Date(`${dateKeys[0]}T00:00:00`), { weekStartsOn: 1 });
-    const last = endOfWeek(new Date(`${dateKeys[dateKeys.length - 1]}T00:00:00`), {
-      weekStartsOn: 1,
-    });
-
-    const anchors: string[] = [];
-    for (let cursor = new Date(first); cursor <= last; cursor = addDays(cursor, 7)) {
-      anchors.push(format(cursor, 'yyyy-MM-dd'));
-    }
-
-    return anchors;
+    return Array.from(
+      new Set(
+        dateKeys.map((key) =>
+          format(startOfWeek(new Date(`${key}T00:00:00`), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+        ),
+      ),
+    );
   }, [dateKeys]);
 
   useEffect(() => {
@@ -337,7 +333,7 @@ export default function FinalizeEventPage({
     isSelected: (key) => selectedDateIdSet.has(key),
     applySelection,
     disableBodyScroll: true,
-    enableKeyboard: false,
+    enableKeyboard: true,
   });
 
   const proceedToConfirm = () => {
@@ -599,10 +595,10 @@ export default function FinalizeEventPage({
                                 className="flex aspect-square w-full items-center justify-center rounded-sm px-1.5 text-xs font-semibold tabular-nums leading-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition-[transform,colors,box-shadow] duration-150 md:aspect-auto md:h-11 md:rounded-md md:px-2 md:text-sm"
                                 style={contentStyle}
                                 {...dateSelectionController.getCellProps(dateId, {
-                                  role: 'switch',
+                                  role: 'button',
                                 })}
                                 aria-pressed={isSelected}
-                                aria-label={isSelected ? '選択済み' : '未選択'}
+                                aria-label={`${formatDateLabel(dateId)}、${availableCount}人参加可能`}
                               >
                                 <div className="flex flex-col items-center justify-center leading-none">
                                   <span>{isMobile ? availableCount : `${availableCount}人`}</span>

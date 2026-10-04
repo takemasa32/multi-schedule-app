@@ -72,6 +72,36 @@ describe('FinalizeEventPage', () => {
     expect(screen.getByText('今回確定する日程')).toBeInTheDocument();
   });
 
+  it('キーボードで候補を選択・解除できる', () => {
+    render(<FinalizeEventPage {...mockProps} />);
+    const cell = screen.getByRole('button', { name: /2人参加可能/ });
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(cell, { key: ' ' });
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.keyDown(cell, { key: 'Enter' });
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('候補が離れた週にあっても空の週を表示しない', () => {
+    render(
+      <FinalizeEventPage
+        {...mockProps}
+        eventDates={[
+          mockProps.eventDates[0],
+          {
+            ...mockProps.eventDates[1],
+            start_time: '2026-06-02T10:00:00+09:00',
+            end_time: '2026-06-02T11:00:00+09:00',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText('1 / 2')[0]).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: '次の週へ移動' })[0]);
+    expect(screen.getByRole('button', { name: /1人参加可能/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '次の週へ移動' })[0]).toBeDisabled();
+  });
+
   it('保存確認から確定アクションを実行し、詳細ページへ戻る', async () => {
     render(<FinalizeEventPage {...mockProps} />);
 
@@ -94,7 +124,7 @@ describe('FinalizeEventPage', () => {
   it('すべて解除する場合は解除モーダルを表示する', async () => {
     render(<FinalizeEventPage {...mockProps} />);
 
-    const selectedSwitch = screen.getByRole('switch', { name: '選択済み' });
+    const selectedSwitch = screen.getByRole('button', { name: /2人参加可能/ });
     fireEvent.pointerDown(selectedSwitch, {
       pointerId: 1,
       pointerType: 'mouse',
@@ -121,7 +151,7 @@ describe('FinalizeEventPage', () => {
   it('解除保存が成功した場合は event_unfinalized を送る', async () => {
     render(<FinalizeEventPage {...mockProps} />);
 
-    const selectedSwitch = screen.getByRole('switch', { name: '選択済み' });
+    const selectedSwitch = screen.getByRole('button', { name: /2人参加可能/ });
     fireEvent.pointerDown(selectedSwitch, {
       pointerId: 1,
       pointerType: 'mouse',

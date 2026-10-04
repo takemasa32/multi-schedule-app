@@ -366,6 +366,14 @@ test.describe.serial('イベントE2Eフロー', () => {
     await expect(saveDraftButton).toBeVisible();
     await saveDraftButton.click();
 
+    const cancelConfirmButton = adminPage.getByRole('button', { name: /^キャンセル$/ });
+    await expect(cancelConfirmButton).toBeFocused();
+    await cancelConfirmButton.press('Shift+Tab');
+    await expect(adminPage.getByRole('button', { name: /^保存する$/ })).toBeFocused();
+    await adminPage.getByRole('button', { name: /^保存する$/ }).press('Escape');
+    await expect(saveDraftButton).toBeFocused();
+    await saveDraftButton.click();
+
     const saveConfirmButton = adminPage.getByRole('button', { name: /^保存する$/ });
     await expect(saveConfirmButton).toBeVisible();
     await saveConfirmButton.click();
@@ -408,7 +416,7 @@ test.describe.serial('イベントE2Eフロー', () => {
     await adminPage.waitForURL(/\/finalize$/);
 
     // 直前のテストで1件確定しているため、その候補をクリックして選択解除
-    const selectedCell = adminPage.getByRole('switch', { name: '選択済み' }).first();
+    const selectedCell = adminPage.locator('[data-selection-key][aria-pressed="true"]').first();
     await expect(selectedCell).toBeVisible();
     await selectedCell.click({ force: true });
     // 「選択中 0件」表示を確認
