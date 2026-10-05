@@ -44,7 +44,7 @@ describe('ローディングと鮮度の契約', () => {
 
     expect(pageSource).toContain('const sessionPromise = getAuthSession();');
     expect(pageSource).toContain(
-      'const [eventDates, participantResult, scheduleContext] = await Promise.all([',
+      'const [eventDates, participantResult, scheduleContext, session] = await Promise.all([',
     );
     expect(pageSource).toContain(
       'getUserScheduleContext(event.id, eventDates, session?.user?.id ?? null)',

@@ -95,7 +95,13 @@ describe('AvailabilityForm', () => {
     fireEvent.click(screen.getByLabelText(/利用規約/));
     unmount();
 
-    render(<AvailabilityForm {...defaultProps} isAuthenticated />);
+    render(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
     expect(screen.getByTestId('availability-step-confirm')).toBeInTheDocument();
     expect(screen.getByText('お名前: 下書き太郎')).toBeInTheDocument();
     expect(screen.getByText('参加可能枠（○）: 1件')).toBeInTheDocument();
@@ -111,6 +117,74 @@ describe('AvailabilityForm', () => {
     render(<AvailabilityForm {...defaultProps} eventId="other-event" />);
     expect(screen.getByLabelText(/お名前/)).toHaveValue('');
   });
+
+  it('曜日入力中に再読込しても一括選択を適用できる', () => {
+    const { unmount } = render(<AvailabilityForm {...defaultProps} />);
+    goToWeeklyStepAsGuest();
+    unmount();
+    render(<AvailabilityForm {...defaultProps} />);
+    const weeklyCell = document.querySelector<HTMLElement>('td[data-day="月"][data-time-slot]');
+    if (!weeklyCell) throw new Error('曜日セルが見つかりません');
+    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    expect(document.querySelector('input[name="availability_date1"]')).toBeInTheDocument();
+  });
+
+  it('復元した日付の手動編集は曜日入力で上書きしない', () => {
+    const { unmount } = render(<AvailabilityForm {...defaultProps} />);
+    goToWeeklyStepAsGuest();
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    const dateCell = document.querySelector<HTMLElement>('[data-selection-key="date1"]');
+    if (!dateCell) throw new Error('日付セルが見つかりません');
+    fireEvent.keyDown(dateCell, { key: ' ' });
+    fireEvent.keyDown(dateCell, { key: ' ' });
+    fireEvent.click(screen.getByRole('button', { name: '戻る' }));
+    unmount();
+    render(<AvailabilityForm {...defaultProps} />);
+    const weeklyCell = document.querySelector<HTMLElement>('td[data-day="月"][data-time-slot]');
+    if (!weeklyCell) throw new Error('曜日セルが見つかりません');
+    fireEvent.pointerDown(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.pointerUp(weeklyCell, { pointerId: 1, pointerType: 'mouse' });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    expect(document.querySelector('input[name="availability_date1"]')).not.toBeInTheDocument();
+  });
+
+  it('最後の保存から24時間経過した下書きは復元しない', () => {
+    const { unmount } = render(<AvailabilityForm {...defaultProps} />);
+    goToWeeklyStepAsGuest();
+    unmount();
+    const key = 'availability-draft:event1:guest:new';
+    const draft = JSON.parse(sessionStorage.getItem(key)!);
+    draft.savedAt = Date.now() - 24 * 60 * 60 * 1000;
+    sessionStorage.setItem(key, JSON.stringify(draft));
+    render(<AvailabilityForm {...defaultProps} />);
+    expect(screen.getByLabelText(/お名前/)).toHaveValue('');
+  });
+
+  it.each(['candidate', 'answer', 'schedule', 'account'])(
+    '%sが変わった下書きは復元しない',
+    (change) => {
+      const initialProps = { ...defaultProps, isAuthenticated: true, userId: 'user-a' };
+      const { unmount } = render(<AvailabilityForm {...initialProps} />);
+      fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: '古い下書き' } });
+      unmount();
+      render(
+        <AvailabilityForm
+          {...initialProps}
+          eventDates={
+            change === 'candidate'
+              ? [{ ...eventDates[0], end_time: '2025-05-12T11:00:00.000Z' }]
+              : eventDates
+          }
+          initialAvailabilities={change === 'answer' ? { date1: true } : undefined}
+          autoFillAvailabilities={change === 'schedule' ? { date1: true } : undefined}
+          userId={change === 'account' ? 'user-b' : 'user-a'}
+        />,
+      );
+      expect(screen.getByLabelText(/お名前/)).toHaveValue('');
+    },
+  );
 
   it('破損した下書きがあっても入力できる', () => {
     sessionStorage.setItem('availability-draft:event1:guest:new', '{broken');
@@ -731,7 +805,7 @@ describe('AvailabilityForm', () => {
     expect(mockRouterReplace).toHaveBeenCalledWith(
       '/event/token1/input/complete?participant_id=part-1',
     );
-    expect(sessionStorage.getItem('availability-draft:event1:account:new')).toBeNull();
+    expect(sessionStorage.getItem('availability-draft:event1:account:unknown:new')).toBeNull();
     expect(trackEvent).toHaveBeenCalledWith('answer_submitted', {
       auth_state: 'authenticated',
       weekly_used: 'no',
@@ -829,6 +903,25 @@ describe('AvailabilityForm', () => {
     });
     expect(trackEvent).not.toHaveBeenCalledWith('answer_submitted', expect.anything());
     expect(mockRouterReplace).not.toHaveBeenCalled();
+  });
+
+  it('表示中に元データが変わった場合も下書きを破棄して最新の回答から始める', () => {
+    const { rerender } = render(
+      <AvailabilityForm {...defaultProps} isAuthenticated userId="user1" />,
+    );
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: '古い下書き' } });
+    rerender(
+      <AvailabilityForm
+        {...defaultProps}
+        isAuthenticated
+        userId="user1"
+        initialAvailabilities={{ date1: true }}
+      />,
+    );
+    expect(screen.getByLabelText(/お名前/)).toHaveValue('');
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: '最新' } });
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    expect(document.querySelector('input[name="availability_date1"]')).toBeInTheDocument();
   });
 
   it('確認画面の名前欄は重複エラー時のみ表示する', async () => {

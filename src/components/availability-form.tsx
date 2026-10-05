@@ -31,6 +31,7 @@ interface AvailabilityFormProps {
   initialAvailabilities?: Record<string, boolean>;
   mode?: 'new' | 'edit';
   isAuthenticated?: boolean;
+  userId?: string | null;
   hasSyncTargetEvents?: boolean;
   lockedDateIds?: string[];
   autoFillAvailabilities?: Record<string, boolean>;
@@ -50,6 +51,7 @@ type WeekDaySchedule = {
 };
 type CellStatus = 'available' | 'unavailable' | 'empty';
 type WizardStep = 1 | 2 | 3 | 4;
+const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export default function AvailabilityForm({
   eventId,
@@ -59,6 +61,7 @@ export default function AvailabilityForm({
   initialAvailabilities = {},
   mode = 'new',
   isAuthenticated = false,
+  userId = null,
   hasSyncTargetEvents: _hasSyncTargetEvents = false,
   lockedDateIds = [],
   autoFillAvailabilities = {},
@@ -118,7 +121,19 @@ export default function AvailabilityForm({
   const completedAnswerStepsRef = useRef(new Set<string>());
   const weeklyUsedRef = useRef(false);
   const answerSuccessTrackedRef = useRef(false);
-  const draftKey = `availability-draft:${eventId}:${isAuthenticated ? 'account' : 'guest'}:${initialParticipant?.id ?? 'new'}`;
+  const draftKey = `availability-draft:${eventId}:${isAuthenticated ? `account:${userId ?? 'unknown'}` : 'guest'}:${initialParticipant?.id ?? 'new'}`;
+  // 元データが変わった下書きは復元せず、最新の候補・回答・アカウント予定を優先する。
+  const draftSource = JSON.stringify({
+    eventDates: eventDates.map(({ id, start_time, end_time }) => ({ id, start_time, end_time })),
+    initialParticipant,
+    initialAvailabilities,
+    autoFillAvailabilities,
+    lockedDateIds,
+    dailyAutoFillDateIds,
+    overrideDateIds: initialOverrideDateIds,
+    showWeeklyStep,
+  });
+  const draftLoadKey = draftKey + draftSource;
   const [loadedDraftKey, setLoadedDraftKey] = useState<string | null>(null);
   const submittedRef = useRef(false);
 
@@ -213,7 +228,7 @@ export default function AvailabilityForm({
 
   const applyDateSelection = useCallback(
     (keys: string[], value: boolean) => {
-      const changedKeys: string[] = [];
+      const changedKeys = keys.filter((key) => key && selectedDates[key] !== value);
       setSelectedDates((prev) => {
         let changed = false;
         const next = { ...prev };
@@ -226,7 +241,6 @@ export default function AvailabilityForm({
           }
           next[key] = value;
           changed = true;
-          changedKeys.push(key);
         }
         return changed ? next : prev;
       });
@@ -242,7 +256,7 @@ export default function AvailabilityForm({
         });
       }
     },
-    [notifySelectionChange],
+    [notifySelectionChange, selectedDates],
   );
 
   const dateSelectionController = useSelectionDragController({
@@ -400,13 +414,42 @@ export default function AvailabilityForm({
 
   // 同じタブ内の移動・再読込では入力を復元し、規約への同意は保存しない。
   useEffect(() => {
+    if (loadedDraftKey === draftLoadKey) return;
     submittedRef.current = false;
+    if (loadedDraftKey !== null) {
+      setName(initialParticipant?.name ?? '');
+      setComment(initialParticipant?.comment ?? '');
+      setSelectedDates({
+        ...Object.fromEntries(eventDates.map(({ id }) => [id, false])),
+        ...initialAvailabilities,
+        ...(isNewMode && isAuthenticated ? autoFillAvailabilities : {}),
+      });
+      setManuallyEditedDateIds({});
+      setOverrideDateIds(initialOverrideDateIds);
+      setCurrentStep(1);
+      setTermsAccepted(false);
+      setWeekdayInitialized(false);
+      setWeekdaySelections(
+        (prev) =>
+          Object.fromEntries(
+            Object.keys(prev).map((day) => [day, { selected: false, timeSlots: {} }]),
+          ) as Record<WeekDay, WeekDaySchedule>,
+      );
+      weeklyUsedRef.current = false;
+    }
     try {
       const raw = sessionStorage.getItem(draftKey);
       const draft: unknown = raw ? JSON.parse(raw) : null;
       if (
         draft &&
         typeof draft === 'object' &&
+        'savedAt' in draft &&
+        typeof draft.savedAt === 'number' &&
+        Number.isFinite(draft.savedAt) &&
+        Date.now() >= draft.savedAt &&
+        Date.now() - draft.savedAt < DRAFT_MAX_AGE_MS &&
+        'source' in draft &&
+        draft.source === draftSource &&
         'name' in draft &&
         typeof draft.name === 'string' &&
         'comment' in draft &&
@@ -428,7 +471,13 @@ export default function AvailabilityForm({
         if ('weeklyUsed' in draft && typeof draft.weeklyUsed === 'boolean')
           weeklyUsedRef.current = draft.weeklyUsed;
         setSelectedDates((prev) => ({ ...prev, ...restored }));
-        setManuallyEditedDateIds(Object.fromEntries(Object.keys(restored).map((id) => [id, true])));
+        const editedIds =
+          'manuallyEditedDateIds' in draft && Array.isArray(draft.manuallyEditedDateIds)
+            ? draft.manuallyEditedDateIds.filter(
+                (id): id is string => typeof id === 'string' && id in restored,
+              )
+            : [];
+        setManuallyEditedDateIds(Object.fromEntries(editedIds.map((id) => [id, true])));
         if ('overrideDateIds' in draft && Array.isArray(draft.overrideDateIds)) {
           setOverrideDateIds(
             draft.overrideDateIds.filter(
@@ -486,22 +535,42 @@ export default function AvailabilityForm({
               : (draft.currentStep as WizardStep),
           );
         }
+      } else if (raw) {
+        sessionStorage.removeItem(draftKey);
       }
     } catch {
       // 破損した下書きや保存制限があっても通常の入力を妨げない。
     }
-    setLoadedDraftKey(draftKey);
-  }, [draftKey, eventDates, confirmStep, heatmapStep, showWeeklyStep]);
+    setLoadedDraftKey(draftLoadKey);
+  }, [
+    loadedDraftKey,
+    draftLoadKey,
+    draftKey,
+    draftSource,
+    eventDates,
+    initialParticipant,
+    initialAvailabilities,
+    autoFillAvailabilities,
+    initialOverrideDateIds,
+    isNewMode,
+    isAuthenticated,
+    confirmStep,
+    heatmapStep,
+    showWeeklyStep,
+  ]);
 
   useEffect(() => {
-    if (loadedDraftKey !== draftKey || submittedRef.current) return;
+    if (loadedDraftKey !== draftLoadKey || submittedRef.current) return;
     try {
       sessionStorage.setItem(
         draftKey,
         JSON.stringify({
+          savedAt: Date.now(),
+          source: draftSource,
           name,
           comment,
           selectedDates,
+          manuallyEditedDateIds: Object.keys(manuallyEditedDateIds),
           overrideDateIds,
           weekdaySelections,
           currentStep,
@@ -514,10 +583,13 @@ export default function AvailabilityForm({
     }
   }, [
     loadedDraftKey,
+    draftLoadKey,
     draftKey,
+    draftSource,
     name,
     comment,
     selectedDates,
+    manuallyEditedDateIds,
     overrideDateIds,
     weekdaySelections,
     currentStep,
@@ -1562,7 +1634,11 @@ export default function AvailabilityForm({
               <p>参加可能枠（○）: {selectedAvailableCount}件</p>
               <details className="mt-2">
                 <summary className="cursor-pointer">選択した日時を確認</summary>
-                <ul className="mt-2 space-y-1">
+                <ul
+                  className="mt-2 max-h-24 space-y-1 overflow-y-auto overscroll-contain"
+                  tabIndex={0}
+                  aria-label="選択した日時の一覧"
+                >
                   {eventDates
                     .filter((date) => selectedDates[date.id])
                     .map((date) => (
