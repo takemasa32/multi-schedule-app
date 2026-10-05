@@ -46,6 +46,17 @@ describe('AvailabilitySummary', () => {
     availabilities,
   };
 
+  it('ヒートマップの詳細をキーボードで開閉できる', () => {
+    render(<AvailabilitySummary {...defaultProps} />);
+    const cell = screen.getAllByRole('button', { name: /回答の詳細/ })[0];
+    cell.focus();
+    fireEvent.keyDown(cell, { key: 'Enter' });
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Charlie')).toBeInTheDocument();
+    fireEvent.keyDown(cell, { key: ' ' });
+    expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+  });
+
   it('ヒートマップがデフォルト表示される', () => {
     render(<AvailabilitySummary {...defaultProps} />);
 

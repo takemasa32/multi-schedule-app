@@ -22,7 +22,7 @@ export default function AccountActivity({ isAuthenticated }: AccountActivityProp
       <EventHistory
         maxDisplay={10}
         showClearButton={true}
-        title="回答履歴"
+        title="イベント履歴"
         headingLevel="h2"
         showLoginPrompt={false}
         withProvider={false}

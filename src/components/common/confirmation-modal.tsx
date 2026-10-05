@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 type ConfirmationModalProps = {
   isOpen: boolean;
@@ -36,12 +36,57 @@ export default function ConfirmationModal({
   children,
   widthClassName = 'max-w-lg',
 }: ConfirmationModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cancelRef.current?.focus();
+    return () => {
+      previousFocus?.focus();
+    };
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className="modal modal-open"
+      // visibilityの開始遷移中にもフォーカスできるよう、可視性は即時に切り替える。
+      style={{ visibility: 'visible', transitionProperty: 'background-color, opacity' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      ref={dialogRef}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !isConfirming) {
+          event.preventDefault();
+          event.stopPropagation();
+          onCancel();
+        }
+        if (event.key !== 'Tab') return;
+        const focusable = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled):not([tabindex="-1"]), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+          ) ?? [],
+        );
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (
+          !first ||
+          (event.shiftKey && document.activeElement === first) ||
+          (!event.shiftKey && document.activeElement === last)
+        ) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+          if (!first) dialogRef.current?.focus();
+        }
+      }}
+    >
       <div className={`modal-box w-11/12 ${widthClassName}`}>
         <h3 className="text-lg font-bold">{title}</h3>
         {description && (
@@ -54,6 +99,7 @@ export default function ConfirmationModal({
             className="btn btn-ghost"
             onClick={onCancel}
             disabled={isConfirming}
+            ref={cancelRef}
           >
             {cancelLabel}
           </button>
@@ -72,6 +118,8 @@ export default function ConfirmationModal({
         aria-label="確認モーダルを閉じる"
         className="modal-backdrop"
         onClick={onCancel}
+        disabled={isConfirming}
+        tabIndex={-1}
       />
     </div>
   );

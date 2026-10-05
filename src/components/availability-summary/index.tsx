@@ -273,7 +273,10 @@ export default function AvailabilitySummary({
   /**
    * ツールチップ/モバイルパネル表示処理（Pointerイベント）
    */
-  const handlePointerClick = (event: React.PointerEvent<Element>, dateId: string) => {
+  const handlePointerClick = (
+    event: React.PointerEvent<Element> | React.KeyboardEvent<Element>,
+    dateId: string,
+  ) => {
     event.stopPropagation();
     if (event.nativeEvent) {
       event.nativeEvent.stopImmediatePropagation();
@@ -312,7 +315,11 @@ export default function AvailabilitySummary({
       }));
       return;
     }
-    const { x, y } = calcTooltipPosition(event.clientX, event.clientY);
+    const rect = event.currentTarget.getBoundingClientRect();
+    const { x, y } =
+      'clientX' in event
+        ? calcTooltipPosition(event.clientX, event.clientY)
+        : calcTooltipPosition(rect.left + rect.width / 2, rect.bottom);
     setTooltip({
       show: true,
       x,
@@ -322,9 +329,10 @@ export default function AvailabilitySummary({
       unavailableParticipants,
       dateLabel,
       timeLabel,
-      lastEvent: `pointerup:${event.pointerType}`,
+      lastEvent: 'pointerType' in event ? `pointerup:${event.pointerType}` : 'keyboard',
       lastUpdate: Date.now(),
-      lastPointerType: event.pointerType as 'touch' | 'mouse' | 'pen',
+      lastPointerType:
+        'pointerType' in event ? (event.pointerType as 'touch' | 'mouse' | 'pen') : undefined,
     });
   };
 

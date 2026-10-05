@@ -94,7 +94,7 @@ test.describe.serial('回答入力のドラッグと触覚 E2E', () => {
     await proceedAsGuest(page);
     await page.getByRole('button', { name: '次へ' }).click();
 
-    const cells = page.locator('div[data-selection-key]');
+    const cells = page.getByTestId('availability-step-heatmap').locator('[data-selection-key]');
     expect(await cells.count()).toBeGreaterThanOrEqual(2);
 
     const firstCell = cells.nth(0);

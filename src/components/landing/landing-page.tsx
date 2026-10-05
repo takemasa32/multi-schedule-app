@@ -299,7 +299,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-base-200/50 px-4 py-16">
+      <section id="how-to-use" className="bg-base-200/50 scroll-mt-20 px-4 py-16">
         <div className="container mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-center">
             <StaticItem>

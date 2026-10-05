@@ -87,7 +87,7 @@ export default function FinalizeEventSection({
 
       <div className="border-base-300 divide-base-300 grid grid-cols-2 divide-x border-y">
         <div className="px-4 py-3">
-          <p className="text-base-content/60 text-xs">候補</p>
+          <p className="text-base-content/60 text-xs">最多人数の候補</p>
           <p className="mt-1 text-lg font-bold">{peakCandidateCount}件</p>
         </div>
         <div className="px-4 py-3">

@@ -78,10 +78,11 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   );
 
   // フォーム表示に必要な情報が揃うまで待機し、不要なスケルトンを避ける
-  const [eventDates, participantResult, scheduleContext] = await Promise.all([
+  const [eventDates, participantResult, scheduleContext, session] = await Promise.all([
     eventDatesPromise,
     participantPromise,
     scheduleContextPromise,
+    sessionPromise,
   ]);
 
   const existingParticipant = participantResult?.participant || null;
@@ -114,6 +115,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
           initialAvailabilities={existingAvailabilities || undefined}
           mode={isEditMode ? 'edit' : 'new'}
           isAuthenticated={scheduleContext.isAuthenticated}
+          userId={session?.user?.id ?? null}
           hasSyncTargetEvents={scheduleContext.hasSyncTargetEvents}
           lockedDateIds={scheduleContext.lockedDateIds}
           autoFillAvailabilities={scheduleContext.autoFillAvailabilities}
