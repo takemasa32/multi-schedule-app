@@ -353,7 +353,12 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
   test('予定表と反映確認は狭い画面でもセルからはみ出さず中央に配置される', async ({
     page,
   }, testInfo) => {
-    const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    // UTCでは日曜、日本時間では月曜になる時刻でも、画面と同じ日付を使う。
+    await page.clock.setFixedTime(new Date('2026-10-11T18:00:00Z'));
+    const today = await page.evaluate(() => {
+      const date = new Date();
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    });
     const currentBlock = await db.query<{ id: string }>(
       `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source)
       values($1,$2,$3,true,'manual') on conflict(user_id,start_time,end_time) do nothing returning id`,
