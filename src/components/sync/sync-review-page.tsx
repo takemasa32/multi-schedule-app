@@ -413,9 +413,12 @@ export default function SyncReviewPage({
               data-testid={`sync-review-event-${event.eventId}`}
             >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <p className="font-semibold">
-                    <Link href={`/event/${event.publicToken}`} className="link link-hover">
+                    <Link
+                      href={`/event/${event.publicToken}`}
+                      className="link link-hover break-words"
+                    >
                       {event.title}
                     </Link>
                   </p>
@@ -461,7 +464,10 @@ export default function SyncReviewPage({
               )}
 
               <div className="overflow-x-auto">
-                <table className="table-xs table w-full table-fixed border-collapse">
+                <table
+                  data-testid="sync-schedule-table"
+                  className="table-xs min-w-md table w-full table-fixed border-collapse"
+                >
                   <thead>
                     <tr className="bg-base-200">
                       <th className="border-base-300 w-20 border px-1 py-1 text-center">時間</th>
@@ -523,7 +529,7 @@ export default function SyncReviewPage({
                             >
                               <button
                                 type="button"
-                                className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
+                                className={`mx-auto block aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
                                 onClick={() =>
                                   slot.willChange &&
                                   setSyncCellSelectionMap((prev) => ({
