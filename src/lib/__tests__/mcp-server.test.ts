@@ -37,6 +37,12 @@ describe('MCP SDKの接続と操作', () => {
       expect(
         tools.tools.find((tool) => tool.name === 'save_my_answer')?._meta?.securitySchemes,
       ).toEqual([{ type: 'oauth2', scopes: ['daysynth.write'] }]);
+      expect(
+        tools.tools.filter((tool) => tool.annotations?.destructiveHint).map((tool) => tool.name),
+      ).toEqual(['save_my_answer', 'update_my_schedule']);
+      expect(
+        tools.tools.find((tool) => tool.name === 'preview_my_schedule_update')?.annotations,
+      ).toMatchObject({ readOnlyHint: true, destructiveHint: false });
       (readMyAnswer as jest.Mock).mockResolvedValue({ answer: null });
       const result = await client.callTool({
         name: 'get_my_answer',

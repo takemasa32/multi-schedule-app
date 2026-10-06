@@ -56,7 +56,7 @@ export function createMcpServer(identity: { userId: string; scopes: string[] } |
   const read = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
   const write = {
     readOnlyHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: true,
     openWorldHint: false,
   };
