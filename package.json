@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.3",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@supabase/supabase-js": "^2.105.3",
     "@types/uuid": "^10.0.0",
     "@vercel/og": "^0.6.8",
@@ -47,7 +48,8 @@
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "uuid": "^14.0.1",
-    "web-haptics": "^0.0.6"
+    "web-haptics": "^0.0.6",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
