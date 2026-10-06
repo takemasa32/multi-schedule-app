@@ -1,0 +1,107 @@
+# DaySynthのMCP接続
+
+## 実装範囲
+
+ChatGPTなどのMCPクライアントから、既存のGoogleログインに紐づくDaySynthアカウントで予定と回答を取得・更新する。Auth.jsとWeb版の権限モデルを維持し、イベント所有者のroleやAI専用の業務テーブルは追加しない。
+
+公開先は`/mcp`。公式TypeScript SDKのStreamable HTTPを使い、リクエストごとにサーバーを生成する。セッション管理、SSEによるサーバーからの通知、動的クライアント登録は実装しない。クライアントがOAuthの機密クライアントとして事前登録に対応することが接続条件となる。ChatGPTやGeminiの各製品での接続可否は、製品側の対応状況と設定に依存する。
+
+接続初期化、初期化完了通知、ツール一覧、pingはトークンなしで利用できる。公開するのは接続情報とツール定義だけで、イベント・回答・予定を取得・更新するツールの実行には認証が必要。トークンが送られた場合は公開操作でも検証し、無効なら401を返す。
+
+各ツールには必要なscopeを`securitySchemes`と互換用の`_meta.securitySchemes`で公開する。未認証のツール実行は401、権限不足は403と`WWW-Authenticate`で必要なscopeを通知する。ツール結果でも`_meta["mcp/www_authenticate"]`を返せるようにし、ChatGPTの追加認可に対応する。許可済みOriginへのエラー応答にもCORSヘッダーを付ける。
+
+| ツール                       | 動作                                                      |
+| ---------------------------- | --------------------------------------------------------- |
+| `list_my_events`             | 本人に紐づくイベントを100件ずつ取得。続きを`offset`で指定 |
+| `get_event`                  | 公開トークンからイベントと候補日時を取得                  |
+| `get_my_answer`              | 本人の回答を取得。紐づきがなければ`answer: null`          |
+| `get_my_schedule`            | `week_start`から7日間の予定を取得                         |
+| `save_my_answer`             | 本人の回答を作成・編集。未指定の枠を保持                  |
+| `preview_my_schedule_update` | 保存せず予定変更による回答の差分を計算                    |
+| `update_my_schedule`         | 予定保存後、本人に紐づく各イベントの回答に反映            |
+
+イベント作成・編集・確定・削除と、既存回答のアカウントへの紐づけは公開しない。
+
+## 認証と最小限の永続化
+
+`/oauth/authorize`で既存Auth.jsセッションを確認し、未ログインなら通常のログインへ戻り先を渡す。本人が接続先とscopeを確認して許可した後だけ認可コードを発行する。許可・拒否はServer Actionで処理し、Next.jsのOrigin検証と暗号化されたアクション引数を使用する。ログインユーザーが同意画面の表示時から変わった場合は再確認する。
+
+認可コードフローとPKCEのS256を必須とし、戻り先は登録済みURLと完全一致で検証する。トークンの`resource`も`NEXTAUTH_URL`のoriginに`/mcp`を付けた値に限定する。Googleのaccess tokenやWebのCookieをMCPの認証には使わない。
+
+新しいテーブルやマイグレーションは追加しない。既存の`authjs.sessions`にMCP専用の接続セッションを作り、`authjs.verification_token`に一回限りの認可コード・refresh tokenのSHA-256ハッシュを保存する。識別子に`mcp:`を付け、Webログインとは独立した行として扱う。期限切れのMCP行は新しい認可コードの発行時に削除する。
+
+トークンは既存のAuth.jsの暗号化機能で発行し、Webとは異なるsaltで暗号鍵を導出する。本人、クライアント、scope、接続ID、発行元、利用先、期限、トークン種別を検証する。DBの`sessionToken`は別のランダム値で、クライアントへ渡さない。MCPトークンをWebログインへ流用することも、その逆もできない。
+
+- 認可コードは5分、access tokenは1時間、refresh tokenは接続許可から30日で期限切れとなる。
+- `/oauth/token`は`client_secret_basic`または`client_secret_post`を受け付ける。シークレットを持たない公開クライアントには対応しない。
+- コードの消費とトークン発行をトランザクションにまとめる。消費済みコードの再使用は、その接続のトークンも失効させる。
+- refresh tokenを更新するたびに旧refresh tokenを消費する。同時更新では最初の1件だけが成功する。発行済みのaccess tokenは自身の期限まで有効で、接続の失効時にはまとめて無効になる。
+- `/oauth/revoke`で登録クライアントを認証し、そのクライアントの接続を失効させる。ユーザー削除時は外部キーのCASCADEで失効する。
+- WebからのログアウトだけではMCP接続は失効しない。切断時はクライアントから`/oauth/revoke`を呼ぶ。
+- 接続ごとに各サーバープロセスで1分あたり60リクエストまでとする。この回数は複数インスタンス間では共有しない。
+- `MCP_CLIENTS`未設定時はエンドポイントを無効にする。登録クライアントの削除でもそのクライアントのトークンを受け付けなくなる。
+
+## 本人の回答だけを更新する境界
+
+AIには`user_id`や`participant_id`を指定させない。Bearer tokenから本人を解決し、`user_event_links`の`(user_id, event_id)`から参加者を取得する。名前一致や、回答用の`response_token`で権限を推測しない。管理用トークンと回答用トークンはMCPの取得結果へ含めない。
+
+回答保存では、対象イベントの候補日時であるかを確認し、本人の紐づきをロックして既存の`update_participant_availability`を呼ぶ。本人の回答がなければ、名前検索せず参加者を作成して紐づける。同名の未紐づけ回答・他人の回答はそのまま残す。参加者作成、紐づけ、回答と手動上書きの保存を同じトランザクションにまとめ、同時作成はアカウントとイベント単位のロックで直列化する。
+
+`save_my_answer`は指定枠だけの更新であり、未指定の枠を保持する。指定枠は明示的な回答として`user_event_availability_overrides`にも保存し、後の予定同期から保護する。アカウント予定や他イベントの回答は変更しない。表示名は必須で、コメント省略は現状維持、`null`はコメントの削除を意味する。
+
+## 予定と回答の同期
+
+既存の予定保存・差分計算・イベント単位の同期を`src/lib/schedule-service.ts`に置き、WebのServer Actionは`src/lib/schedule-actions.ts`から呼ぶ。MCPでは認証済みのユーザーIDを渡す。Webの既存操作の挙動は維持する。
+
+日時はDaySynthの既存保存形式に合わせ、日本時間の壁時計時刻として扱う。取得値の`Z`や`+00:00`は既存の壁時計時刻の保存表現で、UTCに9時間を加算して読む値ではない。予定更新の入力は`YYYY-MM-DDTHH:00:00`、毎正時、正の期間で最大7日。`availability: false`が予定あり、`true`が参加可能を表す。削除・任意のブロックID指定は公開しない。
+
+プレビューでは予定ブロックをメモリ上で置き換え、DBへ保存しない。更新時は、必要なデータが取得できることを確認して予定を保存し、最新状態から同期差分を再計算する。本人に紐づく全イベントが計算対象となる。イベント単位の更新時にも紐づきをロックして本人であることを再確認する。
+
+- 手動上書きと過去の回答を保持する。
+- 確定済みイベントとの重複は既存ルールで判定する。
+- 確定済みイベント自体の回答更新は標準で除外し、`allow_finalized: true`が明示された場合だけ行う。
+- 取得失敗を空の正常結果として使わず、MCPの同期処理を止める。
+- 予定保存と全イベントの同期を1つのDBトランザクションにはしない。`schedule_saved`と`sync_complete`、イベント別の`updated`・`skipped`・`failed`を返す。
+- 部分失敗時は同じ入力を再実行する。予定は既存の一意キーへupsertし、未反映の差分を再計算するため重複しない。
+
+プレビューと適用の間に別操作でデータが変わる可能性はある。適用時の再計算結果を正とし、プレビューと同じ件数を保証する確認用テーブルは追加しない。
+
+## 導入
+
+1. HTTPSの`NEXTAUTH_URL`と、既存の`NEXTAUTH_SECRET`、サーバー環境変数`MCP_CLIENTS`を設定する。ローカルの開発モードでは`http://localhost`も使える。追加のマイグレーションは不要。
+2. クライアントの登録画面に`{NEXTAUTH_URLのorigin}/mcp`、クライアントIDとシークレットを設定する。
+3. Googleでログインし、接続先とscopeを確認して許可する。
+
+`MCP_CLIENTS`は次の形のJSON配列。例の値は形式の説明であり、シークレットには`openssl rand -hex 32`などで生成した値を使う。実際の値をGitに保存しない。
+
+```json
+[
+  {
+    "id": "chatgpt",
+    "name": "ChatGPT",
+    "secret": "REPLACE_WITH_RANDOM_SECRET_AT_LEAST_32_CHARACTERS",
+    "redirectUris": ["https://client.example/oauth/callback"]
+  }
+]
+```
+
+`redirectUris`には利用クライアントが指定する実際の戻り先を登録する。ワイルドカードは使用しない。scopeは取得用`daysynth.read`、更新用`daysynth.write`。標準は読み取りのみで、更新には両方を指定して接続する。
+
+### ChatGPTとGemini Webへの接続
+
+- ChatGPTではカスタムMCPの接続設定でOAuthを選び、事前定義したクライアントID・シークレットを設定する。接続画面が指定する戻り先を`redirectUris`へ登録する。
+- Gemini WebではConnected AppsのCustom appsへMCP URLを入力し、Advanced featuresから事前登録したクライアントの認証情報を入力する。Google側が指定する戻り先を`redirectUris`へ登録する。
+- 接続先ごとに別のクライアントIDとシークレットを使用する。通常のWebログインを再利用できるため、ログイン中ならGoogleへの再ログインは不要。ただし接続許可は確認する。
+- 2026年10月6日確認時点で、Geminiの公式ヘルプはCustom appsの利用条件を米国・18歳以上・個人Googleアカウント・Keep Activity有効・英語対応としている。画面が利用できない場合、サーバーの実装変更だけでは解決できない。
+
+ローカル検証ではOAuthフローと標準SDKの接続、公開ツール定義、権限不足の通知を確認する。ChatGPT・Gemini Webの実接続には、HTTPS公開先と製品側の接続設定が必要となる。製品側の認証情報を入力しただけで動作確認済みとは扱わない。
+
+`SUPABASE_DB_URL`のサーバー用DBロールには、Auth.jsの既存テーブルと、回答保存・同期に必要な業務テーブル、既存RPCへの権限が必要となる。ブラウザへ接続URLや管理キーを渡さない。接続先製品での実接続確認は、このコード変更だけでは完了しない。
+
+## 参照
+
+- [MCP Authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+- [MCP Transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+- [OpenAIの認証ガイド](https://developers.openai.com/plugins/build/auth)
+- [GeminiのCustom apps接続手順](https://support.google.com/gemini/answer/17209137)
+- [アカウント予定連携](./account-schedule.md)

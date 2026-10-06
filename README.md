@@ -103,18 +103,25 @@ npm run dev
 
 `.env.example` に最小構成を置いています。主な変数は次のとおりです。
 
-| 変数                           | 用途                                      |
-| ------------------------------ | ----------------------------------------- |
-| `SUPABASE_URL`                 | Supabase API の URL                       |
-| `SUPABASE_ANON_KEY`            | クライアント公開用キー                    |
-| `SUPABASE_SERVICE_ROLE_KEY`    | サーバー側で使う管理キー                  |
-| `SUPABASE_DB_URL`              | ローカルまたは接続先 DB URL               |
-| `SUPABASE_DB_PASSWORD`         | Supabase ローカル DB のパスワード         |
-| `NEXTAUTH_SECRET`              | NextAuth の署名用シークレット             |
-| `NEXTAUTH_URL`                 | アプリのベース URL                        |
-| `NEXT_PUBLIC_GOOGLE_ANALYTICS` | GA4 の測定 ID（開発環境では送信しない）   |
-| `GOOGLE_CLIENT_ID`             | Google ログイン用クライアント ID          |
-| `GOOGLE_CLIENT_SECRET`         | Google ログイン用クライアントシークレット |
+| 変数                           | 用途                                            |
+| ------------------------------ | ----------------------------------------------- |
+| `SUPABASE_URL`                 | Supabase API の URL                             |
+| `SUPABASE_ANON_KEY`            | クライアント公開用キー                          |
+| `SUPABASE_SERVICE_ROLE_KEY`    | サーバー側で使う管理キー                        |
+| `SUPABASE_DB_URL`              | ローカルまたは接続先 DB URL                     |
+| `SUPABASE_DB_PASSWORD`         | Supabase ローカル DB のパスワード               |
+| `NEXTAUTH_SECRET`              | NextAuth の署名用シークレット                   |
+| `NEXTAUTH_URL`                 | アプリのベース URL                              |
+| `MCP_CLIENTS`                  | MCPの事前登録クライアント設定（未設定なら無効） |
+| `NEXT_PUBLIC_GOOGLE_ANALYTICS` | GA4 の測定 ID（開発環境では送信しない）         |
+| `GOOGLE_CLIENT_ID`             | Google ログイン用クライアント ID                |
+| `GOOGLE_CLIENT_SECRET`         | Google ログイン用クライアントシークレット       |
+
+### MCP接続
+
+MCPクライアントから本人の予定・回答を操作できます。既存のGoogleログインと認証テーブルを利用するため、追加のマイグレーションは不要です。導入にはHTTPSの`NEXTAUTH_URL`、既存の`NEXTAUTH_SECRET`、事前登録クライアントの`MCP_CLIENTS`設定が必要です。設定形式、公開ツール、同期時の扱いは[DaySynthのMCP接続](docs/architecture/mcp.md)を参照してください。
+
+ChatGPTではOAuthの事前定義クライアント設定、Gemini WebではCustom appsのAdvanced featuresからクライアントの認証情報を設定します。各製品が指定する戻り先を登録し、利用条件は上記ドキュメントの接続手順を確認してください。
 
 ### 開発用ログイン
 
