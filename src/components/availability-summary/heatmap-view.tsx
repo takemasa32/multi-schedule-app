@@ -135,7 +135,6 @@ type HeatmapCellVisual = {
   dateId: string;
   isSelected: boolean;
   availableCount: number;
-  unavailableCount: number;
   hasData: boolean;
   hasResponses: boolean;
   isPastColumnGrayscale: boolean;
@@ -144,7 +143,6 @@ type HeatmapCellVisual = {
   boundarySignature: string;
   cellStyle: React.CSSProperties;
   countTextClass: string;
-  unavailableTextClass: string;
   joinKey: string | null;
 };
 
@@ -623,7 +621,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         const cellData = heatmapData.get(key);
         const isSelected = cellData?.isSelected || false;
         const availableCount = cellData?.availableCount || 0;
-        const unavailableCount = cellData?.unavailableCount || 0;
         const totalResponses = cellData?.totalResponses ?? 0;
         const hasData = cellData !== undefined;
         const hasResponses = totalResponses > 0;
@@ -713,11 +710,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         const countTextClass = shouldApplyPastGrayscale
           ? `${countTextBaseClass} ${(isDarkTheme ?? false) ? 'text-base-content/80' : 'text-base-content/60'}`
           : `${countTextBaseClass}${opacityValue >= 0.6 ? ' text-white' : ' text-base-content'}`;
-        const unavailableTextClass = shouldApplyPastGrayscale
-          ? (isDarkTheme ?? false)
-            ? 'text-[10px] text-base-content/50 sm:text-xs'
-            : 'text-[10px] text-base-content/60 sm:text-xs'
-          : 'text-[10px] text-base-content/70 sm:text-xs';
         const joinKey =
           hasData && hasResponses
             ? `${shouldApplyPastGrayscale ? 'past' : filter !== 'none' ? 'muted' : 'primary'}|${
@@ -729,7 +721,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           dateId: cellData?.dateId ?? '',
           isSelected,
           availableCount,
-          unavailableCount,
           hasData,
           hasResponses,
           isPastColumnGrayscale: shouldDimPastColumn,
@@ -738,7 +729,6 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           boundarySignature,
           cellStyle,
           countTextClass,
-          unavailableTextClass,
           joinKey,
         });
       });
@@ -955,13 +945,11 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                       dateId,
                       isSelected,
                       availableCount,
-                      unavailableCount,
                       hasData,
                       hasResponses,
                       isPastColumnGrayscale,
                       cellStyle,
                       countTextClass,
-                      unavailableTextClass,
                     } = visual;
                     // 過去日程グレー表示の列は回答有無に関わらず境界を直線で見せる
                     const shouldUseStraightPastBoundary = isPastColumnGrayscale;
@@ -1166,14 +1154,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
                               className={`relative z-10 flex h-full min-h-8 w-full flex-col items-center justify-center overflow-hidden sm:min-h-9 ${cornerClass}`}
                             >
                               {hasResponses ? (
-                                <>
-                                  <span className={countTextClass}>{availableCount}</span>
-                                  {unavailableCount > 0 && (
-                                    <span className={`${unavailableTextClass} hidden sm:inline`}>
-                                      ({unavailableCount})
-                                    </span>
-                                  )}
-                                </>
+                                <span className={countTextClass}>{availableCount}</span>
                               ) : (
                                 <>
                                   <span className="sr-only">回答なし</span>

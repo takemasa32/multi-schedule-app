@@ -63,7 +63,10 @@ describe('AvailabilitySummary', () => {
     expect(screen.getByText('みんなの回答状況')).toBeInTheDocument();
     expect(screen.getByText('時間')).toBeInTheDocument();
     expect(screen.getAllByText('2').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('(1)').length).toBeGreaterThan(0);
+    expect(screen.queryByText('(1)')).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getAllByRole('button', { name: /回答の詳細/ })[0], { key: 'Enter' });
+    expect(screen.getByText('参加不可（1名）')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('minColoredCountを指定すると閾値未満のセルがグレースケールになる', () => {

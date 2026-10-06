@@ -68,9 +68,43 @@ describe('MCP本人の操作', () => {
     expect(saved[1].slice(0, 2)).toEqual(['my-answer', 'event']);
     expect(JSON.parse(saved[1][2])).toEqual([
       { event_date_id: otherDateId, availability: true },
-      ...input.availabilities,
     ]);
     expect(query).toHaveBeenCalledWith('COMMIT');
+  });
+  it('参加不可への変更で既存の選択を解除し、不可の手動上書きは保持する', async () => {
+    const original = query.getMockImplementation();
+    query.mockImplementation(async (sql: string, params: unknown[]) =>
+      sql.startsWith('SELECT event_date_id')
+        ? {
+            rows: [
+              { event_date_id: dateId, availability: true },
+              { event_date_id: otherDateId, availability: false },
+            ],
+          }
+        : original?.(sql, params),
+    );
+    await saveMyAnswer('me', input);
+    expect(query).toHaveBeenCalledWith(
+      'SELECT public.update_participant_availability($1::uuid, $2::uuid, $3::jsonb)',
+      ['my-answer', 'event', '[]'],
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO public.user_event_availability_overrides'),
+      ['me', 'event', JSON.stringify(input.availabilities)],
+    );
+  });
+  it('参加可能を追加しても未指定の選択済み回答は消さない', async () => {
+    await saveMyAnswer('me', {
+      ...input,
+      availabilities: [{ event_date_id: dateId, availability: true }],
+    });
+    const saved = query.mock.calls.find(([sql]) =>
+      sql.startsWith('SELECT public.update_participant_availability'),
+    );
+    expect(JSON.parse(saved[1][2])).toEqual([
+      { event_date_id: otherDateId, availability: true },
+      { event_date_id: dateId, availability: true },
+    ]);
   });
   it('紐づきがなければ同名検索せず新規回答を作り、本人へ紐づける', async () => {
     const original = query.getMockImplementation();
