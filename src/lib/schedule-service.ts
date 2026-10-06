@@ -633,7 +633,11 @@ const buildUserAvailabilitySyncPreview = async (
   return previewEvents.sort((a, b) => a.title.localeCompare(b.title, 'ja'));
 };
 
-const splitToHourlyRanges = (start: string, end: string): Array<{ start: string; end: string }> => {
+/** 回答とアカウント予定で同じ時間単位へ分割する。 */
+export const splitToHourlyRanges = (
+  start: string,
+  end: string,
+): Array<{ start: string; end: string }> => {
   const startDate = toComparableDate(start);
   const endDate = toComparableDate(end);
   if (

@@ -1,13 +1,19 @@
 import 'server-only';
+import { createHash } from 'node:crypto';
+import { z } from 'zod';
 import { authPool } from '@/lib/auth';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreviewResult,
   saveUserScheduleBlockChanges,
+  splitToHourlyRanges,
 } from '@/lib/schedule-service';
+import { toWallClockUtcIso } from '@/lib/schedule-utils';
+import { loadAnswerSchedule, answerScheduleAvailability, type AnswerDate } from './answer-context';
 import {
   answerInput,
+  answerScheduleInput,
   proposedScheduleBlocks,
   scheduleInput,
   type AnswerInput,
@@ -41,8 +47,25 @@ export async function readEvent(publicToken: string) {
   return { ...event, dates, time_zone: 'Asia/Tokyo' };
 }
 
-export async function readMyAnswer(userId: string, publicToken: string) {
+export async function readMyAnswer(
+  userId: string,
+  publicToken: string,
+  includeAccountSchedule?: boolean,
+) {
   const event = await readEvent(publicToken);
+  let accountSchedule;
+  if (includeAccountSchedule) {
+    const db = await authPool.connect();
+    try {
+      const context = await loadAnswerSchedule(db, userId, event.id, event.dates);
+      accountSchedule = event.dates.map((date) => ({
+        ...date,
+        availability: answerScheduleAvailability(date, context),
+      }));
+    } finally {
+      db.release();
+    }
+  }
   const supabase = createSupabaseAdmin();
   const { data: link, error } = await supabase
     .from('user_event_links')
@@ -51,7 +74,8 @@ export async function readMyAnswer(userId: string, publicToken: string) {
     .eq('event_id', event.id)
     .maybeSingle();
   if (error) throw new Error('回答の紐づきを取得できませんでした');
-  if (!link?.participant_id) return { answer: null };
+  if (!link?.participant_id)
+    return { answer: null, ...(accountSchedule ? { account_schedule: accountSchedule } : {}) };
   const participant = await supabase
     .from('participants')
     .select('name,comment')
@@ -72,6 +96,18 @@ export async function readMyAnswer(userId: string, publicToken: string) {
     if (!page.data || page.data.length < 1000) break;
   }
   return {
+    ...(accountSchedule
+      ? {
+          account_schedule: accountSchedule,
+          conflicting_date_ids: accountSchedule
+            .filter(
+              (date) =>
+                date.availability !== null &&
+                date.availability !== (selected.get(date.id) ?? false),
+            )
+            .map((date) => date.id),
+        }
+      : {}),
     answer: {
       ...participant.data,
       availabilities: event.dates.map((date) => ({
@@ -98,8 +134,8 @@ export async function saveMyAnswer(userId: string, rawInput: AnswerInput) {
     await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
       `mcp-answer:${userId}:${eventId}`,
     ]);
-    const dates = await db.query<{ id: string }>(
-      'SELECT id FROM public.event_dates WHERE event_id = $1 FOR SHARE',
+    const dates = await db.query<AnswerDate>(
+      'SELECT id, start_time::text, end_time::text FROM public.event_dates WHERE event_id = $1 FOR SHARE',
       [eventId],
     );
     const validIds = new Set(dates.rows.map((row) => row.id));
@@ -110,6 +146,18 @@ export async function saveMyAnswer(userId: string, rawInput: AnswerInput) {
       [userId, eventId],
     );
     let participantId = link.rows[0]?.participant_id;
+    if (participantId && input.use_account_schedule)
+      throw new McpInputError(
+        '既存回答があるため初回の予定補完はできません。回答を再取得して変更枠だけ指定してください',
+      );
+    const seeded = new Map<string, boolean>();
+    if (input.use_account_schedule) {
+      const context = await loadAnswerSchedule(db, userId, eventId, dates.rows);
+      for (const date of dates.rows) {
+        const availability = answerScheduleAvailability(date, context);
+        if (availability !== null) seeded.set(date.id, availability);
+      }
+    }
     let created = false;
     if (!participantId) {
       const participant = await db.query<{ id: string }>(
@@ -146,6 +194,7 @@ export async function saveMyAnswer(userId: string, rawInput: AnswerInput) {
       [participantId],
     );
     const answers = new Map(previous.rows.map((row) => [row.event_date_id, row.availability]));
+    for (const [id, availability] of seeded) answers.set(id, availability);
     for (const row of input.availabilities) answers.set(row.event_date_id, row.availability);
     // Webと同じく参加可能だけを保存し、レコードのない枠は参加不可として扱う。
     const payload = [...answers]
@@ -164,7 +213,24 @@ export async function saveMyAnswer(userId: string, rawInput: AnswerInput) {
     );
     await db.query('UPDATE public.events SET last_accessed_at = now() WHERE id = $1', [eventId]);
     await db.query('COMMIT');
-    return { success: true, created, changed_slots: input.availabilities.length };
+    return {
+      success: true,
+      created,
+      changed_slots: input.availabilities.length,
+      answered_date_ids: created
+        ? dates.rows.map((date) => date.id)
+        : input.availabilities.map((date) => date.event_date_id),
+      account_seeded_slots: seeded.size,
+      unresolved_date_ids: input.use_account_schedule
+        ? dates.rows
+            .filter(
+              (date) =>
+                !seeded.has(date.id) &&
+                !input.availabilities.some((row) => row.event_date_id === date.id),
+            )
+            .map((date) => date.id)
+        : [],
+    };
   } catch (error) {
     await db.query('ROLLBACK');
     throw error;
@@ -189,6 +255,88 @@ export async function previewMyScheduleUpdate(userId: string, rawInput: Schedule
       protected_slots: event.changes.protected,
     })),
   };
+}
+
+/** 本人回答の指定枠を予定へ保存する。プレビューの変化を検出し、他イベントは更新しない。 */
+export async function saveMyAnswerToSchedule(
+  userId: string,
+  rawInput: z.input<typeof answerScheduleInput>,
+) {
+  const input = answerScheduleInput.parse(rawInput);
+  const db = await authPool.connect();
+  try {
+    await db.query('BEGIN');
+    // プレビュー検証から保存までの予定追加・回答変更も競合として検出する。
+    await db.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+    const event = await db.query<{ id: string }>(
+      'SELECT id FROM public.events WHERE public_token = $1 FOR SHARE',
+      [input.public_token],
+    );
+    const eventId = event.rows[0]?.id;
+    if (!eventId) throw new McpInputError('イベントが見つかりません');
+    await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
+      `mcp-answer:${userId}:${eventId}`,
+    ]);
+    const link = await db.query<{ participant_id: string | null }>(
+      'SELECT participant_id FROM public.user_event_links WHERE user_id = $1 AND event_id = $2 FOR UPDATE',
+      [userId, eventId],
+    );
+    const participantId = link.rows[0]?.participant_id;
+    if (!participantId) throw new McpInputError('本人に紐づく回答がありません');
+    const dates = await db.query<AnswerDate>(
+      'SELECT id, start_time::text, end_time::text FROM public.event_dates WHERE event_id = $1 ORDER BY start_time, id FOR SHARE',
+      [eventId],
+    );
+    const target = dates.rows.filter((date) => input.event_date_ids.includes(date.id));
+    if (target.length !== input.event_date_ids.length)
+      throw new McpInputError('対象イベント以外の候補日時は指定できません');
+    const answers = await db.query<{ event_date_id: string; availability: boolean }>(
+      'SELECT event_date_id, availability FROM public.availabilities WHERE participant_id = $1 FOR SHARE',
+      [participantId],
+    );
+    const selected = new Map(answers.rows.map((row) => [row.event_date_id, row.availability]));
+    const context = await loadAnswerSchedule(db, userId, eventId, target);
+    const changes = target.map((date) => ({
+      event_date_id: date.id,
+      start_time: date.start_time,
+      end_time: date.end_time,
+      answer_availability: selected.get(date.id) ?? false,
+      account_availability: answerScheduleAvailability(date, context),
+    }));
+    const revision = createHash('sha256')
+      .update(JSON.stringify({ userId, eventId, participantId, changes, context }))
+      .digest('hex');
+    if (input.mode === 'apply' && input.expected_revision !== revision)
+      throw new McpInputError(
+        '回答または予定が変更されました。プレビューを再取得して確認してください',
+      );
+    if (input.mode === 'preview') {
+      await db.query('COMMIT');
+      return { saved: false, expected_revision: revision, changes, other_events_updated: false };
+    }
+    const payload = changes.flatMap((date) =>
+      splitToHourlyRanges(date.start_time, date.end_time).map((range) => ({
+        start_time: toWallClockUtcIso(range.start),
+        end_time: toWallClockUtcIso(range.end),
+        availability: date.answer_availability,
+      })),
+    );
+    await db.query(
+      `INSERT INTO public.user_schedule_blocks (user_id,start_time,end_time,availability,source,event_id,updated_at)
+      SELECT $1,x.start_time,x.end_time,x.availability,'event',$2,now()
+      FROM jsonb_to_recordset($3::jsonb) AS x(start_time timestamptz,end_time timestamptz,availability boolean)
+      ON CONFLICT (user_id,start_time,end_time) DO UPDATE SET availability = EXCLUDED.availability,
+      source = EXCLUDED.source, event_id = EXCLUDED.event_id, updated_at = now()`,
+      [userId, eventId, JSON.stringify(payload)],
+    );
+    await db.query('COMMIT');
+    return { saved: true, saved_slots: payload.length, other_events_updated: false };
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  } finally {
+    db.release();
+  }
 }
 
 /** 予定保存後に再計算し、各イベントの成功・失敗を分けて返す。再実行しても予定は増殖しない。 */

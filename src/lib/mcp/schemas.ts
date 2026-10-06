@@ -11,14 +11,18 @@ export const eventInput = z
   .strict();
 export const answerInput = eventInput
   .extend({
+    use_account_schedule: z.boolean().optional(),
     name: z.string().trim().min(1).max(100),
     comment: z.string().max(2000).nullable().optional(),
     availabilities: z
       .array(z.object({ event_date_id: z.uuid(), availability: z.boolean() }).strict())
-      .min(1)
       .max(1000),
   })
   .strict()
+  .refine(
+    (input) => input.availabilities.length > 0 || input.use_account_schedule === true,
+    '回答する枠、または初回の予定補完を指定してください',
+  )
   .refine(
     (input) =>
       new Set(input.availabilities.map((row) => row.event_date_id)).size ===
@@ -51,6 +55,27 @@ export const scheduleInput = z
 export const weekInput = z.object({ week_start: z.iso.date() }).strict();
 export type AnswerInput = z.infer<typeof answerInput>;
 export type ScheduleInput = z.infer<typeof scheduleInput>;
+
+export const answerReadInput = eventInput.extend({
+  include_account_schedule: z.boolean().optional(),
+});
+export const answerScheduleInput = eventInput
+  .extend({
+    event_date_ids: z
+      .array(z.uuid())
+      .min(1)
+      .max(1000)
+      .refine((ids) => new Set(ids).size === ids.length, '候補日時が重複しています'),
+    mode: z.enum(['preview', 'apply']).default('preview'),
+    expected_revision: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+  })
+  .refine(
+    (input) => input.mode !== 'apply' || Boolean(input.expected_revision),
+    '適用にはプレビューのexpected_revisionが必要です',
+  );
 
 export function proposedScheduleBlocks(input: ScheduleInput) {
   const end = Date.parse(`${input.end_time}Z`);
