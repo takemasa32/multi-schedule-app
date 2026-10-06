@@ -12,7 +12,7 @@ jest.mock('@/lib/schedule-service', () => ({
   applyUserAvailabilitySyncForEvent: jest.fn(),
   fetchUserAvailabilitySyncPreviewResult: jest.fn(),
   saveUserScheduleBlockChanges: jest.fn(),
-  splitToHourlyRanges: jest.requireActual('@/lib/schedule-service').splitToHourlyRanges,
+  buildAnswerScheduleBlocks: jest.requireActual('@/lib/schedule-service').buildAnswerScheduleBlocks,
 }));
 const dateId = '11111111-1111-4111-8111-111111111111';
 const otherDateId = '22222222-2222-4222-8222-222222222222';
@@ -290,6 +290,56 @@ describe('MCP本人の操作', () => {
         expected_revision: preview.expected_revision,
       }),
     ).rejects.toThrow('変更されました');
+    expect(query.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(false);
+  });
+  it.each([true, false])('MCPでも一致する重複枠を統合して保存する（可=%s）', async (available) => {
+    const original = query.getMockImplementation();
+    query.mockImplementation(async (sql: string, params: unknown[]) => {
+      if (sql.startsWith('SELECT id, start_time'))
+        return {
+          rows: [
+            { id: dateId, start_time: '2026-10-12 10:00:00', end_time: '2026-10-12 12:00:00' },
+            { id: otherDateId, start_time: '2026-10-12 10:00:00', end_time: '2026-10-12 11:00:00' },
+          ],
+        };
+      if (sql.startsWith('SELECT event_date_id'))
+        return {
+          rows: [dateId, otherDateId].map((id) => ({ event_date_id: id, availability: available })),
+        };
+      return original?.(sql, params);
+    });
+    const args = { public_token: input.public_token, event_date_ids: [dateId, otherDateId] };
+    const preview = await saveMyAnswerToSchedule('me', args);
+    await expect(
+      saveMyAnswerToSchedule('me', {
+        ...args,
+        mode: 'apply',
+        expected_revision: preview.expected_revision,
+      }),
+    ).resolves.toMatchObject({ saved: true, saved_slots: 2 });
+    const saved = query.mock.calls.find(([sql]) =>
+      sql.startsWith('INSERT INTO public.user_schedule_blocks'),
+    );
+    expect(JSON.parse(saved[1][2])).toHaveLength(2);
+  });
+  it('MCPでも可・不可が矛盾する重複枠はプレビュー時点で拒否する', async () => {
+    const original = query.getMockImplementation();
+    query.mockImplementation(async (sql: string, params: unknown[]) => {
+      if (sql.startsWith('SELECT id, start_time'))
+        return {
+          rows: [
+            { id: dateId, start_time: '2026-10-12 10:00:00', end_time: '2026-10-12 12:00:00' },
+            { id: otherDateId, start_time: '2026-10-12 10:00:00', end_time: '2026-10-12 11:00:00' },
+          ],
+        };
+      return original?.(sql, params);
+    });
+    await expect(
+      saveMyAnswerToSchedule('me', {
+        public_token: input.public_token,
+        event_date_ids: [dateId, otherDateId],
+      }),
+    ).rejects.toThrow('矛盾');
     expect(query.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(false);
   });
 });

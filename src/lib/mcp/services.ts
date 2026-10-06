@@ -7,9 +7,8 @@ import {
   applyUserAvailabilitySyncForEvent,
   fetchUserAvailabilitySyncPreviewResult,
   saveUserScheduleBlockChanges,
-  splitToHourlyRanges,
+  buildAnswerScheduleBlocks,
 } from '@/lib/schedule-service';
-import { toWallClockUtcIso } from '@/lib/schedule-utils';
 import { loadAnswerSchedule, answerScheduleAvailability, type AnswerDate } from './answer-context';
 import {
   answerInput,
@@ -303,6 +302,14 @@ export async function saveMyAnswerToSchedule(
       answer_availability: selected.get(date.id) ?? false,
       account_availability: answerScheduleAvailability(date, context),
     }));
+    const payload = buildAnswerScheduleBlocks(
+      target,
+      changes.filter((date) => date.answer_availability).map((date) => date.event_date_id),
+    );
+    if (!payload)
+      throw new McpInputError(
+        '重なる候補日時の回答が矛盾しています。保存する候補を選び直してください',
+      );
     const revision = createHash('sha256')
       .update(JSON.stringify({ userId, eventId, participantId, changes, context }))
       .digest('hex');
@@ -314,13 +321,6 @@ export async function saveMyAnswerToSchedule(
       await db.query('COMMIT');
       return { saved: false, expected_revision: revision, changes, other_events_updated: false };
     }
-    const payload = changes.flatMap((date) =>
-      splitToHourlyRanges(date.start_time, date.end_time).map((range) => ({
-        start_time: toWallClockUtcIso(range.start),
-        end_time: toWallClockUtcIso(range.end),
-        availability: date.answer_availability,
-      })),
-    );
     await db.query(
       `INSERT INTO public.user_schedule_blocks (user_id,start_time,end_time,availability,source,event_id,updated_at)
       SELECT $1,x.start_time,x.end_time,x.availability,'event',$2,now()
