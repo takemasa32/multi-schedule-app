@@ -122,7 +122,7 @@ export function createMcpServer(identity: { userId: string; scopes: string[] } |
     'save_my_answer',
     {
       description:
-        '本人の回答を登録・編集する。未指定の枠は保持する。指定した回答は手動上書きとして予定同期から保護される。本人の回答がなければ名前検索せず新規作成する。アカウント予定は変更しない。',
+        '本人の回答を登録・編集する。未指定の枠は保持する。参加可能だけを保存し、参加不可の指定は選択を解除する。指定した回答は手動上書きとして予定同期から保護される。本人の回答がなければ名前検索せず新規作成する。アカウント予定は変更しない。',
       inputSchema: answerInput,
       annotations: write,
       _meta: toolSecurity('save_my_answer'),

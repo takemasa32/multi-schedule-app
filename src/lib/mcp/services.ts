@@ -147,10 +147,10 @@ export async function saveMyAnswer(userId: string, rawInput: AnswerInput) {
     );
     const answers = new Map(previous.rows.map((row) => [row.event_date_id, row.availability]));
     for (const row of input.availabilities) answers.set(row.event_date_id, row.availability);
-    const payload = [...answers].map(([event_date_id, availability]) => ({
-      event_date_id,
-      availability,
-    }));
+    // Webと同じく参加可能だけを保存し、レコードのない枠は参加不可として扱う。
+    const payload = [...answers]
+      .filter(([, availability]) => availability)
+      .map(([event_date_id]) => ({ event_date_id, availability: true }));
     await db.query('SELECT public.update_participant_availability($1::uuid, $2::uuid, $3::jsonb)', [
       participantId,
       eventId,
