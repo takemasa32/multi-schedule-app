@@ -874,7 +874,10 @@ export default function AccountScheduleSettings({
               />
             </div>
             <div className="overflow-x-auto">
-              <table className="table-xs table w-full table-fixed border-collapse">
+              <table
+                data-testid="dated-schedule-table"
+                className="table-xs min-w-md table w-full table-fixed border-collapse"
+              >
                 <thead>
                   <tr className="bg-base-200">
                     <th className="border-base-300 w-12 border px-1 py-2 text-center md:w-14 md:px-2 md:py-3">
@@ -937,7 +940,7 @@ export default function AccountScheduleSettings({
                           <td key={rowCellKey} className="border-base-300 border p-0.5 md:p-1">
                             <button
                               type="button"
-                              className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${className}`}
+                              className={`mx-auto block aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${className}`}
                               onClick={() =>
                                 datedEditing &&
                                 setDatedDraftMap((prev) => ({
@@ -1051,10 +1054,13 @@ export default function AccountScheduleSettings({
                   : '-';
               return (
                 <div key={event.eventId} className="bg-base-100 rounded-lg border p-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div>
+                  <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:justify-between">
+                    <div className="w-full min-w-0 sm:flex-1">
                       <p className="font-semibold">
-                        <Link href={`/event/${event.publicToken}`} className="link link-hover">
+                        <Link
+                          href={`/event/${event.publicToken}`}
+                          className="link link-hover break-words"
+                        >
                           {event.title}
                         </Link>
                       </p>
@@ -1108,7 +1114,10 @@ export default function AccountScheduleSettings({
                   )}
 
                   <div className="overflow-x-auto">
-                    <table className="table-xs table w-full table-fixed border-collapse">
+                    <table
+                      data-testid="sync-schedule-table"
+                      className="table-xs min-w-md table w-full table-fixed border-collapse"
+                    >
                       <thead>
                         <tr className="bg-base-200">
                           <th className="border-base-300 w-20 border px-1 py-1 text-center">
@@ -1178,7 +1187,7 @@ export default function AccountScheduleSettings({
                                 >
                                   <button
                                     type="button"
-                                    className={`mx-auto aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
+                                    className={`mx-auto block aspect-square w-7 rounded-md text-xs font-semibold md:aspect-auto md:h-10 md:w-full md:text-sm ${cellClass}`}
                                     onClick={() =>
                                       slot.willChange &&
                                       setSyncCellSelectionMap((prev) => ({
