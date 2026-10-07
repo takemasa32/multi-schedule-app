@@ -1,13 +1,14 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer } from '@/lib/mcp/server';
-import { readMyAnswer, saveMyAnswer } from '@/lib/mcp/services';
+import { readMyAnswer, saveMyAnswer, saveMyAnswerToSchedule } from '@/lib/mcp/services';
 
 jest.mock('@/lib/mcp/services', () => ({
   McpInputError: class extends Error {},
   readEvent: jest.fn(),
   readMyAnswer: jest.fn(),
   saveMyAnswer: jest.fn(),
+  saveMyAnswerToSchedule: jest.fn(),
   previewMyScheduleUpdate: jest.fn(),
   updateMySchedule: jest.fn(),
 }));
@@ -39,7 +40,7 @@ describe('MCP SDKの接続と操作', () => {
       ).toEqual([{ type: 'oauth2', scopes: ['daysynth.write'] }]);
       expect(
         tools.tools.filter((tool) => tool.annotations?.destructiveHint).map((tool) => tool.name),
-      ).toEqual(['save_my_answer', 'update_my_schedule']);
+      ).toEqual(['save_my_answer', 'save_my_answer_to_schedule', 'update_my_schedule']);
       expect(
         tools.tools.find((tool) => tool.name === 'preview_my_schedule_update')?.annotations,
       ).toMatchObject({ readOnlyHint: true, destructiveHint: false });
@@ -49,7 +50,7 @@ describe('MCP SDKの接続と操作', () => {
         arguments: { public_token: 'AbCdEf123456' },
       });
       expect(result.isError).not.toBe(true);
-      expect(readMyAnswer).toHaveBeenCalledWith('me', 'AbCdEf123456');
+      expect(readMyAnswer).toHaveBeenCalledWith('me', 'AbCdEf123456', undefined);
     } finally {
       await client.close();
       await server.close();
@@ -78,6 +79,29 @@ describe('MCP SDKの接続と操作', () => {
       await server.close();
     }
   });
+  it('予定参照は明示指定した場合だけ有効にし、予定保存は書き込み権限を要求する', async () => {
+    const { client, server } = await connect('me', ['daysynth.read']);
+    try {
+      (readMyAnswer as jest.Mock).mockResolvedValue({ answer: null, account_schedule: [] });
+      await client.callTool({
+        name: 'get_my_answer',
+        arguments: { public_token: 'AbCdEf123456', include_account_schedule: true },
+      });
+      expect(readMyAnswer).toHaveBeenCalledWith('me', 'AbCdEf123456', true);
+      const result = await client.callTool({
+        name: 'save_my_answer_to_schedule',
+        arguments: {
+          public_token: 'AbCdEf123456',
+          event_date_ids: ['11111111-1111-4111-8111-111111111111'],
+        },
+      });
+      expect(result.isError).toBe(true);
+      expect(saveMyAnswerToSchedule).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
   it('未ログインでも定義を取得できるが本人の回答にはアクセスできない', async () => {
     const server = createMcpServer(null);
     const client = new Client({ name: 'anonymous', version: '1.0.0' });
@@ -85,7 +109,7 @@ describe('MCP SDKの接続と操作', () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     try {
-      expect((await client.listTools()).tools).toHaveLength(7);
+      expect((await client.listTools()).tools).toHaveLength(8);
       const result = await client.callTool({
         name: 'get_my_answer',
         arguments: { public_token: 'AbCdEf123456' },
@@ -110,8 +134,8 @@ describe('MCP SDKの接続と操作', () => {
           client.callTool({ name: 'get_my_answer', arguments: { public_token: 'AbCdEf123456' } }),
         ),
       );
-      expect(readMyAnswer).toHaveBeenCalledWith('first', 'AbCdEf123456');
-      expect(readMyAnswer).toHaveBeenCalledWith('second', 'AbCdEf123456');
+      expect(readMyAnswer).toHaveBeenCalledWith('first', 'AbCdEf123456', undefined);
+      expect(readMyAnswer).toHaveBeenCalledWith('second', 'AbCdEf123456', undefined);
     } finally {
       await first.client.close();
       await second.client.close();

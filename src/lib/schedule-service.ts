@@ -914,6 +914,24 @@ export async function upsertUserEventLink({
   return { success: true };
 }
 
+/** 回答の可・不可を予定枠へ変換し、同じ枠の重複を統合する。矛盾する回答は保存しない。 */
+export function buildAnswerScheduleBlocks(eventDates: EventDateRange[], selectedDateIds: string[]) {
+  const selected = new Set(selectedDateIds);
+  const blocks = new Map<string, ScheduleBlock>();
+  for (const date of eventDates) {
+    for (const range of splitToHourlyRanges(date.start_time, date.end_time)) {
+      const start_time = toWallClockUtcIso(range.start);
+      const end_time = toWallClockUtcIso(range.end);
+      const availability = selected.has(date.id);
+      const key = `${start_time}/${end_time}`;
+      const previous = blocks.get(key);
+      if (previous && previous.availability !== availability) return null;
+      blocks.set(key, { start_time, end_time, availability });
+    }
+  }
+  return [...blocks.values()];
+}
+
 export async function upsertUserScheduleBlocks({
   userId,
   eventId,
@@ -926,18 +944,19 @@ export async function upsertUserScheduleBlocks({
   selectedDateIds: string[];
 }): Promise<{ success: boolean; message?: string }> {
   if (eventDates.length === 0) return { success: true };
-  const selectedSet = new Set(selectedDateIds);
-  const payload = eventDates.flatMap((date) =>
-    splitToHourlyRanges(date.start_time, date.end_time).map((range) => ({
-      user_id: userId,
-      start_time: toWallClockUtcIso(range.start),
-      end_time: toWallClockUtcIso(range.end),
-      availability: selectedSet.has(date.id),
-      source: 'event',
-      event_id: eventId,
-      updated_at: new Date().toISOString(),
-    })),
-  );
+  const blocks = buildAnswerScheduleBlocks(eventDates, selectedDateIds);
+  if (!blocks)
+    return {
+      success: false,
+      message: '重なる候補日時の回答が矛盾しています。保存する候補を選び直してください',
+    };
+  const payload = blocks.map((block) => ({
+    user_id: userId,
+    ...block,
+    source: 'event',
+    event_id: eventId,
+    updated_at: new Date().toISOString(),
+  }));
 
   const supabase = createSupabaseAdmin();
   const { error } = await supabase

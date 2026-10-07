@@ -93,7 +93,7 @@ describe('MCP HTTPの認証とクライアントへの通知', () => {
     const list = await POST(request('tools/list'));
     expect(list.status).toBe(200);
     const body = await list.json();
-    expect(body.result.tools).toHaveLength(7);
+    expect(body.result.tools).toHaveLength(8);
     for (const tool of body.result.tools) {
       expect(tool.securitySchemes).toEqual(tool._meta.securitySchemes);
       expect(tool.securitySchemes[0].type).toBe('oauth2');
@@ -136,7 +136,7 @@ describe('MCP HTTPの認証とクライアントへの通知', () => {
       ),
     );
     expect(response.status).toBe(200);
-    expect(readMyAnswer).toHaveBeenCalledWith('me', 'AbCdEf123456');
+    expect(readMyAnswer).toHaveBeenCalledWith('me', 'AbCdEf123456', undefined);
   });
   it('未登録Originのリクエストは認証や業務処理より先に拒否する', async () => {
     const response = await POST(

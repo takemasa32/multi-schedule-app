@@ -3,7 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { fetchUserScheduleBlocks } from '@/lib/schedule-service';
-import { answerInput, eventInput, scheduleInput, weekInput } from './schemas';
+import {
+  answerInput,
+  answerReadInput,
+  answerScheduleInput,
+  eventInput,
+  scheduleInput,
+  weekInput,
+} from './schemas';
 import { MCP_TOOL_SCOPES, mcpChallenge, toolSecurity, type McpToolName } from './authorization';
 import {
   McpInputError,
@@ -11,6 +18,7 @@ import {
   readEvent,
   readMyAnswer,
   saveMyAnswer,
+  saveMyAnswerToSchedule,
   updateMySchedule,
 } from './services';
 
@@ -97,12 +105,14 @@ export function createMcpServer(identity: { userId: string; scopes: string[] } |
   server.registerTool(
     'get_my_answer',
     {
-      description: '本人に紐づく回答だけを取得する。紐づきがなければanswerはnull。',
-      inputSchema: eventInput,
+      description:
+        '本人に紐づく回答を取得する。紐づきがなければanswerはnull。include_account_schedule=trueで対象期間のアカウント予定の判定と食い違いを取得する。予定のnullは判断不能であり参加可能ではない。既存回答の不可を未回答と推測しない。',
+      inputSchema: answerReadInput,
       annotations: read,
       _meta: toolSecurity('get_my_answer'),
     },
-    ({ public_token }) => run('get_my_answer', () => readMyAnswer(user.userId, public_token)),
+    ({ public_token, include_account_schedule }) =>
+      run('get_my_answer', () => readMyAnswer(user.userId, public_token, include_account_schedule)),
   );
   server.registerTool(
     'get_my_schedule',
@@ -122,12 +132,23 @@ export function createMcpServer(identity: { userId: string; scopes: string[] } |
     'save_my_answer',
     {
       description:
-        '本人の回答を登録・編集する。未指定の枠は保持する。参加可能だけを保存し、参加不可の指定は選択を解除する。指定した回答は手動上書きとして予定同期から保護される。本人の回答がなければ名前検索せず新規作成する。アカウント予定は変更しない。',
+        '本人の回答を登録・編集する。既存回答は変更枠だけ指定し、未指定枠を保持する。use_account_schedule=trueは初回限定で保存済み予定から補完する。予定不明の省略枠は不可になるため必要なら事前に確認する。明示した回答だけを手動上書きとして保護する。アカウント予定は変更しない。保存結果のanswered_date_idsを予定保存の対象指定に使える。',
       inputSchema: answerInput,
-      annotations: write,
+      annotations: { ...write, idempotentHint: false },
       _meta: toolSecurity('save_my_answer'),
     },
     (input) => run('save_my_answer', () => saveMyAnswer(user.userId, input)),
+  );
+  server.registerTool(
+    'save_my_answer_to_schedule',
+    {
+      description:
+        '本人の保存済み回答の指定日時だけをアカウント予定へ保存する。まずmode=previewで差分を確認し、ユーザーが保存・上書きを希望した場合のみmode=applyと返却されたexpected_revisionを指定する。部分編集後はsave_my_answerのanswered_date_idsだけを渡す。初回の全回答保存は同フィールドの全枠を渡す。不可も記録する。他イベントの回答は変更しない。適用成功後は再実行せず、変更エラーなら再プレビューする。',
+      inputSchema: answerScheduleInput,
+      annotations: { ...write, idempotentHint: false },
+      _meta: toolSecurity('save_my_answer_to_schedule'),
+    },
+    (input) => run('save_my_answer_to_schedule', () => saveMyAnswerToSchedule(user.userId, input)),
   );
   server.registerTool(
     'preview_my_schedule_update',

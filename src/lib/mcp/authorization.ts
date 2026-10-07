@@ -6,6 +6,7 @@ export const MCP_TOOL_SCOPES = {
   get_my_answer: 'daysynth.read',
   get_my_schedule: 'daysynth.read',
   save_my_answer: 'daysynth.write',
+  save_my_answer_to_schedule: 'daysynth.write',
   preview_my_schedule_update: 'daysynth.read',
   update_my_schedule: 'daysynth.write',
 } as const;
