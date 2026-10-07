@@ -15,7 +15,7 @@ Please do not report security vulnerabilities through public GitHub issues.
 
 If GitHub Private Vulnerability Reporting is enabled for this repository, please use it.
 
-If it is not available, please contact the maintainer via the GitHub profile @takemasa32.
+If it is not available, please contact the maintainer via the GitHub profile @ktkms.
 
 ## 報告に含めてほしい情報
 

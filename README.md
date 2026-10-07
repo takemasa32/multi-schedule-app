@@ -246,4 +246,4 @@ npx supabase gen types typescript --linked > src/lib/database.types.ts
 ## ライセンス
 
 - MIT License を採用しています。詳細は [LICENSE](LICENSE) を参照してください。
-- Copyright (c) 2026 @takemasa32
+- Copyright (c) 2026 @ktkms
