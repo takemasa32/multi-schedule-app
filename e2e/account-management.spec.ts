@@ -117,6 +117,7 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
   let schemaSkipReason: string | null = null;
   const createdEventIds: string[] = [];
   const createdTokens: string[] = [];
+  const createdScheduleBlockIds: string[] = [];
 
   const createSeedEvent = async (
     titlePrefix: string,
@@ -193,6 +194,9 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
       return;
     }
     if (createdEventIds.length > 0) {
+      await db.query('delete from public.user_schedule_blocks where id = any($1::uuid[])', [
+        createdScheduleBlockIds,
+      ]);
       await db.query(
         'delete from public.user_event_links where user_id=$1 and event_id = any($2::uuid[])',
         [userId, createdEventIds],
@@ -344,6 +348,90 @@ test.describe('アカウント連携管理E2E @auth-required', () => {
     await expect(syncSection).toContainText(
       /変更対象のイベントはありません|変更のあるイベントを下で確認できます|この変更を適用/,
     );
+  });
+
+  test('予定表と反映確認は狭い画面でもセルからはみ出さず中央に配置される', async ({
+    page,
+  }, testInfo) => {
+    // UTCでは日曜、日本時間では月曜になる時刻でも、画面と同じ日付を使う。
+    await page.clock.setFixedTime(new Date('2026-10-11T18:00:00Z'));
+    const today = await page.evaluate(() => {
+      const date = new Date();
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    });
+    const currentBlock = await db.query<{ id: string }>(
+      `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source)
+      values($1,$2,$3,true,'manual') on conflict(user_id,start_time,end_time) do nothing returning id`,
+      [userId, `${today}T10:00:00Z`, `${today}T11:00:00Z`],
+    );
+    createdScheduleBlockIds.push(...currentBlock.rows.map((row) => row.id));
+    const slots = Array.from({ length: 7 }, (_, index) => {
+      const start = new Date('2099-10-05T10:00:00Z');
+      start.setUTCDate(start.getUTCDate() + index);
+      return { start: start.toISOString(), end: new Date(start.getTime() + 3600000).toISOString() };
+    });
+    const target = await createSeedEvent('E2E_幅確認', slots);
+    const anchor = await createSeedEvent('E2E_確認元', [slots[0]]);
+    const participantId = await createParticipant(target.id, '幅確認');
+    await db.query(
+      'insert into public.user_event_links(user_id,event_id,participant_id) values($1,$2,$3)',
+      [userId, target.id, participantId],
+    );
+    for (const slot of slots) {
+      await db.query(
+        `insert into public.user_schedule_blocks(user_id,start_time,end_time,availability,source)
+        values($1,$2,$3,true,'manual') on conflict(user_id,start_time,end_time) do update set availability=true`,
+        [userId, slot.start, slot.end],
+      );
+    }
+    await loginAsDevUser(page);
+    await dismissAccountTourIfVisible(page);
+    const verifyTable = async (testId: string) => {
+      const table = page.getByTestId(testId).first();
+      await expect(table.locator('tbody button').first()).toBeAttached();
+      const measurements = await table.evaluate((element) => {
+        const region = element.parentElement!;
+        const cells = [...element.querySelectorAll('tbody button')].map((button) => {
+          const cell = button.parentElement!.getBoundingClientRect();
+          const bounds = button.getBoundingClientRect();
+          return {
+            centered: Math.abs(bounds.left + bounds.width / 2 - cell.left - cell.width / 2) < 1,
+            contained: bounds.left >= cell.left && bounds.right <= cell.right,
+          };
+        });
+        return {
+          cells,
+          scrollable: region.scrollWidth > region.clientWidth,
+          pageOverflow: document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+      expect(measurements.cells.every((cell) => cell.centered && cell.contained)).toBe(true);
+      expect(measurements.pageOverflow).toBe(false);
+      if (page.viewportSize()!.width <= 375) expect(measurements.scrollable).toBe(true);
+      await table.locator('tbody button').last().scrollIntoViewIfNeeded();
+      await expect(table.locator('tbody button').last()).toBeInViewport();
+    };
+    for (const width of [320, 375, 640, 800]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/account', { waitUntil: 'domcontentloaded' });
+      await dismissAccountTourIfVisible(page);
+      await verifyTable('dated-schedule-table');
+      if (width === 320 || width === 640)
+        await page.screenshot({ path: testInfo.outputPath(`dated-${width}.png`) });
+      await page.getByTestId('sync-check-button').click();
+      await verifyTable('sync-schedule-table');
+      if (width === 320 || width === 640)
+        await page.screenshot({ path: testInfo.outputPath(`account-${width}.png`) });
+      await page.goto(`/event/${anchor.publicToken}/input/sync-review`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await verifyTable('sync-schedule-table');
+    }
+    // 後続の同期フローへ、このテストの反映候補を持ち越さない。
+    await db.query('delete from public.user_event_links where user_id=$1 and event_id=$2', [
+      userId,
+      target.id,
+    ]);
   });
 
   test('予定一括管理が新規回答と回答イベント反映に適用される', async ({ page, browserName }) => {
